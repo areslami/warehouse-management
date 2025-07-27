@@ -1,0 +1,79 @@
+{% extends 'inventory/base.html' %}
+
+{% block title %}گروه‌های کالایی - سیستم مدیریت انبار{% endblock %}
+{% block page_title %}گروه‌های کالایی{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h5 class="mb-0">
+            <i class="bi bi-tags me-2"></i>
+            گروه‌های کالایی
+        </h5>
+        <a href="{% url 'category_create' %}" class="btn btn-primary">
+            <i class="bi bi-plus-circle me-1"></i>
+            گروه جدید
+        </a>
+    </div>
+    
+    <div class="card-body">
+        {% if categories %}
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>نام گروه</th>
+                            <th>توضیحات</th>
+                            <th>تعداد کالاها</th>
+                            <th>تاریخ ایجاد</th>
+                            <th>عملیات</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for category in categories %}
+                        <tr>
+                            <td>
+                                <strong>{{ category.name }}</strong>
+                            </td>
+                            <td>
+                                {% if category.description %}
+                                    {{ category.description|truncatechars:50 }}
+                                {% else %}
+                                    <span class="text-muted">بدون توضیحات</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <span class="badge bg-info">{{ category.products.count }}</span>
+                            </td>
+                            <td>
+                                {{ category.created_at|date:"Y/m/d" }}
+                            </td>
+                            <td>
+                                <div class="btn-group btn-group-sm" role="group">
+                                    <button class="btn btn-outline-primary" title="ویرایش">
+                                        <i class="bi bi-pencil"></i>
+                                    </button>
+                                    <button class="btn btn-outline-danger" title="حذف">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+            <div class="text-center py-5">
+                <i class="bi bi-tags display-1 text-muted"></i>
+                <h4 class="text-muted mt-3">هیچ گروه کالایی موجود نیست</h4>
+                <p class="text-muted">اولین گروه کالایی خود را ایجاد کنید.</p>
+                <a href="{% url 'category_create' %}" class="btn btn-primary">
+                    <i class="bi bi-plus-circle me-1"></i>
+                    ایجاد گروه جدید
+                </a>
+            </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

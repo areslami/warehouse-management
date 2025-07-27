@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html dir="rtl" lang="fa">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>آپلود فایل اکسل برای حواله</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.rtl.min.css" rel="stylesheet">
+    <style>
+        body { 
+            font-family: 'Tahoma', 'Arial', sans-serif; 
+            background-color: #f8f9fa;
+        }
+        .upload-container { 
+            max-width: 700px; 
+            margin: 50px auto; 
+            padding: 20px; 
+        }
+        .drag-area {
+            border: 2px dashed #007bff;
+            border-radius: 10px;
+            padding: 40px;
+            text-align: center;
+            background-color: #f8f9fa;
+            transition: all 0.3s ease;
+        }
+        .drag-area:hover {
+            background-color: #e9ecef;
+        }
+        .drag-area.active {
+            border-color: #28a745;
+            background-color: #d4edda;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="upload-container">
+            <div class="card shadow">
+                <div class="card-header bg-primary text-white">
+                    <h3 class="mb-0">📤 آپلود فایل اکسل حواله خروج</h3>
+                </div>
+                <div class="card-body">
+                    <!-- نمایش پیام‌ها -->
+                    {% if messages %}
+                        {% for message in messages %}
+                            <div class="alert alert-{{ message.tags|default:'info' }} alert-dismissible fade show" role="alert">
+                                {{ message }}
+                                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                            </div>
+                        {% endfor %}
+                    {% endif %}
+                    
+                    <!-- فرم آپلود -->
+                    <form method="post" enctype="multipart/form-data" id="uploadForm">
+                        {% csrf_token %}
+                        
+                        <div class="drag-area" id="dragArea">
+                            <div class="mb-3">
+                                <i class="fas fa-cloud-upload-alt fa-3x text-primary mb-3"></i>
+                                <h5>فایل اکسل را اینجا بکشید یا کلیک کنید</h5>
+                                <input type="file" id="excel_file" name="excel_file" accept=".xlsx,.xls" required style="display: none;">
+                                <button type="button" class="btn btn-outline-primary" onclick="document.getElementById('excel_file').click()">
+                                    انتخاب فایل
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <div id="fileInfo" style="display: none;" class="mt-3 p-3 bg-light border rounded">
+                            <div class="d-flex align-items-center">
+                                <i class="fas fa-file-excel text-success me-2"></i>
+                                <span id="fileName"></span>
+                                <button type="button" class="btn btn-sm btn-outline-danger ms-auto" onclick="clearFile()">
+                                    حذف
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <div class="mt-3">
+                            <button type="submit" class="btn btn-success btn-lg" id="uploadBtn" disabled>
+                                <i class="fas fa-upload"></i> آپلود فایل
+                            </button>
+                            <a href="/admin/warehouse/warehousedeliveryorder/{{ delivery_order.id }}/change/" class="btn btn-secondary btn-lg">
+                                <i class="fas fa-arrow-left"></i> بازگشت
+                            </a>
+                        </div>
+                    </form>
+                    
+                    <!-- راهنما -->
+                    <div class="alert alert-info mt-4">
+                        <h6><i class="fas fa-info-circle"></i> راهنمای آپلود:</h6>
+                        <ul class="mb-0 small">
+                            <li>فرمت فایل: .xlsx یا .xls</li>
+                            <li>ردیف اول باید شامل عناوین ستون‌ها باشد</li>
+                            <li>ستون‌ها به ترتیب: <strong>کد کالا</strong>، <strong>مقدار</strong>، <strong>نوع وسیله حمل</strong>، <strong>شناسه گیرنده</strong></li>
+                            <li>نوع وسیله حمل: truck, pickup, van, container, other</li>
+                            <li>ابتدا از قسمت "عملیات اکسل" در صفحه حواله، فایل نمونه را دانلود کنید</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/js/all.min.js"></script>
+    <script>
+        const dragArea = document.getElementById('dragArea');
+        const fileInput = document.getElementById('excel_file');
+        const fileInfo = document.getElementById('fileInfo');
+        const fileName = document.getElementById('fileName');
+        const uploadBtn = document.getElementById('uploadBtn');
+        
+        // Drag & Drop functionality
+        dragArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            dragArea.classList.add('active');
+        });
+        
+        dragArea.addEventListener('dragleave', () => {
+            dragArea.classList.remove('active');
+        });
+        
+        dragArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dragArea.classList.remove('active');
+            
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                fileInput.files = files;
+                handleFileSelect();
+            }
+        });
+        
+        fileInput.addEventListener('change', handleFileSelect);
+        
+        function handleFileSelect() {
+            const file = fileInput.files[0];
+            if (file) {
+                fileName.textContent = file.name;
+                fileInfo.style.display = 'block';
+                uploadBtn.disabled = false;
+            }
+        }
+        
+        function clearFile() {
+            fileInput.value = '';
+            fileInfo.style.display = 'none';
+            uploadBtn.disabled = true;
+        }
+    </script>
+</body>
+</html>
