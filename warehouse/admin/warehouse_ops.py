@@ -1,10 +1,49 @@
 from django.contrib import admin
 from django.utils.html import format_html
 from django.shortcuts import redirect
+from django.db import models
 from ..models import (WarehouseReceipt, WarehouseReceiptItem, WarehouseDeliveryOrder, 
                       WarehouseDeliveryOrderItem, ProductDelivery, ProductDeliveryItem, 
                       WarehouseInventory, Product)
 from .base import format_number
+
+# فیلتر سفارشی برای عرضه‌های بازارگاه
+class MarketplaceOfferFilter(admin.SimpleListFilter):
+    title = 'وضعیت عرضه در بازارگاه'
+    parameter_name = 'marketplace_offer_status'
+
+    def lookups(self, request, model_admin):
+        return (
+            ('offered', 'عرضه شده'),
+            ('not_offered', 'عرضه نشده'),
+            ('has_active', 'دارای عرضه فعال'),
+            ('has_sold', 'دارای عرضه فروخته شده'),
+        )
+
+    def queryset(self, request, queryset):
+        try:
+            from marketplace.models import ProductOffer
+            
+            if self.value() == 'offered':
+                return queryset.filter(
+                    id__in=ProductOffer.objects.values_list('warehouse_receipt_id', flat=True)
+                )
+            elif self.value() == 'not_offered':
+                return queryset.exclude(
+                    id__in=ProductOffer.objects.values_list('warehouse_receipt_id', flat=True)
+                )
+            elif self.value() == 'has_active':
+                return queryset.filter(
+                    id__in=ProductOffer.objects.filter(status='active').values_list('warehouse_receipt_id', flat=True)
+                )
+            elif self.value() == 'has_sold':
+                return queryset.filter(
+                    id__in=ProductOffer.objects.filter(status='sold').values_list('warehouse_receipt_id', flat=True)
+                )
+        except ImportError:
+            pass
+        
+        return queryset
 
 # Inline و Admin برای رسید انبار
 class WarehouseReceiptItemInline(admin.TabularInline):
@@ -14,11 +53,11 @@ class WarehouseReceiptItemInline(admin.TabularInline):
 
 @admin.register(WarehouseReceipt)
 class WarehouseReceiptAdmin(admin.ModelAdmin):
-    list_display = ['temp_number', 'receipt_type', 'cottage_number', 'date', 'purchase_proforma', 'warehouse', 'get_total_weight', 'created_at']
+    list_display = ['temp_number', 'receipt_type', 'cottage_number', 'date', 'purchase_proforma', 'warehouse', 'get_total_weight', 'get_offered_weight', 'created_at']
     search_fields = ['temp_number', 'cottage_number', 'purchase_proforma__number']
-    list_filter = ['date', 'warehouse', 'receipt_type']
+    list_filter = ['date', 'warehouse', 'receipt_type', MarketplaceOfferFilter]
     inlines = [WarehouseReceiptItemInline]
-    readonly_fields = ['get_total_weight_display', 'temp_number']  # شماره رسید خودکار میشه
+    readonly_fields = ['get_total_weight_display', 'get_offered_weight_display', 'temp_number']  # شماره رسید خودکار میشه
     list_per_page = 20
     
     fieldsets = (
@@ -26,18 +65,94 @@ class WarehouseReceiptAdmin(admin.ModelAdmin):
             'fields': ('temp_number', 'receipt_type', 'cottage_number', 'date', 'purchase_proforma', 'warehouse')
         }),
         ('جزئیات', {
-            'fields': ('description', 'get_total_weight_display'),
+            'fields': ('description', 'get_total_weight_display', 'get_offered_weight_display'),
             'classes': ('collapse',)
         }),
     )
     
     def get_total_weight(self, obj):
-        return f'{obj.total_weight} {obj.purchase_proforma.items.first().product.unit if obj.purchase_proforma.items.exists() else ""}'
+        unit = obj.purchase_proforma.items.first().product.unit if obj.purchase_proforma.items.exists() else ""
+        return f'{obj.total_weight} {unit}'
     get_total_weight.short_description = 'جمع وزن'
     
     def get_total_weight_display(self, obj):
         return format_html('<strong>{}</strong>', obj.total_weight)
     get_total_weight_display.short_description = 'جمع وزن رسید'
+    
+    def get_offered_weight(self, obj):
+        """محاسبه وزن عرضه شده در بازارگاه"""
+        try:
+            # import کردن مدل ProductOffer از marketplace
+            from marketplace.models import ProductOffer
+            
+            # محاسبه مجموع وزن عرضه شده برای این رسید
+            total_offered = ProductOffer.objects.filter(
+                warehouse_receipt=obj
+            ).aggregate(
+                total=models.Sum('offer_weight')
+            )['total'] or 0
+            
+            if total_offered > 0:
+                return format_html(
+                    '<span style="color: #28a745; font-weight: bold;">{}</span> تن',
+                    total_offered
+                )
+            else:
+                return format_html(
+                    '<span style="color: #dc3545;">عرضه نشده</span>'
+                )
+        except ImportError:
+            # اگر marketplace app وجود نداشته باشد
+            return format_html('<span style="color: #6c757d;">-</span>')
+        except Exception as e:
+            return format_html('<span style="color: #dc3545;">خطا</span>')
+    
+    get_offered_weight.short_description = 'وزن عرضه شده'
+    get_offered_weight.admin_order_field = None  # غیرقابل مرتب‌سازی
+    
+    def get_offered_weight_display(self, obj):
+        """نمایش تفصیلی وزن عرضه شده برای صفحه جزئیات"""
+        try:
+            from marketplace.models import ProductOffer
+            
+            offers = ProductOffer.objects.filter(warehouse_receipt=obj)
+            if not offers.exists():
+                return format_html(
+                    '<div style="color: #dc3545; padding: 10px; background: #f8d7da; border-radius: 4px;">'
+                    '<i class="fas fa-info-circle"></i> هیچ عرضه‌ای در بازارگاه ثبت نشده است'
+                    '</div>'
+                )
+            
+            total_offered = offers.aggregate(total=models.Sum('offer_weight'))['total'] or 0
+            active_offers = offers.filter(status='active').count()
+            sold_offers = offers.filter(status='sold').count()
+            
+            return format_html(
+                '<div style="background: #d4edda; padding: 10px; border-radius: 4px; border-left: 4px solid #28a745;">'
+                '<strong>مجموع وزن عرضه شده:</strong> {} تن<br>'
+                '<small style="color: #495057;">'
+                '• عرضه‌های فعال: {} مورد<br>'
+                '• عرضه‌های فروخته شده: {} مورد<br>'
+                '• کل عرضه‌ها: {} مورد'
+                '</small>'
+                '</div>',
+                total_offered, active_offers, sold_offers, offers.count()
+            )
+        except ImportError:
+            return format_html(
+                '<div style="color: #856404; padding: 10px; background: #fff3cd; border-radius: 4px;">'
+                'ماژول بازارگاه در دسترس نیست'
+                '</div>'
+            )
+        except Exception as e:
+            return format_html(
+                '<div style="color: #721c24; padding: 10px; background: #f8d7da; border-radius: 4px;">'
+                'خطا در محاسبه: {}'
+                '</div>',
+                str(e)
+            )
+    
+    get_offered_weight_display.short_description = 'جزئیات عرضه در بازارگاه'
     
     def get_form(self, request, obj=None, **kwargs):
         form = super().get_form(request, obj, **kwargs)

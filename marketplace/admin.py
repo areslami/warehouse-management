@@ -3,6 +3,7 @@ from django.contrib import admin
 from django.utils.html import format_html
 from django.db.models import Q
 from django.contrib import messages
+from django import forms
 from .models import MarketplaceProductCategory, MarketplaceProduct, ProductMapping, ProductOffer
 
 
@@ -11,6 +12,55 @@ def format_number(value):
     if value is None:
         return '-'
     return f'{int(value):,}'
+
+
+class ThousandSeparatorWidget(forms.TextInput):
+    """ویجت برای نمایش اعداد با جداکننده هزارگان"""
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.attrs.update({
+            'style': 'text-align: left; direction: ltr;',
+            'class': 'thousand-separator-input'
+        })
+    
+    def format_value(self, value):
+        if value is None or value == '':
+            return ''
+        try:
+            # تبدیل به عدد و نمایش با جداکننده
+            return f'{float(value):,.2f}'.rstrip('0').rstrip('.')
+        except (ValueError, TypeError):
+            return str(value)
+
+
+class ProductOfferForm(forms.ModelForm):
+    class Meta:
+        model = ProductOffer
+        fields = '__all__'
+        widgets = {
+            'offer_weight': ThousandSeparatorWidget(),
+            'unit_price': ThousandSeparatorWidget(),
+        }
+    
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        
+        # تغییر queryset برای رسید انبار - فقط کوتاژها
+        if 'warehouse_receipt' in self.fields:
+            from warehouse.models import WarehouseReceipt
+            queryset = WarehouseReceipt.objects.filter(
+                receipt_type__in=['import_cottage', 'distribution_agency'],
+                cottage_number__isnull=False
+            ).exclude(cottage_number='').select_related('purchase_proforma__supplier')
+            
+            self.fields['warehouse_receipt'].queryset = queryset
+            self.fields['warehouse_receipt'].empty_label = "انتخاب کوتاژ..."
+    
+    class Media:
+        js = ('admin/js/thousand_separator.js',)
+        css = {
+            'all': ('admin/css/thousand_separator.css',)
+        }
 
 
 class MarketplaceProductCategoryAdmin(admin.ModelAdmin):
@@ -121,9 +171,10 @@ class ProductMappingAdmin(admin.ModelAdmin):
 
 
 class ProductOfferAdmin(admin.ModelAdmin):
+    form = ProductOfferForm
     list_display = [
         'offer_id', 'get_marketplace_product', 'get_cottage_number', 
-        'offer_weight', 'get_unit_price', 'get_total_price', 
+        'get_offer_weight', 'get_unit_price', 'get_total_price', 
         'offer_type', 'status', 'offer_date'
     ]
     list_filter = [
@@ -142,12 +193,19 @@ class ProductOfferAdmin(admin.ModelAdmin):
             'fields': ('offer_id', 'warehouse_receipt', 'marketplace_product')
         }),
         ('جزئیات عرضه', {
-            'fields': ('offer_date', 'offer_weight', 'unit_price', 'offer_type')
+            'fields': ('offer_date', 'offer_weight', 'unit_price', 'offer_type'),
+            'description': 'وزن به تن و قیمت به ریال وارد شود'
+        }),
+        ('محاسبات خودکار', {
+            'fields': ('get_total_price_display',),
+            'classes': ('collapse',)
         }),
         ('وضعیت و توضیحات', {
             'fields': ('status', 'description', 'notes')
         }),
     )
+    
+    readonly_fields = ['get_total_price_display']
     
     def get_marketplace_product(self, obj):
         return format_html(
@@ -166,19 +224,43 @@ class ProductOfferAdmin(admin.ModelAdmin):
         return format_html('<span style="color: red;">بدون کوتاژ</span>')
     get_cottage_number.short_description = 'شماره کوتاژ'
     
+    def get_offer_weight(self, obj):
+        return format_html(
+            '<strong style="direction: ltr;">{}</strong> تن',
+            format_number(obj.offer_weight)
+        )
+    get_offer_weight.short_description = 'وزن عرضه'
+    
     def get_unit_price(self, obj):
         return format_html(
-            '<strong>{}</strong> ریال',
+            '<strong style="direction: ltr;">{}</strong> ریال',
             format_number(obj.unit_price)
         )
     get_unit_price.short_description = 'قیمت واحد'
     
     def get_total_price(self, obj):
         return format_html(
-            '<strong style="color: green;">{}</strong> ریال',
+            '<strong style="color: green; direction: ltr;">{}</strong> ریال',
             format_number(obj.total_price)
         )
     get_total_price.short_description = 'مبلغ کل'
+    
+    def get_total_price_display(self, obj):
+        if obj.offer_weight and obj.unit_price:
+            total = obj.offer_weight * obj.unit_price
+            return format_html(
+                '<div style="font-size: 16px; font-weight: bold; color: green; direction: ltr;">'
+                '{} ریال'
+                '</div>'
+                '<div style="font-size: 12px; color: #666; margin-top: 5px;">'
+                '{} تن × {} ریال'
+                '</div>',
+                format_number(total),
+                format_number(obj.offer_weight),
+                format_number(obj.unit_price)
+            )
+        return '-'
+    get_total_price_display.short_description = 'مبلغ کل محاسبه شده'
     
     def formfield_for_foreignkey(self, db_field, request, **kwargs):
         if db_field.name == "warehouse_receipt":
@@ -189,6 +271,12 @@ class ProductOfferAdmin(admin.ModelAdmin):
                 cottage_number__isnull=False
             ).exclude(cottage_number='')
         return super().formfield_for_foreignkey(db_field, request, **kwargs)
+    
+    class Media:
+        js = ('admin/js/product_offer.js',)
+        css = {
+            'all': ('admin/css/product_offer.css',)
+        }
 
 
 # مطمئن شو که admin ها register شدن

@@ -31,8 +31,46 @@ class WarehouseReceipt(models.Model):
         ordering = ['-date', '-temp_number']
     
     def __str__(self):
-        return f'رسید انبار {self.temp_number}'
+        """نمایش بهتر رسید انبار با اولویت شماره کوتاژ برای dropdown"""
+        if self.cottage_number:
+            parts = [f'کوتاژ {self.cottage_number}']
+            
+            # اضافه کردن نام تامین‌کننده اگر وجود دارد
+            if hasattr(self, 'purchase_proforma') and self.purchase_proforma and self.purchase_proforma.supplier:
+                supplier_name = str(self.purchase_proforma.supplier)
+                if len(supplier_name) > 30:
+                    supplier_name = supplier_name[:30] + '...'
+                parts.append(supplier_name)
+            
+            # اضافه کردن تاریخ
+            if self.date:
+                try:
+                    import jdatetime
+                    jalali_date = jdatetime.date.fromgregorian(
+                        year=self.date.year,
+                        month=self.date.month, 
+                        day=self.date.day
+                    )
+                    parts.append(f'({jalali_date.strftime("%Y/%m/%d")})')
+                except:
+                    parts.append(f'({self.date.strftime("%Y-%m-%d")})')
+            
+            return ' - '.join(parts)
+        else:
+            return f'رسید انبار {self.temp_number} - {self.get_receipt_type_display()}'
     
+    @property 
+    def cottage_display(self):
+        """خاصیت برای نمایش شماره کوتاژ در جداول"""
+        return self.cottage_number if self.cottage_number else f'رسید {self.temp_number}'
+    
+    @property
+    def short_display(self):
+        """نمایش کوتاه برای استفاده در لیست‌ها"""
+        if self.cottage_number:
+            return f'کوتاژ {self.cottage_number}'
+        return f'رسید {self.temp_number}'
+
     def save(self, *args, **kwargs):
         # تولید شماره خودکار اگر وجود نداشته باشد
         if not self.temp_number:
