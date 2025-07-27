@@ -19,6 +19,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'django_jalali',  # برای تقویم شمسی
     'warehouse',  # اپلیکیشن ما
+    'marketplace',  # زیرسیستم بازارگاه - جدید
 ]
 
 MIDDLEWARE = [

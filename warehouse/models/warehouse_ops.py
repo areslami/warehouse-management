@@ -6,7 +6,15 @@ from .proformas import PurchaseProforma, SalesProforma
 
 class WarehouseReceipt(models.Model):
     """رسید انبار"""
-    temp_number = models.CharField(max_length=50, unique=True, verbose_name='شماره رسید موقت')
+    RECEIPT_TYPES = [
+        ('import_cottage', 'کوتاژ‌وارداتی'),
+        ('distribution_agency', 'عاملیت توزیع'),
+        ('domestic_purchase', 'خرید داخلی'),
+    ]
+    
+    temp_number = models.CharField(max_length=50, unique=True, verbose_name='شماره رسید موقت', blank=True)
+    receipt_type = models.CharField(max_length=20, choices=RECEIPT_TYPES, verbose_name='نوع رسید انبار')
+    cottage_number = models.CharField(max_length=50, blank=True, null=True, verbose_name='شماره کوتاژ')
     date = jDateField(verbose_name='تاریخ رسید')
     purchase_proforma = models.ForeignKey(PurchaseProforma, on_delete=models.CASCADE, verbose_name='پیش فاکتور خرید')
     warehouse = models.ForeignKey(Warehouse, on_delete=models.CASCADE, verbose_name='انبار')
@@ -25,18 +33,53 @@ class WarehouseReceipt(models.Model):
     def __str__(self):
         return f'رسید انبار {self.temp_number}'
     
-    def calculate_total_weight(self):
-        """محاسبه جمع وزن"""
-        total = sum(item.quantity for item in self.items.all())
-        return total
-    
     def save(self, *args, **kwargs):
+        # تولید شماره خودکار اگر وجود نداشته باشد
+        if not self.temp_number:
+            self.temp_number = self.generate_receipt_number()
+        
         super().save(*args, **kwargs)
+        
         # به‌روزرسانی جمع وزن
         new_weight = self.calculate_total_weight()
         if self.total_weight != new_weight:
             self.total_weight = new_weight
             super().save(update_fields=['total_weight'])
+    
+    def generate_receipt_number(self):
+        """تولید شماره خودکار رسید انبار"""
+        import jdatetime
+        from django.db.models import Max
+        
+        # گرفتن سال و ماه جاری شمسی
+        today = jdatetime.date.today()
+        year_month = today.strftime('%y%m')  # مثل 0312 برای اسفند 1403
+        
+        # پیدا کردن آخرین شماره در همین ماه
+        prefix = f"R{year_month}"
+        last_receipt = WarehouseReceipt.objects.filter(
+            temp_number__startswith=prefix
+        ).aggregate(
+            max_number=Max('temp_number')
+        )['max_number']
+        
+        if last_receipt:
+            # استخراج شماره و افزایش یک واحد
+            try:
+                last_seq = int(last_receipt[-4:])  # آخرین 4 رقم
+                new_seq = last_seq + 1
+            except (ValueError, IndexError):
+                new_seq = 1
+        else:
+            new_seq = 1
+        
+        # تولید شماره جدید با فرمت R + سال‌ماه + شماره سریال 4 رقمی
+        return f"{prefix}{new_seq:04d}"
+    
+    def calculate_total_weight(self):
+        """محاسبه جمع وزن"""
+        total = sum(item.quantity for item in self.items.all())
+        return total
 
 class WarehouseReceiptItem(models.Model):
     """آیتم رسید انبار"""
@@ -69,6 +112,7 @@ class WarehouseReceiptItem(models.Model):
         # محاسبه مجدد موجودی از روی همه رسیدها و تحویل‌ها
         inventory.calculate_inventory()
 
+# ادامه باقی کلاس‌ها بدون تغییر...
 class WarehouseDeliveryOrder(models.Model):
     """حواله خروج انبار"""
     number = models.CharField(max_length=50, unique=True, verbose_name='شماره حواله')

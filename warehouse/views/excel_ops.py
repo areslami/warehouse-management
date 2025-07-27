@@ -1,6 +1,6 @@
 from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib.admin.views.decorators import staff_member_required
-from django.http import HttpResponse
+from django.http import HttpResponse, JsonResponse
 from django.contrib import messages
 import openpyxl
 from openpyxl.styles import Font, PatternFill, Alignment
@@ -9,6 +9,21 @@ from ..models import (
     WarehouseDeliveryOrder, WarehouseDeliveryOrderItem, 
     Product, Receiver
 )
+
+@staff_member_required
+def get_receiver_info(request, receiver_id):
+    """API برای دریافت اطلاعات گیرنده"""
+    try:
+        receiver = get_object_or_404(Receiver, id=receiver_id)
+        data = {
+            'address': receiver.address,
+            'phone': receiver.phone,
+            'postal_code': receiver.postal_code,
+            'unique_id': receiver.unique_id,
+        }
+        return JsonResponse(data)
+    except:
+        return JsonResponse({'error': 'گیرنده یافت نشد'}, status=404)
 
 @staff_member_required
 def upload_delivery_order_excel(request, delivery_order_id):

@@ -14,12 +14,22 @@ class WarehouseReceiptItemInline(admin.TabularInline):
 
 @admin.register(WarehouseReceipt)
 class WarehouseReceiptAdmin(admin.ModelAdmin):
-    list_display = ['temp_number', 'date', 'purchase_proforma', 'warehouse', 'get_total_weight', 'created_at']
-    search_fields = ['temp_number', 'purchase_proforma__number']
-    list_filter = ['date', 'warehouse']
+    list_display = ['temp_number', 'receipt_type', 'cottage_number', 'date', 'purchase_proforma', 'warehouse', 'get_total_weight', 'created_at']
+    search_fields = ['temp_number', 'cottage_number', 'purchase_proforma__number']
+    list_filter = ['date', 'warehouse', 'receipt_type']
     inlines = [WarehouseReceiptItemInline]
-    readonly_fields = ['get_total_weight_display']
+    readonly_fields = ['get_total_weight_display', 'temp_number']  # شماره رسید خودکار میشه
     list_per_page = 20
+    
+    fieldsets = (
+        ('اطلاعات اصلی', {
+            'fields': ('temp_number', 'receipt_type', 'cottage_number', 'date', 'purchase_proforma', 'warehouse')
+        }),
+        ('جزئیات', {
+            'fields': ('description', 'get_total_weight_display'),
+            'classes': ('collapse',)
+        }),
+    )
     
     def get_total_weight(self, obj):
         return f'{obj.total_weight} {obj.purchase_proforma.items.first().product.unit if obj.purchase_proforma.items.exists() else ""}'
@@ -28,8 +38,55 @@ class WarehouseReceiptAdmin(admin.ModelAdmin):
     def get_total_weight_display(self, obj):
         return format_html('<strong>{}</strong>', obj.total_weight)
     get_total_weight_display.short_description = 'جمع وزن رسید'
+    
+    def get_form(self, request, obj=None, **kwargs):
+        form = super().get_form(request, obj, **kwargs)
+        
+        # اگر فرم جدید است، راهنما برای فیلد شماره کوتاژ
+        if not obj:
+            form.base_fields['cottage_number'].help_text = '''
+            <div class="cottage-field-help">
+                <p><strong>شماره کوتاژ:</strong></p>
+                <ul>
+                    <li>برای <strong>کوتاژ‌وارداتی</strong>: شماره کوتاژ وارداتی را وارد کنید</li>
+                    <li>برای <strong>عاملیت توزیع</strong>: شماره کوتاژ عاملیت را وارد کنید</li>
+                    <li>برای <strong>خرید داخلی</strong>: این فیلد نمایش داده نمی‌شود</li>
+                </ul>
+            </div>
+            <script>
+            document.addEventListener('DOMContentLoaded', function() {
+                function toggleCottageField() {
+                    var receiptType = document.querySelector('select[name="receipt_type"]');
+                    var cottageField = document.querySelector('input[name="cottage_number"]').closest('.form-row');
+                    
+                    if (receiptType && cottageField) {
+                        if (receiptType.value === 'import_cottage' || receiptType.value === 'distribution_agency') {
+                            cottageField.style.display = 'block';
+                        } else {
+                            cottageField.style.display = 'none';
+                            document.querySelector('input[name="cottage_number"]').value = '';
+                        }
+                    }
+                }
+                
+                var receiptTypeField = document.querySelector('select[name="receipt_type"]');
+                if (receiptTypeField) {
+                    receiptTypeField.addEventListener('change', toggleCottageField);
+                    toggleCottageField(); // اجرای اولیه
+                }
+            });
+            </script>
+            '''
+        
+        return form
+    
+    class Media:
+        css = {
+            'all': ('admin/css/warehouse_receipt.css',)
+        }
+        js = ('admin/js/warehouse_receipt.js',)
 
-# Inline و Admin برای حواله خروج
+# Inline و Admin برای حواله خروج - بدون تغییر
 class WarehouseDeliveryOrderItemInline(admin.TabularInline):
     model = WarehouseDeliveryOrderItem
     extra = 1

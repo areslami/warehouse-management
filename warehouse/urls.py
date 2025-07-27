@@ -16,6 +16,9 @@ urlpatterns = [
     path('api/warehouse-chart/', reports.warehouse_chart_data, name='warehouse_chart_data'),
     path('api/monthly-sales-chart/', reports.monthly_sales_chart_data, name='monthly_sales_chart_data'),
     
+    # API اطلاعات گیرنده
+    path('api/receiver/<int:receiver_id>/', excel_ops.get_receiver_info, name='get_receiver_info'),
+    
     # آپلود و دانلود اکسل حواله
     path('delivery-order/<int:delivery_order_id>/upload-excel/', 
          excel_ops.upload_delivery_order_excel, name='upload_delivery_order_excel'),
