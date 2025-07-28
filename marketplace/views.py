@@ -331,7 +331,7 @@ def download_delivery_template(request):
 
 @staff_member_required
 def upload_delivery_addresses(request, purchase_detail_id):
-    """آپلود آدرس‌های تحویل"""
+    """آپلود آدرس‌های تحویل با پردازش بهبود یافته"""
     purchase_detail = get_object_or_404(MarketplacePurchaseDetail, id=purchase_detail_id)
     
     if request.method == 'POST' and request.FILES.get('excel_file'):
@@ -345,102 +345,154 @@ def upload_delivery_addresses(request, purchase_detail_id):
             error_rows = []
             
             # حذف آدرس‌های قبلی
+            old_count = purchase_detail.delivery_addresses.count()
             purchase_detail.delivery_addresses.all().delete()
             
-            # خواندن داده‌ها از ردیف دوم
+            if old_count > 0:
+                messages.info(request, f'🔄 {old_count} آدرس قبلی حذف شد')
+            
             for row_idx, row in enumerate(sheet.iter_rows(min_row=2, values_only=True), start=2):
+                if not any(row):  # ردیف خالی
+                    continue
+                    
                 try:
-                    if not any(row):
+                    # اعتبارسنجی فیلدهای اصلی
+                    code = str(row[0]).strip() if row[0] else ''
+                    if not code:
+                        error_rows.append(f"ردیف {row_idx}: کد خالی است")
                         continue
                     
-                    # استخراج داده‌ها از ردیف
-                    code = str(row[0]).strip() if row[0] else None
-                    total_purchase_weight = float(row[1]) if row[1] else None
-                    purchase_date_str = str(row[2]).strip() if row[2] else None
-                    
-                    # بررسی تطابق با خرید اصلی
-                    if code != purchase_detail.purchase.purchase_id:
-                        error_rows.append(f"ردیف {row_idx}: کد خرید مطابقت ندارد ({code})")
-                        continue
-                    
-                    if abs(total_purchase_weight - float(purchase_detail.purchase.purchase_weight)) > 0.01:
-                        error_rows.append(f"ردیف {row_idx}: وزن خرید مطابقت ندارد")
-                        continue
-                    
-                    # تبدیل تاریخ
+                    # پردازش وزن کل خرید
                     try:
-                        if '/' in purchase_date_str:
-                            date_parts = purchase_date_str.split('/')
-                            jalali_date = jdatetime.date(int(date_parts[0]), int(date_parts[1]), int(date_parts[2]))
-                            purchase_date = jalali_date.togregorian()
+                        total_purchase_weight = float(row[1]) if row[1] else 0
+                    except (ValueError, TypeError):
+                        error_rows.append(f"ردیف {row_idx}: وزن نامعتبر")
+                        continue
+                    
+                    # پردازش تاریخ خرید
+                    try:
+                        if isinstance(row[2], str):
+                            date_parts = row[2].split('/')
+                            if len(date_parts) == 3:
+                                purchase_date = jdate(int(date_parts[0]), int(date_parts[1]), int(date_parts[2])).togregorian()
+                            else:
+                                purchase_date = purchase_detail.purchase.purchase_date
                         else:
                             purchase_date = purchase_detail.purchase.purchase_date
                     except:
                         purchase_date = purchase_detail.purchase.purchase_date
                     
-                    # تبدیل تاریخ ثبت آدرس
+                    # پردازش تاریخ ثبت آدرس
                     try:
-                        address_date_str = str(row[14]).strip() if row[14] else None
-                        if address_date_str and '/' in address_date_str:
-                            date_parts = address_date_str.split('/')
-                            jalali_date = jdatetime.date(int(date_parts[0]), int(date_parts[1]), int(date_parts[2]))
-                            address_registration_date = jalali_date.togregorian()
+                        if isinstance(row[14], str) and row[14]:
+                            date_parts = row[14].split('/')
+                            if len(date_parts) == 3:
+                                address_registration_date = jdate(int(date_parts[0]), int(date_parts[1]), int(date_parts[2])).togregorian()
+                            else:
+                                address_registration_date = purchase_detail.purchase.purchase_date
                         else:
                             address_registration_date = purchase_detail.purchase.purchase_date
                     except:
                         address_registration_date = purchase_detail.purchase.purchase_date
                     
-                    # ایجاد آدرس تحویل
+                    # تابع کمکی برای پاکسازی رشته‌ها
+                    def clean_string(value, max_length=None):
+                        if value is None:
+                            return ''
+                        result = str(value).strip()
+                        if max_length and len(result) > max_length:
+                            result = result[:max_length]
+                        return result
+                    
+                    # تابع کمکی برای پاکسازی اعداد
+                    def clean_numeric_string(value, max_length=20):
+                        if value is None:
+                            return ''
+                        # حذف همه کاراکترهای غیرعددی
+                        result = ''.join(filter(str.isdigit, str(value)))
+                        if len(result) > max_length:
+                            result = result[:max_length]
+                        return result
+                    
+                    # پردازش فیلدهای عددی
+                    def safe_float(value, default=0):
+                        try:
+                            return float(value) if value else default
+                        except (ValueError, TypeError):
+                            return default
+                    
+                    def safe_int(value, default=None):
+                        try:
+                            return int(value) if value else default
+                        except (ValueError, TypeError):
+                            return default
+                    
+                    # ایجاد آدرس تحویل با پاکسازی داده‌ها
                     delivery_address = DeliveryAddress.objects.create(
                         purchase_detail=purchase_detail,
-                        code=code,
+                        code=clean_string(code, 100),
                         total_purchase_weight=total_purchase_weight,
                         purchase_date=purchase_date,
-                        unit_price=float(row[3]) if row[3] else 0,
-                        tracking_number=str(row[4]) if row[4] else '',
-                        province=str(row[5]) if row[5] else '',
-                        city=str(row[6]) if row[6] else '',
-                        paid_amount=float(row[7]) if row[7] else 0,
-                        buyer_account_number=str(row[8]) if row[8] else '',
-                        cottage_code=str(row[9]) if row[9] else '',
-                        product_title=str(row[10]) if row[10] else '',
-                        description=str(row[11]) if row[11] else '',
-                        payment_method=str(row[12]) if row[12] else '',
-                        offer_id=str(row[13]) if row[13] else '',
+                        unit_price=safe_float(row[3]),
+                        tracking_number=clean_string(row[4], 100),
+                        province=clean_string(row[5], 100),
+                        city=clean_string(row[6], 100),
+                        paid_amount=safe_float(row[7]),
+                        buyer_account_number=clean_string(row[8], 50),
+                        cottage_code=clean_string(row[9], 50),
+                        product_title=clean_string(row[10], 300),
+                        description=clean_string(row[11]),
+                        payment_method=clean_string(row[12], 50),
+                        offer_id=clean_string(row[13], 100),
                         address_registration_date=address_registration_date,
-                        assignment_id=str(row[15]) if row[15] else f'ADDR_{code}_{row_idx}',
-                        buyer_name=str(row[16]) if row[16] else '',
-                        buyer_national_id=str(row[17]) if row[17] else '',
-                        buyer_postal_code=str(row[18]) if row[18] else '',
-                        buyer_address=str(row[19]) if row[19] else '',
-                        deposit_id=str(row[20]) if row[20] else '',
-                        buyer_mobile=str(row[21]) if row[21] else '',
-                        buyer_unique_id=str(row[22]) if row[22] else '',
+                        assignment_id=clean_string(row[15], 100) or f'ADDR_{code}_{row_idx}',
+                        buyer_name=clean_string(row[16], 200),
+                        
+                        # فیلدهای با طول افزایش یافته - FIX برای خطای character varying(10)
+                        buyer_national_id=clean_numeric_string(row[17], 20),
+                        buyer_postal_code=clean_numeric_string(row[18], 20),
+                        
+                        buyer_address=clean_string(row[19]),
+                        deposit_id=clean_string(row[20], 100),
+                        
+                        # شماره تلفن‌ها با طول افزایش یافته
+                        buyer_mobile=clean_numeric_string(row[21], 20),
+                        
+                        buyer_unique_id=clean_string(row[22], 100),
                         buyer_user_type='individual' if str(row[23]).strip() == 'حقیقی' else 'company',
-                        recipient_name=str(row[24]) if row[24] else '',
-                        recipient_unique_id=str(row[25]) if row[25] else '',
+                        recipient_name=clean_string(row[24], 200),
+                        recipient_unique_id=clean_string(row[25], 100),
+                        
+                        # وسایل حمل
                         vehicle_single=str(row[26]).strip().lower() in ['بله', 'true', '1'] if row[26] else False,
                         vehicle_double=str(row[27]).strip().lower() in ['بله', 'true', '1'] if row[27] else False,
                         vehicle_trailer=str(row[28]).strip().lower() in ['بله', 'true', '1'] if row[28] else False,
-                        delivery_address=str(row[29]) if row[29] else '',
-                        delivery_postal_code=str(row[30]) if row[30] else '',
-                        coordination_phone=str(row[31]) if row[31] else '',
-                        delivery_national_id=str(row[32]) if row[32] else '',
-                        order_weight=float(row[33]) if row[33] else 0,
-                        payment_period_1_days=int(row[34]) if row[34] else None,
-                        payment_period_2_days=int(row[35]) if row[35] else None,
-                        payment_period_3_days=int(row[36]) if row[36] else None,
-                        payment_amount_1=float(row[37]) if row[37] else None,
-                        payment_amount_2=float(row[38]) if row[38] else None,
-                        payment_amount_3=float(row[39]) if row[39] else None,
-                        shipped_weight=float(row[40]) if row[40] else 0,
-                        unshipped_weight=float(row[41]) if row[41] else 0,
+                        
+                        # آدرس تحویل با فیلدهای طول افزایش یافته
+                        delivery_address=clean_string(row[29]),
+                        delivery_postal_code=clean_numeric_string(row[30], 20),
+                        coordination_phone=clean_numeric_string(row[31], 20),
+                        delivery_national_id=clean_numeric_string(row[32], 20),
+                        
+                        order_weight=safe_float(row[33]),
+                        
+                        # بازه‌های پرداخت توافقی
+                        payment_period_1_days=safe_int(row[34]),
+                        payment_period_2_days=safe_int(row[35]),
+                        payment_period_3_days=safe_int(row[36]),
+                        payment_amount_1=safe_float(row[37]),
+                        payment_amount_2=safe_float(row[38]),
+                        payment_amount_3=safe_float(row[39]),
+                        
+                        # وزن‌های بارنامه
+                        shipped_weight=safe_float(row[40]),
+                        unshipped_weight=safe_float(row[41]),
                     )
                     
                     success_count += 1
                     
                 except ValueError as e:
-                    error_rows.append(f"ردیف {row_idx}: مقدار عددی نامعتبر")
+                    error_rows.append(f"ردیف {row_idx}: مقدار عددی نامعتبر - {str(e)}")
                 except Exception as e:
                     error_rows.append(f"ردیف {row_idx}: {str(e)}")
             
@@ -449,9 +501,9 @@ def upload_delivery_addresses(request, purchase_detail_id):
                 messages.success(request, f'✅ {success_count} آدرس تحویل با موفقیت اضافه شد')
             
             if error_rows:
-                error_message = '❌ خطا در ردیف‌های: ' + ', '.join(error_rows[:3])
-                if len(error_rows) > 3:
-                    error_message += f' و {len(error_rows) - 3} خطای دیگر'
+                error_message = '❌ خطا در ردیف‌های: ' + ', '.join(error_rows[:5])
+                if len(error_rows) > 5:
+                    error_message += f' و {len(error_rows) - 5} خطای دیگر'
                 messages.warning(request, error_message)
                 
         except Exception as e:
@@ -462,6 +514,6 @@ def upload_delivery_addresses(request, purchase_detail_id):
     # نمایش فرم آپلود
     context = {
         'purchase_detail': purchase_detail,
-        'title': f'آپلود آدرس‌های تحویل خرید {purchase_detail.purchase.purchase_id}'
+        'title': f'آپلود آدرس‌های تحویل برای خرید {purchase_detail.purchase.purchase_id}'
     }
     return render(request, 'marketplace/upload_delivery_addresses.html', context)

@@ -314,24 +314,27 @@ class MarketplaceSale(models.Model):
 
 
 class MarketplacePurchase(models.Model):
-    """خرید بازارگاه (ردیف‌های جدول خریدها)"""
+    """خرید از بازارگاه"""
     
     PURCHASE_TYPES = [
         ('cash', 'نقدی'),
         ('agreement', 'توافقی'),
+        ('mixed', 'ترکیبی'),
     ]
     
     marketplace_sale = models.ForeignKey(
-        MarketplaceSale, 
-        related_name='purchases',
-        on_delete=models.CASCADE, 
+        MarketplaceSale,
+        related_name='purchases', 
+        on_delete=models.CASCADE,
         verbose_name='فروش بازارگاه'
     )
     
+    # اطلاعات اصلی خرید
     purchase_id = models.CharField(
         max_length=100, 
-        unique=True,
-        verbose_name='شناسه خرید'
+        unique=True, 
+        verbose_name='شناسه خرید',
+        db_index=True
     )
     purchase_weight = models.DecimalField(
         max_digits=10, 
@@ -340,8 +343,11 @@ class MarketplacePurchase(models.Model):
     )
     purchase_date = jDateField(verbose_name='تاریخ خرید')
     buyer_name = models.CharField(max_length=200, verbose_name='نام خریدار')
-    buyer_mobile = models.CharField(max_length=15, verbose_name='شماره همراه خریدار')
-    buyer_national_id = models.CharField(max_length=10, verbose_name='شماره ملی خریدار')
+    
+    # فیلدهای با طول افزایش یافته - FIX برای خطای character varying
+    buyer_mobile = models.CharField(max_length=20, verbose_name='شماره همراه خریدار')
+    buyer_national_id = models.CharField(max_length=20, verbose_name='شماره ملی خریدار')
+    
     paid_amount = models.DecimalField(
         max_digits=15, 
         decimal_places=0, 
@@ -361,17 +367,45 @@ class MarketplacePurchase(models.Model):
         verbose_name_plural = 'خریدهای بازارگاه'
         db_table = 'marketplace_purchases'
         ordering = ['-purchase_date', '-created_at']
+        
+        # اضافه کردن indexes برای بهبود performance
+        indexes = [
+            models.Index(fields=['purchase_id'], name='idx_purchase_id'),
+            models.Index(fields=['buyer_national_id'], name='idx_buyer_national_purchase'),
+            models.Index(fields=['purchase_date', 'purchase_type'], name='idx_purchase_date_type'),
+        ]
     
     def __str__(self):
         return f'خرید {self.purchase_id} - {self.buyer_name}'
     
+    def clean(self):
+        """اعتبارسنجی و پاکسازی داده‌ها"""
+        from django.core.exceptions import ValidationError
+        
+        # پاکسازی شماره ملی
+        if self.buyer_national_id:
+            self.buyer_national_id = ''.join(filter(str.isdigit, str(self.buyer_national_id)))
+            
+        # پاکسازی شماره تلفن
+        if self.buyer_mobile:
+            self.buyer_mobile = ''.join(filter(str.isdigit, str(self.buyer_mobile)))
+            
+        # بررسی وزن خرید
+        if self.purchase_weight and self.purchase_weight <= 0:
+            raise ValidationError('وزن خرید باید بیشتر از صفر باشد')
+            
+        # بررسی مبلغ پرداختی
+        if self.paid_amount and self.paid_amount < 0:
+            raise ValidationError('مبلغ پرداختی نمی‌تواند منفی باشد')
+    
     def save(self, *args, **kwargs):
+        """ذخیره با پاکسازی خودکار داده‌ها"""
+        self.clean()
         super().save(*args, **kwargs)
         
         # به‌روزرسانی محاسبات فروش والد
         if self.marketplace_sale:
             self.marketplace_sale.calculate_weights()
-
 
 class MarketplacePurchaseDetail(models.Model):
     """جزئیات فروش بازارگاه (رکورد کامل هر خرید)"""
@@ -399,7 +433,6 @@ class MarketplacePurchaseDetail(models.Model):
     
     def __str__(self):
         return f'جزئیات {self.purchase.purchase_id}'
-
 
 class DeliveryAddress(models.Model):
     """آدرس تحویل (از فایل اکسل)"""
@@ -440,11 +473,17 @@ class DeliveryAddress(models.Model):
     address_registration_date = jDateField(verbose_name='تاریخ ثبت آدرس')
     assignment_id = models.CharField(max_length=100, unique=True, verbose_name='شناسه تخصیص')
     buyer_name = models.CharField(max_length=200, verbose_name='نام خریدار')
-    buyer_national_id = models.CharField(max_length=10, verbose_name='شناسه ملی خریدار')
-    buyer_postal_code = models.CharField(max_length=10, verbose_name='کدپستی خریدار')
+    
+    # فیلدهای افزایش طول داده شده - FIX برای خطای character varying(10)
+    buyer_national_id = models.CharField(max_length=20, blank=True, verbose_name='شناسه ملی خریدار')
+    buyer_postal_code = models.CharField(max_length=20, blank=True, verbose_name='کدپستی خریدار')
+    
     buyer_address = models.TextField(verbose_name='آدرس خریدار')
     deposit_id = models.CharField(max_length=100, blank=True, verbose_name='شناسه واریز')
-    buyer_mobile = models.CharField(max_length=15, verbose_name='شماره همراه خریدار')
+    
+    # فیلدهای تلفن با طول افزایش یافته
+    buyer_mobile = models.CharField(max_length=20, verbose_name='شماره همراه خریدار')
+    
     buyer_unique_id = models.CharField(max_length=100, verbose_name='شناسه یکتا خریدار')
     buyer_user_type = models.CharField(max_length=20, choices=USER_TYPES, verbose_name='نوع کاربری خریدار')
     
@@ -457,11 +496,12 @@ class DeliveryAddress(models.Model):
     vehicle_double = models.BooleanField(default=False, verbose_name='جفت')
     vehicle_trailer = models.BooleanField(default=False, verbose_name='تریلی')
     
-    # آدرس تحویل
+    # آدرس تحویل با فیلدهای طول افزایش یافته
     delivery_address = models.TextField(verbose_name='آدرس تحویل')
-    delivery_postal_code = models.CharField(max_length=10, verbose_name='کد پستی تحویل')
-    coordination_phone = models.CharField(max_length=15, verbose_name='شماره هماهنگی تحویل')
-    delivery_national_id = models.CharField(max_length=10, verbose_name='کد ملی تحویل')
+    delivery_postal_code = models.CharField(max_length=20, blank=True, verbose_name='کد پستی تحویل')
+    coordination_phone = models.CharField(max_length=20, verbose_name='شماره هماهنگی تحویل')
+    delivery_national_id = models.CharField(max_length=20, blank=True, verbose_name='کد ملی تحویل')
+    
     order_weight = models.DecimalField(max_digits=10, decimal_places=2, verbose_name='وزن سفارش')
     
     # بازه‌های پرداخت توافقی (اختیاری)
@@ -484,6 +524,14 @@ class DeliveryAddress(models.Model):
         verbose_name_plural = 'آدرس‌های تحویل'
         db_table = 'marketplace_delivery_addresses'
         ordering = ['-address_registration_date', '-created_at']
+        
+        # اضافه کردن indexes برای بهبود performance
+        indexes = [
+            models.Index(fields=['assignment_id'], name='idx_assignment_id'),
+            models.Index(fields=['recipient_unique_id'], name='idx_recipient_unique'),
+            models.Index(fields=['buyer_national_id'], name='idx_buyer_national'),
+            models.Index(fields=['province', 'city'], name='idx_location'),
+        ]
     
     def __str__(self):
         return f'آدرس {self.assignment_id} - {self.recipient_name}'
@@ -499,3 +547,34 @@ class DeliveryAddress(models.Model):
         if self.vehicle_trailer:
             types.append('تریلی')
         return ', '.join(types) if types else '-'
+    
+    def clean(self):
+        """اعتبارسنجی داده‌ها"""
+        from django.core.exceptions import ValidationError
+        
+        # بررسی کد ملی در صورت وجود
+        if self.buyer_national_id and len(self.buyer_national_id) > 0:
+            # حذف کاراکترهای غیرعددی
+            self.buyer_national_id = ''.join(filter(str.isdigit, str(self.buyer_national_id)))
+            
+        if self.delivery_national_id and len(self.delivery_national_id) > 0:
+            self.delivery_national_id = ''.join(filter(str.isdigit, str(self.delivery_national_id)))
+            
+        # بررسی کد پستی در صورت وجود
+        if self.buyer_postal_code and len(self.buyer_postal_code) > 0:
+            self.buyer_postal_code = ''.join(filter(str.isdigit, str(self.buyer_postal_code)))
+            
+        if self.delivery_postal_code and len(self.delivery_postal_code) > 0:
+            self.delivery_postal_code = ''.join(filter(str.isdigit, str(self.delivery_postal_code)))
+            
+        # بررسی شماره تلفن
+        if self.buyer_mobile:
+            self.buyer_mobile = ''.join(filter(str.isdigit, str(self.buyer_mobile)))
+            
+        if self.coordination_phone:
+            self.coordination_phone = ''.join(filter(str.isdigit, str(self.coordination_phone)))
+    
+    def save(self, *args, **kwargs):
+        """ذخیره با پاکسازی خودکار داده‌ها"""
+        self.clean()
+        super().save(*args, **kwargs)
