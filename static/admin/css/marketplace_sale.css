@@ -1,0 +1,73 @@
+/* استایل‌های ساده برای فروش بازارگاه */
+
+/* فیلدهای عددی */
+input[name*="purchase_weight"],
+input[name*="paid_amount"],
+.field-purchase_weight input,
+.field-paid_amount input {
+    text-align: left !important;
+    direction: ltr !important;
+    font-family: 'Courier New', monospace;
+    background-color: #f8f9fa;
+    border: 1px solid #ced4da;
+    padding: 6px 10px;
+    border-radius: 4px;
+}
+
+/* نمایش بهتر وزن‌ها */
+.weight-display {
+    font-family: 'Courier New', monospace;
+    font-weight: bold;
+    direction: ltr;
+    display: inline-block;
+}
+
+.weight-sold {
+    color: #28a745;
+}
+
+.weight-remaining {
+    color: #dc3545;
+}
+
+.weight-total {
+    color: #007bff;
+}
+
+/* فیلدهای readonly */
+.readonly-field {
+    background-color: #e9ecef;
+    padding: 8px 12px;
+    border-radius: 4px;
+    color: #495057;
+    font-weight: bold;
+}
+
+/* جدول خریدها */
+.purchases-table th {
+    background-color: #f8f9fa;
+    text-align: center;
+    font-weight: bold;
+}
+
+.purchases-table td {
+    text-align: center;
+    vertical-align: middle;
+}
+
+/* نوع خرید */
+.purchase-type-cash {
+    background-color: #d4edda;
+    color: #155724;
+    padding: 3px 6px;
+    border-radius: 3px;
+    font-size: 11px;
+}
+
+.purchase-type-agreement {
+    background-color: #fff3cd;
+    color: #856404;
+    padding: 3px 6px;
+    border-radius: 3px;
+    font-size: 11px;
+}
