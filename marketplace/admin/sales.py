@@ -1,0 +1,270 @@
+# marketplace/admin/sales.py
+from django.contrib import admin
+from django.utils.html import format_html
+from ..models import MarketplaceSale, MarketplacePurchase, MarketplacePurchaseDetail, DeliveryAddress, ProductOffer
+from .base import BaseMarketplaceAdmin, ExcelOperationsMixin, format_number
+
+
+class MarketplacePurchaseInline(admin.TabularInline):
+    """Inline برای خریدهای بازارگاه"""
+    model = MarketplacePurchase
+    extra = 1
+    fields = [
+        'purchase_id', 'purchase_weight', 'purchase_date', 
+        'buyer_name', 'buyer_mobile', 'buyer_national_id',
+        'paid_amount', 'purchase_type'
+    ]
+
+
+@admin.register(MarketplaceSale)
+class MarketplaceSaleAdmin(BaseMarketplaceAdmin, ExcelOperationsMixin):
+    """Admin برای فروش بازارگاه"""
+    
+    list_display = [
+        'get_offer_id', 'get_cottage_number', 'product_title',
+        'get_offer_unit_price', 'get_total_offer_weight',
+        'get_sold_weight_before_transport', 'get_remaining_weight_before_transport',
+        'offer_status', 'created_at'
+    ]
+    
+    list_filter = [
+        'offer_status', 'created_at', 
+        'product_offer__marketplace_product__marketplace_category'
+    ]
+    
+    search_fields = [
+        'cottage_number', 'product_title', 
+        'product_offer__offer_id', 'product_offer__cottage_number'
+    ]
+    
+    readonly_fields = [
+        'cottage_number', 'product_title', 'offer_unit_price', 'total_offer_weight',
+        'sold_weight_before_transport', 'remaining_weight_before_transport',
+        'sold_weight_after_transport', 'remaining_weight_after_transport',
+        'offer_status', 'entry_customs', 'excel_operations'
+    ]
+    
+    inlines = [MarketplacePurchaseInline]
+    
+    fieldsets = (
+        ('اطلاعات عرضه', {
+            'fields': (
+                'product_offer', 'cottage_number', 'product_title', 
+                'offer_unit_price', 'total_offer_weight', 'offer_status'
+            )
+        }),
+        ('محاسبات وزن', {
+            'fields': (
+                'sold_weight_before_transport', 'remaining_weight_before_transport',
+                'sold_weight_after_transport', 'remaining_weight_after_transport'
+            ),
+            'classes': ('collapse',)
+        }),
+        ('اطلاعات تکمیلی', {
+            'fields': ('entry_customs',),
+            'classes': ('collapse',)
+        }),
+        ('عملیات اکسل', {
+            'fields': ('excel_operations',),
+            'classes': ('collapse',)
+        }),
+    )
+    
+    def get_offer_id(self, obj):
+        return obj.product_offer.offer_id if obj.product_offer else '-'
+    get_offer_id.short_description = 'شناسه عرضه'
+    
+    def get_cottage_number(self, obj):
+        if obj.cottage_number:
+            return format_html(
+                '<span style="color: #0066cc; font-weight: bold;">{}</span>',
+                obj.cottage_number
+            )
+        return '-'
+    get_cottage_number.short_description = 'شماره کوتاژ'
+    
+    def get_offer_unit_price(self, obj):
+        return self.format_currency(obj.offer_unit_price)
+    get_offer_unit_price.short_description = 'فی عرضه'
+    
+    def get_total_offer_weight(self, obj):
+        return self.format_weight(obj.total_offer_weight)
+    get_total_offer_weight.short_description = 'وزن کل عرضه'
+    
+    def get_sold_weight_before_transport(self, obj):
+        return format_html(
+            '<span style="direction: ltr; color: green; font-weight: bold;">{}</span> تن',
+            format_number(obj.sold_weight_before_transport)
+        )
+    get_sold_weight_before_transport.short_description = 'وزن فروش رفته'
+    
+    def get_remaining_weight_before_transport(self, obj):
+        color = 'red' if obj.remaining_weight_before_transport <= 0 else 'orange'
+        return format_html(
+            '<span style="direction: ltr; color: {}; font-weight: bold;">{}</span> تن',
+            color, format_number(obj.remaining_weight_before_transport)
+        )
+    get_remaining_weight_before_transport.short_description = 'وزن باقیمانده'
+    
+    def excel_operations(self, obj):
+        """عملیات اکسل برای import/export خریدها"""
+        if obj.pk:
+            try:
+                from django.urls import reverse
+                download_url = reverse('marketplace:download_purchases_excel', args=[obj.pk])
+                upload_url = reverse('marketplace:upload_purchases_excel', args=[obj.pk])
+                template_url = reverse('marketplace:download_purchases_template')
+                
+                return format_html(
+                    '<div style="display: flex; gap: 8px; margin-bottom: 10px;">'
+                    '<a href="{}" class="button" style="background-color:#28a745; color:white; padding:8px 12px; text-decoration:none; border-radius:4px;">📥 دانلود خریدها</a>'
+                    '<a href="{}" class="button" style="background-color:#17a2b8; color:white; padding:8px 12px; text-decoration:none; border-radius:4px;">📋 نمونه اکسل</a>'
+                    '<a href="{}" class="button" style="background-color:#007bff; color:white; padding:8px 12px; text-decoration:none; border-radius:4px;" target="_blank">📤 آپلود خریدها</a>'
+                    '</div>',
+                    download_url, template_url, upload_url
+                )
+            except Exception as e:
+                return f"خطا: {str(e)}"
+        return "ابتدا فروش را ذخیره کنید"
+    excel_operations.short_description = 'عملیات اکسل'
+    
+    def formfield_for_foreignkey(self, db_field, request, **kwargs):
+        if db_field.name == "product_offer":
+            # فقط عرضه‌های فعال نمایش داده شوند
+            kwargs["queryset"] = ProductOffer.objects.filter(
+                status__in=['active', 'sold']
+            ).select_related('marketplace_product', 'warehouse_receipt')
+        return super().formfield_for_foreignkey(db_field, request, **kwargs)
+    
+    class Media:
+        js = ('admin/js/marketplace_simple.js',)
+        css = {
+            'all': ('admin/css/marketplace_sale.css',)
+        }
+
+
+class DeliveryAddressInline(admin.TabularInline):
+    """Inline برای آدرس‌های تحویل"""
+    model = DeliveryAddress
+    extra = 0  # فقط از طریق اکسل اضافه میشن
+    fields = [
+        'assignment_id', 'recipient_name', 'province', 'city',
+        'order_weight', 'buyer_name', 'coordination_phone'
+    ]
+    readonly_fields = ['assignment_id', 'recipient_name', 'province', 'city', 'order_weight']
+
+
+@admin.register(MarketplacePurchaseDetail)
+class MarketplacePurchaseDetailAdmin(BaseMarketplaceAdmin, ExcelOperationsMixin):
+    """Admin برای جزئیات خرید بازارگاه"""
+    
+    list_display = [
+        'get_purchase_id', 'get_buyer_name', 'get_purchase_weight', 
+        'get_purchase_date', 'get_purchase_type', 'get_delivery_addresses_count'
+    ]
+    
+    list_filter = [
+        'purchase__purchase_type', 'purchase__purchase_date', 'created_at'
+    ]
+    
+    search_fields = [
+        'purchase__purchase_id', 'purchase__buyer_name', 
+        'purchase__buyer_national_id', 'purchase__buyer_mobile'
+    ]
+    
+    readonly_fields = [
+        'get_purchase_info', 'get_delivery_count', 'delivery_excel_operations'
+    ]
+    
+    inlines = [DeliveryAddressInline]
+    
+    fieldsets = (
+        ('اطلاعات خرید', {
+            'fields': ('purchase', 'get_purchase_info')
+        }),
+        ('جزئیات اضافی', {
+            'fields': ('agreement_description',)
+        }),
+        ('آدرس‌های تحویل', {
+            'fields': ('get_delivery_count', 'delivery_excel_operations'),
+            'classes': ('collapse',)
+        }),
+    )
+    
+    def get_purchase_id(self, obj):
+        return obj.purchase.purchase_id
+    get_purchase_id.short_description = 'شناسه خرید'
+    
+    def get_buyer_name(self, obj):
+        return obj.purchase.buyer_name
+    get_buyer_name.short_description = 'نام خریدار'
+    
+    def get_purchase_weight(self, obj):
+        return self.format_weight(obj.purchase.purchase_weight)
+    get_purchase_weight.short_description = 'وزن خرید'
+    
+    def get_purchase_date(self, obj):
+        return obj.purchase.purchase_date
+    get_purchase_date.short_description = 'تاریخ خرید'
+    
+    def get_purchase_type(self, obj):
+        return obj.purchase.get_purchase_type_display()
+    get_purchase_type.short_description = 'نوع خرید'
+    
+    def get_delivery_addresses_count(self, obj):
+        count = obj.delivery_addresses.count()
+        color = 'green' if count > 0 else 'red'
+        return format_html(
+            '<span style="color: {}; font-weight: bold;">{} آدرس</span>',
+            color, count
+        )
+    get_delivery_addresses_count.short_description = 'تعداد آدرس‌ها'
+    
+    def get_purchase_info(self, obj):
+        """نمایش اطلاعات کامل خرید"""
+        purchase = obj.purchase
+        return format_html(
+            '<div style="background: #f8f9fa; padding: 10px; border-radius: 5px;">'
+            '<strong>شناسه:</strong> {}<br>'
+            '<strong>خریدار:</strong> {}<br>'
+            '<strong>وزن:</strong> {} تن<br>'
+            '<strong>مبلغ:</strong> {} ریال<br>'
+            '<strong>تاریخ:</strong> {}<br>'
+            '<strong>نوع:</strong> {}'
+            '</div>',
+            purchase.purchase_id,
+            purchase.buyer_name,
+            format_number(purchase.purchase_weight),
+            format_number(purchase.paid_amount),
+            purchase.purchase_date,
+            purchase.get_purchase_type_display()
+        )
+    get_purchase_info.short_description = 'اطلاعات خرید'
+    
+    def get_delivery_count(self, obj):
+        count = obj.delivery_addresses.count()
+        return format_html(
+            '<span style="font-size: 16px; font-weight: bold; color: {};">{} آدرس تحویل</span>',
+            'green' if count > 0 else 'red', count
+        )
+    get_delivery_count.short_description = 'تعداد آدرس‌ها'
+    
+    def delivery_excel_operations(self, obj):
+        """عملیات اکسل برای آدرس‌های تحویل"""
+        if obj.pk:
+            try:
+                from django.urls import reverse
+                upload_url = reverse('marketplace:upload_delivery_addresses', args=[obj.pk])
+                template_url = reverse('marketplace:download_delivery_template')
+                
+                return format_html(
+                    '<div style="display: flex; gap: 8px; margin-bottom: 10px;">'
+                    '<a href="{}" class="button" style="background-color:#17a2b8; color:white; padding:8px 12px; text-decoration:none; border-radius:4px;">📋 نمونه اکسل</a>'
+                    '<a href="{}" class="button" style="background-color:#007bff; color:white; padding:8px 12px; text-decoration:none; border-radius:4px;" target="_blank">📤 آپلود آدرس‌ها</a>'
+                    '</div>',
+                    template_url, upload_url
+                )
+            except Exception as e:
+                return f"خطا: {str(e)}"
+        return "ابتدا جزئیات خرید را ذخیره کنید"
+    delivery_excel_operations.short_description = 'عملیات اکسل آدرس‌ها'
