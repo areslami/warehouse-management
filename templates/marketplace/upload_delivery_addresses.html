@@ -35,7 +35,16 @@
         <div class="row justify-content-center">
             <div class="col-lg-10">
                 <div class="card shadow">
-                    
+                    <div class="card-header bg-info text-white">
+                        <h3 class="mb-0">
+                            <i class="fas fa-map-marked-alt"></i> آپلود آدرس‌های تحویل
+                        </h3>
+                        <small>
+                            شناسه خرید: {{ purchase_detail.purchase.purchase_id }} | 
+                            خریدار: {{ purchase_detail.purchase.buyer_name }} |
+                            وزن: {{ purchase_detail.purchase.purchase_weight }} Kg
+                        </small>
+                    </div>
                     <div class="card-body">
                         <!-- نمایش پیام‌ها -->
                         {% if messages %}
@@ -55,7 +64,7 @@
                                         <h6><i class="fas fa-shopping-cart text-primary"></i> اطلاعات خرید</h6>
                                         <ul class="list-unstyled mb-0">
                                             <li><strong>شناسه:</strong> {{ purchase_detail.purchase.purchase_id }}</li>
-                                            <li><strong>وزن:</strong> {{ purchase_detail.purchase.purchase_weight }} تن</li>
+                                            <li><strong>وزن:</strong> {{ purchase_detail.purchase.purchase_weight }} Kg</li>
                                             <li><strong>نوع:</strong> {{ purchase_detail.purchase.get_purchase_type_display }}</li>
                                         </ul>
                                     </div>
@@ -169,9 +178,9 @@
                                             <tr>
                                                 <td><code>{{ address.assignment_id }}</code></td>
                                                 <td>{{ address.recipient_name }}</td>
-                                                <td>{{ address.vehicle_type_display }}</td>
+                                                <td>{{ address.vehicle_type_display|default:"-" }}</td>
                                                 <td>{{ address.city }}</td>
-                                                <td>{{ address.order_weight }} تن</td>
+                                                <td>{{ address.order_weight }} Kg</td>
                                             </tr>
                                             {% endfor %}
                                             {% if purchase_detail.delivery_addresses.count > 5 %}
@@ -240,13 +249,4 @@
         }
     </script>
 </body>
-</html><div class="card-header bg-info text-white">
-                        <h3 class="mb-0">
-                            <i class="fas fa-map-marked-alt"></i> آپلود آدرس‌های تحویل
-                        </h3>
-                        <small>
-                            شناسه خرید: {{ purchase_detail.purchase.purchase_id }} | 
-                            خریدار: {{ purchase_detail.purchase.buyer_name }} |
-                            وزن: {{ purchase_detail.purchase.purchase_weight }} تن
-                        </small>
-                    </div>
+</html>

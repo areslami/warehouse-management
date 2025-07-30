@@ -1,0 +1,378 @@
+{% extends "admin/base_site.html" %}
+{% load i18n admin_urls static admin_modify %}
+
+{% block title %}مدیریت آدرس‌های تحویل | {{ site_title|default:_('Django site admin') }}{% endblock %}
+
+{% block extrahead %}{{ block.super }}
+<script src="{% static 'admin/js/vendor/jquery/jquery.js' %}"></script>
+<script>
+// اطمینان از بارگذاری jQuery
+if (typeof jQuery === 'undefined') {
+    console.error('jQuery is not loaded!');
+}
+</script>
+<style>
+    .address-card {
+        border: 1px solid #ddd;
+        border-radius: 8px;
+        padding: 15px;
+        margin-bottom: 15px;
+        background: #fff;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    .address-card.selected {
+        border-color: #007bff;
+        background-color: #f8f9ff;
+    }
+    .status-badge {
+        padding: 4px 8px;
+        border-radius: 4px;
+        color: white;
+        font-size: 12px;
+        font-weight: bold;
+    }
+    .status-pending { background-color: #ffc107; color: #000; }
+    .status-sent_to_delivery { background-color: #17a2b8; }
+    .status-delivery_created { background-color: #28a745; }
+    .status-completed { background-color: #6c757d; }
+    
+    .filters {
+        background: #f8f9fa;
+        padding: 20px;
+        border-radius: 8px;
+        margin-bottom: 20px;
+    }
+    .stats {
+        display: flex;
+        gap: 20px;
+        margin-bottom: 20px;
+    }
+    .stat-card {
+        flex: 1;
+        background: white;
+        padding: 15px;
+        border-radius: 8px;
+        text-align: center;
+        border: 1px solid #ddd;
+    }
+    .stat-number {
+        font-size: 24px;
+        font-weight: bold;
+        color: #007bff;
+    }
+    .bulk-actions {
+        background: #fff3cd;
+        border: 1px solid #ffeeba;
+        padding: 15px;
+        border-radius: 8px;
+        margin-bottom: 20px;
+        display: none;
+    }
+    .bulk-actions.show {
+        display: block;
+    }
+    .vehicle-types {
+        display: flex;
+        gap: 5px;
+    }
+    .vehicle-type {
+        padding: 2px 6px;
+        background: #e9ecef;
+        border-radius: 3px;
+        font-size: 11px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div id="content-main">
+    <h1>مدیریت آدرس‌های تحویل</h1>
+    
+    <!-- آمار -->
+    <div class="stats">
+        <div class="stat-card">
+            <div class="stat-number">{{ stats.total }}</div>
+            <div>کل آدرس‌ها</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-number">{{ stats.pending }}</div>
+            <div>در انتظار</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-number">{{ stats.sent_to_delivery }}</div>
+            <div>ارسال شده</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-number">{{ stats.delivery_created }}</div>
+            <div>حواله ایجاد شده</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-number">{{ stats.completed }}</div>
+            <div>تکمیل شده</div>
+        </div>
+    </div>
+    
+    <!-- فیلترها -->
+    <div class="filters">
+        <form method="get" class="form-inline">
+            <div class="form-row">
+                <div class="form-group col-md-3">
+                    <label for="status">وضعیت:</label>
+                    <select name="status" id="status" class="form-control">
+                        <option value="">همه</option>
+                        {% for value, label in status_choices %}
+                            <option value="{{ value }}" {% if status_filter == value %}selected{% endif %}>{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="form-group col-md-3">
+                    <label for="search">جستجو:</label>
+                    <input type="text" name="search" id="search" class="form-control" 
+                           value="{{ search_query }}" placeholder="شناسه، نام، استان...">
+                </div>
+                <div class="form-group col-md-3">
+                    <label for="purchase_detail">خرید:</label>
+                    <select name="purchase_detail" id="purchase_detail" class="form-control">
+                        <option value="">همه خریدها</option>
+                        {% for pd in purchase_details %}
+                            <option value="{{ pd.id }}" {% if purchase_detail_id == pd.id|stringformat:"s" %}selected{% endif %}>
+                                {{ pd.purchase.purchase_id }} - {{ pd.purchase.buyer_name }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="form-group col-md-3">
+                    <label>&nbsp;</label>
+                    <div>
+                        <button type="submit" class="btn btn-primary">فیلتر</button>
+                        <a href="{% url 'marketplace:address_list' %}" class="btn btn-secondary">پاک کردن</a>
+                    </div>
+                </div>
+            </div>
+        </form>
+    </div>
+    
+    <!-- عملیات گروهی -->
+    <div class="bulk-actions" id="bulkActions">
+        <div class="d-flex justify-content-between align-items-center">
+            <span id="selectedCount">0 آدرس انتخاب شده</span>
+            <div>
+                <button type="button" class="btn btn-success" onclick="bulkSendToDelivery()">
+                    📤 ارسال برای ایجاد حواله
+                </button>
+                <button type="button" class="btn btn-secondary" onclick="clearSelection()">
+                    انصراف
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- لیست آدرس‌ها -->
+    <form id="addressForm" onsubmit="return false;">
+        {% csrf_token %}
+        {% for address in page_obj %}
+        <div class="address-card" data-address-id="{{ address.id }}">
+            <div class="row">
+                <div class="col-md-1">
+                    {% if address.status == 'pending' %}
+                    <input type="checkbox" class="address-checkbox" name="address_ids[]" value="{{ address.id }}">
+                    {% endif %}
+                </div>
+                <div class="col-md-11">
+                    <div class="row">
+                        <div class="col-md-8">
+                            <h5>
+                                <strong>{{ address.assignment_id }}</strong>
+                                <span class="status-badge status-{{ address.status }}">
+                                    {{ address.get_status_display }}
+                                </span>
+                            </h5>
+                            
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <p><strong>گیرنده:</strong> {{ address.recipient_name|default:address.buyer_name }}</p>
+                                    <p><strong>مکان:</strong> {{ address.province }} - {{ address.city }}</p>
+                                    <p><strong>وزن سفارش:</strong> {{ address.order_weight }} Kg</p>
+                                    <p><strong>خرید:</strong> {{ address.purchase_detail.purchase.purchase_id }}</p>
+                                </div>
+                                <div class="col-md-6">
+                                    <p><strong>تلفن هماهنگی:</strong> {{ address.coordination_phone|default:"-" }}</p>
+                                    <p><strong>آدرس:</strong> {{ address.delivery_address|truncatechars:50 }}</p>
+                                    
+                                    <div class="vehicle-types">
+                                        {% if address.vehicle_single %}<span class="vehicle-type">تک</span>{% endif %}
+                                        {% if address.vehicle_double %}<span class="vehicle-type">جفت</span>{% endif %}
+                                        {% if address.vehicle_trailer %}<span class="vehicle-type">تریلی</span>{% endif %}
+                                    </div>
+                                    
+                                    {% if address.delivery_order_number %}
+                                        <p><strong>شماره حواله:</strong> 
+                                            <a href="/admin/warehouse/warehousedeliveryorder/?number={{ address.delivery_order_number }}" target="_blank">
+                                                {{ address.delivery_order_number }}
+                                            </a>
+                                        </p>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="text-right">
+                                <a href="{% url 'marketplace:address_detail' address.id %}" class="btn btn-info btn-sm">
+                                    📋 جزئیات
+                                </a>
+                                
+                                {% if address.status == 'pending' %}
+                                <form method="post" action="{% url 'marketplace:single_send_to_delivery' address.id %}" style="display:inline;">
+                                    {% csrf_token %}
+                                    <button type="submit" class="btn btn-success btn-sm" 
+                                            onclick="return confirm('آیا مطمئن هستید؟')">
+                                        📤 ارسال برای حواله
+                                    </button>
+                                </form>
+                                {% endif %}
+                            </div>
+                            
+                            <div class="mt-2">
+                                <small class="text-muted">
+                                    ایجاد: {{ address.created_at|date:"Y/m/d H:i" }}
+                                </small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% empty %}
+        <div class="alert alert-info">
+            آدرسی یافت نشد.
+        </div>
+        {% endfor %}
+    </form>
+    
+    <!-- صفحه‌بندی -->
+    {% if page_obj.has_other_pages %}
+    <nav aria-label="صفحه‌بندی">
+        <ul class="pagination justify-content-center">
+            {% if page_obj.has_previous %}
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if status_filter %}&status={{ status_filter }}{% endif %}{% if search_query %}&search={{ search_query }}{% endif %}">قبلی</a>
+                </li>
+            {% endif %}
+            
+            <li class="page-item active">
+                <span class="page-link">{{ page_obj.number }} از {{ page_obj.paginator.num_pages }}</span>
+            </li>
+            
+            {% if page_obj.has_next %}
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if status_filter %}&status={{ status_filter }}{% endif %}{% if search_query %}&search={{ search_query }}{% endif %}">بعدی</a>
+                </li>
+            {% endif %}
+        </ul>
+    </nav>
+    {% endif %}
+</div>
+
+<script>
+$(document).ready(function() {
+    // مدیریت انتخاب چکباکس‌ها
+    $('.address-checkbox').change(function() {
+        updateBulkActions();
+        updateCardSelection();
+    });
+    
+    // انتخاب همه
+    $('#selectAll').change(function() {
+        $('.address-checkbox').prop('checked', this.checked);
+        updateBulkActions();
+        updateCardSelection();
+    });
+});
+
+function updateBulkActions() {
+    const selected = $('.address-checkbox:checked').length;
+    $('#selectedCount').text(selected + ' آدرس انتخاب شده');
+    
+    if (selected > 0) {
+        $('#bulkActions').addClass('show');
+    } else {
+        $('#bulkActions').removeClass('show');
+    }
+}
+
+function updateCardSelection() {
+    $('.address-checkbox').each(function() {
+        const card = $(this).closest('.address-card');
+        if (this.checked) {
+            card.addClass('selected');
+        } else {
+            card.removeClass('selected');
+        }
+    });
+}
+
+function clearSelection() {
+    $('.address-checkbox').prop('checked', false);
+    updateBulkActions();
+    updateCardSelection();
+}
+
+function bulkSendToDelivery() {
+    console.log('bulkSendToDelivery called');
+    
+    const selectedIds = $('.address-checkbox:checked').map(function() {
+        return $(this).val();
+    }).get();
+    
+    console.log('Selected IDs:', selectedIds);
+    
+    if (selectedIds.length === 0) {
+        alert('لطفاً آدرس‌هایی را انتخاب کنید');
+        return;
+    }
+    
+    if (!confirm(`آیا مطمئن هستید که می‌خواهید ${selectedIds.length} آدرس را برای ایجاد حواله ارسال کنید؟`)) {
+        return;
+    }
+    
+    console.log('Proceeding with AJAX call');
+    
+    // نمایش loading
+    $('body').append('<div id="loading" style="position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);color:white;display:flex;align-items:center;justify-content:center;z-index:9999;"><div>در حال پردازش...</div></div>');
+    
+    // ایجاد داده‌ها برای ارسال
+    const postData = {
+        'csrfmiddlewaretoken': $('[name=csrfmiddlewaretoken]').val(),
+        'address_ids[]': selectedIds
+    };
+    
+    console.log('POST Data:', postData);
+    
+    $.ajax({
+        url: '{% url "marketplace:bulk_send_to_delivery" %}',
+        method: 'POST',
+        data: postData,
+        success: function(response) {
+            $('#loading').remove();
+            if (response.success) {
+                alert(response.message);
+                location.reload();
+            } else {
+                alert('خطا: ' + response.error);
+            }
+        },
+        error: function(xhr, status, error) {
+            $('#loading').remove();
+            console.log('AJAX Error:', error);
+            console.log('Response:', xhr.responseText);
+            try {
+                const response = JSON.parse(xhr.responseText);
+                alert('خطا: ' + response.error);
+            } catch (e) {
+                alert('خطا در ارسال درخواست: ' + error);
+            }
+        }
+    });
+}
+</script>
+{% endblock %}

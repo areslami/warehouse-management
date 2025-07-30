@@ -77,9 +77,11 @@ class Customer(models.Model):
     
     # فیلدهای مشترک
     economic_code = models.CharField(max_length=20, blank=True, verbose_name='کد اقتصادی')
-    phone = models.CharField(max_length=20, verbose_name='شماره تلفن')
-    address = models.TextField(verbose_name='آدرس')
+    phone = models.CharField(max_length=20, verbose_name='شماره تلفن', blank=True)
+    address = models.TextField(verbose_name='آدرس', blank=True)
     description = models.TextField(blank=True, verbose_name='توضیحات')
+    tags = models.CharField(max_length=200, blank=True, verbose_name='برچسب‌ها', 
+                           help_text='برچسب‌ها را با کاما جدا کنید')
     
     created_at = jDateTimeField(auto_now_add=True, verbose_name='تاریخ ایجاد')
     updated_at = jDateTimeField(auto_now=True, verbose_name='تاریخ ویرایش')

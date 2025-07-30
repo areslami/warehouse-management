@@ -1,15 +1,62 @@
 # marketplace/views/delivery_views.py
-from django.shortcuts import get_object_or_404, redirect
+from django.shortcuts import get_object_or_404, redirect, render
 from django.contrib.admin.views.decorators import staff_member_required
 from django.contrib import messages
 import openpyxl
 from decimal import Decimal
 from ..models import MarketplacePurchaseDetail, DeliveryAddress
-from .mixins import ExcelResponseMixin, PersianDateMixin, DataCleaningMixin
+from .mixins import ExcelResponseMixin, PersianDateMixin, DataCleaningMixin, HeaderBasedExcelMixin
 
 
-class DeliveryAddressProcessor(ExcelResponseMixin, PersianDateMixin, DataCleaningMixin):
+class DeliveryAddressProcessor(ExcelResponseMixin, PersianDateMixin, DataCleaningMixin, HeaderBasedExcelMixin):
     """Processor for delivery address Excel operations"""
+    
+    def get_field_mapping(self):
+        """Return mapping of field names to possible Excel header variations"""
+        return {
+            'code': ['کد', 'Code'],
+            'total_purchase_weight': ['وزن کل خرید', 'وزن کل', 'Total Weight'],
+            'purchase_date': ['تاریخ خرید', 'تاریخ', 'Date'],
+            'unit_price': ['قیمت هر واحد', 'قیمت', 'Price'],
+            'tracking_number': ['شماره پیگیری', 'پیگیری', 'Tracking'],
+            'province': ['استان', 'Province'],
+            'city': ['شهرستان', 'شهر', 'City'],
+            'paid_amount': ['مبلغ پرداختی', 'مبلغ', 'Amount'],
+            'buyer_account_number': ['شماره حساب خریدار', 'شماره حساب', 'Account'],
+            'cottage_code': ['کد کوتاژ', 'کوتاژ', 'Cottage'],
+            'product_title': ['عنوان کالا', 'کالا', 'Product'],
+            'description': ['توضیحات', 'شرح', 'Description'],
+            'payment_method': ['شیوه پرداخت', 'پرداخت', 'Payment'],
+            'offer_id': ['شناسه عرضه', 'عرضه', 'Offer'],
+            'address_registration_date': ['تاریخ ثبت آدرس', 'تاریخ ثبت'],
+            'assignment_id': ['شناسه تخصیص', 'تخصیص', 'Assignment'],
+            'buyer_name': ['نام خریدار', 'نام', 'Name'],
+            'buyer_national_id': ['شناسه ملی خریدار', 'کد ملی', 'National ID'],
+            'buyer_postal_code': ['کدپستی خریدار', 'کد پستی', 'Postal Code'],
+            'buyer_address': ['آدرس خریدار', 'آدرس', 'Address'],
+            'deposit_id': ['شناسه واریز', 'واریز', 'Deposit'],
+            'buyer_mobile': ['شماره همراه خریدار', 'موبایل', 'Mobile'],
+            'buyer_unique_id': ['شناسه یکتا خریدار', 'شناسه یکتا', 'Unique ID'],
+            'buyer_user_type': ['نوع کاربری خریدار', 'نوع کاربر', 'User Type'],
+            'recipient_name': ['نام تحویل گیرنده', 'تحویل گیرنده', 'Recipient'],
+            'recipient_unique_id': ['شناسه یکتای تحویل', 'شناسه تحویل'],
+            'vehicle_single': ['تک', 'Single'],
+            'vehicle_double': ['جفت', 'Double'],
+            'vehicle_trailer': ['تریلی', 'Trailer'],
+            'delivery_address': ['آدرس تحویل', 'آدرس'],
+            'delivery_postal_code': ['کد پستی تحویل', 'کد پستی'],
+            'coordination_phone': ['شماره هماهنگی تحویل', 'هماهنگی'],
+            'delivery_national_id': ['کد ملی تحویل', 'کد ملی'],
+            'order_weight': ['وزن سفارش', 'وزن', 'Weight'],
+            'payment_period_1_days': ['بازه 1 پرداخت توافقی (روز)', 'بازه 1'],
+            'payment_period_2_days': ['بازه 2 پرداخت توافقی (روز)', 'بازه 2'],
+            'payment_period_3_days': ['بازه 3 پرداخت توافقی (روز)', 'بازه 3'],
+            'payment_amount_1': ['مبلغ بازه 1 توافقی-ریال', 'مبلغ بازه 1'],
+            'payment_amount_2': ['مبلغ بازه 2 توافقی-ریال', 'مبلغ بازه 2'],
+            'payment_amount_3': ['مبلغ بازه 3 توافقی-ریال', 'مبلغ بازه 3'],
+            'shipped_weight': ['وزن بارنامه شده', 'بارنامه شده'],
+            'unshipped_weight': ['وزن بارنامه نشده', 'بارنامه نشده']
+        }
     
     def create_delivery_template(self):
         """Create Excel template for delivery addresses"""
@@ -62,6 +109,21 @@ class DeliveryAddressProcessor(ExcelResponseMixin, PersianDateMixin, DataCleanin
             workbook = openpyxl.load_workbook(file)
             sheet = workbook.active
             
+            # Get header mapping from first row
+            header_mapping = self.get_header_mapping(sheet)
+            field_mapping = self.get_field_mapping()
+            
+            # Validate required headers
+            required_headers = [
+                ['کد', 'Code'],
+                ['شناسه تخصیص', 'تخصیص'],
+                ['نام خریدار', 'نام']
+            ]
+            
+            missing_headers = self.validate_required_headers(header_mapping, required_headers)
+            if missing_headers:
+                return 0, [f'هدرهای الزامی موجود نیست: {", ".join(missing_headers)}'], 0
+            
             success_count = 0
             error_rows = []
             
@@ -74,61 +136,64 @@ class DeliveryAddressProcessor(ExcelResponseMixin, PersianDateMixin, DataCleanin
                     continue
                 
                 try:
+                    # Extract data using header-based mapping
+                    row_data = self.extract_row_data(row, header_mapping, field_mapping)
+                    
                     # Validate main fields
-                    code = str(row[0]).strip() if row[0] else ''
+                    code = str(row_data['code']).strip() if row_data['code'] else ''
                     if not code:
                         error_rows.append(f"ردیف {row_idx}: کد خالی است")
                         continue
                     
                     # Process fields with data cleaning
-                    total_purchase_weight = self._safe_decimal(row[1])
-                    purchase_date = self.persian_to_gregorian(str(row[2]).strip() if row[2] else '')
-                    unit_price = self._safe_decimal(row[3])
-                    tracking_number = str(row[4]).strip() if row[4] else ''
-                    province = str(row[5]).strip() if row[5] else ''
-                    city = str(row[6]).strip() if row[6] else ''
-                    paid_amount = self._safe_decimal(row[7])
-                    buyer_account_number = str(row[8]).strip() if row[8] else ''
-                    cottage_code = str(row[9]).strip() if row[9] else ''
-                    product_title = str(row[10]).strip() if row[10] else ''
-                    description = str(row[11]).strip() if row[11] else ''
-                    payment_method = str(row[12]).strip() if row[12] else ''
-                    offer_id = str(row[13]).strip() if row[13] else ''
-                    address_registration_date = self.persian_to_gregorian(str(row[14]).strip() if row[14] else '')
-                    assignment_id = str(row[15]).strip() if row[15] else ''
-                    buyer_name = str(row[16]).strip() if row[16] else ''
-                    buyer_national_id = self.clean_national_id(row[17])
-                    buyer_postal_code = self.clean_postal_code(row[18])
-                    buyer_address = str(row[19]).strip() if row[19] else ''
-                    deposit_id = str(row[20]).strip() if row[20] else ''
-                    buyer_mobile = self.clean_phone_number(row[21])
-                    buyer_unique_id = str(row[22]).strip() if row[22] else ''
-                    buyer_user_type = self._map_user_type(str(row[23]).strip() if row[23] else '')
-                    recipient_name = str(row[24]).strip() if row[24] else ''
-                    recipient_unique_id = str(row[25]).strip() if row[25] else ''
+                    total_purchase_weight = self._safe_decimal(row_data['total_purchase_weight'])
+                    purchase_date = self.persian_to_gregorian(str(row_data['purchase_date']).strip() if row_data['purchase_date'] else '')
+                    unit_price = self._safe_decimal(row_data['unit_price'])
+                    tracking_number = str(row_data['tracking_number']).strip() if row_data['tracking_number'] else ''
+                    province = str(row_data['province']).strip() if row_data['province'] else ''
+                    city = str(row_data['city']).strip() if row_data['city'] else ''
+                    paid_amount = self._safe_decimal(row_data['paid_amount'])
+                    buyer_account_number = str(row_data['buyer_account_number']).strip() if row_data['buyer_account_number'] else ''
+                    cottage_code = str(row_data['cottage_code']).strip() if row_data['cottage_code'] else ''
+                    product_title = str(row_data['product_title']).strip() if row_data['product_title'] else ''
+                    description = str(row_data['description']).strip() if row_data['description'] else ''
+                    payment_method = str(row_data['payment_method']).strip() if row_data['payment_method'] else ''
+                    offer_id = str(row_data['offer_id']).strip() if row_data['offer_id'] else ''
+                    address_registration_date = self.persian_to_gregorian(str(row_data['address_registration_date']).strip() if row_data['address_registration_date'] else '')
+                    assignment_id = str(row_data['assignment_id']).strip() if row_data['assignment_id'] else ''
+                    buyer_name = str(row_data['buyer_name']).strip() if row_data['buyer_name'] else ''
+                    buyer_national_id = self.clean_national_id(row_data['buyer_national_id'])
+                    buyer_postal_code = self.clean_postal_code(row_data['buyer_postal_code'])
+                    buyer_address = str(row_data['buyer_address']).strip() if row_data['buyer_address'] else ''
+                    deposit_id = str(row_data['deposit_id']).strip() if row_data['deposit_id'] else ''
+                    buyer_mobile = self.clean_phone_number(row_data['buyer_mobile'])
+                    buyer_unique_id = str(row_data['buyer_unique_id']).strip() if row_data['buyer_unique_id'] else ''
+                    buyer_user_type = self._map_user_type(str(row_data['buyer_user_type']).strip() if row_data['buyer_user_type'] else '')
+                    recipient_name = str(row_data['recipient_name']).strip() if row_data['recipient_name'] else ''
+                    recipient_unique_id = str(row_data['recipient_unique_id']).strip() if row_data['recipient_unique_id'] else ''
                     
                     # Vehicle types
-                    vehicle_single = self._safe_boolean(row[26])
-                    vehicle_double = self._safe_boolean(row[27])
-                    vehicle_trailer = self._safe_boolean(row[28])
+                    vehicle_single = self._safe_boolean(row_data['vehicle_single'])
+                    vehicle_double = self._safe_boolean(row_data['vehicle_double'])
+                    vehicle_trailer = self._safe_boolean(row_data['vehicle_trailer'])
                     
-                    delivery_address = str(row[29]).strip() if row[29] else ''
-                    delivery_postal_code = self.clean_postal_code(row[30])
-                    coordination_phone = self.clean_phone_number(row[31])
-                    delivery_national_id = self.clean_national_id(row[32])
-                    order_weight = self._safe_decimal(row[33])
+                    delivery_address = str(row_data['delivery_address']).strip() if row_data['delivery_address'] else ''
+                    delivery_postal_code = self.clean_postal_code(row_data['delivery_postal_code'])
+                    coordination_phone = self.clean_phone_number(row_data['coordination_phone'])
+                    delivery_national_id = self.clean_national_id(row_data['delivery_national_id'])
+                    order_weight = self._safe_decimal(row_data['order_weight'])
                     
                     # Payment periods (optional)
-                    payment_period_1_days = self._safe_integer(row[34])
-                    payment_period_2_days = self._safe_integer(row[35])
-                    payment_period_3_days = self._safe_integer(row[36])
-                    payment_amount_1 = self._safe_decimal(row[37])
-                    payment_amount_2 = self._safe_decimal(row[38])
-                    payment_amount_3 = self._safe_decimal(row[39])
+                    payment_period_1_days = self._safe_integer(row_data['payment_period_1_days'])
+                    payment_period_2_days = self._safe_integer(row_data['payment_period_2_days'])
+                    payment_period_3_days = self._safe_integer(row_data['payment_period_3_days'])
+                    payment_amount_1 = self._safe_decimal(row_data['payment_amount_1'])
+                    payment_amount_2 = self._safe_decimal(row_data['payment_amount_2'])
+                    payment_amount_3 = self._safe_decimal(row_data['payment_amount_3'])
                     
                     # Shipping weights
-                    shipped_weight = self._safe_decimal(row[40])
-                    unshipped_weight = self._safe_decimal(row[41])
+                    shipped_weight = self._safe_decimal(row_data['shipped_weight'])
+                    unshipped_weight = self._safe_decimal(row_data['unshipped_weight'])
                     
                     # Validate required fields
                     if not assignment_id:
@@ -269,8 +334,11 @@ def upload_delivery_addresses(request, purchase_detail_id):
         else:
             messages.warning(request, '⚠️ هیچ آدرسی ثبت نشد')
         
-        # Redirect back to admin
+        # Redirect back to admin after successful upload
         return redirect(f'/admin/marketplace/marketplacepurchasedetail/{purchase_detail_id}/change/')
     
-    # If not POST or no file, redirect back
-    return redirect(f'/admin/marketplace/marketplacepurchasedetail/{purchase_detail_id}/change/')
+    # Show upload form for GET requests
+    return render(request, 'marketplace/upload_delivery_addresses.html', {
+        'purchase_detail': purchase_detail,
+        'title': 'آپلود آدرس‌های تحویل'
+    })

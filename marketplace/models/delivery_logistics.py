@@ -19,6 +19,13 @@ class DeliveryAddress(TimestampMixin, models.Model):
         ('company', 'حقوقی'),
     ]
     
+    STATUS_CHOICES = [
+        ('pending', 'در انتظار'),
+        ('sent_to_delivery', 'ارسال شده برای حواله'),
+        ('delivery_created', 'حواله ایجاد شده'),
+        ('completed', 'تکمیل شده'),
+    ]
+    
     purchase_detail = models.ForeignKey(
         MarketplacePurchaseDetail,
         related_name='delivery_addresses',
@@ -86,6 +93,22 @@ class DeliveryAddress(TimestampMixin, models.Model):
     # وزن‌های بارنامه
     shipped_weight = models.DecimalField(max_digits=10, decimal_places=2, default=0, verbose_name='وزن بارنامه شده')
     unshipped_weight = models.DecimalField(max_digits=10, decimal_places=2, default=0, verbose_name='وزن بارنامه نشده')
+    
+    # وضعیت آدرس
+    status = models.CharField(
+        max_length=20, 
+        choices=STATUS_CHOICES, 
+        default='pending',
+        verbose_name='وضعیت'
+    )
+    
+    # ارجاع به حواله خروج انبار (در صورت ایجاد)
+    delivery_order_number = models.CharField(
+        max_length=50, 
+        blank=True, 
+        null=True,
+        verbose_name='شماره حواله خروج'
+    )
     
     class Meta:
         verbose_name = 'آدرس تحویل'

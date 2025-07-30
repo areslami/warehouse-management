@@ -10,9 +10,9 @@ class MarketplacePurchaseInline(admin.TabularInline):
     model = MarketplacePurchase
     extra = 1
     fields = [
-        'purchase_id', 'purchase_weight', 'purchase_date', 
-        'buyer_name', 'buyer_mobile', 'buyer_national_id',
-        'paid_amount', 'purchase_type'
+        'purchase_id', 'cottage_number', 'description', 'purchase_weight', 'province',
+        'purchase_date', 'paid_amount', 'unit_price', 'tracking_number',
+        'product_title', 'buyer_national_id', 'buyer_mobile', 'buyer_name', 'purchase_type'
     ]
 
 
@@ -127,6 +127,12 @@ class MarketplaceSaleAdmin(BaseMarketplaceAdmin, ExcelOperationsMixin):
                 return f"خطا: {str(e)}"
         return "ابتدا فروش را ذخیره کنید"
     excel_operations.short_description = 'عملیات اکسل'
+    
+    def add_view(self, request, form_url='', extra_context=None):
+        """Redirect to custom form for creating sales with Excel upload"""
+        from django.urls import reverse
+        from django.shortcuts import redirect
+        return redirect(reverse('marketplace:create_sale_with_excel'))
     
     def formfield_for_foreignkey(self, db_field, request, **kwargs):
         if db_field.name == "product_offer":
@@ -256,13 +262,21 @@ class MarketplacePurchaseDetailAdmin(BaseMarketplaceAdmin, ExcelOperationsMixin)
                 from django.urls import reverse
                 upload_url = reverse('marketplace:upload_delivery_addresses', args=[obj.pk])
                 template_url = reverse('marketplace:download_delivery_template')
+                address_list_url = reverse('marketplace:address_list') + f'?purchase_detail={obj.pk}'
+                
+                address_count = obj.delivery_addresses.count()
                 
                 return format_html(
-                    '<div style="display: flex; gap: 8px; margin-bottom: 10px;">'
+                    '<div style="display: flex; flex-direction: column; gap: 8px;">'
+                    '<div style="display: flex; gap: 8px;">'
                     '<a href="{}" class="button" style="background-color:#17a2b8; color:white; padding:8px 12px; text-decoration:none; border-radius:4px;">📋 نمونه اکسل</a>'
-                    '<a href="{}" class="button" style="background-color:#007bff; color:white; padding:8px 12px; text-decoration:none; border-radius:4px;" target="_blank">📤 آپلود آدرس‌ها</a>'
+                    '<a href="{}" class="button" style="background-color:#007bff; color:white; padding:8px 12px; text-decoration:none; border-radius:4px;">📤 آپلود آدرس‌ها</a>'
+                    '</div>'
+                    '<div style="display: flex; gap: 8px;">'
+                    '<a href="{}" class="button" style="background-color:#28a745; color:white; padding:8px 12px; text-decoration:none; border-radius:4px;">🗺️ مدیریت آدرس‌ها ({} آدرس)</a>'
+                    '</div>'
                     '</div>',
-                    template_url, upload_url
+                    template_url, upload_url, address_list_url, address_count
                 )
             except Exception as e:
                 return f"خطا: {str(e)}"

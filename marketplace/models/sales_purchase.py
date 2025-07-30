@@ -158,27 +158,123 @@ class MarketplacePurchase(TimestampMixin, models.Model):
         verbose_name='شناسه خرید',
         db_index=True
     )
+    cottage_number = models.CharField(
+        max_length=50,
+        default='',
+        verbose_name='شماره کوتاژ',
+        help_text='باید با شماره کوتاژ عرضه تطابق داشته باشد'
+    )
+    description = models.TextField(
+        blank=True,
+        verbose_name='توضیحات'
+    )
     purchase_weight = models.DecimalField(
         max_digits=10, 
         decimal_places=2, 
-        verbose_name='وزن خرید'
+        verbose_name='وزن خرید شده-Kg'
+    )
+    province = models.CharField(
+        max_length=100,
+        default='',
+        verbose_name='استان'
     )
     purchase_date = jDateField(verbose_name='تاریخ خرید')
-    buyer_name = models.CharField(max_length=200, verbose_name='نام خریدار')
-    
-    # فیلدهای با طول افزایش یافته
-    buyer_mobile = models.CharField(max_length=20, verbose_name='شماره همراه خریدار')
-    buyer_national_id = models.CharField(max_length=20, verbose_name='شماره ملی خریدار')
-    
     paid_amount = models.DecimalField(
         max_digits=15, 
         decimal_places=0, 
-        verbose_name='مبلغ پرداختی'
+        verbose_name='مبلغ پرداختی-ریال'
+    )
+    unit_price = models.DecimalField(
+        max_digits=15,
+        decimal_places=0,
+        default=0,
+        verbose_name='قیمت هر واحد-ریال'
+    )
+    delivery_date = jDateField(
+        null=True,
+        blank=True,
+        verbose_name='تاریخ تحویل'
+    )
+    tracking_number = models.CharField(
+        max_length=100,
+        blank=True,
+        verbose_name='شماره پیگیری'
+    )
+    document_registration_date = jDateField(
+        null=True,
+        blank=True,
+        verbose_name='تاریخ ثبت سند'
+    )
+    product_title = models.CharField(
+        max_length=300,
+        default='',
+        verbose_name='عنوان کالا'
+    )
+    buyer_national_id = models.CharField(
+        max_length=20, 
+        verbose_name='کد ملی خریدار',
+        help_text='کد ملی یا شناسه ملی'
+    )
+    buyer_account_number = models.CharField(
+        max_length=50,
+        blank=True,
+        verbose_name='شماره حساب خریدار'
+    )
+    buyer_mobile = models.CharField(
+        max_length=20, 
+        verbose_name='شماره همراه خریدار'
+    )
+    buyer_name = models.CharField(
+        max_length=200, 
+        verbose_name='نام خریدار'
     )
     purchase_type = models.CharField(
         max_length=20, 
         choices=PURCHASE_TYPES,
-        verbose_name='نوع خرید'
+        verbose_name='شیوه پرداخت'
+    )
+    
+    # بازه‌های پرداخت توافقی
+    agreement_period_1 = models.PositiveIntegerField(
+        null=True,
+        blank=True,
+        verbose_name='بازه 1 پرداخت توافقی (روز)'
+    )
+    agreement_period_2 = models.PositiveIntegerField(
+        null=True,
+        blank=True,
+        verbose_name='بازه 2 پرداخت توافقی (روز)'
+    )
+    agreement_period_3 = models.PositiveIntegerField(
+        null=True,
+        blank=True,
+        verbose_name='بازه 3 پرداخت توافقی (روز)'
+    )
+    agreement_amount_1 = models.DecimalField(
+        max_digits=15,
+        decimal_places=0,
+        null=True,
+        blank=True,
+        verbose_name='مبلغ بازه 1 توافقی-ریال'
+    )
+    agreement_amount_2 = models.DecimalField(
+        max_digits=15,
+        decimal_places=0,
+        null=True,
+        blank=True,
+        verbose_name='مبلغ بازه 2 توافقی-ریال'
+    )
+    agreement_amount_3 = models.DecimalField(
+        max_digits=15,
+        decimal_places=0,
+        null=True,
+        blank=True,
+        verbose_name='مبلغ بازه 3 توافقی-ریال'
+    )
+    supply_id = models.CharField(
+        max_length=100,
+        default='',
+        verbose_name='شناسه عرضه'
     )
     
     class Meta:
@@ -199,6 +295,7 @@ class MarketplacePurchase(TimestampMixin, models.Model):
     def clean(self):
         """اعتبارسنجی و پاکسازی داده‌ها"""
         from django.core.exceptions import ValidationError
+        from ..models.offer_management import ProductOffer
         
         # پاکسازی شماره ملی
         if self.buyer_national_id:
@@ -215,10 +312,70 @@ class MarketplacePurchase(TimestampMixin, models.Model):
         # بررسی مبلغ پرداختی
         if self.paid_amount and self.paid_amount < 0:
             raise ValidationError('مبلغ پرداختی نمی‌تواند منفی باشد')
+            
+        # اعتبارسنجی شماره کوتاژ با عرضه
+        if self.cottage_number and self.marketplace_sale:
+            if self.marketplace_sale.cottage_number != self.cottage_number:
+                raise ValidationError(
+                    f'شماره کوتاژ ({self.cottage_number}) با شماره کوتاژ عرضه ({self.marketplace_sale.cottage_number}) تطابق ندارد'
+                )
     
+    def get_or_create_customer(self):
+        """پیدا کردن یا ایجاد مشتری بر اساس کد ملی"""
+        from warehouse.models.parties import Customer
+        
+        if not self.buyer_national_id:
+            return None
+            
+        # تشخیص نوع کد ملی (10 رقم = حقیقی، 11 رقم = حقوقی)
+        clean_national_id = ''.join(filter(str.isdigit, str(self.buyer_national_id)))
+        
+        if len(clean_national_id) == 10:
+            # مشتری حقیقی
+            customer, created = Customer.objects.get_or_create(
+                personal_code=clean_national_id,
+                defaults={
+                    'customer_type': 'natural',
+                    'full_name': self.buyer_name,
+                    'phone': self.buyer_mobile,
+                    'address': self.province if self.province else 'نامشخص',
+                    'tags': 'بازارگاه',
+                    'description': f'ایجاد شده از بازارگاه - خرید {self.purchase_id}'
+                }
+            )
+        elif len(clean_national_id) == 11:
+            # مشتری حقوقی
+            customer, created = Customer.objects.get_or_create(
+                national_id=clean_national_id,
+                defaults={
+                    'customer_type': 'legal',
+                    'company_name': self.buyer_name,
+                    'phone': self.buyer_mobile,
+                    'address': self.province if self.province else 'نامشخص',
+                    'tags': 'بازارگاه',
+                    'description': f'ایجاد شده از بازارگاه - خرید {self.purchase_id}'
+                }
+            )
+        else:
+            return None
+            
+        # اگر مشتری جدید است، تگ بازارگاه را اضافه کن
+        if created or 'بازارگاه' not in customer.tags:
+            if customer.tags:
+                customer.tags += ', بازارگاه'
+            else:
+                customer.tags = 'بازارگاه'
+            customer.save()
+            
+        return customer
+
     def save(self, *args, **kwargs):
         """ذخیره با پاکسازی خودکار داده‌ها"""
         self.clean()
+        
+        # ایجاد یا به‌روزرسانی مشتری
+        self.get_or_create_customer()
+        
         super().save(*args, **kwargs)
         
         # به‌روزرسانی محاسبات فروش والد

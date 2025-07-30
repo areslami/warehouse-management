@@ -41,6 +41,64 @@ class ExcelResponseMixin:
         return worksheet
 
 
+class HeaderBasedExcelMixin:
+    """Mixin for header-based Excel processing"""
+    
+    def get_header_mapping(self, sheet):
+        """Extract header mapping from first row of Excel sheet"""
+        headers = {}
+        first_row = sheet[1]  # First row contains headers
+        
+        for idx, cell in enumerate(first_row, 1):
+            if cell.value:
+                header_name = str(cell.value).strip()
+                headers[header_name] = idx
+        
+        return headers
+    
+    def get_field_mapping(self):
+        """Return mapping of field names to possible Excel header variations
+        Override this method in child classes"""
+        return {}
+    
+    def extract_row_data(self, row, header_mapping, field_mapping):
+        """Extract data from Excel row based on header mapping"""
+        data = {}
+        
+        for field_name, possible_headers in field_mapping.items():
+            value = None
+            
+            # Try each possible header variation
+            for header in possible_headers:
+                if header in header_mapping:
+                    col_idx = header_mapping[header]
+                    if col_idx <= len(row):
+                        cell_value = row[col_idx - 1]  # Convert to 0-based index
+                        if cell_value is not None and str(cell_value).strip():
+                            value = cell_value
+                            break
+            
+            data[field_name] = value
+        
+        return data
+    
+    def validate_required_headers(self, header_mapping, required_headers):
+        """Validate that required headers exist in Excel file"""
+        missing_headers = []
+        
+        for required_header_group in required_headers:
+            # Each group can have multiple possible names
+            if isinstance(required_header_group, list):
+                found = any(header in header_mapping for header in required_header_group)
+                if not found:
+                    missing_headers.append(f"یکی از این هدرها: {', '.join(required_header_group)}")
+            else:
+                if required_header_group not in header_mapping:
+                    missing_headers.append(required_header_group)
+        
+        return missing_headers
+
+
 class PersianDateMixin:
     """Mixin for Persian date handling"""
     
