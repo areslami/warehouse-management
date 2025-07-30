@@ -1,5 +1,7 @@
 from django import forms
 from django.forms import inlineformset_factory
+from django_jalali.forms import jDateField
+from django_jalali.forms.widgets import jDateInput
 from .models import *
 
 class ProductCategoryForm(forms.ModelForm):
@@ -309,9 +311,8 @@ class PurchaseProformaForm(forms.ModelForm):
                 'class': 'form-control',
                 'placeholder': 'شماره پیش‌فاکتور'
             }),
-            'date': forms.DateInput(attrs={
-                'class': 'form-control',
-                'type': 'date'
+            'date': jDateInput(attrs={
+                'class': 'form-control vjDateField'
             }),
             'supplier': forms.Select(attrs={
                 'class': 'form-control'
@@ -343,9 +344,8 @@ class SalesProformaForm(forms.ModelForm):  # اصلاح نام از SaleProforma
                 'class': 'form-control',
                 'placeholder': 'شماره پیش‌فاکتور'
             }),
-            'date': forms.DateInput(attrs={
-                'class': 'form-control',
-                'type': 'date'
+            'date': jDateInput(attrs={
+                'class': 'form-control vjDateField'
             }),
             'customer': forms.Select(attrs={
                 'class': 'form-control'
@@ -406,3 +406,52 @@ SalesProformaItemFormSet = inlineformset_factory(  # اصلاح نام
     extra=1, 
     can_delete=True
 )
+
+class WarehouseDeliveryOrderForm(forms.ModelForm):
+    class Meta:
+        model = WarehouseDeliveryOrder
+        fields = ['number', 'issue_date', 'validity_date', 'warehouse', 'sales_proforma', 'shipping_company', 'description']
+        widgets = {
+            'number': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'شماره حواله'
+            }),
+            'issue_date': jDateInput(attrs={
+                'class': 'form-control vjDateField'
+            }),
+            'validity_date': jDateInput(attrs={
+                'class': 'form-control vjDateField'
+            }),
+            'warehouse': forms.Select(attrs={
+                'class': 'form-control'
+            }),
+            'sales_proforma': forms.Select(attrs={
+                'class': 'form-control'
+            }),
+            'shipping_company': forms.Select(attrs={
+                'class': 'form-control'
+            }),
+            'description': forms.Textarea(attrs={
+                'class': 'form-control',
+                'placeholder': 'توضیحات',
+                'rows': 3
+            }),
+        }
+        labels = {
+            'number': 'شماره حواله',
+            'issue_date': 'تاریخ صدور',
+            'validity_date': 'تاریخ اعتبار',
+            'warehouse': 'انبار',
+            'sales_proforma': 'پیش فاکتور فروش',
+            'shipping_company': 'شرکت حمل',
+            'description': 'توضیحات'
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['warehouse'].queryset = Warehouse.objects.all()
+        self.fields['warehouse'].empty_label = "انتخاب انبار"
+        self.fields['sales_proforma'].queryset = SalesProforma.objects.all()
+        self.fields['sales_proforma'].empty_label = "انتخاب پیش فاکتور"
+        self.fields['shipping_company'].queryset = ShippingCompany.objects.all()
+        self.fields['shipping_company'].empty_label = "انتخاب شرکت حمل"

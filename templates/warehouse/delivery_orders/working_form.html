@@ -1,0 +1,498 @@
+{% extends 'warehouse/base.html' %}
+{% load static %}
+
+{% block title %}
+    {% if form.instance.pk %}ویرایش حواله خروج{% else %}ایجاد حواله خروج جدید{% endif %} - سیستم مدیریت انبار
+{% endblock %}
+
+{% block page_title %}
+    {% if form.instance.pk %}ویرایش حواله خروج{% else %}ایجاد حواله خروج جدید{% endif %}
+{% endblock %}
+
+{% block content %}
+<div class="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
+    <h3 class="text-lg font-semibold text-gray-800 mb-6">
+        <i class="fas fa-info-circle ml-2"></i>
+        ایجاد حواله خروج جدید
+    </h3>
+    
+    <form method="post" class="space-y-6">
+        {% csrf_token %}
+        
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <!-- Form fields -->
+            {% for field in form %}
+                <div class="{% if field.name == 'description' %}md:col-span-2{% endif %}">
+                    <label for="{{ field.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">
+                        {{ field.label }}{% if field.field.required %} *{% endif %}
+                    </label>
+                    {{ field }}
+                    {% if field.errors %}
+                        <div class="text-red-600 text-sm mt-1">
+                            {{ field.errors }}
+                        </div>
+                    {% endif %}
+                    {% if field.help_text %}
+                        <div class="text-gray-500 text-sm mt-1">
+                            {{ field.help_text }}
+                        </div>
+                    {% endif %}
+                </div>
+            {% endfor %}
+        </div>
+        
+        <!-- Items Section -->
+        <div class="border-t pt-6">
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="text-lg font-semibold text-gray-800">
+                    <i class="fas fa-boxes ml-2"></i>
+                    آیتم‌های حواله
+                </h3>
+                <div class="flex gap-3">
+                    <button type="button" onclick="importExcel()" 
+                            class="flex items-center px-4 py-2 bg-warning-500 text-white rounded-lg hover:bg-warning-600 transition-colors">
+                        <i class="fas fa-file-excel ml-2"></i>
+                        آپلود اکسل
+                    </button>
+                    <button type="button" onclick="downloadTemplate()" 
+                            class="flex items-center px-4 py-2 bg-info-500 text-white rounded-lg hover:bg-info-600 transition-colors">
+                        <i class="fas fa-download ml-2"></i>
+                        دانلود قالب
+                    </button>
+                    <button type="button" onclick="addNewItem()" 
+                            class="flex items-center px-4 py-2 bg-success-500 text-white rounded-lg hover:bg-success-600 transition-colors">
+                        <i class="fas fa-plus ml-2"></i>
+                        افزودن آیتم
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Hidden file input for Excel upload -->
+            <input type="file" id="excel-file-input" accept=".xlsx,.xls" style="display: none;" onchange="processExcelFile(this)">
+            
+            <div id="items-container">
+                <!-- Items will be added here -->
+            </div>
+        </div>
+        
+        <!-- Submit Button -->
+        <div class="flex justify-between pt-6">
+            <a href="{% url 'warehouse:delivery_order_list' %}" 
+               class="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors">
+                انصراف
+            </a>
+            <button type="submit" 
+                    class="px-6 py-2 bg-success-500 text-white rounded-lg hover:bg-success-600 transition-colors">
+                <i class="fas fa-save ml-2"></i>
+                ثبت حواله
+            </button>
+        </div>
+    </form>
+</div>
+
+<!-- Item Template -->
+<div id="item-template" style="display: none;">
+    <div class="item-row bg-gray-50 p-4 rounded-lg border mb-4">
+        <div class="flex items-center justify-between mb-4">
+            <h4 class="text-sm font-medium text-gray-700">آیتم <span class="item-number">1</span></h4>
+            <button type="button" onclick="removeItem(this)" class="text-red-600 hover:text-red-800">
+                <i class="fas fa-trash"></i>
+            </button>
+        </div>
+        
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">کالا *</label>
+                <select name="items[INDEX][product]" required 
+                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500">
+                    <option value="">انتخاب کالا</option>
+                    {% for product in products %}
+                    <option value="{{ product.id }}">{{ product.name }} ({{ product.unit }})</option>
+                    {% endfor %}
+                </select>
+            </div>
+            
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">مقدار *</label>
+                <input type="number" name="items[INDEX][quantity]" step="0.01" required
+                       class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                       placeholder="0.00">
+            </div>
+            
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">نوع وسیله حمل *</label>
+                <select name="items[INDEX][vehicle_type]" required 
+                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500">
+                    <option value="">انتخاب وسیله</option>
+                    <option value="truck">کامیون</option>
+                    <option value="pickup">وانت</option>
+                    <option value="van">ون</option>
+                    <option value="container">کانتینر</option>
+                    <option value="other">سایر</option>
+                </select>
+            </div>
+            
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">گیرنده *</label>
+                <select name="items[INDEX][receiver]" required onchange="loadReceiverAddress(this)"
+                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500">
+                    <option value="">انتخاب گیرنده</option>
+                    {% for receiver in receivers %}
+                    <option value="{{ receiver.id }}" data-address="{{ receiver.address }}">{{ receiver }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            
+            <div class="md:col-span-2">
+                <label class="block text-sm font-medium text-gray-700 mb-2">آدرس گیرنده</label>
+                <textarea name="items[INDEX][receiver_address]" rows="2" 
+                          class="receiver-address w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                          placeholder="آدرس گیرنده بعد از انتخاب گیرنده تکمیل می‌شود..."></textarea>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+/* Style form fields to match Tailwind classes */
+.form-control {
+    width: 100%;
+    padding: 0.5rem 0.75rem;
+    border: 1px solid #d1d5db;
+    border-radius: 0.5rem;
+    font-size: 1rem;
+    line-height: 1.5;
+    transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+}
+
+.form-control:focus {
+    outline: none;
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.5);
+}
+
+/* Jalali date picker specific styles */
+.ui-datepicker {
+    font-family: 'Vazir', sans-serif !important;
+    direction: rtl !important;
+}
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<!-- jQuery (required for Jalali date picker) -->
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<!-- Jalali Date Picker Assets -->
+<link rel="stylesheet" type="text/css" href="{% static 'admin/jquery.ui.datepicker.jalali/themes/base/jquery-ui.css' %}" />
+<script type="text/javascript" src="{% static 'admin/jquery.ui.datepicker.jalali/scripts/jquery.ui.core.js' %}"></script>
+<script type="text/javascript" src="{% static 'admin/jquery.ui.datepicker.jalali/scripts/jquery.ui.datepicker-cc.js' %}"></script>
+<script type="text/javascript" src="{% static 'admin/jquery.ui.datepicker.jalali/scripts/jquery.ui.datepicker-cc-fa.js' %}"></script>
+<script type="text/javascript" src="{% static 'admin/main.js' %}"></script>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script>
+let itemIndex = 0;
+
+// Initialize form
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('✅ Form loaded!');
+    
+    // Add first item automatically
+    addNewItem();
+    
+    console.log('✅ Form initialized successfully!');
+});
+
+// Add new item function
+function addNewItem() {
+    console.log('🔘 Adding new item...');
+    
+    const container = document.getElementById('items-container');
+    const template = document.getElementById('item-template');
+    
+    if (!container || !template) {
+        console.error('❌ Container or template not found!');
+        return;
+    }
+    
+    // Clone the template
+    const newItem = template.cloneNode(true);
+    newItem.style.display = 'block';
+    newItem.id = '';
+    
+    // Replace INDEX with actual index
+    newItem.innerHTML = newItem.innerHTML.replace(/INDEX/g, itemIndex);
+    
+    // Update item number
+    newItem.querySelector('.item-number').textContent = itemIndex + 1;
+    
+    // Add to container
+    container.appendChild(newItem);
+    
+    itemIndex++;
+    console.log('✅ Item added successfully! Total items:', itemIndex);
+}
+
+// Remove item function
+function removeItem(button) {
+    console.log('🗑️ Removing item...');
+    
+    const itemRow = button.closest('.item-row');
+    if (itemRow) {
+        itemRow.remove();
+        updateItemNumbers();
+        console.log('✅ Item removed successfully!');
+    }
+}
+
+// Update item numbers
+function updateItemNumbers() {
+    const items = document.querySelectorAll('.item-row');
+    items.forEach((item, index) => {
+        const numberElement = item.querySelector('.item-number');
+        if (numberElement) {
+            numberElement.textContent = index + 1;
+        }
+    });
+    console.log('🔢 Item numbers updated. Total items now:', items.length);
+}
+
+// Load receiver address
+function loadReceiverAddress(selectElement) {
+    console.log('👤 Loading receiver address...');
+    
+    const selectedOption = selectElement.options[selectElement.selectedIndex];
+    const address = selectedOption.getAttribute('data-address');
+    
+    // Find the address field in the same item row
+    const itemRow = selectElement.closest('.item-row');
+    const addressField = itemRow.querySelector('.receiver-address');
+    
+    if (addressField && address) {
+        addressField.value = address;
+        console.log('✅ Address loaded:', address);
+    }
+}
+
+// Excel import functionality
+function importExcel() {
+    console.log('📊 Opening Excel import...');
+    document.getElementById('excel-file-input').click();
+}
+
+function processExcelFile(input) {
+    const file = input.files[0];
+    if (!file) return;
+    
+    console.log('📂 Processing Excel file:', file.name);
+    
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        try {
+            const data = new Uint8Array(e.target.result);
+            const workbook = XLSX.read(data, {type: 'array'});
+            const sheetName = workbook.SheetNames[0];
+            const worksheet = workbook.Sheets[sheetName];
+            const jsonData = XLSX.utils.sheet_to_json(worksheet, {header: 1});
+            
+            // Clear existing items
+            document.getElementById('items-container').innerHTML = '';
+            itemIndex = 0;
+            
+            // Process Excel data (skip header row)
+            let successCount = 0;
+            for (let i = 1; i < jsonData.length; i++) {
+                const row = jsonData[i];
+                if (row.length < 4) continue; // Skip incomplete rows
+                
+                addNewItem();
+                
+                // Find the last added item and populate it
+                const items = document.querySelectorAll('.item-row');
+                const lastItem = items[items.length - 1];
+                
+                if (lastItem) {
+                    // Populate fields (adjust indices based on your Excel format)
+                    const productSelect = lastItem.querySelector('select[name*="[product]"]');
+                    const quantityInput = lastItem.querySelector('input[name*="[quantity]"]');
+                    const vehicleSelect = lastItem.querySelector('select[name*="[vehicle_type]"]');
+                    const receiverSelect = lastItem.querySelector('select[name*="[receiver]"]');
+                    const addressField = lastItem.querySelector('textarea[name*="[receiver_address]"]');
+                    
+                    // Smart matching by name (case-insensitive and partial matching)
+                    if (row[0]) { // Product
+                        const productName = String(row[0]).toLowerCase().trim();
+                        for (let option of productSelect.options) {
+                            const optionText = option.text.toLowerCase();
+                            if (optionText.includes(productName) || productName.includes(optionText.split('(')[0].trim())) {
+                                productSelect.value = option.value;
+                                break;
+                            }
+                        }
+                    }
+                    
+                    if (row[1]) quantityInput.value = parseFloat(row[1]) || 0; // Quantity
+                    
+                    if (row[2]) { // Vehicle Type - smart matching
+                        const vehicleType = String(row[2]).toLowerCase().trim();
+                        const vehicleMap = {
+                            'کامیون': 'truck', 'truck': 'truck', 'kamion': 'truck',
+                            'وانت': 'pickup', 'pickup': 'pickup', 'vanet': 'pickup',
+                            'ون': 'van', 'van': 'van',
+                            'کانتینر': 'container', 'container': 'container',
+                            'سایر': 'other', 'other': 'other'
+                        };
+                        vehicleSelect.value = vehicleMap[vehicleType] || 'other';
+                    }
+                    
+                    if (row[3]) { // Receiver - smart matching
+                        const receiverName = String(row[3]).toLowerCase().trim();
+                        for (let option of receiverSelect.options) {
+                            const optionText = option.text.toLowerCase();
+                            if (optionText.includes(receiverName) || receiverName.includes(optionText.split('(')[0].trim())) {
+                                receiverSelect.value = option.value;
+                                loadReceiverAddress(receiverSelect);
+                                break;
+                            }
+                        }
+                    }
+                    
+                    if (row[4]) addressField.value = String(row[4]); // Address override
+                }
+                
+                successCount++;
+            }
+            
+            alert(`✅ ${successCount} آیتم از فایل اکسل با موفقیت بارگذاری شد.`);
+            console.log('✅ Excel import completed:', successCount, 'items');
+            
+        } catch (error) {
+            console.error('❌ Excel import error:', error);
+            alert('خطا در خواندن فایل اکسل: ' + error.message);
+        }
+        
+        // Clear file input
+        input.value = '';
+    };
+    
+    reader.readAsArrayBuffer(file);
+}
+
+// Download Excel template
+function downloadTemplate() {
+    console.log('⬇️ Downloading Excel template...');
+    
+    // Create Excel template
+    const wb = XLSX.utils.book_new();
+    
+    // Create header data
+    const headers = [
+        'نام کالا',
+        'مقدار', 
+        'نوع وسیله حمل (truck/pickup/van/container/other)',
+        'نام گیرنده',
+        'آدرس گیرنده'
+    ];
+    
+    // Create sample data
+    const sampleData = [
+        ['نمونه کالا 1', '100', 'truck', 'نمونه گیرنده 1', 'آدرس نمونه 1'],
+        ['نمونه کالا 2', '50', 'pickup', 'نمونه گیرنده 2', 'آدرس نمونه 2']
+    ];
+    
+    // Combine headers and sample data
+    const wsData = [headers, ...sampleData];
+    
+    // Create worksheet
+    const ws = XLSX.utils.aoa_to_sheet(wsData);
+    
+    // Add worksheet to workbook
+    XLSX.utils.book_append_sheet(wb, ws, 'آیتم‌های حواله');
+    
+    // Generate filename with current date
+    const now = new Date();
+    const filename = `template_delivery_order_${now.getFullYear()}_${(now.getMonth()+1).toString().padStart(2,'0')}_${now.getDate().toString().padStart(2,'0')}.xlsx`;
+    
+    // Download file
+    XLSX.writeFile(wb, filename);
+    console.log('✅ Template downloaded:', filename);
+}
+
+// Form validation and submission
+document.querySelector('form').addEventListener('submit', function(e) {
+    console.log('📤 Form submission started...');
+    console.log('📋 Form data:', new FormData(this));
+    
+    const items = document.querySelectorAll('.item-row');
+    console.log('📦 Found items:', items.length);
+    
+    if (items.length === 0) {
+        e.preventDefault();
+        alert('لطفاً حداقل یک آیتم به حواله اضافه کنید.');
+        console.log('❌ No items found');
+        return false;
+    }
+    
+    // Validate required fields
+    let isValid = true;
+    let emptyFields = [];
+    
+    // Check main form fields (excluding item fields)
+    const requiredFields = document.querySelectorAll('input[required], select[required]');
+    console.log('🔍 Checking required fields:', requiredFields.length);
+    
+    requiredFields.forEach(field => {
+        // Skip item fields in main validation
+        if (field.closest('.item-row')) return;
+        
+        console.log(`🔎 Checking field: ${field.name} = "${field.value}"`);
+        if (!field.value || field.value.trim() === '') {
+            field.classList.add('border-red-500');
+            const fieldLabel = field.parentElement.querySelector('label')?.textContent || field.name || 'unnamed field';
+            emptyFields.push(fieldLabel);
+            isValid = false;
+            console.log(`❌ Empty field: ${fieldLabel}`);
+        } else {
+            field.classList.remove('border-red-500');
+            console.log(`✅ Field OK: ${field.name}`);
+        }
+    });
+    
+    // Check item fields
+    items.forEach((item, index) => {
+        const itemRequiredFields = item.querySelectorAll('[required]');
+        console.log(`📦 Item ${index + 1}: checking ${itemRequiredFields.length} required fields`);
+        
+        itemRequiredFields.forEach(field => {
+            if (!field.value || field.value.trim() === '') {
+                field.classList.add('border-red-500');
+                emptyFields.push(`آیتم ${index + 1}: ${field.name || 'unnamed field'}`);
+                isValid = false;
+                console.log(`❌ Empty item field: ${field.name} in item ${index + 1}`);
+            } else {
+                field.classList.remove('border-red-500');
+                console.log(`✅ Item field OK: ${field.name} in item ${index + 1}`);
+            }
+        });
+    });
+    
+    if (!isValid) {
+        e.preventDefault();
+        alert(`لطفاً فیلدهای زیر را تکمیل کنید:\n${emptyFields.join('\n')}`);
+        console.log('❌ Validation failed. Empty fields:', emptyFields);
+        return false;
+    }
+    
+    console.log('✅ Form validation passed! Submitting...');
+    
+    // Log all form data for debugging
+    const formData = new FormData(this);
+    console.log('📋 Complete form data:');
+    for (let [key, value] of formData.entries()) {
+        console.log(`  ${key}: ${value}`);
+    }
+});
+</script>
+{% endblock %}
