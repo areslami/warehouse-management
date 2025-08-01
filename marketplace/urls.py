@@ -8,6 +8,7 @@ from .views.address_management import (
     address_detail, single_send_to_delivery
 )
 from .views.address_management_new import bulk_send_to_delivery_new
+from .views.bulk_address_upload import bulk_address_upload_view
 
 app_name = 'marketplace'
 
@@ -39,4 +40,8 @@ urlpatterns = [
          views.upload_delivery_addresses, name='upload_delivery_addresses'),
     path('delivery-addresses/template/', 
          views.download_delivery_template, name='download_delivery_template'),
+    
+    # آپلود بالک آدرس‌های تحویل
+    path('bulk-address-upload/', 
+         bulk_address_upload_view, name='bulk_address_upload'),
 ]

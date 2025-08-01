@@ -96,7 +96,7 @@ class MarketplaceSale(TimestampMixin, models.Model):
         # لود کردن اطلاعات از عرضه
         if self.product_offer:
             self.cottage_number = self.product_offer.cottage_number or ''
-            self.product_title = self.product_offer.marketplace_product.marketplace_name
+            self.product_title = self.product_offer.product.name
             self.offer_unit_price = self.product_offer.unit_price
             self.total_offer_weight = self.product_offer.offer_weight
             self.offer_status = self.product_offer.status

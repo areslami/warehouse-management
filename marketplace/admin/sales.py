@@ -3,6 +3,7 @@ from django.contrib import admin
 from django.utils.html import format_html
 from ..models import MarketplaceSale, MarketplacePurchase, MarketplacePurchaseDetail, DeliveryAddress, ProductOffer
 from .base import BaseMarketplaceAdmin, ExcelOperationsMixin, format_number
+from .bulk_operations import BulkOperationsMixin, get_bulk_upload_changelist_view
 
 
 class MarketplacePurchaseInline(admin.TabularInline):
@@ -29,7 +30,7 @@ class MarketplaceSaleAdmin(BaseMarketplaceAdmin, ExcelOperationsMixin):
     
     list_filter = [
         'offer_status', 'created_at', 
-        'product_offer__marketplace_product__marketplace_category'
+        'product_offer__product__category'
     ]
     
     search_fields = [
@@ -139,7 +140,7 @@ class MarketplaceSaleAdmin(BaseMarketplaceAdmin, ExcelOperationsMixin):
             # فقط عرضه‌های فعال نمایش داده شوند
             kwargs["queryset"] = ProductOffer.objects.filter(
                 status__in=['active', 'sold']
-            ).select_related('marketplace_product', 'warehouse_receipt')
+            ).select_related('product', 'warehouse_receipt')
         return super().formfield_for_foreignkey(db_field, request, **kwargs)
     
     class Media:
@@ -161,7 +162,7 @@ class DeliveryAddressInline(admin.TabularInline):
 
 
 @admin.register(MarketplacePurchaseDetail)
-class MarketplacePurchaseDetailAdmin(BaseMarketplaceAdmin, ExcelOperationsMixin):
+class MarketplacePurchaseDetailAdmin(BaseMarketplaceAdmin, ExcelOperationsMixin, BulkOperationsMixin):
     """Admin برای جزئیات خرید بازارگاه"""
     
     list_display = [
@@ -282,3 +283,6 @@ class MarketplacePurchaseDetailAdmin(BaseMarketplaceAdmin, ExcelOperationsMixin)
                 return f"خطا: {str(e)}"
         return "ابتدا جزئیات خرید را ذخیره کنید"
     delivery_excel_operations.short_description = 'عملیات اکسل آدرس‌ها'
+    
+    # اضافه کردن bulk operations به changelist view
+    changelist_view = get_bulk_upload_changelist_view(BaseMarketplaceAdmin.changelist_view)

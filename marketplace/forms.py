@@ -29,4 +29,4 @@ class MarketplaceSaleCreateForm(forms.ModelForm):
         # فقط عرضه‌های فعال نمایش داده شوند
         self.fields['product_offer'].queryset = ProductOffer.objects.filter(
             status__in=['active', 'sold']
-        ).select_related('marketplace_product', 'warehouse_receipt')
+        ).select_related('product', 'warehouse_receipt')

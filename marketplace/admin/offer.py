@@ -29,6 +29,11 @@ class ProductOfferForm(forms.ModelForm):
                 cottage_number__isnull=False
             ).exclude(cottage_number='')
             
+        # فیلتر کردن محصولات انبار
+        if 'product' in self.fields:
+            from warehouse.models.base import Product
+            self.fields['product'].queryset = Product.objects.all().order_by('name')
+            
         # تنظیمات ظاهری
         if 'offer_weight' in self.fields:
             self.fields['offer_weight'].help_text = 'وزن به تن وارد شود'
@@ -40,24 +45,24 @@ class ProductOfferForm(forms.ModelForm):
 class ProductOfferAdmin(BaseMarketplaceAdmin):
     form = ProductOfferForm
     list_display = [
-        'offer_id', 'get_marketplace_product', 'get_cottage_number', 
+        'offer_id', 'get_product', 'get_cottage_number', 
         'get_offer_weight', 'get_unit_price', 'get_total_price', 
         'offer_type', 'status', 'offer_date'
     ]
     list_filter = [
         'status', 'offer_type', 'offer_date', 'created_at',
-        'marketplace_product__marketplace_category'
+        'product__category'
     ]
     search_fields = [
-        'offer_id', 'marketplace_product__marketplace_name', 
-        'marketplace_product__marketplace_id', 'warehouse_receipt__cottage_number'
+        'offer_id', 'product__name', 
+        'product__code', 'warehouse_receipt__cottage_number'
     ]
     list_editable = ['status', 'offer_type']
     ordering = ['-offer_date', '-created_at']
     
     fieldsets = (
         ('اطلاعات اصلی عرضه', {
-            'fields': ('offer_id', 'warehouse_receipt', 'marketplace_product')
+            'fields': ('offer_id', 'warehouse_receipt', 'product')
         }),
         ('جزئیات عرضه', {
             'fields': ('offer_date', 'offer_weight', 'unit_price', 'offer_type'),
@@ -74,13 +79,13 @@ class ProductOfferAdmin(BaseMarketplaceAdmin):
     
     readonly_fields = ['get_total_price_display']
     
-    def get_marketplace_product(self, obj):
+    def get_product(self, obj):
         return format_html(
             '<strong>{}</strong><br><small style="color: #666;">{}</small>',
-            obj.marketplace_product.marketplace_name,
-            obj.marketplace_product.marketplace_id
+            obj.product.name,
+            obj.product.code
         )
-    get_marketplace_product.short_description = 'کالای بازارگاه'
+    get_product.short_description = 'کالا'
     
     def get_cottage_number(self, obj):
         if obj.cottage_number:

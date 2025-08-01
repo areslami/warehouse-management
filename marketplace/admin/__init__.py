@@ -2,7 +2,6 @@
 
 # Import all admin classes from modules
 from .base import *
-from .product import *
 from .offer import *
 from .sales import *
 from .address_admin import *
