@@ -119,6 +119,32 @@ class WarehouseReceipt(models.Model):
         total = sum(item.quantity for item in self.items.all())
         return total
 
+    def get_offered_weight(self):
+        """محاسبه وزن عرضه شده از این رسید انبار"""
+        from marketplace.models import ProductOffer
+        
+        # پیدا کردن عرضه‌هایی که از این رسید انبار استفاده کرده‌اند
+        offers = ProductOffer.objects.filter(warehouse_receipt=self)
+        total_offered = sum(offer.offer_weight for offer in offers)
+        return total_offered
+
+    def get_agency_weight(self):
+        """محاسبه وزن عاملیت داده شده از این رسید انبار"""
+        from marketplace.models import DistributionAgency
+        
+        # پیدا کردن عاملیت‌هایی که از این رسید انبار استفاده کرده‌اند
+        agencies = DistributionAgency.objects.filter(warehouse_receipt=self)
+        total_agency = sum(agency.agency_weight for agency in agencies)
+        return total_agency
+
+    def get_available_for_offer_weight(self):
+        """محاسبه مانده قابل عرضه"""
+        total_weight = self.total_weight
+        offered_weight = self.get_offered_weight()
+        agency_weight = self.get_agency_weight()
+        
+        return total_weight - offered_weight - agency_weight
+
 class WarehouseReceiptItem(models.Model):
     """آیتم رسید انبار"""
     receipt = models.ForeignKey(WarehouseReceipt, related_name='items', on_delete=models.CASCADE, verbose_name='رسید انبار')

@@ -6,7 +6,8 @@ from .offer_management import ProductOffer
 from .sales_purchase import (
     MarketplaceSale,
     MarketplacePurchase,  
-    MarketplacePurchaseDetail
+    MarketplacePurchaseDetail,
+    DistributionAgency
 )
 from .delivery_logistics import DeliveryAddress
 
@@ -23,6 +24,7 @@ __all__ = [
     'MarketplaceSale',
     'MarketplacePurchase',
     'MarketplacePurchaseDetail',
+    'DistributionAgency',
     
     # Delivery and logistics
     'DeliveryAddress',

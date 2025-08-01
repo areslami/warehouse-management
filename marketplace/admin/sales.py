@@ -1,7 +1,7 @@
 # marketplace/admin/sales.py
 from django.contrib import admin
 from django.utils.html import format_html
-from ..models import MarketplaceSale, MarketplacePurchase, MarketplacePurchaseDetail, DeliveryAddress, ProductOffer
+from ..models import MarketplaceSale, MarketplacePurchase, MarketplacePurchaseDetail, DeliveryAddress, ProductOffer, DistributionAgency
 from .base import BaseMarketplaceAdmin, ExcelOperationsMixin, format_number
 from .bulk_operations import BulkOperationsMixin, get_bulk_upload_changelist_view
 
@@ -94,7 +94,7 @@ class MarketplaceSaleAdmin(BaseMarketplaceAdmin, ExcelOperationsMixin):
     
     def get_sold_weight_before_transport(self, obj):
         return format_html(
-            '<span style="direction: ltr; color: green; font-weight: bold;">{}</span> تن',
+            '<span style="direction: ltr; color: green; font-weight: bold;">{}</span>',
             format_number(obj.sold_weight_before_transport)
         )
     get_sold_weight_before_transport.short_description = 'وزن فروش رفته'
@@ -102,7 +102,7 @@ class MarketplaceSaleAdmin(BaseMarketplaceAdmin, ExcelOperationsMixin):
     def get_remaining_weight_before_transport(self, obj):
         color = 'red' if obj.remaining_weight_before_transport <= 0 else 'orange'
         return format_html(
-            '<span style="direction: ltr; color: {}; font-weight: bold;">{}</span> تن',
+            '<span style="direction: ltr; color: {}; font-weight: bold;">{}</span>',
             color, format_number(obj.remaining_weight_before_transport)
         )
     get_remaining_weight_before_transport.short_description = 'وزن باقیمانده'
@@ -234,7 +234,7 @@ class MarketplacePurchaseDetailAdmin(BaseMarketplaceAdmin, ExcelOperationsMixin,
             '<div style="background: #f8f9fa; padding: 10px; border-radius: 5px;">'
             '<strong>شناسه:</strong> {}<br>'
             '<strong>خریدار:</strong> {}<br>'
-            '<strong>وزن:</strong> {} تن<br>'
+            '<strong>وزن:</strong> {}<br>'
             '<strong>مبلغ:</strong> {} ریال<br>'
             '<strong>تاریخ:</strong> {}<br>'
             '<strong>نوع:</strong> {}'
@@ -286,3 +286,144 @@ class MarketplacePurchaseDetailAdmin(BaseMarketplaceAdmin, ExcelOperationsMixin,
     
     # اضافه کردن bulk operations به changelist view
     changelist_view = get_bulk_upload_changelist_view(BaseMarketplaceAdmin.changelist_view)
+
+
+@admin.register(DistributionAgency)
+class DistributionAgencyAdmin(BaseMarketplaceAdmin):
+    """Admin برای اعطای عاملیت توزیع"""
+    
+    list_display = [
+        'get_cottage_number', 'get_warehouse', 'get_product_type', 
+        'customer', 'get_agency_weight', 'agency_date', 'get_sales_proforma'
+    ]
+    
+    list_filter = [
+        'agency_date', 'warehouse', 'product_type', 'customer'
+    ]
+    
+    search_fields = [
+        'cottage_number', 'customer__full_name', 'customer__company_name',
+        'warehouse_receipt__cottage_number', 'warehouse_receipt__temp_number',
+        'sales_proforma__number'
+    ]
+    
+    readonly_fields = [
+        'warehouse', 'product_type', 'cottage_number', 
+        'get_warehouse_info', 'get_receipt_info', 'get_available_weight'
+    ]
+    
+    fieldsets = (
+        ('انتخاب رسید انبار', {
+            'fields': ('warehouse_receipt', 'get_receipt_info')
+        }),
+        ('اطلاعات خودکار از رسید', {
+            'fields': ('warehouse', 'product_type', 'cottage_number'),
+            'classes': ('collapse',)
+        }),
+        ('اطلاعات عاملیت', {
+            'fields': ('sales_proforma', 'customer', 'agency_weight', 'agency_date')
+        }),
+        ('وضعیت موجودی', {
+            'fields': ('get_available_weight',),
+            'classes': ('collapse',)
+        }),
+        ('توضیحات', {
+            'fields': ('description',),
+            'classes': ('collapse',)
+        }),
+    )
+    
+    def get_cottage_number(self, obj):
+        if obj.cottage_number:
+            return format_html(
+                '<span style="color: #0066cc; font-weight: bold;">{}</span>',
+                obj.cottage_number
+            )
+        return '-'
+    get_cottage_number.short_description = 'شماره کوتاژ'
+    
+    def get_warehouse(self, obj):
+        return obj.warehouse.name if obj.warehouse else '-'
+    get_warehouse.short_description = 'انبار'
+    
+    def get_product_type(self, obj):
+        return obj.product_type.name if obj.product_type else '-'
+    get_product_type.short_description = 'نوع کالا'
+    
+    def get_agency_weight(self, obj):
+        return format_html(
+            '<span style="color: #fd7e14; font-weight: bold;">{}</span> کیلو',
+            format_number(obj.agency_weight)
+        )
+    get_agency_weight.short_description = 'وزن عاملیت'
+    
+    def get_sales_proforma(self, obj):
+        return obj.sales_proforma.number if obj.sales_proforma else '-'
+    get_sales_proforma.short_description = 'شماره پیش‌فاکتور فروش'
+    
+    def get_warehouse_info(self, obj):
+        """نمایش اطلاعات انبار"""
+        if obj.warehouse:
+            return format_html(
+                '<div style="background: #e3f2fd; padding: 8px; border-radius: 4px;">'
+                '<strong>انبار:</strong> {}<br>'
+                '<strong>نوع کالا:</strong> {}'
+                '</div>',
+                obj.warehouse.name,
+                obj.product_type.name if obj.product_type else 'نامشخص'
+            )
+        return 'انبار انتخاب نشده'
+    get_warehouse_info.short_description = 'اطلاعات انبار'
+    
+    def get_receipt_info(self, obj):
+        """نمایش اطلاعات رسید انبار"""
+        if obj.warehouse_receipt:
+            receipt = obj.warehouse_receipt
+            return format_html(
+                '<div style="background: #f3e5f5; padding: 8px; border-radius: 4px;">'
+                '<strong>رسید:</strong> {}<br>'
+                '<strong>کوتاژ:</strong> {}<br>'
+                '<strong>تاریخ:</strong> {}<br>'
+                '<strong>جمع وزن:</strong> {} کیلو<br>'
+                '<strong>وزن عرضه شده:</strong> {} کیلو<br>'
+                '<strong>وزن عاملیت داده شده:</strong> {} کیلو<br>'
+                '<strong>مانده قابل عرضه:</strong> <span style="color: #28a745; font-weight: bold;">{}</span> کیلو'
+                '</div>',
+                receipt.temp_number,
+                receipt.cottage_number or 'ندارد',
+                receipt.date,
+                format_number(receipt.total_weight),
+                format_number(receipt.get_offered_weight()),
+                format_number(receipt.get_agency_weight()),
+                format_number(receipt.get_available_for_offer_weight())
+            )
+        return 'رسید انبار انتخاب نشده'
+    get_receipt_info.short_description = 'اطلاعات رسید انبار'
+    
+    def get_available_weight(self, obj):
+        """نمایش وزن قابل دسترس برای عاملیت"""
+        if obj.warehouse_receipt:
+            available = obj.warehouse_receipt.get_available_for_offer_weight()
+            color = '#28a745' if available > 0 else '#dc3545'
+            return format_html(
+                '<div style="background: #f8f9fa; padding: 8px; border-radius: 4px; border-left: 3px solid {};">'
+                '<strong>مانده قابل عرضه:</strong> <span style="color: {}; font-weight: bold;">{}</span> کیلو'
+                '</div>',
+                color, color, format_number(available)
+            )
+        return 'رسید انبار انتخاب نشده'
+    get_available_weight.short_description = 'وضعیت موجودی'
+    
+    def formfield_for_foreignkey(self, db_field, request, **kwargs):
+        if db_field.name == "warehouse_receipt":
+            # فقط رسیدهای کوتاژ وارداتی نمایش داده شوند
+            kwargs["queryset"] = kwargs.get("queryset", db_field.remote_field.model.objects.all()).filter(
+                receipt_type='import_cottage'
+            ).select_related('warehouse', 'purchase_proforma')
+        return super().formfield_for_foreignkey(db_field, request, **kwargs)
+    
+    class Media:
+        js = ('admin/js/conditional_fields.js',)
+        css = {
+            'all': ('admin/css/marketplace_sale.css',)
+        }

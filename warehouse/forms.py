@@ -47,7 +47,7 @@ class ProductForm(forms.ModelForm):
             }),
             'unit': forms.TextInput(attrs={
                 'class': 'form-control',
-                'placeholder': 'واحد (کیلوگرم، تن، عدد و ...)'
+                'placeholder': 'واحد (کیلو، عدد، بسته و ...)'
             }),
         }
         labels = {

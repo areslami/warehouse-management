@@ -23,7 +23,7 @@ def format_number(value):
     """فرمت کردن اعداد با جداکننده هزارگان"""
     if value is None:
         return '-'
-    return f'{int(value):,}'
+    return f"{int(value):,}".replace(',', '،')
 
 # Admin های مدل‌های پایه
 @admin.register(ProductCategory)

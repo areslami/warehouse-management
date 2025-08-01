@@ -19,7 +19,7 @@ class AccountsPayable(models.Model):
         db_table = 'accounts_payable'
     
     def __str__(self):
-        return f'بدهی به {self.supplier} - {self.amount:,} ریال'
+        return f'بدهی به {self.supplier} - {self.amount:,} ریال'.replace(',', '٬')
 
 class AccountsReceivable(models.Model):
     """حساب‌های دریافتنی"""
@@ -37,4 +37,4 @@ class AccountsReceivable(models.Model):
         db_table = 'accounts_receivable'
     
     def __str__(self):
-        return f'طلب از {self.customer} - {self.amount:,} ریال'
+        return f'طلب از {self.customer} - {self.amount:,} ریال'.replace(',', '٬')

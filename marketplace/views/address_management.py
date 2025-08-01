@@ -255,7 +255,7 @@ def get_or_create_default_product(offer):
             name=product_name,
             defaults={
                 'description': f'محصول ایجاد شده از بازارگاه - عرضه {offer.offer_id}',
-                'unit': 'تن'
+                'unit': 'کیلو'
             }
         )
         return product
@@ -265,7 +265,7 @@ def get_or_create_default_product(offer):
             name="محصول بازارگاه",
             defaults={
                 'description': 'محصول پیش‌فرض برای بازارگاه',
-                'unit': 'تن'
+                'unit': 'کیلو'
             }
         )
         return product

@@ -22,7 +22,7 @@ class BaseReportView(TemplateView):
         """فرمت کردن اعداد با جداکننده هزارگان"""
         if value is None:
             return 0
-        return f'{int(value):,}'
+        return f"{int(value):,}".replace(',', '،')
 
 class WarehouseReportView(BaseReportView):
     """گزارش مرور انبار"""

@@ -34,7 +34,7 @@ class ProductOffer(TimestampMixin, models.Model):
     
     product = models.ForeignKey(Product, on_delete=models.CASCADE, verbose_name='کالا')
     offer_date = jDateField(verbose_name='تاریخ عرضه')
-    offer_weight = models.DecimalField(max_digits=10, decimal_places=2, verbose_name='وزن عرضه (تن)')
+    offer_weight = models.DecimalField(max_digits=10, decimal_places=2, verbose_name='وزن عرضه (کیلوگرم)')
     unit_price = models.DecimalField(max_digits=15, decimal_places=0, verbose_name='قیمت فروش (ریال)')
     total_price = models.DecimalField(max_digits=18, decimal_places=0, verbose_name='مبلغ کل', editable=False)
     

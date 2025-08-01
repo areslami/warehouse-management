@@ -31,7 +31,7 @@ class ThousandSeparatorWidget(forms.TextInput):
         try:
             # Remove any existing separators and format with commas
             cleaned_value = str(value).replace('،', '').replace(',', '')
-            return f"{int(float(cleaned_value)):,}"
+            return f"{int(float(cleaned_value)):,}".replace(',', '،')
         except (ValueError, TypeError):
             return str(value)
     
@@ -52,7 +52,7 @@ class NumberFormattingMixin:
         except:
             return str(value)
     
-    def format_weight(self, value, unit="تن"):
+    def format_weight(self, value, unit=""):
         """Format weight values"""
         if value is None:
             return '-'

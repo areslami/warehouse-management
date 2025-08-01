@@ -36,7 +36,7 @@ class ProductOfferForm(forms.ModelForm):
             
         # تنظیمات ظاهری
         if 'offer_weight' in self.fields:
-            self.fields['offer_weight'].help_text = 'وزن به تن وارد شود'
+            self.fields['offer_weight'].help_text = 'وزن وارد شود'
         if 'unit_price' in self.fields:
             self.fields['unit_price'].help_text = 'قیمت به ریال وارد شود'
 
@@ -66,7 +66,7 @@ class ProductOfferAdmin(BaseMarketplaceAdmin):
         }),
         ('جزئیات عرضه', {
             'fields': ('offer_date', 'offer_weight', 'unit_price', 'offer_type'),
-            'description': 'وزن به تن و قیمت به ریال وارد شود'
+            'description': 'وزن بر حسب کیلوگرم و قیمت به ریال وارد شود'
         }),
         ('محاسبات خودکار', {
             'fields': ('get_total_price_display',),
@@ -119,7 +119,7 @@ class ProductOfferAdmin(BaseMarketplaceAdmin):
                 '{} ریال'
                 '</div>'
                 '<div style="font-size: 12px; color: #666; margin-top: 5px;">'
-                '{} تن × {} ریال'
+                '{} × {} ریال'
                 '</div>',
                 format_number(total),
                 format_number(obj.offer_weight),

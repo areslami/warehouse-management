@@ -406,3 +406,114 @@ class MarketplacePurchaseDetail(TimestampMixin, models.Model):
     
     def __str__(self):
         return f'جزئیات {self.purchase.purchase_id}'
+
+
+class DistributionAgency(TimestampMixin, models.Model):
+    """اعطای عاملیت توزیع"""
+    
+    # انتخاب رسید انبار (فقط کوتاژ وارداتی)
+    warehouse_receipt = models.ForeignKey(
+        'warehouse.WarehouseReceipt',
+        on_delete=models.CASCADE,
+        verbose_name='رسید انبار',
+        limit_choices_to={'receipt_type': 'import_cottage'},
+        help_text='فقط رسیدهای کوتاژ وارداتی قابل انتخاب هستند'
+    )
+    
+    # پیش‌فاکتور فروش مرتبط
+    sales_proforma = models.ForeignKey(
+        'warehouse.SalesProforma',
+        on_delete=models.CASCADE,
+        verbose_name='پیش‌فاکتور فروش'
+    )
+    
+    # انتخاب مشتری
+    customer = models.ForeignKey(
+        'warehouse.Customer',
+        on_delete=models.CASCADE,
+        verbose_name='مشتری (عامل توزیع)'
+    )
+    
+    # مقدار وزنی عاملیت
+    agency_weight = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        verbose_name='وزن عاملیت داده شده (کیلوگرم)'
+    )
+    
+    # اطلاعات خودکار از رسید انبار
+    warehouse = models.ForeignKey(
+        'warehouse.Warehouse',
+        on_delete=models.CASCADE,
+        verbose_name='انبار',
+        editable=False
+    )
+    
+    product_type = models.ForeignKey(
+        'warehouse.Product',
+        on_delete=models.CASCADE,
+        verbose_name='نوع کالا',
+        editable=False
+    )
+    
+    cottage_number = models.CharField(
+        max_length=50,
+        verbose_name='شماره کوتاژ',
+        editable=False
+    )
+    
+    # تاریخ اعطای عاملیت
+    agency_date = jDateField(
+        verbose_name='تاریخ اعطای عاملیت'
+    )
+    
+    # توضیحات
+    description = models.TextField(
+        blank=True,
+        verbose_name='توضیحات'
+    )
+    
+    class Meta:
+        verbose_name = 'اعطای عاملیت توزیع'
+        verbose_name_plural = 'اعطای عاملیت‌های توزیع'
+        db_table = 'distribution_agencies'
+        ordering = ['-agency_date', '-created_at']
+    
+    def __str__(self):
+        return f'عاملیت {self.cottage_number} - {self.customer} ({self.agency_weight} کیلو)'
+    
+    def clean(self):
+        """اعتبارسنجی داده‌ها"""
+        from django.core.exceptions import ValidationError
+        
+        # بررسی وزن عاملیت
+        if self.agency_weight and self.agency_weight <= 0:
+            raise ValidationError('وزن عاملیت باید بیشتر از صفر باشد')
+        
+        # بررسی اینکه رسید انبار کوتاژ وارداتی باشد
+        if self.warehouse_receipt and self.warehouse_receipt.receipt_type != 'import_cottage':
+            raise ValidationError('فقط رسیدهای کوتاژ وارداتی قابل انتخاب هستند')
+        
+        # بررسی اینکه وزن عاملیت از مانده قابل عرضه رسید انبار بیشتر نباشد
+        if self.warehouse_receipt and self.agency_weight:
+            available_weight = self.warehouse_receipt.get_available_for_offer_weight()
+            if self.agency_weight > available_weight:
+                raise ValidationError(
+                    f'وزن عاملیت ({self.agency_weight}) نمی‌تواند از مانده قابل عرضه ({available_weight}) بیشتر باشد'
+                )
+    
+    def save(self, *args, **kwargs):
+        """ذخیره با لود اطلاعات خودکار"""
+        self.clean()
+        
+        # لود اطلاعات از رسید انبار
+        if self.warehouse_receipt:
+            self.warehouse = self.warehouse_receipt.warehouse
+            self.cottage_number = self.warehouse_receipt.cottage_number or self.warehouse_receipt.temp_number
+            
+            # لود نوع کالا از اولین آیتم رسید انبار
+            first_item = self.warehouse_receipt.items.first()
+            if first_item:
+                self.product_type = first_item.product
+        
+        super().save(*args, **kwargs)

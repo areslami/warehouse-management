@@ -53,7 +53,7 @@ class WarehouseReceiptItemInline(admin.TabularInline):
 
 @admin.register(WarehouseReceipt)
 class WarehouseReceiptAdmin(admin.ModelAdmin):
-    list_display = ['temp_number', 'receipt_type', 'cottage_number', 'date', 'purchase_proforma', 'warehouse', 'get_total_weight', 'get_offered_weight', 'created_at']
+    list_display = ['temp_number', 'receipt_type', 'cottage_number', 'date', 'warehouse', 'get_total_weight', 'get_offered_weight', 'get_agency_weight', 'get_available_for_offer', 'created_at']
     search_fields = ['temp_number', 'cottage_number', 'purchase_proforma__number']
     list_filter = ['date', 'warehouse', 'receipt_type', MarketplaceOfferFilter]
     inlines = [WarehouseReceiptItemInline]
@@ -94,7 +94,7 @@ class WarehouseReceiptAdmin(admin.ModelAdmin):
             
             if total_offered > 0:
                 return format_html(
-                    '<span style="color: #28a745; font-weight: bold;">{}</span> تن',
+                    '<span style="color: #28a745; font-weight: bold;">{}</span>',
                     total_offered
                 )
             else:
@@ -129,7 +129,7 @@ class WarehouseReceiptAdmin(admin.ModelAdmin):
             
             return format_html(
                 '<div style="background: #d4edda; padding: 10px; border-radius: 4px; border-left: 4px solid #28a745;">'
-                '<strong>مجموع وزن عرضه شده:</strong> {} تن<br>'
+                '<strong>مجموع وزن عرضه شده:</strong> {}<br>'
                 '<small style="color: #495057;">'
                 '• عرضه‌های فعال: {} مورد<br>'
                 '• عرضه‌های فروخته شده: {} مورد<br>'
@@ -153,6 +153,49 @@ class WarehouseReceiptAdmin(admin.ModelAdmin):
             )
     
     get_offered_weight_display.short_description = 'جزئیات عرضه در بازارگاه'
+    
+    def get_agency_weight(self, obj):
+        """محاسبه وزن عاملیت داده شده"""
+        try:
+            agency_weight = obj.get_agency_weight()
+            if agency_weight > 0:
+                return format_html(
+                    '<span style="color: #fd7e14; font-weight: bold;">{}</span>',
+                    agency_weight
+                )
+            else:
+                return format_html(
+                    '<span style="color: #6c757d;">-</span>'
+                )
+        except Exception as e:
+            return format_html('<span style="color: #dc3545;">خطا</span>')
+    
+    get_agency_weight.short_description = 'وزن عاملیت داده شده'
+    get_agency_weight.admin_order_field = None
+    
+    def get_available_for_offer(self, obj):
+        """محاسبه مانده قابل عرضه"""
+        try:
+            available_weight = obj.get_available_for_offer_weight()
+            if available_weight > 0:
+                return format_html(
+                    '<span style="color: #20c997; font-weight: bold;">{}</span>',
+                    available_weight
+                )
+            elif available_weight == 0:
+                return format_html(
+                    '<span style="color: #6c757d;">۰</span>'
+                )
+            else:
+                return format_html(
+                    '<span style="color: #dc3545; font-weight: bold;">{}</span>',
+                    available_weight
+                )
+        except Exception as e:
+            return format_html('<span style="color: #dc3545;">خطا</span>')
+    
+    get_available_for_offer.short_description = 'مانده قابل عرضه'
+    get_available_for_offer.admin_order_field = None
     
     def get_form(self, request, obj=None, **kwargs):
         form = super().get_form(request, obj, **kwargs)
@@ -363,7 +406,7 @@ class ProductDeliveryAdmin(admin.ModelAdmin):
 
 @admin.register(WarehouseInventory)
 class WarehouseInventoryAdmin(admin.ModelAdmin):
-    list_display = ['warehouse', 'product', 'get_quantity', 'get_reserved_quantity', 'get_available_quantity', 'updated_at']
+    list_display = ['warehouse', 'product', 'get_cottage_number', 'get_quantity', 'get_offered_weight', 'get_agency_weight', 'get_reserved_quantity', 'get_delivered_quantity', 'get_available_quantity']
     search_fields = ['warehouse__name', 'product__name', 'product__code']
     list_filter = ['warehouse', 'product__category']
     readonly_fields = ['get_quantity_display', 'get_reserved_display', 'get_available_display']
@@ -393,6 +436,133 @@ class WarehouseInventoryAdmin(admin.ModelAdmin):
         return format_html('<strong>{}</strong> {}', obj.available_quantity, obj.product.unit)
     get_available_display.short_description = 'موجودی قابل دسترس'
     
+    def get_cottage_number(self, obj):
+        """نمایش شماره کوتاژ از رسیدهای انبار مرتبط"""
+        try:
+            # پیدا کردن رسیدهای انبار برای این محصول و انبار
+            from ..models import WarehouseReceiptItem
+            receipt_items = WarehouseReceiptItem.objects.filter(
+                receipt__warehouse=obj.warehouse,
+                product=obj.product
+            ).select_related('receipt')
+            
+            cottage_numbers = []
+            for item in receipt_items:
+                if item.receipt.cottage_number:
+                    cottage_numbers.append(item.receipt.cottage_number)
+                else:
+                    cottage_numbers.append(item.receipt.temp_number)
+            
+            if cottage_numbers:
+                # حداکثر 3 شماره کوتاژ نمایش می‌دهیم
+                display_cottages = cottage_numbers[:3]
+                result = ', '.join(display_cottages)
+                if len(cottage_numbers) > 3:
+                    result += f' و {len(cottage_numbers) - 3} مورد دیگر'
+                return result
+            else:
+                return '-'
+        except Exception as e:
+            return 'خطا'
+    
+    get_cottage_number.short_description = 'کوتاژ'
+    
+    def get_offered_weight(self, obj):
+        """محاسبه وزن عرضه شده در بازارگاه"""
+        try:
+            from marketplace.models import ProductOffer
+            from ..models import WarehouseReceiptItem
+            
+            # پیدا کردن رسیدهای انبار برای این محصول و انبار
+            receipt_items = WarehouseReceiptItem.objects.filter(
+                receipt__warehouse=obj.warehouse,
+                product=obj.product
+            ).values_list('receipt_id', flat=True)
+            
+            # محاسبه مجموع وزن عرضه شده از این رسیدها
+            total_offered = ProductOffer.objects.filter(
+                warehouse_receipt_id__in=receipt_items
+            ).aggregate(
+                total=models.Sum('offer_weight')
+            )['total'] or 0
+            
+            if total_offered > 0:
+                return format_html(
+                    '<span style="color: #28a745; font-weight: bold;">{}</span>',
+                    total_offered
+                )
+            else:
+                return format_html(
+                    '<span style="color: #6c757d;">-</span>'
+                )
+        except Exception as e:
+            return format_html('<span style="color: #dc3545;">خطا</span>')
+    
+    get_offered_weight.short_description = 'عرضه شده'
+    get_offered_weight.admin_order_field = None
+    
+    def get_agency_weight(self, obj):
+        """محاسبه وزن عاملیت توزیع داده شده"""
+        try:
+            from marketplace.models import DistributionAgency
+            from ..models import WarehouseReceiptItem
+            
+            # پیدا کردن رسیدهای انبار برای این محصول و انبار
+            receipt_items = WarehouseReceiptItem.objects.filter(
+                receipt__warehouse=obj.warehouse,
+                product=obj.product
+            ).values_list('receipt_id', flat=True)
+            
+            # محاسبه مجموع وزن عاملیت داده شده از این رسیدها
+            total_agency = DistributionAgency.objects.filter(
+                warehouse_receipt_id__in=receipt_items
+            ).aggregate(
+                total=models.Sum('agency_weight')
+            )['total'] or 0
+            
+            if total_agency > 0:
+                return format_html(
+                    '<span style="color: #fd7e14; font-weight: bold;">{}</span>',
+                    total_agency
+                )
+            else:
+                return format_html(
+                    '<span style="color: #6c757d;">-</span>'
+                )
+        except Exception as e:
+            return format_html('<span style="color: #dc3545;">خطا</span>')
+    
+    get_agency_weight.short_description = 'عاملیت توزیع داده شده'
+    get_agency_weight.admin_order_field = None
+    
+    def get_delivered_quantity(self, obj):
+        """محاسبه مقدار حمل شده"""
+        try:
+            from ..models import ProductDeliveryItem
+            
+            # محاسبه مجموع کالاهای حمل شده
+            total_delivered = ProductDeliveryItem.objects.filter(
+                delivery__exit_warehouse=obj.warehouse,
+                product=obj.product
+            ).aggregate(
+                total=models.Sum('quantity')
+            )['total'] or 0
+            
+            if total_delivered > 0:
+                return format_html(
+                    '<span style="color: #6f42c1; font-weight: bold;">{}</span>',
+                    total_delivered
+                )
+            else:
+                return format_html(
+                    '<span style="color: #6c757d;">-</span>'
+                )
+        except Exception as e:
+            return format_html('<span style="color: #dc3545;">خطا</span>')
+    
+    get_delivered_quantity.short_description = 'حمل شده'
+    get_delivered_quantity.admin_order_field = None
+
     def has_add_permission(self, request):
         # موجودی انبار خودکار محاسبه می‌شود
         return False
