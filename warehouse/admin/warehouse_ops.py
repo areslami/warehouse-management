@@ -216,6 +216,11 @@ class WarehouseDeliveryOrderAdmin(admin.ModelAdmin):
     readonly_fields = ['get_total_weight_display', 'excel_operations']
     list_per_page = 20
     
+    def changelist_view(self, request, extra_context=None):
+        extra_context = extra_context or {}
+        extra_context['bulk_export_url'] = '/warehouse/bulk-delivery-export/'
+        return super().changelist_view(request, extra_context)
+    
     def get_total_weight(self, obj):
         return f'{obj.total_weight}'
     get_total_weight.short_description = 'جمع وزن'

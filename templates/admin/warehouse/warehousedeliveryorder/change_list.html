@@ -1,0 +1,24 @@
+{% extends "admin/change_list.html" %}
+{% load i18n admin_urls static %}
+
+{% block object-tools-items %}
+    {{ block.super }}
+    <li>
+        <a href="{{ bulk_export_url }}" class="addlink" style="background-color: #28a745; border-color: #28a745;">
+            <i class="fas fa-file-excel"></i> ارسال بالک حواله خروج
+        </a>
+    </li>
+{% endblock %}
+
+{% block extrahead %}
+    {{ block.super }}
+    <style>
+        .addlink {
+            color: white !important;
+            text-decoration: none;
+        }
+        .addlink:hover {
+            opacity: 0.8;
+        }
+    </style>
+{% endblock %}
