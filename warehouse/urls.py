@@ -26,4 +26,10 @@ urlpatterns = [
          excel_ops.download_delivery_order_excel, name='download_delivery_order_excel'),
     path('delivery-order/template-excel/', 
          excel_ops.download_delivery_order_template, name='download_delivery_order_template'),
+    
+    # ارسال بالک حواله خروج
+    path('bulk-delivery-export/', 
+         excel_ops.bulk_delivery_order_selection, name='bulk_delivery_order_selection'),
+    path('bulk-delivery-export/export/', 
+         excel_ops.bulk_delivery_order_export, name='bulk_delivery_order_export'),
 ]

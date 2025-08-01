@@ -229,3 +229,174 @@ def download_delivery_order_template(request):
     response.write(virtual_workbook.getvalue())
     
     return response
+
+
+@staff_member_required
+def bulk_delivery_order_selection(request):
+    """صفحه انتخاب حواله‌های خروج برای ارسال بالک"""
+    from django.db.models import Q
+    from django.core.paginator import Paginator
+    
+    # دریافت پارامترهای فیلتر
+    search_query = request.GET.get('search', '')
+    date_from = request.GET.get('date_from', '')
+    date_to = request.GET.get('date_to', '')
+    warehouse_id = request.GET.get('warehouse', '')
+    
+    # شروع با کل حواله‌ها
+    delivery_orders = WarehouseDeliveryOrder.objects.select_related(
+        'warehouse', 'sales_proforma', 'shipping_company'
+    ).prefetch_related('items')
+    
+    # اعمال فیلترها
+    if search_query:
+        delivery_orders = delivery_orders.filter(
+            Q(number__icontains=search_query) |
+            Q(sales_proforma__number__icontains=search_query) |
+            Q(description__icontains=search_query)
+        )
+    
+    if date_from:
+        delivery_orders = delivery_orders.filter(issue_date__gte=date_from)
+    
+    if date_to:
+        delivery_orders = delivery_orders.filter(issue_date__lte=date_to)
+    
+    if warehouse_id:
+        delivery_orders = delivery_orders.filter(warehouse_id=warehouse_id)
+    
+    # مرتب‌سازی
+    delivery_orders = delivery_orders.order_by('-issue_date', '-number')
+    
+    # صفحه‌بندی
+    paginator = Paginator(delivery_orders, 20)
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+    
+    # دریافت لیست انبارها برای فیلتر
+    from ..models.base import Warehouse
+    warehouses = Warehouse.objects.all()
+    
+    context = {
+        'page_obj': page_obj,
+        'search_query': search_query,
+        'date_from': date_from,
+        'date_to': date_to,
+        'warehouse_id': warehouse_id,
+        'warehouses': warehouses,
+        'total_count': paginator.count
+    }
+    
+    return render(request, 'warehouse/bulk_delivery_selection.html', context)
+
+
+@staff_member_required
+def bulk_delivery_order_export(request):
+    """ارسال بالک حواله‌های خروج به اکسل"""
+    if request.method != 'POST':
+        messages.error(request, 'روش درخواست نامعتبر است')
+        return redirect('warehouse:bulk_delivery_order_selection')
+    
+    # دریافت شناسه‌های حواله انتخاب شده
+    delivery_order_ids = request.POST.getlist('delivery_orders')
+    
+    if not delivery_order_ids:
+        messages.error(request, 'هیچ حواله‌ای انتخاب نشده است')
+        return redirect('warehouse:bulk_delivery_order_selection')
+    
+    try:
+        # دریافت حواله‌های انتخاب شده
+        delivery_orders = WarehouseDeliveryOrder.objects.filter(
+            id__in=delivery_order_ids
+        ).select_related(
+            'warehouse', 'sales_proforma', 'shipping_company'
+        ).prefetch_related(
+            'items__product', 'items__receiver'
+        )
+        
+        if not delivery_orders.exists():
+            messages.error(request, 'حواله‌های انتخاب شده یافت نشد')
+            return redirect('warehouse:bulk_delivery_order_selection')
+        
+        # ایجاد فایل اکسل
+        workbook = openpyxl.Workbook()
+        sheet = workbook.active
+        sheet.title = "حواله‌های خروج انبار"
+        
+        # تنظیم سبک‌ها
+        header_font = Font(bold=True, color="FFFFFF")
+        header_fill = PatternFill(start_color="366092", end_color="366092", fill_type="solid")
+        center_alignment = Alignment(horizontal="center", vertical="center")
+        
+        # هدرهای جدول
+        headers = [
+            'شماره حواله', 'تاریخ صدور', 'انبار', 'پیش‌فاکتور فروش', 'شرکت حمل',
+            'کد کالا', 'نام کالا', 'مقدار', 'واحد', 'نوع وسیله حمل',
+            'کد گیرنده', 'نام گیرنده', 'آدرس گیرنده', 'تلفن گیرنده', 'کد پستی گیرنده', 'شناسه یکتای گیرنده'
+        ]
+        
+        # نوشتن هدرها
+        for col_idx, header in enumerate(headers, 1):
+            cell = sheet.cell(row=1, column=col_idx, value=header)
+            cell.font = header_font
+            cell.fill = header_fill
+            cell.alignment = center_alignment
+        
+        # نوشتن داده‌ها
+        row_idx = 2
+        
+        for delivery_order in delivery_orders:
+            for item in delivery_order.items.all():
+                data_row = [
+                    delivery_order.number,
+                    delivery_order.issue_date.strftime('%Y/%m/%d') if delivery_order.issue_date else '',
+                    delivery_order.warehouse.name if delivery_order.warehouse else '',
+                    delivery_order.sales_proforma.number if delivery_order.sales_proforma else '',
+                    delivery_order.shipping_company.name if delivery_order.shipping_company else '',
+                    item.product.code if item.product else '',
+                    item.product.name if item.product else '',
+                    str(item.quantity),
+                    item.product.unit if item.product else '',
+                    item.get_vehicle_type_display(),
+                    item.receiver.code if item.receiver else '',
+                    item.receiver.full_name if item.receiver and item.receiver.receiver_type == 'natural' else (item.receiver.company_name if item.receiver else ''),
+                    item.receiver_address,
+                    item.receiver_phone,
+                    item.receiver_postal_code,
+                    item.receiver_unique_id
+                ]
+                
+                for col_idx, value in enumerate(data_row, 1):
+                    sheet.cell(row=row_idx, column=col_idx, value=value)
+                
+                row_idx += 1
+        
+        # تنظیم عرض ستون‌ها
+        for col_idx in range(1, len(headers) + 1):
+            sheet.column_dimensions[openpyxl.utils.get_column_letter(col_idx)].width = 20
+        
+        # ایجاد response برای دانلود
+        response = HttpResponse(
+            content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        )
+        
+        # نام فایل با تاریخ
+        import jdatetime
+        today = jdatetime.date.today()
+        filename = f"bulk_delivery_orders_{today.strftime('%Y%m%d')}.xlsx"
+        response['Content-Disposition'] = f'attachment; filename="{filename}"'
+        
+        # ذخیره فایل
+        virtual_workbook = io.BytesIO()
+        workbook.save(virtual_workbook)
+        virtual_workbook.seek(0)
+        response.write(virtual_workbook.getvalue())
+        
+        # پیام موفقیت
+        messages.success(request, f'فایل اکسل حاوی {len(delivery_order_ids)} حواله با موفقیت ایجاد شد')
+        
+        return response
+        
+    except Exception as e:
+        messages.error(request, f'خطا در ایجاد فایل اکسل: {str(e)}')
+        return redirect('warehouse:bulk_delivery_order_selection')
