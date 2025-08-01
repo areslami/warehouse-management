@@ -118,7 +118,8 @@ class Receiver(models.Model):
     ]
     
     code = models.AutoField(primary_key=True, verbose_name='کد گیرنده')
-    unique_id = models.CharField(max_length=50, unique=True, verbose_name='شناسه یکتا')
+    system_id = models.CharField(max_length=50, unique=True, verbose_name='شناسه سیستمی', editable=False)
+    unique_id = models.CharField(max_length=50, verbose_name='شناسه یکتا', help_text='شناسه از اکسل آدرس‌ها')
     receiver_type = models.CharField(max_length=10, choices=RECEIVER_TYPES, verbose_name='نوع گیرنده')
     
     # فیلدهای حقوقی
@@ -152,6 +153,20 @@ class Receiver(models.Model):
             return f'{self.company_name} ({self.unique_id})'
         else:
             return f'{self.full_name} ({self.unique_id})'
+    
+    def save(self, *args, **kwargs):
+        """تولید خودکار شناسه سیستمی"""
+        if not self.system_id:
+            import uuid
+            from datetime import datetime
+            import jdatetime
+            
+            # تولید شناسه یکتا با ترکیب تاریخ شمسی و UUID
+            jalali_date = jdatetime.datetime.now().strftime('%Y%m%d')
+            unique_part = str(uuid.uuid4())[:8].upper()
+            self.system_id = f"REC-{jalali_date}-{unique_part}"
+        
+        super().save(*args, **kwargs)
     
     def clean(self):
         from django.core.exceptions import ValidationError
