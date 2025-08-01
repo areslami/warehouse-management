@@ -1,0 +1,265 @@
+{% extends 'warehouse/base.html' %}
+
+{% block title %}ارسال بالک حواله خروج{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h4 class="mb-0">
+                        <i class="fas fa-shipping-fast"></i>
+                        ارسال بالک حواله خروج انبار
+                    </h4>
+                    <small>انتخاب حواله‌های مورد نظر برای دانلود فایل اکسل</small>
+                </div>
+                
+                <div class="card-body">
+                    <!-- فیلترها -->
+                    <div class="row mb-4">
+                        <div class="col-12">
+                            <form method="get" class="row g-3">
+                                <div class="col-md-3">
+                                    <label for="search" class="form-label">جستجو</label>
+                                    <input type="text" class="form-control" id="search" name="search" 
+                                           value="{{ search_query }}" placeholder="شماره حواله، پیش‌فاکتور...">
+                                </div>
+                                <div class="col-md-2">
+                                    <label for="date_from" class="form-label">از تاریخ</label>
+                                    <input type="date" class="form-control" id="date_from" name="date_from" 
+                                           value="{{ date_from }}">
+                                </div>
+                                <div class="col-md-2">
+                                    <label for="date_to" class="form-label">تا تاریخ</label>
+                                    <input type="date" class="form-control" id="date_to" name="date_to" 
+                                           value="{{ date_to }}">
+                                </div>
+                                <div class="col-md-3">
+                                    <label for="warehouse" class="form-label">انبار</label>
+                                    <select class="form-select" id="warehouse" name="warehouse">
+                                        <option value="">همه انبارها</option>
+                                        {% for warehouse in warehouses %}
+                                            <option value="{{ warehouse.id }}" 
+                                                    {% if warehouse.id|stringformat:"s" == warehouse_id %}selected{% endif %}>
+                                                {{ warehouse.name }}
+                                            </option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                                <div class="col-md-2 d-flex align-items-end">
+                                    <button type="submit" class="btn btn-outline-primary me-2">
+                                        <i class="fas fa-search"></i> جستجو
+                                    </button>
+                                    <a href="{% url 'warehouse:bulk_delivery_order_selection' %}" class="btn btn-outline-secondary">
+                                        <i class="fas fa-eraser"></i> پاک کردن
+                                    </a>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+
+                    <!-- نتایج -->
+                    <div class="row mb-3">
+                        <div class="col-6">
+                            <p class="text-muted mb-0">
+                                <i class="fas fa-info-circle"></i>
+                                مجموع {{ total_count }} حواله یافت شد
+                            </p>
+                        </div>
+                        <div class="col-6 text-end">
+                            <button type="button" class="btn btn-sm btn-success" id="select-all">
+                                <i class="fas fa-check-double"></i> انتخاب همه
+                            </button>
+                            <button type="button" class="btn btn-sm btn-warning" id="deselect-all">
+                                <i class="fas fa-times"></i> لغو انتخاب همه
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- فرم ارسال -->
+                    <form method="post" action="{% url 'warehouse:bulk_delivery_order_export' %}" id="export-form">
+                        {% csrf_token %}
+                        
+                        <!-- جدول حواله‌ها -->
+                        <div class="table-responsive">
+                            <table class="table table-hover table-bordered">
+                                <thead class="bg-light">
+                                    <tr>
+                                        <th width="5%">
+                                            <input type="checkbox" id="select-all-checkbox" class="form-check-input">
+                                        </th>
+                                        <th>شماره حواله</th>
+                                        <th>تاریخ صدور</th>
+                                        <th>انبار</th>
+                                        <th>پیش‌فاکتور فروش</th>
+                                        <th>شرکت حمل</th>
+                                        <th>جمع وزن</th>
+                                        <th>تعداد آیتم</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for delivery_order in page_obj %}
+                                        <tr>
+                                            <td>
+                                                <input type="checkbox" name="delivery_orders" 
+                                                       value="{{ delivery_order.id }}" 
+                                                       class="form-check-input delivery-checkbox">
+                                            </td>
+                                            <td>
+                                                <strong class="text-primary">{{ delivery_order.number }}</strong>
+                                            </td>
+                                            <td>{{ delivery_order.issue_date|date:"Y/m/d" }}</td>
+                                            <td>{{ delivery_order.warehouse.name }}</td>
+                                            <td>
+                                                {% if delivery_order.sales_proforma %}
+                                                    <span class="badge bg-success">{{ delivery_order.sales_proforma.number }}</span>
+                                                {% else %}
+                                                    <span class="text-muted">-</span>
+                                                {% endif %}
+                                            </td>
+                                            <td>{{ delivery_order.shipping_company.name }}</td>
+                                            <td>
+                                                <span class="badge bg-info">{{ delivery_order.total_weight }} تن</span>
+                                            </td>
+                                            <td>
+                                                <span class="badge bg-secondary">{{ delivery_order.items.count }} آیتم</span>
+                                            </td>
+                                        </tr>
+                                    {% empty %}
+                                        <tr>
+                                            <td colspan="8" class="text-center text-muted py-4">
+                                                <i class="fas fa-search fa-2x mb-2"></i><br>
+                                                هیچ حواله‌ای یافت نشد
+                                            </td>
+                                        </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <!-- صفحه‌بندی -->
+                        {% if page_obj.has_other_pages %}
+                            <nav aria-label="Page navigation">
+                                <ul class="pagination justify-content-center">
+                                    {% if page_obj.has_previous %}
+                                        <li class="page-item">
+                                            <a class="page-link" href="?{% if search_query %}search={{ search_query }}&{% endif %}{% if date_from %}date_from={{ date_from }}&{% endif %}{% if date_to %}date_to={{ date_to }}&{% endif %}{% if warehouse_id %}warehouse={{ warehouse_id }}&{% endif %}page={{ page_obj.previous_page_number }}">قبلی</a>
+                                        </li>
+                                    {% endif %}
+                                    
+                                    {% for num in page_obj.paginator.page_range %}
+                                        {% if page_obj.number == num %}
+                                            <li class="page-item active">
+                                                <span class="page-link">{{ num }}</span>
+                                            </li>
+                                        {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+                                            <li class="page-item">
+                                                <a class="page-link" href="?{% if search_query %}search={{ search_query }}&{% endif %}{% if date_from %}date_from={{ date_from }}&{% endif %}{% if date_to %}date_to={{ date_to }}&{% endif %}{% if warehouse_id %}warehouse={{ warehouse_id }}&{% endif %}page={{ num }}">{{ num }}</a>
+                                            </li>
+                                        {% endif %}
+                                    {% endfor %}
+                                    
+                                    {% if page_obj.has_next %}
+                                        <li class="page-item">
+                                            <a class="page-link" href="?{% if search_query %}search={{ search_query }}&{% endif %}{% if date_from %}date_from={{ date_from }}&{% endif %}{% if date_to %}date_to={{ date_to }}&{% endif %}{% if warehouse_id %}warehouse={{ warehouse_id }}&{% endif %}page={{ page_obj.next_page_number }}">بعدی</a>
+                                        </li>
+                                    {% endif %}
+                                </ul>
+                            </nav>
+                        {% endif %}
+
+                        <!-- دکمه ارسال -->
+                        <div class="row mt-4">
+                            <div class="col-12 text-center">
+                                <button type="submit" class="btn btn-success btn-lg" id="export-btn" disabled>
+                                    <i class="fas fa-file-excel"></i>
+                                    دانلود فایل اکسل حواله‌های انتخاب شده
+                                    (<span id="selected-count">0</span> حواله)
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const selectAllCheckbox = document.getElementById('select-all-checkbox');
+    const deliveryCheckboxes = document.querySelectorAll('.delivery-checkbox');
+    const exportBtn = document.getElementById('export-btn');
+    const selectedCountSpan = document.getElementById('selected-count');
+    const selectAllBtn = document.getElementById('select-all');
+    const deselectAllBtn = document.getElementById('deselect-all');
+
+    function updateSelectedCount() {
+        const checkedBoxes = document.querySelectorAll('.delivery-checkbox:checked');
+        const count = checkedBoxes.length;
+        
+        selectedCountSpan.textContent = count;
+        exportBtn.disabled = count === 0;
+        
+        if (count === 0) {
+            exportBtn.classList.remove('btn-success');
+            exportBtn.classList.add('btn-secondary');
+        } else {
+            exportBtn.classList.remove('btn-secondary');
+            exportBtn.classList.add('btn-success');
+        }
+        
+        // به‌روزرسانی checkbox اصلی
+        selectAllCheckbox.indeterminate = count > 0 && count < deliveryCheckboxes.length;
+        selectAllCheckbox.checked = count === deliveryCheckboxes.length;
+    }
+    
+    // رویداد تغییر checkbox اصلی
+    selectAllCheckbox.addEventListener('change', function() {
+        deliveryCheckboxes.forEach(checkbox => {
+            checkbox.checked = this.checked;
+        });
+        updateSelectedCount();
+    });
+    
+    // رویداد تغییر checkbox های فردی
+    deliveryCheckboxes.forEach(checkbox => {
+        checkbox.addEventListener('change', updateSelectedCount);
+    });
+    
+    // دکمه انتخاب همه
+    selectAllBtn.addEventListener('click', function() {
+        deliveryCheckboxes.forEach(checkbox => {
+            checkbox.checked = true;
+        });
+        updateSelectedCount();
+    });
+    
+    // دکمه لغو انتخاب همه
+    deselectAllBtn.addEventListener('click', function() {
+        deliveryCheckboxes.forEach(checkbox => {
+            checkbox.checked = false;
+        });
+        updateSelectedCount();
+    });
+    
+    // تأیید قبل از ارسال
+    document.getElementById('export-form').addEventListener('submit', function(e) {
+        const checkedBoxes = document.querySelectorAll('.delivery-checkbox:checked');
+        if (checkedBoxes.length === 0) {
+            e.preventDefault();
+            alert('لطفا حداقل یک حواله انتخاب کنید');
+            return;
+        }
+        
+        if (!confirm(`آیا مطمئن هستید که می‌خواهید ${checkedBoxes.length} حواله را به اکسل ارسال کنید؟`)) {
+            e.preventDefault();
+        }
+    });
+    
+    // شروع اولیه
+    updateSelectedCount();
+});
+</script>
+{% endblock %}
