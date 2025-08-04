@@ -85,11 +85,11 @@ class DeliveryFulfillment(models.Model):
     updated_at = models.DateTimeField(auto_now=True)    
     
 class DeliveryFulfillmentItem(models.Model):
-    delivery_order = models.ForeignKey(DeliveryFulfillment, related_name='items', on_delete=models.CASCADE)
+    delivery = models.ForeignKey(DeliveryFulfillment, related_name='items', on_delete=models.CASCADE)
     shippment_id = models.CharField(max_length=50, unique=True, null=False)
     shippment_price = models.DecimalField(max_digits=16, decimal_places=8)
     product = models.ForeignKey('core.Product', on_delete=models.PROTECT)
     weight = models.DecimalField(max_digits=16, decimal_places=8)
     vehicle_type = models.CharField(max_length=20, choices=VEHICLE_TYPES)
     receiver = models.ForeignKey('core.Receiver', on_delete=models.PROTECT)
-    
+
