@@ -25,7 +25,10 @@ class Supplier(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     
-class Customer(models.Model):
+class BaseParty(models.Model):
+    pass
+    
+class Customer(BaseParty):
     customer_type = models.CharField(max_length=10, choices=PartyType.choices,null=False)
     
     # corporate
@@ -47,7 +50,7 @@ class Customer(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
-class Reciever(models.Model):
+class Reciever(BaseParty):
     reciever_type = models.CharField(max_length=10, choices=PartyType.choices,null=False)
     system_id = models.CharField(max_length=50, unique=True)
     unique_id = models.CharField(max_length=50)
