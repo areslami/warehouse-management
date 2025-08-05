@@ -43,6 +43,7 @@ INSTALLED_APPS = [
     "b2b",
     "finance",
     "rest_framework",
+    'django_filters',
 ]
 
 MIDDLEWARE = [

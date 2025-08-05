@@ -1,8 +1,7 @@
 from rest_framework import serializers
-from .models.base import Warehouse, ShippingCompany
-from .models.inventory import (
-    WarehouseReceipt, WarehouseReceiptItem, DispatchIssue, DispatchIssueItem,
-    DeliveryFulfillment, DeliveryFulfillmentItem
+from .models import (
+    Warehouse, ShippingCompany, WarehouseReceipt, WarehouseReceiptItem,
+    DispatchIssue, DispatchIssueItem, DeliveryFulfillment, DeliveryFulfillmentItem
 )
 
 

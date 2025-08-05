@@ -3,8 +3,7 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 from django_filters.rest_framework import DjangoFilterBackend
 
-from .models.parties import Supplier, Customer, Reciever
-from .models.product import Product, ProductCategory, ProductReigon
+from .models import Supplier, Customer, Reciever, Product, ProductCategory, ProductReigon
 from .serializers import (
     SupplierSerializer, CustomerSerializer, RecieverSerializer,
     ProductSerializer, ProductListSerializer, ProductCategorySerializer,

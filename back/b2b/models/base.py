@@ -40,7 +40,10 @@ class B2BOffer(models.Model):
     notes = models.TextField(blank=True)
     
     created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)    
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    def __str__(self):
+        return f"{self.offer_id} - {self.product.name} ({self.status})"    
     
     
     
@@ -55,7 +58,7 @@ class B2bDistribution(models.Model):
     )
     
     product= models.ForeignKey('core.Product',on_delete=models.CASCADE,)
-    sales_proforma = models.ForeignKey('warehouse.SalesProforma',on_delete=models.CASCADE,)
+    sales_proforma = models.ForeignKey('finance.SalesProforma',on_delete=models.CASCADE,)
     
     customer = models.ForeignKey('core.Customer',on_delete=models.CASCADE,)
     
@@ -64,7 +67,10 @@ class B2bDistribution(models.Model):
     agency_weight = models.DecimalField(max_digits=16,decimal_places=8,default=0)
     
     created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)    
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    def __str__(self):
+        return f"Distribution {self.product.name} - {self.customer}"    
     
 
 
@@ -85,7 +91,10 @@ class B2BSale(models.Model):
     # ! not in warehouse receipt
     entry_customs = models.CharField(max_length=200,blank=True,)
     created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)    
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    def __str__(self):
+        return f"Sale {self.product_offer.offer_id} ({self.offer_status})"    
    
    
 class B2BSaleDetail(models.Model):

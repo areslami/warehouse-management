@@ -3,9 +3,8 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 from django_filters.rest_framework import DjangoFilterBackend
 
-from .models.base import Warehouse, ShippingCompany
-from .models.inventory import (
-    WarehouseReceipt, DispatchIssue, DeliveryFulfillment
+from .models import (
+    Warehouse, ShippingCompany, WarehouseReceipt, DispatchIssue, DeliveryFulfillment
 )
 from .serializers import (
     WarehouseSerializer, ShippingCompanySerializer, WarehouseReceiptSerializer,

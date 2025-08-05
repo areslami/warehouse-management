@@ -1,6 +1,5 @@
 from rest_framework import serializers
-from .models.parties import Supplier, Customer, Reciever, PartyType
-from .models.product import Product, ProductCategory, ProductReigon
+from .models import Supplier, Customer, Reciever, PartyType, Product, ProductCategory, ProductReigon
 
 
 class ProductCategorySerializer(serializers.ModelSerializer):
@@ -55,11 +54,18 @@ class SupplierSerializer(serializers.ModelSerializer):
                 raise serializers.ValidationError("Company name is required for corporate suppliers")
             if not data.get('national_id'):
                 raise serializers.ValidationError("National ID is required for corporate suppliers")
+            # Clear individual fields for corporate
+            data['full_name'] = ''
+            data['personal_code'] = ''
+            
         elif supplier_type == PartyType.INDIVIDUAL:
             if not data.get('full_name'):
                 raise serializers.ValidationError("Full name is required for individual suppliers")
             if not data.get('personal_code'):
                 raise serializers.ValidationError("Personal code is required for individual suppliers")
+            # Clear corporate fields for individual
+            data['company_name'] = ''
+            data['national_id'] = ''
         
         return data
 
@@ -82,11 +88,18 @@ class CustomerSerializer(serializers.ModelSerializer):
                 raise serializers.ValidationError("Company name is required for corporate customers")
             if not data.get('national_id'):
                 raise serializers.ValidationError("National ID is required for corporate customers")
+            # Clear individual fields for corporate
+            data['full_name'] = ''
+            data['personal_code'] = ''
+            
         elif customer_type == PartyType.INDIVIDUAL:
             if not data.get('full_name'):
                 raise serializers.ValidationError("Full name is required for individual customers")
             if not data.get('personal_code'):
                 raise serializers.ValidationError("Personal code is required for individual customers")
+            # Clear corporate fields for individual
+            data['company_name'] = ''
+            data['national_id'] = ''
         
         return data
 
@@ -109,11 +122,18 @@ class RecieverSerializer(serializers.ModelSerializer):
                 raise serializers.ValidationError("Company name is required for corporate receivers")
             if not data.get('national_id'):
                 raise serializers.ValidationError("National ID is required for corporate receivers")
+            # Clear individual fields for corporate
+            data['full_name'] = ''
+            data['personal_code'] = ''
+            
         elif reciever_type == PartyType.INDIVIDUAL:
             if not data.get('full_name'):
                 raise serializers.ValidationError("Full name is required for individual receivers")
             if not data.get('personal_code'):
                 raise serializers.ValidationError("Personal code is required for individual receivers")
+            # Clear corporate fields for individual
+            data['company_name'] = ''
+            data['national_id'] = ''
         
         return data
 
