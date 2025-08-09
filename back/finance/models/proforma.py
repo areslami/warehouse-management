@@ -39,7 +39,7 @@ class SalesProforma(Proforma):
 
 
 class ProformaLine(models.Model):
-    profoma=models.ForeignKey(Proforma,related_name='lines', on_delete=models.CASCADE)
+    proforma=models.ForeignKey(Proforma,related_name='lines', on_delete=models.CASCADE)
     
     product = models.ForeignKey('core.Product', on_delete=models.PROTECT)
     weight = models.DecimalField(max_digits=16, decimal_places=8)

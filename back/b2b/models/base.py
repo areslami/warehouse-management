@@ -101,5 +101,7 @@ class B2BSaleDetail(models.Model):
     marketplace_sale = models.ForeignKey(B2BSale,related_name="items",on_delete=models.CASCADE)
     #? what
     customer = models.ForeignKey('core.Customer',on_delete=models.PROTECT,null=False)
-    
-#* Market 
+
+
+
+#* Purchase

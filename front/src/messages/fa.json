@@ -1,0 +1,27 @@
+{
+  "sidebar": {
+    "title": "شمس تجارت خوشنام",
+    "products": "محصولات",
+    "supplier": "تامین کنندگان",
+    "recivers": "تحیل گیرندگان",
+    "customers": "مشتریان",
+
+    "b2b": "بازارگاه",
+    "b2b-offer": "عرضه کالا",
+    "b2b-distribution": "عاملیت توزیع",
+    "b2b-sale": "فروش بازارگاه",
+
+    "warehouse": "انبار",
+    "warehouse-receipt": "رسید انبار",
+    "dispatch-issue": "صدور حواله",
+    "delivery-fulfillment": "تحویل کالا",
+
+    "finance": "مالی",
+    "sale-proforma": "پیش فاکتور فروش",
+    "purchase-proforma": "پیش فاکتور خرید"
+  },
+  "header": {
+    "welcome": "خوش آمدید",
+    "logout": "خروج"
+  }
+}
