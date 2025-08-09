@@ -88,7 +88,6 @@ class CustomerSerializer(serializers.ModelSerializer):
                 raise serializers.ValidationError("Company name is required for corporate customers")
             if not data.get('national_id'):
                 raise serializers.ValidationError("National ID is required for corporate customers")
-            # Clear individual fields for corporate
             data['full_name'] = ''
             data['personal_code'] = ''
             
@@ -97,7 +96,6 @@ class CustomerSerializer(serializers.ModelSerializer):
                 raise serializers.ValidationError("Full name is required for individual customers")
             if not data.get('personal_code'):
                 raise serializers.ValidationError("Personal code is required for individual customers")
-            # Clear corporate fields for individual
             data['company_name'] = ''
             data['national_id'] = ''
         
@@ -122,7 +120,6 @@ class RecieverSerializer(serializers.ModelSerializer):
                 raise serializers.ValidationError("Company name is required for corporate receivers")
             if not data.get('national_id'):
                 raise serializers.ValidationError("National ID is required for corporate receivers")
-            # Clear individual fields for corporate
             data['full_name'] = ''
             data['personal_code'] = ''
             
@@ -131,7 +128,6 @@ class RecieverSerializer(serializers.ModelSerializer):
                 raise serializers.ValidationError("Full name is required for individual receivers")
             if not data.get('personal_code'):
                 raise serializers.ValidationError("Personal code is required for individual receivers")
-            # Clear corporate fields for individual
             data['company_name'] = ''
             data['national_id'] = ''
         

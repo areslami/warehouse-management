@@ -179,6 +179,134 @@
     "save": "ذخیره",
     "cancel": "لغو"
   },
+  "productCategory": {
+    "validation": {
+      "name": "نام دسته بندی الزامی است"
+    },
+    "title": "دسته بندی محصول",
+    "name": "نام",
+    "description": "توضیحات",
+    "save": "ذخیره",
+    "cancel": "لغو"
+  },
+  "productRegion": {
+    "validation": {
+      "name": "نام منطقه الزامی است"
+    },
+    "title": "منطقه محصول",
+    "name": "نام",
+    "description": "توضیحات",
+    "save": "ذخیره",
+    "cancel": "لغو"
+  },
+  "product": {
+    "validation": {
+      "name": "نام محصول الزامی است",
+      "code": "کد محصول الزامی است",
+      "b2bcode": "کد B2B الزامی است",
+      "b2breigon": "منطقه B2B الزامی است",
+      "category": "دسته بندی الزامی است"
+    },
+    "title": "محصول",
+    "name": "نام",
+    "code": "کد",
+    "b2bcode": "کد B2B",
+    "b2breigon": "منطقه B2B",
+    "category": "دسته بندی",
+    "description": "توضیحات",
+    "save": "ذخیره",
+    "cancel": "لغو"
+  },
+  "supplier": {
+    "validation": {
+      "economic-code": "کد اقتصادی الزامی است",
+      "phone": "شماره تلفن الزامی است",
+      "address": "آدرس الزامی است",
+      "party-fields": "فیلدهای مربوط به نوع شخص باید تکمیل شوند"
+    },
+    "title": "تامین کننده",
+    "supplier-type": "نوع تامین کننده",
+    "type-individual": "حقیقی",
+    "type-corporate": "حقوقی",
+    "company-name": "نام شرکت",
+    "national-id": "شناسه ملی",
+    "full-name": "نام کامل",
+    "personal-code": "کد شخصی",
+    "economic-code": "کد اقتصادی",
+    "phone": "تلفن",
+    "address": "آدرس",
+    "description": "توضیحات",
+    "save": "ذخیره",
+    "cancel": "لغو"
+  },
+  "customer": {
+    "validation": {
+      "economic-code": "کد اقتصادی الزامی است",
+      "phone": "شماره تلفن الزامی است",
+      "address": "آدرس الزامی است",
+      "party-fields": "فیلدهای مربوط به نوع شخص باید تکمیل شوند"
+    },
+    "title": "مشتری",
+    "customer-type": "نوع مشتری",
+    "type-individual": "حقیقی",
+    "type-corporate": "حقوقی",
+    "company-name": "نام شرکت",
+    "national-id": "شناسه ملی",
+    "full-name": "نام کامل",
+    "personal-code": "کد شخصی",
+    "economic-code": "کد اقتصادی",
+    "phone": "تلفن",
+    "address": "آدرس",
+    "description": "توضیحات",
+    "tags": "برچسب ها",
+    "save": "ذخیره",
+    "cancel": "لغو"
+  },
+  "receiver": {
+    "validation": {
+      "system-id": "شناسه سیستم الزامی است",
+      "unique-id": "شناسه یکتا الزامی است",
+      "economic-code": "کد اقتصادی الزامی است",
+      "phone": "شماره تلفن الزامی است",
+      "address": "آدرس الزامی است",
+      "party-fields": "فیلدهای مربوط به نوع شخص باید تکمیل شوند"
+    },
+    "title": "دریافت کننده",
+    "receiver-type": "نوع دریافت کننده",
+    "type-individual": "حقیقی",
+    "type-corporate": "حقوقی",
+    "system-id": "شناسه سیستم",
+    "unique-id": "شناسه یکتا",
+    "company-name": "نام شرکت",
+    "national-id": "شناسه ملی",
+    "full-name": "نام کامل",
+    "personal-code": "کد شخصی",
+    "economic-code": "کد اقتصادی",
+    "phone": "تلفن",
+    "address": "آدرس",
+    "description": "توضیحات",
+    "postal-code": "کد پستی",
+    "save": "ذخیره",
+    "cancel": "لغو"
+  },
+  "shippingCompany": {
+    "validation": {
+      "name": "نام شرکت الزامی است",
+      "contact-person": "نام شخص تماس الزامی است",
+      "phone": "شماره تلفن الزامی است",
+      "email": "ایمیل معتبر وارد کنید",
+      "address": "آدرس الزامی است"
+    },
+    "title": "شرکت حمل",
+    "name": "نام شرکت",
+    "contact-person": "شخص تماس",
+    "phone": "تلفن",
+    "email": "ایمیل",
+    "address": "آدرس",
+    "description": "توضیحات",
+    "save": "ذخیره",
+    "cancel": "لغو"
+  },
   "header": {
     "welcome": "خوش آمدید",
     "logout": "خروج"
