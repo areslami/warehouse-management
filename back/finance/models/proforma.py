@@ -27,7 +27,7 @@ class SalesProforma(Proforma):
         ('credit','credit'),
         ('other','other'),
     ]
-    customer = models.ForeignKey('core.BaseParty', on_delete=models.PROTECT)
+    customer = models.ForeignKey('core.Customer', on_delete=models.PROTECT)
     payment_type = models.CharField(max_length=6,choices=PAYMENT_TYPES,null=False)
     payment_description =  models.CharField(max_length=200,null=True)
     

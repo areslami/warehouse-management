@@ -20,15 +20,20 @@ class ProformaLineSerializer(serializers.ModelSerializer):
         read_only_fields=['created_at','updated_at','total_price']
         
 class PurchaseProformaSerializer(serializers.ModelSerializer):
-    items=ProformaLineSerializer(many=True,required=False)
-    supplier_name=serializers.CharField(source='supplier.name',read_only=True)
+    lines=ProformaLineSerializer(many=True,required=False)
+    supplier_name=serializers.SerializerMethodField()
     class Meta:
         model = PurchaseProforma
-        fields = ['id','serial_number','date','subtotal','tax','discount' ,'final_price' ,'supplier','created_at','updated_at']
+        fields = ['id','serial_number','date','subtotal','tax','discount' ,'final_price' ,'supplier','supplier_name','created_at','updated_at','lines']
         read_only_fields=['created_at','updated_at']
+    
+    def get_supplier_name(self, obj):
+        if obj.supplier.supplier_type == 'Corporate':
+            return obj.supplier.company_name
+        return obj.supplier.full_name
 
     def create(self,validated_data):
-        items_data = validated_data.pop('items', [])
+        items_data = validated_data.pop('lines', [])
         proforma = PurchaseProforma.objects.create(**validated_data)
         subtotal = 0
         for item_data in items_data:
@@ -38,18 +43,43 @@ class PurchaseProformaSerializer(serializers.ModelSerializer):
         proforma.final_price = subtotal + proforma.tax - proforma.discount
         proforma.save()
         return proforma
+    
+    def update(self, instance, validated_data):
+        items_data = validated_data.pop('lines', None)
+        
+        for attr, value in validated_data.items():
+            setattr(instance, attr, value)
+        
+        if items_data is not None:
+            instance.lines.all().delete()
+            
+            subtotal = 0
+            for item_data in items_data:
+                ProformaLine.objects.create(proforma=instance, **item_data)
+                subtotal += item_data['weight'] * item_data['unit_price']
+            
+            instance.subtotal = subtotal
+            instance.final_price = subtotal + instance.tax - instance.discount
+        
+        instance.save()
+        return instance
 
 
 class SalesProformaSerializer(serializers.ModelSerializer):
-    items=ProformaLineSerializer(many=True,required=False)
-    customer_name=serializers.CharField(source='customer.name',read_only=True)
+    lines=ProformaLineSerializer(many=True,required=False)
+    customer_name=serializers.SerializerMethodField()
     class Meta:
         model = SalesProforma
-        fields = ['serial_number','date','subtotal','tax','discount' ,'final_price','payment_type',"payment_description",'customer','created_at','updated_at' ]
+        fields = ['id','serial_number','date','subtotal','tax','discount' ,'final_price','payment_type',"payment_description",'customer','customer_name','created_at','updated_at' ,'lines']
         read_only_fields=['created_at','updated_at']
+    
+    def get_customer_name(self, obj):
+        if obj.customer.customer_type == 'Corporate':
+            return obj.customer.company_name
+        return obj.customer.full_name
 
     def create(self,validated_data):
-        items_data = validated_data.pop('items', [])
+        items_data = validated_data.pop('lines', [])
         proforma = SalesProforma.objects.create(**validated_data)
         subtotal = 0
         for item_data in items_data:
@@ -59,6 +89,30 @@ class SalesProformaSerializer(serializers.ModelSerializer):
         proforma.final_price = subtotal + proforma.tax - proforma.discount
         proforma.save()
         return proforma
+    
+    def update(self, instance, validated_data):
+        items_data = validated_data.pop('lines', None)
+        
+        # Update proforma fields
+        for attr, value in validated_data.items():
+            setattr(instance, attr, value)
+        
+        # Handle items update if provided
+        if items_data is not None:
+            # Delete existing items
+            instance.lines.all().delete()
+            
+            # Create new items
+            subtotal = 0
+            for item_data in items_data:
+                ProformaLine.objects.create(proforma=instance, **item_data)
+                subtotal += item_data['weight'] * item_data['unit_price']
+            
+            instance.subtotal = subtotal
+            instance.final_price = subtotal + instance.tax - instance.discount
+        
+        instance.save()
+        return instance
 
     
     

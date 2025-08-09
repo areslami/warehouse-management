@@ -17,17 +17,15 @@ export default function Layout({ children }: { children: React.ReactNode }) {
     <html lang="fa" dir="rtl">
       <body className={vazir.className} style={{ fontWeight: "300" }}>
         <NextIntlClientProvider locale="fa" messages={fa}>
-
-
-          <SidebarProvider>
-            <AppSidebar />
-            <main>
-              <SidebarTrigger />
-              <ModalProvider>
+          <ModalProvider>
+            <SidebarProvider>
+              <AppSidebar />
+              <main>
+                <SidebarTrigger />
                 {children}
-              </ModalProvider>
-            </main>
-          </SidebarProvider>
+              </main>
+            </SidebarProvider>
+          </ModalProvider>
         </NextIntlClientProvider>
       </body>
     </html >

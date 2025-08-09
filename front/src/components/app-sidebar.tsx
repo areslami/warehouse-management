@@ -1,10 +1,16 @@
+"use client";
+
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "./ui/collapsible";
 import { Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent, SidebarHeader, SidebarMenuButton, SidebarMenuItem, SidebarMenuSub, SidebarMenuSubItem } from "./ui/sidebar";
 import { useTranslations } from "next-intl";
+import { useModal } from "@/lib/modal-context";
+import { SalesProformaModal } from "./modals/salesproforma-modal";
+import { PurchaseProformaModal } from "./modals/purchaseproforma-modal";
 
 import { Warehouse, Cable, Truck, User, DollarSign, ChevronLeft } from "lucide-react";
 export function AppSidebar() {
     const t = useTranslations('sidebar')
+    const { openModal } = useModal();
 
     const coreItems = [
         { name: t("products"), icon: Warehouse, href: "/products" },
@@ -117,10 +123,29 @@ export function AppSidebar() {
                                 </CollapsibleTrigger>
                             </div>
                             <CollapsibleContent className="mx-3.5 mt-0.5">
-                                <SidebarMenuSub className="border-l-0 border-r-1 border-gray-50/50 hover:border-gray-100 px-2.5 my-0 py-1.5 cursor-pointer">
+                                <SidebarMenuSub
+                                    className="border-l-0 border-r-1 border-gray-50/50 hover:border-gray-100 px-2.5 my-0 py-1.5 cursor-pointer"
+                                    onClick={() => {
+                                        console.log("Ali");
+                                        openModal(SalesProformaModal, {
+                                            onSubmit: (data) => {
+                                                console.log('Sales Proforma Data:', data);
+                                            }
+                                        })
+                                    }}
+                                >
                                     <SidebarMenuSubItem className="text-sm text-white/50 px-1 hover:text-white">{t("sale-proforma")}</ SidebarMenuSubItem>
                                 </SidebarMenuSub>
-                                <SidebarMenuSub className="border-l-0 border-r-1 border-gray-50/50 hover:border-gray-100 px-2.5 my-0 py-1.5 cursor-pointer">
+                                <SidebarMenuSub 
+                                    className="border-l-0 border-r-1 border-gray-50/50 hover:border-gray-100 px-2.5 my-0 py-1.5 cursor-pointer"
+                                    onClick={() => {
+                                        openModal(PurchaseProformaModal, {
+                                            onSubmit: (data) => {
+                                                console.log('Purchase Proforma Data:', data);
+                                            }
+                                        })
+                                    }}
+                                >
                                     <SidebarMenuSubItem className="text-sm text-white/50 px-1 hover:text-white">{t("purchase-proforma")}</ SidebarMenuSubItem>
                                 </SidebarMenuSub>
                             </CollapsibleContent>

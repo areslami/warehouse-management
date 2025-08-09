@@ -11,73 +11,68 @@ import { Input } from "../ui/input";
 import { Plus, Trash2 } from "lucide-react";
 import { useTranslations } from "next-intl";
 
-type SalesProformaFormData = {
-  serial_number: string;
+type WarehouseReceiptFormData = {
+  receipt_id: string;
+  receipt_type: "import_cottage" | "distribution_cottage" | "purchase";
   date: string;
-  tax: number;
-  discount: number;
-  payment_type: "cash" | "credit" | "other";
-  payment_description?: string;
-  customer: number;
-  lines: {
+  warehouse: number;
+  description: string;
+  cottage_serial_number?: string;
+  proforma?: number;
+  items: {
     product: number;
     weight: number;
-    unit_price: number;
   }[];
 };
 
-
-interface SalesProformaModalProps {
+interface WarehouseReceiptModalProps {
   trigger?: React.ReactNode;
-  onSubmit?: (data: SalesProformaFormData) => void;
+  onSubmit?: (data: WarehouseReceiptFormData) => void;
   onClose?: () => void;
 }
 
-export function SalesProformaModal({ trigger, onSubmit, onClose }: SalesProformaModalProps) {
-  const tval = useTranslations("salesProforma.validation");
-  const t = useTranslations("salesProforma");
+export function WarehouseReceiptModal({ trigger, onSubmit, onClose }: WarehouseReceiptModalProps) {
+  const tval = useTranslations("warehouseReceipt.validation");
+  const t = useTranslations("warehouseReceipt");
 
-  const proformaLineSchema = z.object({
+  const receiptItemSchema = z.object({
     product: z.number().min(1, tval("product-required")),
-    weight: z.number().min(0, tval("weight")),
-    unit_price: z.number().min(0, tval("unit-price")),
+    weight: z.number().min(0.00000001, tval("weight")),
   });
 
-  const salesProformaSchema = z.object({
-    serial_number: z.string().min(1, tval('serialnumber')).max(20, tval('serialnumber')),
-    date: z.string().min(1, tval('date')),
-    tax: z.number().min(0, tval('tax')),
-    discount: z.number().min(0, tval('discount')),
-    payment_type: z.enum(["cash", "credit", "other"]),
-    payment_description: z.string().optional(),
-    customer: z.number().min(1, tval('customer')),
-    lines: z.array(proformaLineSchema).min(1, tval('lines')),
+  const warehouseReceiptSchema = z.object({
+    receipt_id: z.string().min(1, tval("receipt-id")),
+    receipt_type: z.enum(["import_cottage", "distribution_cottage", "purchase"]),
+    date: z.string().min(1, tval("date")),
+    warehouse: z.number().min(1, tval("warehouse")),
+    description: z.string(),
+    cottage_serial_number: z.string().optional(),
+    proforma: z.number().optional(),
+    items: z.array(receiptItemSchema).min(1, tval("items")),
   });
-
-
 
   const [open, setOpen] = useState(trigger ? false : true);
 
-  const form = useForm<SalesProformaFormData>({
-    resolver: zodResolver(salesProformaSchema),
+  const form = useForm<WarehouseReceiptFormData>({
+    resolver: zodResolver(warehouseReceiptSchema),
     defaultValues: {
-      serial_number: "",
+      receipt_id: "",
+      receipt_type: "purchase",
       date: new Date().toISOString().split('T')[0],
-      tax: 0,
-      discount: 0,
-      payment_type: "cash",
-      payment_description: "",
-      customer: 0,
-      lines: [{ product: 0, weight: 0, unit_price: 0 }],
+      warehouse: 0,
+      description: "",
+      cottage_serial_number: "",
+      proforma: 0,
+      items: [{ product: 0, weight: 0 }],
     },
   });
 
   const { fields, append, remove } = useFieldArray({
     control: form.control,
-    name: "lines",
+    name: "items",
   });
 
-  const handleSubmit = (data: SalesProformaFormData) => {
+  const handleSubmit = (data: WarehouseReceiptFormData) => {
     onSubmit?.(data);
     if (trigger) {
       setOpen(false);
@@ -112,10 +107,10 @@ export function SalesProformaModal({ trigger, onSubmit, onClose }: SalesProforma
             <div className="grid grid-cols-2 gap-4">
               <FormField
                 control={form.control}
-                name="serial_number"
+                name="receipt_id"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>{t('serialnumber')}</FormLabel>
+                    <FormLabel>{t("receipt-id")}</FormLabel>
                     <FormControl>
                       <Input {...field} />
                     </FormControl>
@@ -129,7 +124,7 @@ export function SalesProformaModal({ trigger, onSubmit, onClose }: SalesProforma
                 name="date"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>{t('date')}</FormLabel>
+                    <FormLabel>{t("date")}</FormLabel>
                     <FormControl>
                       <Input type="date" {...field} />
                     </FormControl>
@@ -142,10 +137,28 @@ export function SalesProformaModal({ trigger, onSubmit, onClose }: SalesProforma
             <div className="grid grid-cols-2 gap-4">
               <FormField
                 control={form.control}
-                name="customer"
+                name="receipt_type"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>{t('customer')}</FormLabel>
+                    <FormLabel>{t("receipt-type")}</FormLabel>
+                    <FormControl>
+                      <select {...field} className="w-full px-3 py-2 border rounded-md">
+                        <option value="import_cottage">{t("type-import")}</option>
+                        <option value="distribution_cottage">{t("type-distribution")}</option>
+                        <option value="purchase">{t("type-purchase")}</option>
+                      </select>
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="warehouse"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>{t("warehouse")}</FormLabel>
                     <FormControl>
                       <Input
                         type="number"
@@ -157,19 +170,35 @@ export function SalesProformaModal({ trigger, onSubmit, onClose }: SalesProforma
                   </FormItem>
                 )}
               />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="cottage_serial_number"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>{t("cottage-serial")}</FormLabel>
+                    <FormControl>
+                      <Input {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
 
               <FormField
                 control={form.control}
-                name="payment_type"
+                name="proforma"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>{t('payment')}</FormLabel>
+                    <FormLabel>{t("proforma")}</FormLabel>
                     <FormControl>
-                      <select {...field} className="w-full px-3 py-2 border rounded-md">
-                        <option value="cash">{t("payment_cash")}</option>
-                        <option value="credit">{t("payment_credit")}</option>
-                        <option value="other">{t("payment_other")}</option>
-                      </select>
+                      <Input
+                        type="number"
+                        {...field}
+                        onChange={(e) => field.onChange(Number(e.target.value))}
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -179,10 +208,10 @@ export function SalesProformaModal({ trigger, onSubmit, onClose }: SalesProforma
 
             <FormField
               control={form.control}
-              name="payment_description"
+              name="description"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>{t("payment_desc")}</FormLabel>
+                  <FormLabel>{t("description")}</FormLabel>
                   <FormControl>
                     <Input {...field} />
                   </FormControl>
@@ -191,65 +220,25 @@ export function SalesProformaModal({ trigger, onSubmit, onClose }: SalesProforma
               )}
             />
 
-            <div className="grid grid-cols-2 gap-4">
-              <FormField
-                control={form.control}
-                name="tax"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>{t("tax")}</FormLabel>
-                    <FormControl>
-                      <Input
-                        type="number"
-                        step="0.01"
-                        {...field}
-                        onChange={(e) => field.onChange(Number(e.target.value))}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="discount"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>{t("discount")}</FormLabel>
-                    <FormControl>
-                      <Input
-                        type="number"
-                        step="0.01"
-                        {...field}
-                        onChange={(e) => field.onChange(Number(e.target.value))}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
-
             <div className="space-y-4">
               <div className="flex items-center justify-between">
-                <h3 className="text-lg font-medium">{t("lines")}</h3>
+                <h3 className="text-lg font-medium">{t("items")}</h3>
                 <Button
                   type="button"
                   variant="outline"
                   size="sm"
-                  onClick={() => append({ product: 0, weight: 0, unit_price: 0 })}
+                  onClick={() => append({ product: 0, weight: 0 })}
                 >
                   <Plus className="w-4 h-4 mr-2" />
-                  {t("add-line")}
+                  {t("add-item")}
                 </Button>
               </div>
 
               {fields.map((field, index) => (
-                <div key={field.id} className="grid grid-cols-4 gap-4 p-4 border rounded-lg">
+                <div key={field.id} className="grid grid-cols-3 gap-4 p-4 border rounded-lg">
                   <FormField
                     control={form.control}
-                    name={`lines.${index}.product`}
+                    name={`items.${index}.product`}
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>{t("product")}</FormLabel>
@@ -267,7 +256,7 @@ export function SalesProformaModal({ trigger, onSubmit, onClose }: SalesProforma
 
                   <FormField
                     control={form.control}
-                    name={`lines.${index}.weight`}
+                    name={`items.${index}.weight`}
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>{t("weight")}</FormLabel>
@@ -275,25 +264,6 @@ export function SalesProformaModal({ trigger, onSubmit, onClose }: SalesProforma
                           <Input
                             type="number"
                             step="0.00000001"
-                            {...field}
-                            onChange={(e) => field.onChange(Number(e.target.value))}
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name={`lines.${index}.unit_price`}
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>{t('unit_price')}</FormLabel>
-                        <FormControl>
-                          <Input
-                            type="number"
-                            step="0.01"
                             {...field}
                             onChange={(e) => field.onChange(Number(e.target.value))}
                           />

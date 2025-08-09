@@ -11,14 +11,12 @@ import { Input } from "../ui/input";
 import { Plus, Trash2 } from "lucide-react";
 import { useTranslations } from "next-intl";
 
-type SalesProformaFormData = {
+type PurchaseProformaFormData = {
   serial_number: string;
   date: string;
   tax: number;
   discount: number;
-  payment_type: "cash" | "credit" | "other";
-  payment_description?: string;
-  customer: number;
+  supplier: number;
   lines: {
     product: number;
     weight: number;
@@ -26,16 +24,15 @@ type SalesProformaFormData = {
   }[];
 };
 
-
-interface SalesProformaModalProps {
+interface PurchaseProformaModalProps {
   trigger?: React.ReactNode;
-  onSubmit?: (data: SalesProformaFormData) => void;
+  onSubmit?: (data: PurchaseProformaFormData) => void;
   onClose?: () => void;
 }
 
-export function SalesProformaModal({ trigger, onSubmit, onClose }: SalesProformaModalProps) {
-  const tval = useTranslations("salesProforma.validation");
-  const t = useTranslations("salesProforma");
+export function PurchaseProformaModal({ trigger, onSubmit, onClose }: PurchaseProformaModalProps) {
+  const tval = useTranslations("purchaseProforma.validation");
+  const t = useTranslations("purchaseProforma");
 
   const proformaLineSchema = z.object({
     product: z.number().min(1, tval("product-required")),
@@ -43,31 +40,25 @@ export function SalesProformaModal({ trigger, onSubmit, onClose }: SalesProforma
     unit_price: z.number().min(0, tval("unit-price")),
   });
 
-  const salesProformaSchema = z.object({
+  const purchaseProformaSchema = z.object({
     serial_number: z.string().min(1, tval('serialnumber')).max(20, tval('serialnumber')),
     date: z.string().min(1, tval('date')),
     tax: z.number().min(0, tval('tax')),
     discount: z.number().min(0, tval('discount')),
-    payment_type: z.enum(["cash", "credit", "other"]),
-    payment_description: z.string().optional(),
-    customer: z.number().min(1, tval('customer')),
+    supplier: z.number().min(1, tval('supplier')),
     lines: z.array(proformaLineSchema).min(1, tval('lines')),
   });
 
-
-
   const [open, setOpen] = useState(trigger ? false : true);
 
-  const form = useForm<SalesProformaFormData>({
-    resolver: zodResolver(salesProformaSchema),
+  const form = useForm<PurchaseProformaFormData>({
+    resolver: zodResolver(purchaseProformaSchema),
     defaultValues: {
       serial_number: "",
       date: new Date().toISOString().split('T')[0],
       tax: 0,
       discount: 0,
-      payment_type: "cash",
-      payment_description: "",
-      customer: 0,
+      supplier: 0,
       lines: [{ product: 0, weight: 0, unit_price: 0 }],
     },
   });
@@ -77,7 +68,7 @@ export function SalesProformaModal({ trigger, onSubmit, onClose }: SalesProforma
     name: "lines",
   });
 
-  const handleSubmit = (data: SalesProformaFormData) => {
+  const handleSubmit = (data: PurchaseProformaFormData) => {
     onSubmit?.(data);
     if (trigger) {
       setOpen(false);
@@ -139,52 +130,18 @@ export function SalesProformaModal({ trigger, onSubmit, onClose }: SalesProforma
               />
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
-              <FormField
-                control={form.control}
-                name="customer"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>{t('customer')}</FormLabel>
-                    <FormControl>
-                      <Input
-                        type="number"
-                        {...field}
-                        onChange={(e) => field.onChange(Number(e.target.value))}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="payment_type"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>{t('payment')}</FormLabel>
-                    <FormControl>
-                      <select {...field} className="w-full px-3 py-2 border rounded-md">
-                        <option value="cash">{t("payment_cash")}</option>
-                        <option value="credit">{t("payment_credit")}</option>
-                        <option value="other">{t("payment_other")}</option>
-                      </select>
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
-
             <FormField
               control={form.control}
-              name="payment_description"
+              name="supplier"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>{t("payment_desc")}</FormLabel>
+                  <FormLabel>{t('supplier')}</FormLabel>
                   <FormControl>
-                    <Input {...field} />
+                    <Input
+                      type="number"
+                      {...field}
+                      onChange={(e) => field.onChange(Number(e.target.value))}
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
