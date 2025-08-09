@@ -6,6 +6,9 @@ import { useTranslations } from "next-intl";
 import { useModal } from "@/lib/modal-context";
 import { SalesProformaModal } from "./modals/salesproforma-modal";
 import { PurchaseProformaModal } from "./modals/purchaseproforma-modal";
+import { WarehouseReceiptModal } from "./modals/warehouse-receipt-modal";
+import { DispatchIssueModal } from "./modals/dispatch-issue-modal";
+import { DeliveryFulfillmentModal } from "./modals/delivery-fulfillment-modal";
 
 import { Warehouse, Cable, Truck, User, DollarSign, ChevronLeft } from "lucide-react";
 export function AppSidebar() {
@@ -62,13 +65,40 @@ export function AppSidebar() {
                                 </CollapsibleTrigger>
                             </div>
                             <CollapsibleContent className="mx-3.5 mt-0.5">
-                                <SidebarMenuSub className="border-l-0 border-r-1 border-gray-50/50 hover:border-gray-100 px-2.5 my-0 py-1.5 cursor-pointer">
+                                <SidebarMenuSub 
+                                    className="border-l-0 border-r-1 border-gray-50/50 hover:border-gray-100 px-2.5 my-0 py-1.5 cursor-pointer"
+                                    onClick={() => {
+                                        openModal(WarehouseReceiptModal, {
+                                            onSubmit: (data) => {
+                                                console.log('Warehouse Receipt Data:', data);
+                                            }
+                                        })
+                                    }}
+                                >
                                     <SidebarMenuSubItem className="text-sm text-white/50 px-1 hover:text-white">{t("warehouse-receipt")}</ SidebarMenuSubItem>
                                 </SidebarMenuSub>
-                                <SidebarMenuSub className="border-l-0 border-r-1 border-gray-50/50 hover:border-gray-100 px-2.5 my-0 py-1.5 cursor-pointer">
+                                <SidebarMenuSub 
+                                    className="border-l-0 border-r-1 border-gray-50/50 hover:border-gray-100 px-2.5 my-0 py-1.5 cursor-pointer"
+                                    onClick={() => {
+                                        openModal(DispatchIssueModal, {
+                                            onSubmit: (data) => {
+                                                console.log('Dispatch Issue Data:', data);
+                                            }
+                                        })
+                                    }}
+                                >
                                     <SidebarMenuSubItem className="text-sm text-white/50 px-1 hover:text-white">{t("dispatch-issue")}</ SidebarMenuSubItem>
                                 </SidebarMenuSub>
-                                <SidebarMenuSub className="border-l-0 border-r-1 border-gray-50/50 hover:border-gray-100 px-2.5 my-0 py-1.5 cursor-pointer">
+                                <SidebarMenuSub 
+                                    className="border-l-0 border-r-1 border-gray-50/50 hover:border-gray-100 px-2.5 my-0 py-1.5 cursor-pointer"
+                                    onClick={() => {
+                                        openModal(DeliveryFulfillmentModal, {
+                                            onSubmit: (data) => {
+                                                console.log('Delivery Fulfillment Data:', data);
+                                            }
+                                        })
+                                    }}
+                                >
                                     <SidebarMenuSubItem className="text-sm text-white/50 px-1 hover:text-white">{t("delivery-fulfillment")}</ SidebarMenuSubItem>
                                 </SidebarMenuSub>
                             </CollapsibleContent>
