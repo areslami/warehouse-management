@@ -3,6 +3,9 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 from django_filters.rest_framework import DjangoFilterBackend
 
+from django.core.cache import cache
+
+
 from .models import Supplier, Customer, Reciever, Product, ProductCategory, ProductReigon
 from .serializers import (
     SupplierSerializer, CustomerSerializer, RecieverSerializer,
@@ -18,6 +21,25 @@ class ProductCategoryViewSet(viewsets.ModelViewSet):
     search_fields = ['name', 'description']
     ordering_fields = ['name', 'created_at']
     ordering = ['name']
+    
+    def list(self,request,*args,**kwargs):
+        cache_key = 'product_categories'
+        cached_data=cache.get(cache_key)
+        if cached_data is None:
+            response = super().list(request, *args, **kwargs)
+            cache.set(cache_key, response.data, timeout=None)  
+            return response
+        return Response(cached_data)
+    def retrieve(self, request, *args, **kwargs):
+        pk = kwargs.get('pk')
+        cache_key = f'product_category_{pk}'
+        data = cache.get(cache_key)
+        if data is None:
+            response = super().retrieve(request, *args, **kwargs)
+            cache.set(cache_key, response.data, timeout=None)
+            return response
+        return Response(data)
+            
 
 
 class ProductReigonViewSet(viewsets.ModelViewSet):
@@ -27,6 +49,23 @@ class ProductReigonViewSet(viewsets.ModelViewSet):
     search_fields = ['name', 'description']
     ordering_fields = ['name', 'created_at']
     ordering = ['name']
+    def list(self,request,*args,**kwargs):
+        cache_key = 'product_regions'
+        cached_data=cache.get(cache_key)
+        if cached_data is None:
+            response = super().list(request, *args, **kwargs)
+            cache.set(cache_key, response.data, timeout=None)  
+            return response
+        return Response(cached_data)
+    def retrieve(self, request, *args, **kwargs):
+        pk = kwargs.get('pk')
+        cache_key = f'product_region_{pk}'
+        data = cache.get(cache_key)
+        if data is None:
+            response = super().retrieve(request, *args, **kwargs)
+            cache.set(cache_key, response.data, timeout=None)
+            return response
+        return Response(data)
 
 
 class ProductViewSet(viewsets.ModelViewSet):
@@ -41,6 +80,25 @@ class ProductViewSet(viewsets.ModelViewSet):
         if self.action == 'list':
             return ProductListSerializer
         return ProductSerializer
+    
+    def list(self, request, *args, **kwargs):
+        cache_key = 'products'
+        cached_data = cache.get(cache_key)
+        if cached_data is None:
+            response = super().list(request, *args, **kwargs)
+            cache.set(cache_key, response.data, timeout=None)
+            return response
+        return Response(cached_data)
+    
+    def retrieve(self, request, *args, **kwargs):
+        pk = kwargs.get('pk')
+        cache_key = f'product_{pk}'
+        data = cache.get(cache_key)
+        if data is None:
+            response = super().retrieve(request, *args, **kwargs)
+            cache.set(cache_key, response.data, timeout=None)
+            return response
+        return Response(data)
 
     @action(detail=False, methods=['get'])
     def by_category(self, request):
@@ -60,6 +118,25 @@ class SupplierViewSet(viewsets.ModelViewSet):
     search_fields = ['company_name', 'full_name', 'economic_code', 'phone']
     ordering_fields = ['company_name', 'full_name', 'created_at']
     ordering = ['company_name', 'full_name']
+    
+    def list(self, request, *args, **kwargs):
+        cache_key = 'suppliers'
+        cached_data = cache.get(cache_key)
+        if cached_data is None:
+            response = super().list(request, *args, **kwargs)
+            cache.set(cache_key, response.data, timeout=None)
+            return response
+        return Response(cached_data)
+    
+    def retrieve(self, request, *args, **kwargs):
+        pk = kwargs.get('pk')
+        cache_key = f'supplier_{pk}'
+        data = cache.get(cache_key)
+        if data is None:
+            response = super().retrieve(request, *args, **kwargs)
+            cache.set(cache_key, response.data, timeout=None)
+            return response
+        return Response(data)
 
 
 class CustomerViewSet(viewsets.ModelViewSet):
@@ -70,6 +147,25 @@ class CustomerViewSet(viewsets.ModelViewSet):
     search_fields = ['company_name', 'full_name', 'economic_code', 'phone', 'tags']
     ordering_fields = ['company_name', 'full_name', 'created_at']
     ordering = ['company_name', 'full_name']
+    
+    def list(self, request, *args, **kwargs):
+        cache_key = 'customers'
+        cached_data = cache.get(cache_key)
+        if cached_data is None:
+            response = super().list(request, *args, **kwargs)
+            cache.set(cache_key, response.data, timeout=None)
+            return response
+        return Response(cached_data)
+    
+    def retrieve(self, request, *args, **kwargs):
+        pk = kwargs.get('pk')
+        cache_key = f'customer_{pk}'
+        data = cache.get(cache_key)
+        if data is None:
+            response = super().retrieve(request, *args, **kwargs)
+            cache.set(cache_key, response.data, timeout=None)
+            return response
+        return Response(data)
 
 
 class RecieverViewSet(viewsets.ModelViewSet):
@@ -80,3 +176,22 @@ class RecieverViewSet(viewsets.ModelViewSet):
     search_fields = ['company_name', 'full_name', 'economic_code', 'phone', 'system_id', 'unique_id']
     ordering_fields = ['company_name', 'full_name', 'created_at']
     ordering = ['company_name', 'full_name']
+    
+    def list(self, request, *args, **kwargs):
+        cache_key = 'recievers'
+        cached_data = cache.get(cache_key)
+        if cached_data is None:
+            response = super().list(request, *args, **kwargs)
+            cache.set(cache_key, response.data, timeout=None)
+            return response
+        return Response(cached_data)
+    
+    def retrieve(self, request, *args, **kwargs):
+        pk = kwargs.get('pk')
+        cache_key = f'reciever_{pk}'
+        data = cache.get(cache_key)
+        if data is None:
+            response = super().retrieve(request, *args, **kwargs)
+            cache.set(cache_key, response.data, timeout=None)
+            return response
+        return Response(data)
