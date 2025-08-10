@@ -1,15 +1,26 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useForm, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "../ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "../ui/dialog";
 import { Button } from "../ui/button";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "../ui/form";
 import { Input } from "../ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select";
 import { Plus, Trash2 } from "lucide-react";
 import { useTranslations } from "next-intl";
+import { useCoreData } from "@/lib/core-data-context";
+import { useModal } from "@/lib/modal-context";
+import { PersianDatePicker } from "../ui/persian-date-picker";
+import { getTodayGregorian } from "@/lib/utils/persian-date";
+import { WarehouseModal } from "./warehouse-modal";
+import { ProductModal } from "./product-modal";
+import { PurchaseProformaModal } from "./purchaseproforma-modal";
+import { createWarehouse } from "@/lib/api/warehouse";
+import { createProduct } from "@/lib/api/core";
+import { createPurchaseProforma } from "@/lib/api/finance";
 
 type WarehouseReceiptFormData = {
   receipt_id: string;
@@ -35,10 +46,31 @@ interface WarehouseReceiptModalProps {
 export function WarehouseReceiptModal({ trigger, onSubmit, onClose, initialData }: WarehouseReceiptModalProps) {
   const tval = useTranslations("warehouseReceipt.validation");
   const t = useTranslations("warehouseReceipt");
+  const { data, refreshData } = useCoreData();
+  const { openModal, closeModal } = useModal();
+  
+  // State for child modals
+  const [showWarehouseModal, setShowWarehouseModal] = useState(false);
+  const [showProductModal, setShowProductModal] = useState(false);
+  const [showProformaModal, setShowProformaModal] = useState(false);
+  const [pendingProductIndex, setPendingProductIndex] = useState<number | null>(null);
+  
+  useEffect(() => {
+    // Refresh warehouses and products when modal opens
+    if (data.warehouses.length === 0) {
+      refreshData('warehouses');
+    }
+    if (data.products.length === 0) {
+      refreshData('products');
+    }
+    if (data.purchaseProformas.length === 0) {
+      refreshData('purchaseProformas');
+    }
+  }, []);
 
   const getTodayDate = () => {
     if (typeof window === 'undefined') return '';
-    return new Date().toISOString().split('T')[0];
+    return getTodayGregorian();
   };
 
   const receiptItemSchema = z.object({
@@ -58,7 +90,7 @@ export function WarehouseReceiptModal({ trigger, onSubmit, onClose, initialData 
   });
 
   const [open, setOpen] = useState(trigger ? false : true);
-
+  
   const form = useForm<WarehouseReceiptFormData>({
     resolver: zodResolver(warehouseReceiptSchema),
     defaultValues: {
@@ -77,9 +109,16 @@ export function WarehouseReceiptModal({ trigger, onSubmit, onClose, initialData 
     control: form.control,
     name: "items",
   });
+  
+  const receiptType = form.watch("receipt_type");
 
   const handleSubmit = (data: WarehouseReceiptFormData) => {
-    onSubmit?.(data);
+    console.log("Form submitted with data:", data);
+    if (onSubmit) {
+      onSubmit(data);
+    } else {
+      console.log("No onSubmit handler provided");
+    }
     if (trigger) {
       setOpen(false);
     } else {
@@ -97,6 +136,7 @@ export function WarehouseReceiptModal({ trigger, onSubmit, onClose, initialData 
   };
 
   return (
+    <>
     <Dialog open={open} onOpenChange={trigger ? setOpen : handleClose}>
       {trigger && (
         <DialogTrigger asChild>
@@ -106,6 +146,7 @@ export function WarehouseReceiptModal({ trigger, onSubmit, onClose, initialData 
       <DialogContent dir="rtl" className="min-w-[80%] max-h-[90vh] overflow-y-auto scrollbar-hide  p-0 my-0 mx-auto [&>button]:hidden">
         <DialogHeader className="px-3.5 py-4.5  justify-start" style={{ backgroundColor: "#f6d265" }}>
           <DialogTitle className="font-bold text-white text-right">{t("title")}</DialogTitle>
+          <DialogDescription className="sr-only">Create or edit warehouse receipt</DialogDescription>
         </DialogHeader>
 
         <Form {...form} >
@@ -132,7 +173,11 @@ export function WarehouseReceiptModal({ trigger, onSubmit, onClose, initialData 
                   <FormItem>
                     <FormLabel>{t("date")}</FormLabel>
                     <FormControl>
-                      <Input type="date" {...field} />
+                      <PersianDatePicker
+                        value={field.value}
+                        onChange={field.onChange}
+                        placeholder={t("select-date")}
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -166,11 +211,44 @@ export function WarehouseReceiptModal({ trigger, onSubmit, onClose, initialData 
                   <FormItem>
                     <FormLabel>{t("warehouse")}</FormLabel>
                     <FormControl>
-                      <Input
-                        type="number"
-                        {...field}
-                        onChange={(e) => field.onChange(Number(e.target.value))}
-                      />
+                      <Select
+                        value={field.value > 0 ? field.value.toString() : ""}
+                        onValueChange={(value) => {
+                          if (value === "new") {
+                            setShowWarehouseModal(true);
+                          } else if (value) {
+                            field.onChange(Number(value));
+                          }
+                        }}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder={t("select-warehouse")} />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem 
+                            value="new" 
+                            className="font-semibold text-[#f6d265]"
+                            onPointerDown={(e) => e.preventDefault()}
+                          >
+                            <Plus className="inline-block w-4 h-4 mr-2" />
+                            {t("create-new-warehouse")}
+                          </SelectItem>
+                          {data.warehouses && data.warehouses.length > 0 && (
+                            <div className="border-t my-1" />
+                          )}
+                          {data.warehouses && data.warehouses.length > 0 ? (
+                            data.warehouses.map((warehouse) => (
+                              <SelectItem key={warehouse.id} value={warehouse.id.toString()}>
+                                {warehouse.name} (#{warehouse.id})
+                              </SelectItem>
+                            ))
+                          ) : (
+                            <SelectItem value="0" disabled>
+                              {t("no-warehouses")}
+                            </SelectItem>
+                          )}
+                        </SelectContent>
+                      </Select>
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -179,19 +257,21 @@ export function WarehouseReceiptModal({ trigger, onSubmit, onClose, initialData 
             </div>
 
             <div className="grid grid-cols-2 gap-4">
-              <FormField
-                control={form.control}
-                name="cottage_serial_number"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>{t("cottage-serial")}</FormLabel>
-                    <FormControl>
-                      <Input {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+              {(receiptType === "import_cottage" || receiptType === "distribution_cottage") && (
+                <FormField
+                  control={form.control}
+                  name="cottage_serial_number"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>{t("cottage-serial")}</FormLabel>
+                      <FormControl>
+                        <Input {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              )}
 
               <FormField
                 control={form.control}
@@ -200,11 +280,41 @@ export function WarehouseReceiptModal({ trigger, onSubmit, onClose, initialData 
                   <FormItem>
                     <FormLabel>{t("proforma")}</FormLabel>
                     <FormControl>
-                      <Input
-                        type="number"
-                        {...field}
-                        onChange={(e) => field.onChange(Number(e.target.value))}
-                      />
+                      <Select
+                        value={field.value?.toString() || ""}
+                        onValueChange={(value) => {
+                          if (value === "new") {
+                            setShowProformaModal(true);
+                          } else {
+                            field.onChange(value === "none" ? undefined : Number(value));
+                          }
+                        }}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder={t("select-proforma")} />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem 
+                            value="new" 
+                            className="font-semibold text-[#f6d265]"
+                            onPointerDown={(e) => e.preventDefault()}
+                          >
+                            <Plus className="inline-block w-4 h-4 mr-2" />
+                            {t("create-new-proforma")}
+                          </SelectItem>
+                          <SelectItem value="none">
+                            {t("no-proforma")}
+                          </SelectItem>
+                          {data.purchaseProformas.length > 0 && (
+                            <div className="border-t my-1" />
+                          )}
+                          {data.purchaseProformas.map((proforma) => (
+                            <SelectItem key={proforma.id} value={proforma.id.toString()}>
+                              {proforma.serialnumber} - {proforma.supplier_display || proforma.supplier}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -249,11 +359,45 @@ export function WarehouseReceiptModal({ trigger, onSubmit, onClose, initialData 
                       <FormItem>
                         <FormLabel>{t("product")}</FormLabel>
                         <FormControl>
-                          <Input
-                            type="number"
-                            {...field}
-                            onChange={(e) => field.onChange(Number(e.target.value))}
-                          />
+                          <Select
+                            value={field.value > 0 ? field.value.toString() : ""}
+                            onValueChange={(value) => {
+                              if (value === "new") {
+                                setPendingProductIndex(index);
+                                setShowProductModal(true);
+                              } else if (value) {
+                                field.onChange(Number(value));
+                              }
+                            }}
+                          >
+                            <SelectTrigger>
+                              <SelectValue placeholder={t("select-product")} />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem 
+                                value="new" 
+                                className="font-semibold text-[#f6d265]"
+                                onPointerDown={(e) => e.preventDefault()}
+                              >
+                                <Plus className="inline-block w-4 h-4 mr-2" />
+                                {t("create-new-product")}
+                              </SelectItem>
+                              {data.products && data.products.length > 0 && (
+                                <div className="border-t my-1" />
+                              )}
+                              {data.products && data.products.length > 0 ? (
+                                data.products.map((product) => (
+                                  <SelectItem key={product.id} value={product.id.toString()}>
+                                    {product.name} (#{product.id})
+                                  </SelectItem>
+                                ))
+                              ) : (
+                                <SelectItem value="0" disabled>
+                                  {t("no-products")}
+                                </SelectItem>
+                              )}
+                            </SelectContent>
+                          </Select>
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -269,7 +413,7 @@ export function WarehouseReceiptModal({ trigger, onSubmit, onClose, initialData 
                         <FormControl>
                           <Input
                             type="number"
-                            step="0.00000001"
+                            step="1"
                             {...field}
                             onChange={(e) => field.onChange(Number(e.target.value))}
                           />
@@ -303,6 +447,56 @@ export function WarehouseReceiptModal({ trigger, onSubmit, onClose, initialData 
           </form>
         </Form>
       </DialogContent>
-    </Dialog >
+    </Dialog>
+
+    {/* Child Modals */}
+    {showWarehouseModal && (
+      <WarehouseModal
+        onSubmit={async (newWarehouse: any) => {
+          const created = await createWarehouse(newWarehouse);
+          if (created) {
+            await refreshData('warehouses');
+            form.setValue('warehouse', created.id);
+            setShowWarehouseModal(false);
+          }
+        }}
+        onClose={() => setShowWarehouseModal(false)}
+      />
+    )}
+
+    {showProductModal && (
+      <ProductModal
+        onSubmit={async (newProduct: any) => {
+          const created = await createProduct(newProduct);
+          if (created) {
+            await refreshData('products');
+            if (pendingProductIndex !== null) {
+              form.setValue(`items.${pendingProductIndex}.product`, created.id);
+            }
+            setShowProductModal(false);
+            setPendingProductIndex(null);
+          }
+        }}
+        onClose={() => {
+          setShowProductModal(false);
+          setPendingProductIndex(null);
+        }}
+      />
+    )}
+
+    {showProformaModal && (
+      <PurchaseProformaModal
+        onSubmit={async (newProforma: any) => {
+          const created = await createPurchaseProforma(newProforma);
+          if (created) {
+            await refreshData('purchaseProformas');
+            form.setValue('proforma', created.id);
+            setShowProformaModal(false);
+          }
+        }}
+        onClose={() => setShowProformaModal(false)}
+      />
+    )}
+    </>
   );
 }

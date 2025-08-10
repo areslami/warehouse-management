@@ -7,6 +7,7 @@ import type {
   Receiver,
   ShippingCompany,
 } from "./../interfaces/core";
+import { getCoreContext } from "../core-data-context";
 
 const API_BASE_URL = "http://127.0.0.1:8000/";
 
@@ -44,118 +45,266 @@ const apiFetch = async <T>(
 
 // ------------------  Product Category ------------------
 export const fetchProductCategories = () =>
-  apiFetch(`${API_BASE_URL}product-categories/`);
+  apiFetch<ProductCategory[]>(`${API_BASE_URL}product-categories/`);
 
 export const fetchProductCategoryById = (id: number) =>
   apiFetch(`${API_BASE_URL}product-categories/${id}/`);
 
-export const createProductCategory = (
+export const createProductCategory = async (
   data: Omit<ProductCategory, "id" | "created_at" | "updated_at">
-) =>
-  apiFetch(`${API_BASE_URL}product-categories/`, {
+) => {
+  const result = await apiFetch<ProductCategory>(`${API_BASE_URL}product-categories/`, {
     method: "POST",
     body: data,
   });
+  
+  if (result) {
+    const context = getCoreContext();
+    context?.addItem('productCategories', result);
+  }
+  
+  return result;
+};
 
-export const updateProductCategory = (
+export const updateProductCategory = async (
   id: number,
   data: Partial<ProductCategory>
-) =>
-  apiFetch(`${API_BASE_URL}product-categories/${id}/`, {
+) => {
+  const result = await apiFetch<ProductCategory>(`${API_BASE_URL}product-categories/${id}/`, {
     method: "PATCH",
     body: data,
   });
+  
+  if (result) {
+    const context = getCoreContext();
+    context?.updateItem('productCategories', id, result);
+  }
+  
+  return result;
+};
 
-export const deleteProductCategory = (id: number) =>
-  apiFetch(`${API_BASE_URL}product-categories/${id}/`, { method: "DELETE" });
+export const deleteProductCategory = async (id: number) => {
+  const result = await apiFetch(`${API_BASE_URL}product-categories/${id}/`, { method: "DELETE" });
+  
+  if (result !== null) {
+    const context = getCoreContext();
+    context?.deleteItem('productCategories', id);
+  }
+  
+  return result;
+};
 
 // ------------------  Product Region ------------------
 export const fetchProductRegions = () =>
-  apiFetch(`${API_BASE_URL}product-regions/`);
+  apiFetch<ProductRegion[]>(`${API_BASE_URL}product-regions/`);
 
 export const fetchProductRegionById = (id: number) =>
   apiFetch(`${API_BASE_URL}product-regions/${id}/`);
 
-export const createProductRegion = (
+export const createProductRegion = async (
   data: Omit<ProductRegion, "id" | "created_at" | "updated_at">
-) =>
-  apiFetch(`${API_BASE_URL}product-regions/`, { method: "POST", body: data });
+) => {
+  const result = await apiFetch<ProductRegion>(`${API_BASE_URL}product-regions/`, { method: "POST", body: data });
+  
+  if (result) {
+    const context = getCoreContext();
+    context?.addItem('productRegions', result);
+  }
+  
+  return result;
+};
 
-export const updateProductRegion = (id: number, data: Partial<ProductRegion>) =>
-  apiFetch(`${API_BASE_URL}product-regions/${id}/`, {
+export const updateProductRegion = async (id: number, data: Partial<ProductRegion>) => {
+  const result = await apiFetch<ProductRegion>(`${API_BASE_URL}product-regions/${id}/`, {
     method: "PATCH",
     body: data,
   });
+  
+  if (result) {
+    const context = getCoreContext();
+    context?.updateItem('productRegions', id, result);
+  }
+  
+  return result;
+};
 
-export const deleteProductRegion = (id: number) =>
-  apiFetch(`${API_BASE_URL}product-regions/${id}/`, { method: "DELETE" });
+export const deleteProductRegion = async (id: number) => {
+  const result = await apiFetch(`${API_BASE_URL}product-regions/${id}/`, { method: "DELETE" });
+  
+  if (result !== null) {
+    const context = getCoreContext();
+    context?.deleteItem('productRegions', id);
+  }
+  
+  return result;
+};
 
 // ------------------  Product ------------------
-export const fetchProducts = () => apiFetch(`${API_BASE_URL}products/`);
+export const fetchProducts = () => apiFetch<Product[]>(`${API_BASE_URL}products/`);
 
 export const fetchProductById = (id: number) =>
   apiFetch(`${API_BASE_URL}products/${id}/`);
 
-export const createProduct = (
+export const createProduct = async (
   data: Omit<Product, "id" | "created_at" | "updated_at">
-) => apiFetch(`${API_BASE_URL}products/`, { method: "POST", body: data });
+) => {
+  const result = await apiFetch<Product>(`${API_BASE_URL}products/`, { method: "POST", body: data });
+  
+  if (result) {
+    const context = getCoreContext();
+    context?.addItem('products', result);
+  }
+  
+  return result;
+};
 
-export const updateProduct = (id: number, data: Partial<Product>) =>
-  apiFetch(`${API_BASE_URL}products/${id}/`, { method: "PATCH", body: data });
+export const updateProduct = async (id: number, data: Partial<Product>) => {
+  const result = await apiFetch<Product>(`${API_BASE_URL}products/${id}/`, { method: "PATCH", body: data });
+  
+  if (result) {
+    const context = getCoreContext();
+    context?.updateItem('products', id, result);
+  }
+  
+  return result;
+};
 
-export const deleteProduct = (id: number) =>
-  apiFetch(`${API_BASE_URL}products/${id}/`, { method: "DELETE" });
+export const deleteProduct = async (id: number) => {
+  const result = await apiFetch(`${API_BASE_URL}products/${id}/`, { method: "DELETE" });
+  
+  if (result !== null) {
+    const context = getCoreContext();
+    context?.deleteItem('products', id);
+  }
+  
+  return result;
+};
 
 export const fetchProductsByCategory = (categoryId: number) =>
   apiFetch(`${API_BASE_URL}products/by_category/?category_id=${categoryId}`);
 
 // ------------------  Supplier ------------------
-export const fetchSuppliers = () => apiFetch(`${API_BASE_URL}suppliers/`);
+export const fetchSuppliers = () => apiFetch<Supplier[]>(`${API_BASE_URL}suppliers/`);
 
 export const fetchSupplierById = (id: number) =>
   apiFetch(`${API_BASE_URL}suppliers/${id}/`);
 
-export const createSupplier = (
+export const createSupplier = async (
   data: Omit<Supplier, "id" | "created_at" | "updated_at">
-) => apiFetch(`${API_BASE_URL}suppliers/`, { method: "POST", body: data });
+) => {
+  const result = await apiFetch<Supplier>(`${API_BASE_URL}suppliers/`, { method: "POST", body: data });
+  
+  if (result) {
+    const context = getCoreContext();
+    context?.addItem('suppliers', result);
+  }
+  
+  return result;
+};
 
-export const updateSupplier = (id: number, data: Partial<Supplier>) =>
-  apiFetch(`${API_BASE_URL}suppliers/${id}/`, { method: "PATCH", body: data });
+export const updateSupplier = async (id: number, data: Partial<Supplier>) => {
+  const result = await apiFetch<Supplier>(`${API_BASE_URL}suppliers/${id}/`, { method: "PATCH", body: data });
+  
+  if (result) {
+    const context = getCoreContext();
+    context?.updateItem('suppliers', id, result);
+  }
+  
+  return result;
+};
 
-export const deleteSupplier = (id: number) =>
-  apiFetch(`${API_BASE_URL}suppliers/${id}/`, { method: "DELETE" });
+export const deleteSupplier = async (id: number) => {
+  const result = await apiFetch(`${API_BASE_URL}suppliers/${id}/`, { method: "DELETE" });
+  
+  if (result !== null) {
+    const context = getCoreContext();
+    context?.deleteItem('suppliers', id);
+  }
+  
+  return result;
+};
 
 // ------------------  Customer ------------------
-export const fetchCustomers = () => apiFetch(`${API_BASE_URL}customers/`);
+export const fetchCustomers = () => apiFetch<Customer[]>(`${API_BASE_URL}customers/`);
 
 export const fetchCustomerById = (id: number) =>
   apiFetch(`${API_BASE_URL}customers/${id}/`);
 
-export const createCustomer = (
+export const createCustomer = async (
   data: Omit<Customer, "id" | "created_at" | "updated_at">
-) => apiFetch(`${API_BASE_URL}customers/`, { method: "POST", body: data });
+) => {
+  const result = await apiFetch<Customer>(`${API_BASE_URL}customers/`, { method: "POST", body: data });
+  
+  if (result) {
+    const context = getCoreContext();
+    context?.addItem('customers', result);
+  }
+  
+  return result;
+};
 
-export const updateCustomer = (id: number, data: Partial<Customer>) =>
-  apiFetch(`${API_BASE_URL}customers/${id}/`, { method: "PATCH", body: data });
+export const updateCustomer = async (id: number, data: Partial<Customer>) => {
+  const result = await apiFetch<Customer>(`${API_BASE_URL}customers/${id}/`, { method: "PATCH", body: data });
+  
+  if (result) {
+    const context = getCoreContext();
+    context?.updateItem('customers', id, result);
+  }
+  
+  return result;
+};
 
-export const deleteCustomer = (id: number) =>
-  apiFetch(`${API_BASE_URL}customers/${id}/`, { method: "DELETE" });
+export const deleteCustomer = async (id: number) => {
+  const result = await apiFetch(`${API_BASE_URL}customers/${id}/`, { method: "DELETE" });
+  
+  if (result !== null) {
+    const context = getCoreContext();
+    context?.deleteItem('customers', id);
+  }
+  
+  return result;
+};
 
 // ------------------  Receiver ------------------
-export const fetchReceivers = () => apiFetch(`${API_BASE_URL}receivers/`);
+export const fetchReceivers = () => apiFetch<Receiver[]>(`${API_BASE_URL}receivers/`);
 
 export const fetchReceiverById = (id: number) =>
   apiFetch(`${API_BASE_URL}receivers/${id}/`);
 
-export const createReceiver = (
+export const createReceiver = async (
   data: Omit<Receiver, "id" | "created_at" | "updated_at">
-) => apiFetch(`${API_BASE_URL}receivers/`, { method: "POST", body: data });
+) => {
+  const result = await apiFetch<Receiver>(`${API_BASE_URL}receivers/`, { method: "POST", body: data });
+  
+  if (result) {
+    const context = getCoreContext();
+    context?.addItem('receivers', result);
+  }
+  
+  return result;
+};
 
-export const updateReceiver = (id: number, data: Partial<Receiver>) =>
-  apiFetch(`${API_BASE_URL}receivers/${id}/`, { method: "PATCH", body: data });
+export const updateReceiver = async (id: number, data: Partial<Receiver>) => {
+  const result = await apiFetch<Receiver>(`${API_BASE_URL}receivers/${id}/`, { method: "PATCH", body: data });
+  
+  if (result) {
+    const context = getCoreContext();
+    context?.updateItem('receivers', id, result);
+  }
+  
+  return result;
+};
 
-export const deleteReceiver = (id: number) =>
-  apiFetch(`${API_BASE_URL}receivers/${id}/`, { method: "DELETE" });
+export const deleteReceiver = async (id: number) => {
+  const result = await apiFetch(`${API_BASE_URL}receivers/${id}/`, { method: "DELETE" });
+  
+  if (result !== null) {
+    const context = getCoreContext();
+    context?.deleteItem('receivers', id);
+  }
+  
+  return result;
+};
 
 export const fetchShippingCompanies = () =>
   apiFetch<ShippingCompany[]>(`${API_BASE_URL}warehouse/shipping-companies/`);
@@ -165,24 +314,48 @@ export const fetchShippingCompanyById = (id: number) =>
     `${API_BASE_URL}warehouse/shipping-companies/${id}/`
   );
 
-export const createShippingCompany = (
+export const createShippingCompany = async (
   data: Omit<ShippingCompany, "id" | "created_at" | "updated_at">
-) =>
-  apiFetch<ShippingCompany>(`${API_BASE_URL}warehouse/shipping-companies/`, {
+) => {
+  const result = await apiFetch<ShippingCompany>(`${API_BASE_URL}warehouse/shipping-companies/`, {
     method: "POST",
     body: data,
   });
+  
+  if (result) {
+    const context = getCoreContext();
+    context?.addItem('shippingCompanies', result);
+  }
+  
+  return result;
+};
 
-export const updateShippingCompany = (
+export const updateShippingCompany = async (
   id: number,
   data: Partial<ShippingCompany>
-) =>
-  apiFetch<ShippingCompany>(
+) => {
+  const result = await apiFetch<ShippingCompany>(
     `${API_BASE_URL}warehouse/shipping-companies/${id}/`,
     { method: "PATCH", body: data }
   );
+  
+  if (result) {
+    const context = getCoreContext();
+    context?.updateItem('shippingCompanies', id, result);
+  }
+  
+  return result;
+};
 
-export const deleteShippingCompany = (id: number) =>
-  apiFetch(`${API_BASE_URL}warehouse/shipping-companies/${id}/`, {
+export const deleteShippingCompany = async (id: number) => {
+  const result = await apiFetch(`${API_BASE_URL}warehouse/shipping-companies/${id}/`, {
     method: "DELETE",
   });
+  
+  if (result !== null) {
+    const context = getCoreContext();
+    context?.deleteItem('shippingCompanies', id);
+  }
+  
+  return result;
+};

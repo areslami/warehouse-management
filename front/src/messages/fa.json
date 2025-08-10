@@ -90,18 +90,28 @@
     "title": "رسید انبار",
     "receipt-id": "شناسه رسید",
     "receipt-type": "نوع رسید",
-    "type-import": "واردات کلبه",
-    "type-distribution": "توزیع کلبه",
+    "type-import": "واردات کوتاژ",
+    "type-distribution": "توزیع کوتاژ",
     "type-purchase": "خرید",
     "warehouse": "انبار",
-    "cottage-serial": "شماره سریال کلبه",
+    "cottage-serial": "شماره سریال کوتاژ",
     "proforma": "پیش فاکتور",
+    "select-proforma": "انتخاب پیش فاکتور",
+    "no-proforma": "بدون پیش فاکتور",
     "description": "توضیحات",
     "items": "اقلام",
     "add-item": "افزودن قلم",
     "product": "محصول",
     "weight": "وزن",
     "date": "تاریخ",
+    "select-warehouse": "انتخاب انبار",
+    "select-product": "انتخاب محصول",
+    "no-warehouses": "انباری یافت نشد",
+    "no-products": "محصولی یافت نشد",
+    "create-new-warehouse": "ایجاد انبار جدید",
+    "create-new-product": "ایجاد محصول جدید",
+    "create-new-proforma": "ایجاد پیش فاکتور جدید",
+    "select-date": "انتخاب تاریخ",
     "save": "ذخیره",
     "cancel": "لغو"
   },
@@ -137,6 +147,13 @@
     "vehicle-container": "کانتینر",
     "vehicle-other": "سایر",
     "receiver": "دریافت کننده",
+    "select-warehouse": "انتخاب انبار",
+    "select-product": "انتخاب محصول",
+    "select-receiver": "انتخاب دریافت کننده",
+    "create-new-warehouse": "ایجاد انبار جدید",
+    "create-new-product": "ایجاد محصول جدید",
+    "create-new-receiver": "ایجاد دریافت کننده جدید",
+    "select-date": "انتخاب تاریخ",
     "save": "ذخیره",
     "cancel": "لغو"
   },
@@ -176,6 +193,13 @@
     "vehicle-container": "کانتینر",
     "vehicle-other": "سایر",
     "receiver": "دریافت کننده",
+    "select-warehouse": "انتخاب انبار",
+    "select-product": "انتخاب محصول",
+    "select-receiver": "انتخاب دریافت کننده",
+    "create-new-warehouse": "ایجاد انبار جدید",
+    "create-new-product": "ایجاد محصول جدید",
+    "create-new-receiver": "ایجاد دریافت کننده جدید",
+    "select-date": "انتخاب تاریخ",
     "save": "ذخیره",
     "cancel": "لغو"
   },
@@ -204,6 +228,7 @@
       "name": "نام محصول الزامی است",
       "code": "کد محصول الزامی است",
       "b2bcode": "کد B2B الزامی است",
+      "b2bregion": "منطقه B2B الزامی است",
       "b2breigon": "منطقه B2B الزامی است",
       "category": "دسته بندی الزامی است"
     },
@@ -213,6 +238,8 @@
     "b2bcode": "کد B2B",
     "b2breigon": "منطقه B2B",
     "category": "دسته بندی",
+    "select-category": "انتخاب دسته بندی",
+    "select-region": "انتخاب منطقه",
     "description": "توضیحات",
     "save": "ذخیره",
     "cancel": "لغو"
@@ -327,6 +354,7 @@
     "title": "انبار",
     "select_warehouse_label": "انتخاب انبار",
     "select_warehouse_placeholder": "لطفا انبار مورد نظر را انتخاب کنید",
+    "all_warehouses": "همه انبارها",
     "add_warehouse": "افزودن انبار",
     "edit_warehouse": "ویرایش",
     "delete_warehouse": "حذف",
@@ -376,7 +404,8 @@
       "edit": "ویرایش",
       "delete": "حذف",
       "confirm_delete": "آیا از حذف این حواله اطمینان دارید؟",
-      "loading": "در حال بارگذاری حواله‌ها..."
+      "loading": "در حال بارگذاری حواله‌ها...",
+      "search_placeholder": "جستجو در حواله‌ها..."
     },
     "deliveries": {
       "title": "گزارش تحویل‌ها",
@@ -394,7 +423,8 @@
       "edit": "ویرایش",
       "delete": "حذف",
       "confirm_delete": "آیا از حذف این تحویل اطمینان دارید؟",
-      "loading": "در حال بارگذاری تحویل‌ها..."
+      "loading": "در حال بارگذاری تحویل‌ها...",
+      "search_placeholder": "جستجو در تحویل‌ها..."
     }
   }
 }

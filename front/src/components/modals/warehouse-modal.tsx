@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "../ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "../ui/dialog";
 import { Button } from "../ui/button";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "../ui/form";
 import { Input } from "../ui/input";
@@ -52,11 +52,6 @@ export function WarehouseModal({ trigger, onSubmit, onClose, initialData }: Ware
 
   const handleSubmit = (data: WarehouseFormData) => {
     onSubmit?.(data);
-    if (trigger) {
-      setOpen(false);
-    } else {
-      onClose?.();
-    }
     form.reset();
   };
 
@@ -78,6 +73,7 @@ export function WarehouseModal({ trigger, onSubmit, onClose, initialData }: Ware
       <DialogContent dir="rtl" className="min-w-[60%] max-h-[90vh] overflow-y-auto scrollbar-hide  p-0 my-0 mx-auto [&>button]:hidden">
         <DialogHeader className="px-3.5 py-4.5  justify-start" style={{ backgroundColor: "#f6d265" }}>
           <DialogTitle className="font-bold text-white text-right">{t("title")}</DialogTitle>
+          <DialogDescription className="sr-only">Create or edit warehouse</DialogDescription>
         </DialogHeader>
 
         <Form {...form} >

@@ -1,4 +1,4 @@
-import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar"
+import { SidebarProvider } from "@/components/ui/sidebar"
 import { AppSidebar } from "@/components/app-sidebar"
 import { NextIntlClientProvider } from "next-intl"
 import fa from "@/messages/fa.json"
@@ -7,6 +7,7 @@ import './globals.css'
 
 import { Vazirmatn } from "next/font/google";
 import { ModalProvider } from "@/lib/modal-context"
+import { CoreDataProvider } from "@/lib/core-data-context"
 
 const vazir = Vazirmatn({
   subsets: ["arabic"],
@@ -17,14 +18,16 @@ export default function Layout({ children }: { children: React.ReactNode }) {
     <html lang="fa" dir="rtl">
       <body className={vazir.className} style={{ fontWeight: "300" }}>
         <NextIntlClientProvider locale="fa" messages={fa}>
-          <ModalProvider>
-            <SidebarProvider>
-              <AppSidebar />
-              <main>
-                {children}
-              </main>
-            </SidebarProvider>
-          </ModalProvider>
+          <CoreDataProvider>
+            <ModalProvider>
+              <SidebarProvider>
+                <AppSidebar />
+                <main className="p-5 pt-[5vh] w-full">
+                  {children}
+                </main>
+              </SidebarProvider>
+            </ModalProvider>
+          </CoreDataProvider>
         </NextIntlClientProvider>
       </body>
     </html >

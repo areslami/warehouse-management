@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useForm, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -8,8 +8,18 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Button } from "../ui/button";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "../ui/form";
 import { Input } from "../ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select";
 import { Plus, Trash2 } from "lucide-react";
 import { useTranslations } from "next-intl";
+import { useCoreData } from "@/lib/core-data-context";
+import { useModal } from "@/lib/modal-context";
+import { PersianDatePicker } from "../ui/persian-date-picker";
+import { getTodayGregorian } from "@/lib/utils/persian-date";
+import { WarehouseModal } from "./warehouse-modal";
+import { ProductModal } from "./product-modal";
+import { ReceiverModal } from "./receiver-modal";
+import { createWarehouse } from "@/lib/api/warehouse";
+import { createProduct, createReceiver } from "@/lib/api/core";
 
 type DeliveryFulfillmentFormData = {
   delivery_id: string;
@@ -39,10 +49,25 @@ interface DeliveryFulfillmentModalProps {
 export function DeliveryFulfillmentModal({ trigger, onSubmit, onClose, initialData }: DeliveryFulfillmentModalProps) {
   const tval = useTranslations("deliveryFulfillment.validation");
   const t = useTranslations("deliveryFulfillment");
+  const { data, refreshData } = useCoreData();
+  const { openModal } = useModal();
+  
+  useEffect(() => {
+    // Refresh data when modal opens
+    if (data.warehouses.length === 0) {
+      refreshData('warehouses');
+    }
+    if (data.products.length === 0) {
+      refreshData('products');
+    }
+    if (data.receivers.length === 0) {
+      refreshData('receivers');
+    }
+  }, []);
 
   const getTodayDate = () => {
     if (typeof window === 'undefined') return '';
-    return new Date().toISOString().split('T')[0];
+    return getTodayGregorian();
   };
 
   const deliveryItemSchema = z.object({
@@ -140,11 +165,21 @@ export function DeliveryFulfillmentModal({ trigger, onSubmit, onClose, initialDa
                   <FormItem>
                     <FormLabel>{t("warehouse")}</FormLabel>
                     <FormControl>
-                      <Input
-                        type="number"
-                        {...field}
-                        onChange={(e) => field.onChange(Number(e.target.value))}
-                      />
+                      <Select
+                        value={field.value > 0 ? field.value.toString() : ""}
+                        onValueChange={(value) => field.onChange(Number(value))}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder={t("select-warehouse")} />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {data.warehouses.map((warehouse) => (
+                            <SelectItem key={warehouse.id} value={warehouse.id.toString()}>
+                              {warehouse.name} (#{warehouse.id})
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -198,7 +233,11 @@ export function DeliveryFulfillmentModal({ trigger, onSubmit, onClose, initialDa
                   <FormItem>
                     <FormLabel>{t("issue-date")}</FormLabel>
                     <FormControl>
-                      <Input type="date" {...field} />
+                      <PersianDatePicker
+                        value={field.value}
+                        onChange={field.onChange}
+                        placeholder={t("select-date")}
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -212,7 +251,11 @@ export function DeliveryFulfillmentModal({ trigger, onSubmit, onClose, initialDa
                   <FormItem>
                     <FormLabel>{t("validity-date")}</FormLabel>
                     <FormControl>
-                      <Input type="date" {...field} />
+                      <PersianDatePicker
+                        value={field.value}
+                        onChange={field.onChange}
+                        placeholder={t("select-date")}
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -290,11 +333,21 @@ export function DeliveryFulfillmentModal({ trigger, onSubmit, onClose, initialDa
                       <FormItem>
                         <FormLabel>{t("product")}</FormLabel>
                         <FormControl>
-                          <Input
-                            type="number"
-                            {...field}
-                            onChange={(e) => field.onChange(Number(e.target.value))}
-                          />
+                          <Select
+                            value={field.value > 0 ? field.value.toString() : ""}
+                            onValueChange={(value) => field.onChange(Number(value))}
+                          >
+                            <SelectTrigger>
+                              <SelectValue placeholder={t("select-product")} />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {data.products.map((product) => (
+                                <SelectItem key={product.id} value={product.id.toString()}>
+                                  {product.name} (#{product.id})
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -347,11 +400,21 @@ export function DeliveryFulfillmentModal({ trigger, onSubmit, onClose, initialDa
                       <FormItem>
                         <FormLabel>{t("receiver")}</FormLabel>
                         <FormControl>
-                          <Input
-                            type="number"
-                            {...field}
-                            onChange={(e) => field.onChange(Number(e.target.value))}
-                          />
+                          <Select
+                            value={field.value > 0 ? field.value.toString() : ""}
+                            onValueChange={(value) => field.onChange(Number(value))}
+                          >
+                            <SelectTrigger>
+                              <SelectValue placeholder={t("select-receiver")} />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {data.receivers.map((receiver) => (
+                                <SelectItem key={receiver.id} value={receiver.id.toString()}>
+                                  {receiver.name} (#{receiver.id})
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
                         </FormControl>
                         <FormMessage />
                       </FormItem>

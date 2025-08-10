@@ -1,14 +1,16 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "../ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "../ui/dialog";
 import { Button } from "../ui/button";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "../ui/form";
 import { Input } from "../ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select";
 import { useTranslations } from "next-intl";
+import { useCoreData } from "@/lib/core-data-context";
 
 type ProductFormData = {
   name: string;
@@ -29,6 +31,16 @@ interface ProductModalProps {
 export function ProductModal({ trigger, onSubmit, onClose, initialData }: ProductModalProps) {
   const tval = useTranslations("product.validation");
   const t = useTranslations("product");
+  const { data, refreshData } = useCoreData();
+  
+  useEffect(() => {
+    if (data.productCategories.length === 0) {
+      refreshData('productCategories');
+    }
+    if (data.productRegions.length === 0) {
+      refreshData('productRegions');
+    }
+  }, []);
 
   const productSchema = z.object({
     name: z.string().min(1, tval("name")),
@@ -55,11 +67,6 @@ export function ProductModal({ trigger, onSubmit, onClose, initialData }: Produc
 
   const handleSubmit = (data: ProductFormData) => {
     onSubmit?.(data);
-    if (trigger) {
-      setOpen(false);
-    } else {
-      onClose?.();
-    }
     form.reset();
   };
 
@@ -81,6 +88,7 @@ export function ProductModal({ trigger, onSubmit, onClose, initialData }: Produc
       <DialogContent dir="rtl" className="min-w-[70%] max-h-[90vh] overflow-y-auto scrollbar-hide  p-0 my-0 mx-auto [&>button]:hidden">
         <DialogHeader className="px-3.5 py-4.5  justify-start" style={{ backgroundColor: "#f6d265" }}>
           <DialogTitle className="font-bold text-white text-right">{t("title")}</DialogTitle>
+          <DialogDescription className="sr-only">Create or edit product</DialogDescription>
         </DialogHeader>
 
         <Form {...form} >
@@ -137,11 +145,21 @@ export function ProductModal({ trigger, onSubmit, onClose, initialData }: Produc
                   <FormItem>
                     <FormLabel>{t("category")}</FormLabel>
                     <FormControl>
-                      <Input
-                        type="number"
-                        {...field}
-                        onChange={(e) => field.onChange(Number(e.target.value))}
-                      />
+                      <Select
+                        value={field.value > 0 ? field.value.toString() : ""}
+                        onValueChange={(value) => field.onChange(Number(value))}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder={t("select-category")} />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {data.productCategories.map((category) => (
+                            <SelectItem key={category.id} value={category.id.toString()}>
+                              {category.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -154,13 +172,23 @@ export function ProductModal({ trigger, onSubmit, onClose, initialData }: Produc
               name="b2bregion"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>{t("b2bregion")}</FormLabel>
+                  <FormLabel>{t("b2breigon")}</FormLabel>
                   <FormControl>
-                    <Input
-                      type="number"
-                      {...field}
-                      onChange={(e) => field.onChange(Number(e.target.value))}
-                    />
+                    <Select
+                      value={field.value > 0 ? field.value.toString() : ""}
+                      onValueChange={(value) => field.onChange(Number(value))}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder={t("select-region")} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {data.productRegions.map((region) => (
+                          <SelectItem key={region.id} value={region.id.toString()}>
+                            {region.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </FormControl>
                   <FormMessage />
                 </FormItem>

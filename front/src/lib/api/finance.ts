@@ -6,6 +6,7 @@ import type {
   SalesProformaCreate,
   PurchaseProformaCreate,
 } from "./../interfaces/finance";
+import { getCoreContext } from "../core-data-context";
 
 const API_BASE_URL = "http://127.0.0.1:8000/finance/";
 
@@ -41,21 +42,45 @@ export const fetchPurchaseProformas = () =>
   apiFetch<PurchaseProforma[]>(`${API_BASE_URL}purchase-proformas/`);
 export const fetchPurchaseProformaById = (id: number) =>
   apiFetch<PurchaseProforma>(`${API_BASE_URL}purchase-proformas/${id}/`);
-export const createPurchaseProforma = (data: PurchaseProformaCreate) =>
-  apiFetch<PurchaseProforma>(`${API_BASE_URL}purchase-proformas/`, {
+export const createPurchaseProforma = async (data: PurchaseProformaCreate) => {
+  const result = await apiFetch<PurchaseProforma>(`${API_BASE_URL}purchase-proformas/`, {
     method: "POST",
     body: data,
   });
-export const updatePurchaseProforma = (
+  
+  if (result) {
+    const context = getCoreContext();
+    context?.addItem('purchaseProformas', result);
+  }
+  
+  return result;
+};
+export const updatePurchaseProforma = async (
   id: number,
   data: Partial<PurchaseProformaCreate>
-) =>
-  apiFetch<PurchaseProforma>(`${API_BASE_URL}purchase-proformas/${id}/`, {
+) => {
+  const result = await apiFetch<PurchaseProforma>(`${API_BASE_URL}purchase-proformas/${id}/`, {
     method: "PATCH",
     body: data,
   });
-export const deletePurchaseProforma = (id: number) =>
-  apiFetch(`${API_BASE_URL}purchase-proformas/${id}/`, { method: "DELETE" });
+  
+  if (result) {
+    const context = getCoreContext();
+    context?.updateItem('purchaseProformas', id, result);
+  }
+  
+  return result;
+};
+export const deletePurchaseProforma = async (id: number) => {
+  const result = await apiFetch(`${API_BASE_URL}purchase-proformas/${id}/`, { method: "DELETE" });
+  
+  if (result !== null) {
+    const context = getCoreContext();
+    context?.deleteItem('purchaseProformas', id);
+  }
+  
+  return result;
+};
 
 export const fetchPurchaseProformasBySupplier = (supplierId: number) =>
   apiFetch<PurchaseProforma[]>(
@@ -74,21 +99,45 @@ export const fetchSalesProformas = () =>
   apiFetch<SalesProforma[]>(`${API_BASE_URL}sales-proformas/`);
 export const fetchSalesProformaById = (id: number) =>
   apiFetch<SalesProforma>(`${API_BASE_URL}sales-proformas/${id}/`);
-export const createSalesProforma = (data: SalesProformaCreate) =>
-  apiFetch<SalesProforma>(`${API_BASE_URL}sales-proformas/`, {
+export const createSalesProforma = async (data: SalesProformaCreate) => {
+  const result = await apiFetch<SalesProforma>(`${API_BASE_URL}sales-proformas/`, {
     method: "POST",
     body: data,
   });
-export const updateSalesProforma = (
+  
+  if (result) {
+    const context = getCoreContext();
+    context?.addItem('salesProformas', result);
+  }
+  
+  return result;
+};
+export const updateSalesProforma = async (
   id: number,
   data: Partial<SalesProformaCreate>
-) =>
-  apiFetch<SalesProforma>(`${API_BASE_URL}sales-proformas/${id}/`, {
+) => {
+  const result = await apiFetch<SalesProforma>(`${API_BASE_URL}sales-proformas/${id}/`, {
     method: "PATCH",
     body: data,
   });
-export const deleteSalesProforma = (id: number) =>
-  apiFetch(`${API_BASE_URL}sales-proformas/${id}/`, { method: "DELETE" });
+  
+  if (result) {
+    const context = getCoreContext();
+    context?.updateItem('salesProformas', id, result);
+  }
+  
+  return result;
+};
+export const deleteSalesProforma = async (id: number) => {
+  const result = await apiFetch(`${API_BASE_URL}sales-proformas/${id}/`, { method: "DELETE" });
+  
+  if (result !== null) {
+    const context = getCoreContext();
+    context?.deleteItem('salesProformas', id);
+  }
+  
+  return result;
+};
 
 export const fetchSalesProformasByCustomer = (customerId: number) =>
   apiFetch<SalesProforma[]>(

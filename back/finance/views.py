@@ -16,8 +16,8 @@ class PurchaseProformaViewSet(viewsets.ModelViewSet):
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_fields = ['supplier', 'date']
     search_fields = ['serial_number', 'supplier__company_name', 'supplier__full_name']
-    ordering_fields = ['date', 'serial_number', 'final_price', 'created_at']
-    ordering = ['-date', '-created_at']
+    ordering_fields = ['date', 'serial_number', 'final_price']
+    ordering = ['-date']
 
     @action(detail=False, methods=['get'])
     def by_supplier(self, request):
@@ -47,8 +47,8 @@ class SalesProformaViewSet(viewsets.ModelViewSet):
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_fields = ['customer', 'date', 'payment_type']
     search_fields = ['serial_number', 'customer__company_name', 'customer__full_name', 'payment_description']
-    ordering_fields = ['date', 'serial_number', 'final_price', 'created_at']
-    ordering = ['-date', '-created_at']
+    ordering_fields = ['date', 'serial_number', 'final_price']
+    ordering = ['-date']
 
     @action(detail=False, methods=['get'])
     def by_customer(self, request):

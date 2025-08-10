@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useForm, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -8,8 +8,18 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Button } from "../ui/button";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "../ui/form";
 import { Input } from "../ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select";
 import { Plus, Trash2 } from "lucide-react";
 import { useTranslations } from "next-intl";
+import { useCoreData } from "@/lib/core-data-context";
+import { useModal } from "@/lib/modal-context";
+import { PersianDatePicker } from "../ui/persian-date-picker";
+import { getTodayGregorian } from "@/lib/utils/persian-date";
+import { WarehouseModal } from "./warehouse-modal";
+import { ProductModal } from "./product-modal";
+import { ReceiverModal } from "./receiver-modal";
+import { createWarehouse } from "@/lib/api/warehouse";
+import { createProduct, createReceiver } from "@/lib/api/core";
 
 type DispatchIssueFormData = {
   dispatch_id: string;
@@ -37,10 +47,25 @@ interface DispatchIssueModalProps {
 export function DispatchIssueModal({ trigger, onSubmit, onClose, initialData }: DispatchIssueModalProps) {
   const tval = useTranslations("dispatchIssue.validation");
   const t = useTranslations("dispatchIssue");
+  const { data, refreshData } = useCoreData();
+  const { openModal } = useModal();
+  
+  useEffect(() => {
+    // Refresh data when modal opens
+    if (data.warehouses.length === 0) {
+      refreshData('warehouses');
+    }
+    if (data.products.length === 0) {
+      refreshData('products');
+    }
+    if (data.receivers.length === 0) {
+      refreshData('receivers');
+    }
+  }, []);
 
   const getTodayDate = () => {
     if (typeof window === 'undefined') return '';
-    return new Date().toISOString().split('T')[0];
+    return getTodayGregorian();
   };
 
   const dispatchItemSchema = z.object({
@@ -136,11 +161,43 @@ export function DispatchIssueModal({ trigger, onSubmit, onClose, initialData }: 
                   <FormItem>
                     <FormLabel>{t("warehouse")}</FormLabel>
                     <FormControl>
-                      <Input
-                        type="number"
-                        {...field}
-                        onChange={(e) => field.onChange(Number(e.target.value))}
-                      />
+                      <Select
+                        value={field.value > 0 ? field.value.toString() : ""}
+                        onValueChange={(value) => {
+                          if (value === "new") {
+                            openModal(WarehouseModal, {
+                              onSubmit: async (newWarehouse: any) => {
+                                const created = await createWarehouse(newWarehouse);
+                                if (created) {
+                                  await refreshData('warehouses');
+                                  field.onChange(created.id);
+                                }
+                              },
+                              trigger: <span />
+                            });
+                          } else {
+                            field.onChange(Number(value));
+                          }
+                        }}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder={t("select-warehouse")} />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="new" className="font-semibold text-[#f6d265]">
+                            <Plus className="inline-block w-4 h-4 mr-2" />
+                            {t("create-new-warehouse")}
+                          </SelectItem>
+                          {data.warehouses.length > 0 && (
+                            <div className="border-t my-1" />
+                          )}
+                          {data.warehouses.map((warehouse) => (
+                            <SelectItem key={warehouse.id} value={warehouse.id.toString()}>
+                              {warehouse.name} (#{warehouse.id})
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -194,7 +251,11 @@ export function DispatchIssueModal({ trigger, onSubmit, onClose, initialData }: 
                   <FormItem>
                     <FormLabel>{t("issue-date")}</FormLabel>
                     <FormControl>
-                      <Input type="date" {...field} />
+                      <PersianDatePicker
+                        value={field.value}
+                        onChange={field.onChange}
+                        placeholder={t("select-date")}
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -208,7 +269,11 @@ export function DispatchIssueModal({ trigger, onSubmit, onClose, initialData }: 
                   <FormItem>
                     <FormLabel>{t("validity-date")}</FormLabel>
                     <FormControl>
-                      <Input type="date" {...field} />
+                      <PersianDatePicker
+                        value={field.value}
+                        onChange={field.onChange}
+                        placeholder={t("select-date")}
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -253,11 +318,43 @@ export function DispatchIssueModal({ trigger, onSubmit, onClose, initialData }: 
                       <FormItem>
                         <FormLabel>{t("product")}</FormLabel>
                         <FormControl>
-                          <Input
-                            type="number"
-                            {...field}
-                            onChange={(e) => field.onChange(Number(e.target.value))}
-                          />
+                          <Select
+                            value={field.value > 0 ? field.value.toString() : ""}
+                            onValueChange={(value) => {
+                              if (value === "new") {
+                                openModal(ProductModal, {
+                                  onSubmit: async (newProduct: any) => {
+                                    const created = await createProduct(newProduct);
+                                    if (created) {
+                                      await refreshData('products');
+                                      field.onChange(created.id);
+                                    }
+                                  },
+                                  trigger: <span />
+                                });
+                              } else {
+                                field.onChange(Number(value));
+                              }
+                            }}
+                          >
+                            <SelectTrigger>
+                              <SelectValue placeholder={t("select-product")} />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="new" className="font-semibold text-[#f6d265]">
+                                <Plus className="inline-block w-4 h-4 mr-2" />
+                                {t("create-new-product")}
+                              </SelectItem>
+                              {data.products.length > 0 && (
+                                <div className="border-t my-1" />
+                              )}
+                              {data.products.map((product) => (
+                                <SelectItem key={product.id} value={product.id.toString()}>
+                                  {product.name} (#{product.id})
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -310,11 +407,43 @@ export function DispatchIssueModal({ trigger, onSubmit, onClose, initialData }: 
                       <FormItem>
                         <FormLabel>{t("receiver")}</FormLabel>
                         <FormControl>
-                          <Input
-                            type="number"
-                            {...field}
-                            onChange={(e) => field.onChange(Number(e.target.value))}
-                          />
+                          <Select
+                            value={field.value > 0 ? field.value.toString() : ""}
+                            onValueChange={(value) => {
+                              if (value === "new") {
+                                openModal(ReceiverModal, {
+                                  onSubmit: async (newReceiver: any) => {
+                                    const created = await createReceiver(newReceiver);
+                                    if (created) {
+                                      await refreshData('receivers');
+                                      field.onChange(created.id);
+                                    }
+                                  },
+                                  trigger: <span />
+                                });
+                              } else {
+                                field.onChange(Number(value));
+                              }
+                            }}
+                          >
+                            <SelectTrigger>
+                              <SelectValue placeholder={t("select-receiver")} />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="new" className="font-semibold text-[#f6d265]">
+                                <Plus className="inline-block w-4 h-4 mr-2" />
+                                {t("create-new-receiver")}
+                              </SelectItem>
+                              {data.receivers.length > 0 && (
+                                <div className="border-t my-1" />
+                              )}
+                              {data.receivers.map((receiver) => (
+                                <SelectItem key={receiver.id} value={receiver.id.toString()}>
+                                  {receiver.name} (#{receiver.id})
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
                         </FormControl>
                         <FormMessage />
                       </FormItem>

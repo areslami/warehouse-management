@@ -3,10 +3,57 @@ import type {
   WarehouseReceipt,
   DispatchIssue,
   DeliveryFulfillment,
-  WarehouseReceiptItem,
-  DispatchIssueItem,
-  DeliveryFulfillmentItem,
 } from "./../interfaces/warehouse";
+
+// Create interfaces for API calls that use IDs instead of full objects
+export interface WarehouseReceiptCreate {
+  receipt_id?: string;
+  receipt_type: "import_cottage" | "distribution_cottage" | "purchase";
+  date: string;
+  warehouse: number;
+  description: string;
+  total_weight: number;
+  cottage_serial_number?: string;
+  proforma?: number;
+  items: { product: number; weight: number }[];
+}
+
+export interface DispatchIssueCreate {
+  dispatch_id: string;
+  warehouse: number;
+  sales_proforma: number;
+  issue_date: string;
+  validity_date: string;
+  description: string;
+  shipping_company: number;
+  total_weight: number;
+  items: {
+    product: number;
+    weight: number;
+    vehicle_type: "truck" | "pickup" | "van" | "container" | "other";
+    receiver: number;
+  }[];
+}
+
+export interface DeliveryFulfillmentCreate {
+  delivery_id: string;
+  issue_date: string;
+  validity_date: string;
+  warehouse: number;
+  sales_proforma: number;
+  description: string;
+  shipping_company: number;
+  total_weight: number;
+  items: {
+    shipment_id: string;
+    shipment_price: number;
+    product: number;
+    weight: number;
+    vehicle_type: "truck" | "pickup" | "van" | "container" | "other";
+    receiver: number;
+  }[];
+}
+import { getCoreContext } from "../core-data-context";
 
 const API_BASE_URL = "http://127.0.0.1:8000/warehouse/";
 
@@ -48,22 +95,46 @@ export const fetchWarehouses = () =>
 export const fetchWarehouseById = (id: number) =>
   apiFetch<Warehouse>(`${API_BASE_URL}warehouses/${id}/`);
 
-export const createWarehouse = (
+export const createWarehouse = async (
   data: Omit<Warehouse, "id" | "created_at" | "updated_at">
-) =>
-  apiFetch<Warehouse>(`${API_BASE_URL}warehouses/`, {
+) => {
+  const result = await apiFetch<Warehouse>(`${API_BASE_URL}warehouses/`, {
     method: "POST",
     body: data,
   });
+  
+  if (result) {
+    const context = getCoreContext();
+    context?.addItem('warehouses', result);
+  }
+  
+  return result;
+};
 
-export const updateWarehouse = (id: number, data: Partial<Warehouse>) =>
-  apiFetch<Warehouse>(`${API_BASE_URL}warehouses/${id}/`, {
+export const updateWarehouse = async (id: number, data: Partial<Warehouse>) => {
+  const result = await apiFetch<Warehouse>(`${API_BASE_URL}warehouses/${id}/`, {
     method: "PATCH",
     body: data,
   });
+  
+  if (result) {
+    const context = getCoreContext();
+    context?.updateItem('warehouses', id, result);
+  }
+  
+  return result;
+};
 
-export const deleteWarehouse = (id: number) =>
-  apiFetch(`${API_BASE_URL}warehouses/${id}/`, { method: "DELETE" });
+export const deleteWarehouse = async (id: number) => {
+  const result = await apiFetch(`${API_BASE_URL}warehouses/${id}/`, { method: "DELETE" });
+  
+  if (result !== null) {
+    const context = getCoreContext();
+    context?.deleteItem('warehouses', id);
+  }
+  
+  return result;
+};
 
 // --------------- WarehouseReceipt  ---------------
 export const fetchWarehouseReceipts = () =>
@@ -72,11 +143,7 @@ export const fetchWarehouseReceipts = () =>
 export const fetchWarehouseReceiptById = (id: number) =>
   apiFetch<WarehouseReceipt>(`${API_BASE_URL}receipts/${id}/`);
 
-export const createWarehouseReceipt = (
-  data: Omit<WarehouseReceipt, "id" | "created_at" | "updated_at" | "items"> & {
-    items: Omit<WarehouseReceiptItem, "id" | "receipt">[];
-  }
-) =>
+export const createWarehouseReceipt = (data: WarehouseReceiptCreate) =>
   apiFetch<WarehouseReceipt>(`${API_BASE_URL}receipts/`, {
     method: "POST",
     body: data,
@@ -84,16 +151,7 @@ export const createWarehouseReceipt = (
 
 export const updateWarehouseReceipt = (
   id: number,
-  data: {
-    receipt_id?: string;
-    receipt_type?: "import_cottage" | "distribution_cottage" | "purchase";
-    date?: string;
-    warehouse?: number;
-    description?: string;
-    cottage_serial_number?: string;
-    proforma?: number;
-    items?: { product: number; weight: number }[];
-  }
+  data: Partial<WarehouseReceiptCreate>
 ) =>
   apiFetch<WarehouseReceipt>(`${API_BASE_URL}receipts/${id}/`, {
     method: "PATCH",
@@ -118,11 +176,7 @@ export const fetchDispatchIssues = () =>
 export const fetchDispatchIssueById = (id: number) =>
   apiFetch<DispatchIssue>(`${API_BASE_URL}dispatches/${id}/`);
 
-export const createDispatchIssue = (
-  data: Omit<DispatchIssue, "id" | "created_at" | "updated_at" | "items"> & {
-    items: Omit<DispatchIssueItem, "id" | "dispatch">[];
-  }
-) =>
+export const createDispatchIssue = (data: DispatchIssueCreate) =>
   apiFetch<DispatchIssue>(`${API_BASE_URL}dispatches/`, {
     method: "POST",
     body: data,
@@ -130,21 +184,7 @@ export const createDispatchIssue = (
 
 export const updateDispatchIssue = (
   id: number,
-  data: {
-    dispatch_id?: string;
-    warehouse?: number;
-    sales_proforma?: number;
-    issue_date?: string;
-    validity_date?: string;
-    description?: string;
-    shipping_company?: number;
-    items?: {
-      product: number;
-      weight: number;
-      vehicle_type: "truck" | "pickup" | "van" | "container" | "other";
-      receiver: number;
-    }[];
-  }
+  data: Partial<DispatchIssueCreate>
 ) =>
   apiFetch<DispatchIssue>(`${API_BASE_URL}dispatches/${id}/`, {
     method: "PATCH",
@@ -161,12 +201,7 @@ export const fetchDeliveryFulfillments = () =>
 export const fetchDeliveryFulfillmentById = (id: number) =>
   apiFetch<DeliveryFulfillment>(`${API_BASE_URL}deliveries/${id}/`);
 
-export const createDeliveryFulfillment = (
-  data: Omit<
-    DeliveryFulfillment,
-    "id" | "created_at" | "updated_at" | "items"
-  > & { items: Omit<DeliveryFulfillmentItem, "id" | "delivery">[] }
-) =>
+export const createDeliveryFulfillment = (data: DeliveryFulfillmentCreate) =>
   apiFetch<DeliveryFulfillment>(`${API_BASE_URL}deliveries/`, {
     method: "POST",
     body: data,
@@ -174,23 +209,7 @@ export const createDeliveryFulfillment = (
 
 export const updateDeliveryFulfillment = (
   id: number,
-  data: {
-    delivery_id?: string;
-    issue_date?: string;
-    validity_date?: string;
-    warehouse?: number;
-    sales_proforma?: number;
-    description?: string;
-    shipping_company?: number;
-    items?: {
-      shipment_id: string;
-      shipment_price: number;
-      product: number;
-      weight: number;
-      vehicle_type: "truck" | "pickup" | "van" | "container" | "other";
-      receiver: number;
-    }[];
-  }
+  data: Partial<DeliveryFulfillmentCreate>
 ) =>
   apiFetch<DeliveryFulfillment>(`${API_BASE_URL}deliveries/${id}/`, {
     method: "PATCH",
