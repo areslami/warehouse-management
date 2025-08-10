@@ -14,7 +14,7 @@ type ProductFormData = {
   name: string;
   code: string;
   b2bcode: string;
-  b2breigon: number;
+  b2bregion: number;
   category: number;
   description: string;
 };
@@ -33,7 +33,7 @@ export function ProductModal({ trigger, onSubmit, onClose }: ProductModalProps) 
     name: z.string().min(1, tval("name")),
     code: z.string().min(1, tval("code")),
     b2bcode: z.string().min(1, tval("b2bcode")),
-    b2breigon: z.number().min(1, tval("b2breigon")),
+    b2bregion: z.number().min(1, tval("b2bregion")),
     category: z.number().min(1, tval("category")),
     description: z.string(),
   });
@@ -46,7 +46,7 @@ export function ProductModal({ trigger, onSubmit, onClose }: ProductModalProps) 
       name: "",
       code: "",
       b2bcode: "",
-      b2breigon: 0,
+      b2bregion: 0,
       category: 0,
       description: "",
     },
@@ -83,7 +83,7 @@ export function ProductModal({ trigger, onSubmit, onClose }: ProductModalProps) 
         </DialogHeader>
 
         <Form {...form} >
-          <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6 py-4 px-8">
+          <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6 py-4 px-12">
             <div className="grid grid-cols-2 gap-4">
               <FormField
                 control={form.control}
@@ -150,10 +150,10 @@ export function ProductModal({ trigger, onSubmit, onClose }: ProductModalProps) 
 
             <FormField
               control={form.control}
-              name="b2breigon"
+              name="b2bregion"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>{t("b2breigon")}</FormLabel>
+                  <FormLabel>{t("b2bregion")}</FormLabel>
                   <FormControl>
                     <Input
                       type="number"

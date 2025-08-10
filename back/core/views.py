@@ -69,9 +69,9 @@ class ProductRegionViewSet(viewsets.ModelViewSet):
 
 
 class ProductViewSet(viewsets.ModelViewSet):
-    queryset = Product.objects.select_related('category', 'b2breigon').all()
+    queryset = Product.objects.select_related('category', 'b2bregion').all()
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
-    filterset_fields = ['category', 'b2breigon']
+    filterset_fields = ['category', 'b2bregion']
     search_fields = ['name', 'code', 'b2bcode', 'description']
     ordering_fields = ['name', 'code', 'created_at']
     ordering = ['name']
@@ -172,13 +172,13 @@ class ReceiverViewSet(viewsets.ModelViewSet):
     queryset = Receiver.objects.all()
     serializer_class = ReceiverSerializer
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
-    filterset_fields = ['reciever_type']
+    filterset_fields = ['receiver_type']
     search_fields = ['company_name', 'full_name', 'economic_code', 'phone', 'system_id', 'unique_id']
     ordering_fields = ['company_name', 'full_name', 'created_at']
     ordering = ['company_name', 'full_name']
     
     def list(self, request, *args, **kwargs):
-        cache_key = 'recievers'
+        cache_key = 'receivers'
         cached_data = cache.get(cache_key)
         if cached_data is None:
             response = super().list(request, *args, **kwargs)
@@ -188,7 +188,7 @@ class ReceiverViewSet(viewsets.ModelViewSet):
     
     def retrieve(self, request, *args, **kwargs):
         pk = kwargs.get('pk')
-        cache_key = f'reciever_{pk}'
+        cache_key = f'receiver_{pk}'
         data = cache.get(cache_key)
         if data is None:
             response = super().retrieve(request, *args, **kwargs)

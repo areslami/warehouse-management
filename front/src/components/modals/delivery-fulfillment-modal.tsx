@@ -21,7 +21,7 @@ type DeliveryFulfillmentFormData = {
   shipping_company: number;
   items: {
     shipment_id: string;
-    shippment_price: number;
+    shipment_price: number;
     product: number;
     weight: number;
     vehicle_type: "truck" | "pickup" | "van" | "container" | "other";
@@ -41,7 +41,7 @@ export function DeliveryFulfillmentModal({ trigger, onSubmit, onClose }: Deliver
 
   const deliveryItemSchema = z.object({
     shipment_id: z.string().min(1, tval("shipment-id")),
-    shippment_price: z.number().min(0, tval("shipment-price")),
+    shipment_price: z.number().min(0, tval("shipment-price")),
     product: z.number().min(1, tval("product-required")),
     weight: z.number().min(0.00000001, tval("weight")),
     vehicle_type: z.enum(["truck", "pickup", "van", "container", "other"]),
@@ -71,7 +71,7 @@ export function DeliveryFulfillmentModal({ trigger, onSubmit, onClose }: Deliver
       sales_proforma: 0,
       description: "",
       shipping_company: 0,
-      items: [{ shipment_id: "", shippment_price: 0, product: 0, weight: 0, vehicle_type: "truck", receiver: 0 }],
+      items: [{ shipment_id: "", shipment_price: 0, product: 0, weight: 0, vehicle_type: "truck", receiver: 0 }],
     },
   });
 
@@ -111,7 +111,7 @@ export function DeliveryFulfillmentModal({ trigger, onSubmit, onClose }: Deliver
         </DialogHeader>
 
         <Form {...form} >
-          <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6 py-4 px-8">
+          <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6 py-4 px-12">
             <div className="grid grid-cols-2 gap-4">
               <FormField
                 control={form.control}
@@ -235,7 +235,7 @@ export function DeliveryFulfillmentModal({ trigger, onSubmit, onClose }: Deliver
                   type="button"
                   variant="outline"
                   size="sm"
-                  onClick={() => append({ shipment_id: "", shippment_price: 0, product: 0, weight: 0, vehicle_type: "truck", receiver: 0 })}
+                  onClick={() => append({ shipment_id: "", shipment_price: 0, product: 0, weight: 0, vehicle_type: "truck", receiver: 0 })}
                 >
                   <Plus className="w-4 h-4 mr-2" />
                   {t("add-item")}
@@ -260,7 +260,7 @@ export function DeliveryFulfillmentModal({ trigger, onSubmit, onClose }: Deliver
 
                   <FormField
                     control={form.control}
-                    name={`items.${index}.shippment_price`}
+                    name={`items.${index}.shipment_price`}
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>{t("shipment-price")}</FormLabel>

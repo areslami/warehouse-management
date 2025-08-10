@@ -1,21 +1,17 @@
 import { createContext, useContext, useEffect, useState } from "react";
 
-import { ProductCategory, ProductReigon, Product, Supplier, Reciever, Customer, ShippingCompany, } from "@/lib/interfaces/core";
-
+import { ProductCategory, ProductRegion, Product, Supplier, Receiver, Customer, ShippingCompany, } from "@/lib/interfaces/core";
 import {
-    fetchCustomers, fetchSuppliers, fetchProducts, fetchProductCategories,
-    fetchProductReigons, fetchRecievers, fetchShippingCompanies,
-    createCustomer, createSupplier, createProduct, createProductCategory,
-    createProductReigon, createReciever, createShippingCompany
-} from '@/lib/api/core';
+    fetchCustomers, fetchSuppliers, fetchProducts, fetchProductCategories, fetchProductRegions, fetchReceivers, fetchShippingCompanies
+} from "./api/core";
 
 interface AppData {
     customers: Customer[];
     suppliers: Supplier[];
     products: Product[];
     productCategories: ProductCategory[];
-    productReigons: ProductReigon[];
-    recievers: Reciever[];
+    productRegions: ProductRegion[];
+    receivers: Receiver[];
     shippingCompanies: ShippingCompany[];
 }
 
@@ -33,26 +29,26 @@ export const CoreDataProvider = ({ children }: { children: React.ReactNode }) =>
         suppliers: [],
         products: [],
         productCategories: [],
-        productReigons: [],
-        recievers: [],
+        productRegions: [],
+        receivers: [],
         shippingCompanies: [],
     });
     const fetchInitialData = async () => {
         try {
             const [
                 customers, suppliers, products, productCategories,
-                productReigons, recievers, shippingCompanies
+                productRegions, receivers, shippingCompanies
             ] = await Promise.all([
                 fetchCustomers(),
                 fetchSuppliers(),
                 fetchProducts(),
                 fetchProductCategories(),
-                fetchProductReigons(),
-                fetchRecievers(),
+                fetchProductRegions(),
+                fetchReceivers(),
                 fetchShippingCompanies(),
             ]) as [
                     (Customer[] | null), (Supplier[] | null), (Product[] | null), (ProductCategory[] | null),
-                    (ProductReigon[] | null), (Reciever[] | null), (ShippingCompany[] | null),
+                    (ProductRegion[] | null), (Receiver[] | null), (ShippingCompany[] | null),
                 ];
 
 
@@ -61,8 +57,8 @@ export const CoreDataProvider = ({ children }: { children: React.ReactNode }) =>
                 suppliers: suppliers || [],
                 products: products || [],
                 productCategories: productCategories || [],
-                productReigons: productReigons || [],
-                recievers: recievers || [],
+                productRegions: productRegions || [],
+                receivers: receivers || [],
                 shippingCompanies: shippingCompanies || [],
             });
 

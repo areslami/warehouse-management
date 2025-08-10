@@ -71,7 +71,7 @@ export function ProductRegionModal({ trigger, onSubmit, onClose }: ProductRegion
         </DialogHeader>
 
         <Form {...form} >
-          <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6 py-4 px-8">
+          <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6 py-4 px-12">
             <FormField
               control={form.control}
               name="name"

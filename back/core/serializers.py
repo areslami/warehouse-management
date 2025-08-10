@@ -18,18 +18,18 @@ class ProductRegionSerializer(serializers.ModelSerializer):
 
 class ProductSerializer(serializers.ModelSerializer):
     category_name = serializers.CharField(source='category.name', read_only=True)
-    region_name = serializers.CharField(source='b2breigon.name', read_only=True)
+    region_name = serializers.CharField(source='b2bregion.name', read_only=True)
     
     class Meta:
         model = Product
         fields = [
-            'id', 'name', 'code', 'b2bcode', 'b2breigon', 'region_name',
+            'id', 'name', 'code', 'b2bcode', 'b2bregion', 'region_name',
             'category', 'category_name', 'description', 'created_at', 'updated_at'
         ]
         read_only_fields = ['created_at', 'updated_at']
 
     def validate(self, data):
-        if data.get('b2breigon') is None:
+        if data.get('b2bregion') is None:
             raise serializers.ValidationError("B2B region is required")
         if data.get('category') is None:
             raise serializers.ValidationError("Product category is required")
@@ -106,16 +106,16 @@ class ReceiverSerializer(serializers.ModelSerializer):
     class Meta:
         model = Receiver
         fields = [
-            'id', 'reciever_type', 'system_id', 'unique_id', 'company_name',
+            'id', 'receiver_type', 'system_id', 'unique_id', 'company_name',
             'national_id', 'full_name', 'personal_code', 'economic_code',
             'phone', 'address', 'description', 'postal_code', 'created_at', 'updated_at'
         ]
         read_only_fields = ['created_at', 'updated_at']
 
     def validate(self, data):
-        reciever_type = data.get('reciever_type')
+        receiver_type = data.get('receiver_type')
         
-        if reciever_type == PartyType.CORPORATE:
+        if receiver_type == PartyType.CORPORATE:
             if not data.get('company_name'):
                 raise serializers.ValidationError("Company name is required for corporate receivers")
             if not data.get('national_id'):
@@ -123,7 +123,7 @@ class ReceiverSerializer(serializers.ModelSerializer):
             data['full_name'] = ''
             data['personal_code'] = ''
             
-        elif reciever_type == PartyType.INDIVIDUAL:
+        elif receiver_type == PartyType.INDIVIDUAL:
             if not data.get('full_name'):
                 raise serializers.ValidationError("Full name is required for individual receivers")
             if not data.get('personal_code'):
@@ -141,6 +141,6 @@ class ProductListSerializer(serializers.ModelSerializer):
     class Meta:
         model = Product
         fields = [
-            'id', 'name', 'code', 'b2bcode', 'b2breigon',
+            'id', 'name', 'code', 'b2bcode', 'b2bregion',
             'category', 'description', 'created_at', 'updated_at'
         ]

@@ -16,10 +16,26 @@ export function AppSidebar() {
     const { openModal } = useModal();
 
     const coreItems = [
-        { name: t("products"), icon: Warehouse, href: "/products" },
-        { name: t("supplier"), icon: Cable, href: "/supplier" },
-        { name: t("recivers"), icon: Truck, href: "/recivers" },
-        { name: t("customers"), icon: User, href: "/customers" },
+        { 
+            name: t("products"), 
+            icon: Warehouse, 
+            href: "/products"
+        },
+        { 
+            name: t("supplier"), 
+            icon: Cable, 
+            href: "/suppliers"
+        },
+        { 
+            name: t("recivers"), 
+            icon: Truck, 
+            href: "/receivers"
+        },
+        { 
+            name: t("customers"), 
+            icon: User, 
+            href: "/customers"
+        },
     ];
     return (
         <Sidebar dir="rtl" side="right" className="m-0 p-0 w-[20%] list-none">
@@ -34,12 +50,16 @@ export function AppSidebar() {
                         {
                             coreItems.map((item) => {
                                 return <SidebarMenuItem key={item.name} >
-                                    <SidebarMenuButton className="bg-[#2f323a] hover:bg-[#40444f]   hover:text-black transition-colors duration-300 my-0.5">
-                                        <a href={item.href} className="flex items-center gap-2 text-white">
-                                            <item.icon />
-                                            <span>{item.name}</span>
-                                        </a>
-                                    </SidebarMenuButton>
+                                    <a href={item.href}>
+                                        <SidebarMenuButton 
+                                            className="bg-[#2f323a] hover:bg-[#40444f] hover:text-black transition-colors duration-300 my-0.5"
+                                        >
+                                            <div className="flex items-center gap-2 text-white">
+                                                <item.icon />
+                                                <span>{item.name}</span>
+                                            </div>
+                                        </SidebarMenuButton>
+                                    </a>
                                 </SidebarMenuItem>
                             })
                         }
@@ -50,7 +70,7 @@ export function AppSidebar() {
                     <Collapsible defaultOpen className="group/collapsible my-2">
                         <SidebarMenuItem>
                             <div className="flex items-center">
-                                <a href="/finance" className="flex-1">
+                                <a href="/warehouse" className="flex-1">
                                     <SidebarMenuButton className="bg-[#2f323a] hover:bg-[#40444f] hover:text-black transition-colors duration-300 my-0.5 w-full">
                                         <h3 className="flex items-center gap-2 text-white text-lg cursor-pointer">
                                             <DollarSign />
@@ -108,7 +128,7 @@ export function AppSidebar() {
                     <Collapsible defaultOpen className="group/collapsible my-2">
                         <SidebarMenuItem>
                             <div className="flex items-center">
-                                <a href="/finance" className="flex-1">
+                                <a href="/b2b" className="flex-1">
                                     <SidebarMenuButton className="bg-[#2f323a] hover:bg-[#40444f] hover:text-black transition-colors duration-300 my-0.5 w-full">
                                         <h3 className="flex items-center gap-2 text-white text-lg cursor-pointer">
                                             <DollarSign />
@@ -123,14 +143,20 @@ export function AppSidebar() {
                                 </CollapsibleTrigger>
                             </div>
                             <CollapsibleContent className="mx-3.5 mt-0.5">
-                                <SidebarMenuSub className="border-l-0 border-r-1 border-gray-50/50 hover:border-gray-100 px-2.5 my-0 py-1.5 cursor-pointer">
-                                    <SidebarMenuSubItem className="text-sm text-white/50 px-1 hover:text-white">{t("b2b-offer")}</ SidebarMenuSubItem>
+                                <SidebarMenuSub className="border-l-0 border-r-1 border-gray-50/50 hover:border-gray-100 px-2.5 my-0 py-1.5">
+                                    <a href="/b2b/offers">
+                                        <SidebarMenuSubItem className="text-sm text-white/50 px-1 hover:text-white cursor-pointer">{t("b2b-offer")}</ SidebarMenuSubItem>
+                                    </a>
                                 </SidebarMenuSub>
-                                <SidebarMenuSub className="border-l-0 border-r-1 border-gray-50/50 hover:border-gray-100 px-2.5 my-0 py-1.5 cursor-pointer">
-                                    <SidebarMenuSubItem className="text-sm text-white/50 px-1 hover:text-white">{t("b2b-distribution")}</ SidebarMenuSubItem>
+                                <SidebarMenuSub className="border-l-0 border-r-1 border-gray-50/50 hover:border-gray-100 px-2.5 my-0 py-1.5">
+                                    <a href="/b2b/distributions">
+                                        <SidebarMenuSubItem className="text-sm text-white/50 px-1 hover:text-white cursor-pointer">{t("b2b-distribution")}</ SidebarMenuSubItem>
+                                    </a>
                                 </SidebarMenuSub>
-                                <SidebarMenuSub className="border-l-0 border-r-1 border-gray-50/50 hover:border-gray-100 px-2.5 my-0 py-1.5 cursor-pointer">
-                                    <SidebarMenuSubItem className="text-sm text-white/50 px-1 hover:text-white">{t("b2b-sale")}</ SidebarMenuSubItem>
+                                <SidebarMenuSub className="border-l-0 border-r-1 border-gray-50/50 hover:border-gray-100 px-2.5 my-0 py-1.5">
+                                    <a href="/b2b/sales">
+                                        <SidebarMenuSubItem className="text-sm text-white/50 px-1 hover:text-white cursor-pointer">{t("b2b-sale")}</ SidebarMenuSubItem>
+                                    </a>
                                 </SidebarMenuSub>
                             </CollapsibleContent>
                         </SidebarMenuItem>
@@ -156,7 +182,6 @@ export function AppSidebar() {
                                 <SidebarMenuSub
                                     className="border-l-0 border-r-1 border-gray-50/50 hover:border-gray-100 px-2.5 my-0 py-1.5 cursor-pointer"
                                     onClick={() => {
-                                        console.log("Ali");
                                         openModal(SalesProformaModal, {
                                             onSubmit: (data) => {
                                                 console.log('Sales Proforma Data:', data);
@@ -181,6 +206,44 @@ export function AppSidebar() {
                             </CollapsibleContent>
                         </SidebarMenuItem>
                     </Collapsible>
+                </SidebarGroup>
+                
+                <SidebarGroup>
+                    <SidebarGroupContent className="flex flex-col gap-1 mt-4">
+                        <SidebarMenuItem>
+                            <a href="/settings/product-categories">
+                                <SidebarMenuButton 
+                                    className="bg-[#2f323a] hover:bg-[#40444f] hover:text-black transition-colors duration-300 my-0.5"
+                                >
+                                    <div className="flex items-center gap-2 text-white text-sm">
+                                        <span>{t("product-category")}</span>
+                                    </div>
+                                </SidebarMenuButton>
+                            </a>
+                        </SidebarMenuItem>
+                        <SidebarMenuItem>
+                            <a href="/settings/product-regions">
+                                <SidebarMenuButton 
+                                    className="bg-[#2f323a] hover:bg-[#40444f] hover:text-black transition-colors duration-300 my-0.5"
+                                >
+                                    <div className="flex items-center gap-2 text-white text-sm">
+                                        <span>{t("product-region")}</span>
+                                    </div>
+                                </SidebarMenuButton>
+                            </a>
+                        </SidebarMenuItem>
+                        <SidebarMenuItem>
+                            <a href="/settings/shipping-companies">
+                                <SidebarMenuButton 
+                                    className="bg-[#2f323a] hover:bg-[#40444f] hover:text-black transition-colors duration-300 my-0.5"
+                                >
+                                    <div className="flex items-center gap-2 text-white text-sm">
+                                        <span>{t("shipping-company")}</span>
+                                    </div>
+                                </SidebarMenuButton>
+                            </a>
+                        </SidebarMenuItem>
+                    </SidebarGroupContent>
                 </SidebarGroup>
 
             </SidebarContent >

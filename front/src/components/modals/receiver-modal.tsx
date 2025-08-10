@@ -11,7 +11,7 @@ import { Input } from "../ui/input";
 import { useTranslations } from "next-intl";
 
 type ReceiverFormData = {
-  reciever_type: "Individual" | "Corporate";
+  receiver_type: "Individual" | "Corporate";
   system_id: string;
   unique_id: string;
   company_name: string;
@@ -36,7 +36,7 @@ export function ReceiverModal({ trigger, onSubmit, onClose }: ReceiverModalProps
   const t = useTranslations("receiver");
 
   const receiverSchema = z.object({
-    reciever_type: z.enum(["Individual", "Corporate"]),
+    receiver_type: z.enum(["Individual", "Corporate"]),
     system_id: z.string().min(1, tval("system-id")),
     unique_id: z.string().min(1, tval("unique-id")),
     company_name: z.string(),
@@ -49,13 +49,13 @@ export function ReceiverModal({ trigger, onSubmit, onClose }: ReceiverModalProps
     description: z.string(),
     postal_code: z.string(),
   }).refine((data) => {
-    if (data.reciever_type === "Corporate") {
+    if (data.receiver_type === "Corporate") {
       return data.company_name.length > 0 && data.national_id.length > 0;
     }
     return data.full_name.length > 0 && data.personal_code.length > 0;
   }, {
     message: tval("party-fields"),
-    path: ["reciever_type"]
+    path: ["receiver_type"]
   });
 
   const [open, setOpen] = useState(trigger ? false : true);
@@ -63,7 +63,7 @@ export function ReceiverModal({ trigger, onSubmit, onClose }: ReceiverModalProps
   const form = useForm<ReceiverFormData>({
     resolver: zodResolver(receiverSchema),
     defaultValues: {
-      reciever_type: "Individual",
+      receiver_type: "Individual",
       system_id: "",
       unique_id: "",
       company_name: "",
@@ -78,7 +78,7 @@ export function ReceiverModal({ trigger, onSubmit, onClose }: ReceiverModalProps
     },
   });
 
-  const receiverType = form.watch("reciever_type");
+  const receiverType = form.watch("receiver_type");
 
   const handleSubmit = (data: ReceiverFormData) => {
     onSubmit?.(data);
@@ -111,10 +111,10 @@ export function ReceiverModal({ trigger, onSubmit, onClose }: ReceiverModalProps
         </DialogHeader>
 
         <Form {...form} >
-          <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6 py-4 px-8">
+          <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6 py-4 px-12">
             <FormField
               control={form.control}
-              name="reciever_type"
+              name="receiver_type"
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>{t("receiver-type")}</FormLabel>

@@ -85,7 +85,7 @@ export function ShippingCompanyModal({ trigger, onSubmit, onClose }: ShippingCom
         </DialogHeader>
 
         <Form {...form} >
-          <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6 py-4 px-8">
+          <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6 py-4 px-12">
             <div className="grid grid-cols-2 gap-4">
               <FormField
                 control={form.control}
