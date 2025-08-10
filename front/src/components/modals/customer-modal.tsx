@@ -27,9 +27,10 @@ interface CustomerModalProps {
   trigger?: React.ReactNode;
   onSubmit?: (data: CustomerFormData) => void;
   onClose?: () => void;
+  initialData?: Partial<CustomerFormData>;
 }
 
-export function CustomerModal({ trigger, onSubmit, onClose }: CustomerModalProps) {
+export function CustomerModal({ trigger, onSubmit, onClose, initialData }: CustomerModalProps) {
   const tval = useTranslations("customer.validation");
   const t = useTranslations("customer");
 
@@ -59,16 +60,16 @@ export function CustomerModal({ trigger, onSubmit, onClose }: CustomerModalProps
   const form = useForm<CustomerFormData>({
     resolver: zodResolver(customerSchema),
     defaultValues: {
-      customer_type: "Individual",
-      company_name: "",
-      national_id: "",
-      full_name: "",
-      personal_code: "",
-      economic_code: "",
-      phone: "",
-      address: "",
-      description: "",
-      tags: "",
+      customer_type: initialData?.customer_type || "Individual",
+      company_name: initialData?.company_name || "",
+      national_id: initialData?.national_id || "",
+      full_name: initialData?.full_name || "",
+      personal_code: initialData?.personal_code || "",
+      economic_code: initialData?.economic_code || "",
+      phone: initialData?.phone || "",
+      address: initialData?.address || "",
+      description: initialData?.description || "",
+      tags: initialData?.tags || "",
     },
   });
 

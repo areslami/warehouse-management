@@ -19,9 +19,10 @@ interface ProductCategoryModalProps {
   trigger?: React.ReactNode;
   onSubmit?: (data: ProductCategoryFormData) => void;
   onClose?: () => void;
+  initialData?: Partial<ProductCategoryFormData>;
 }
 
-export function ProductCategoryModal({ trigger, onSubmit, onClose }: ProductCategoryModalProps) {
+export function ProductCategoryModal({ trigger, onSubmit, onClose, initialData }: ProductCategoryModalProps) {
   const tval = useTranslations("productCategory.validation");
   const t = useTranslations("productCategory");
 
@@ -35,8 +36,8 @@ export function ProductCategoryModal({ trigger, onSubmit, onClose }: ProductCate
   const form = useForm<ProductCategoryFormData>({
     resolver: zodResolver(productCategorySchema),
     defaultValues: {
-      name: "",
-      description: "",
+      name: initialData?.name || "",
+      description: initialData?.description || "",
     },
   });
 

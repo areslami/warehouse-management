@@ -29,9 +29,10 @@ interface ReceiverModalProps {
   trigger?: React.ReactNode;
   onSubmit?: (data: ReceiverFormData) => void;
   onClose?: () => void;
+  initialData?: Partial<ReceiverFormData>;
 }
 
-export function ReceiverModal({ trigger, onSubmit, onClose }: ReceiverModalProps) {
+export function ReceiverModal({ trigger, onSubmit, onClose, initialData }: ReceiverModalProps) {
   const tval = useTranslations("receiver.validation");
   const t = useTranslations("receiver");
 
@@ -63,18 +64,18 @@ export function ReceiverModal({ trigger, onSubmit, onClose }: ReceiverModalProps
   const form = useForm<ReceiverFormData>({
     resolver: zodResolver(receiverSchema),
     defaultValues: {
-      receiver_type: "Individual",
-      system_id: "",
-      unique_id: "",
-      company_name: "",
-      national_id: "",
-      full_name: "",
-      personal_code: "",
-      economic_code: "",
-      phone: "",
-      address: "",
-      description: "",
-      postal_code: "",
+      receiver_type: initialData?.receiver_type || "Individual",
+      system_id: initialData?.system_id || "",
+      unique_id: initialData?.unique_id || "",
+      company_name: initialData?.company_name || "",
+      national_id: initialData?.national_id || "",
+      full_name: initialData?.full_name || "",
+      personal_code: initialData?.personal_code || "",
+      economic_code: initialData?.economic_code || "",
+      phone: initialData?.phone || "",
+      address: initialData?.address || "",
+      description: initialData?.description || "",
+      postal_code: initialData?.postal_code || "",
     },
   });
 

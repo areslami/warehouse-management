@@ -10,52 +10,47 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Input } from "../ui/input";
 import { useTranslations } from "next-intl";
 
-type ShippingCompanyFormData = {
+type WarehouseFormData = {
   name: string;
-  contact_person: string;
-  phone: string;
-  email: string;
   address: string;
+  manager: string;
+  phone: string;
   description: string;
 };
 
-interface ShippingCompanyModalProps {
+interface WarehouseModalProps {
   trigger?: React.ReactNode;
-  onSubmit?: (data: ShippingCompanyFormData) => void;
+  onSubmit?: (data: WarehouseFormData) => void;
   onClose?: () => void;
-  initialData?: Partial<ShippingCompanyFormData>;
+  initialData?: Partial<WarehouseFormData>;
 }
 
-export function ShippingCompanyModal({ trigger, onSubmit, onClose, initialData }: ShippingCompanyModalProps) {
-  const tval = useTranslations("shippingCompany.validation");
-  const t = useTranslations("shippingCompany");
+export function WarehouseModal({ trigger, onSubmit, onClose, initialData }: WarehouseModalProps) {
+  const tval = useTranslations("warehouse.validation");
+  const t = useTranslations("warehouse");
 
-  const shippingCompanySchema = z.object({
+  const warehouseSchema = z.object({
     name: z.string().min(1, tval("name")),
-    contact_person: z.string().min(1, tval("contact-person")),
-    phone: z.string().min(1, tval("phone")),
-    email: z.string().refine((val) => val === "" || z.string().email().safeParse(val).success, {
-      message: tval("email")
-    }),
     address: z.string().min(1, tval("address")),
+    manager: z.string().min(1, tval("manager")),
+    phone: z.string().min(1, tval("phone")),
     description: z.string(),
   });
 
   const [open, setOpen] = useState(trigger ? false : true);
 
-  const form = useForm<ShippingCompanyFormData>({
-    resolver: zodResolver(shippingCompanySchema),
+  const form = useForm<WarehouseFormData>({
+    resolver: zodResolver(warehouseSchema),
     defaultValues: {
       name: initialData?.name || "",
-      contact_person: initialData?.contact_person || "",
-      phone: initialData?.phone || "",
-      email: initialData?.email || "",
       address: initialData?.address || "",
+      manager: initialData?.manager || "",
+      phone: initialData?.phone || "",
       description: initialData?.description || "",
     },
   });
 
-  const handleSubmit = (data: ShippingCompanyFormData) => {
+  const handleSubmit = (data: WarehouseFormData) => {
     onSubmit?.(data);
     if (trigger) {
       setOpen(false);
@@ -80,13 +75,13 @@ export function ShippingCompanyModal({ trigger, onSubmit, onClose, initialData }
           {trigger}
         </DialogTrigger>
       )}
-      <DialogContent dir="rtl" className="min-w-[70%] max-h-[90vh] overflow-y-auto scrollbar-hide  p-0 my-0 mx-auto [&>button]:hidden">
+      <DialogContent dir="rtl" className="min-w-[60%] max-h-[90vh] overflow-y-auto scrollbar-hide  p-0 my-0 mx-auto [&>button]:hidden">
         <DialogHeader className="px-3.5 py-4.5  justify-start" style={{ backgroundColor: "#f6d265" }}>
           <DialogTitle className="font-bold text-white text-right">{t("title")}</DialogTitle>
         </DialogHeader>
 
         <Form {...form} >
-          <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6 py-4 px-12">
+          <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6 py-4 px-8">
             <div className="grid grid-cols-2 gap-4">
               <FormField
                 control={form.control}
@@ -104,10 +99,10 @@ export function ShippingCompanyModal({ trigger, onSubmit, onClose, initialData }
 
               <FormField
                 control={form.control}
-                name="contact_person"
+                name="address"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>{t("contact-person")}</FormLabel>
+                    <FormLabel>{t("address")}</FormLabel>
                     <FormControl>
                       <Input {...field} />
                     </FormControl>
@@ -118,28 +113,15 @@ export function ShippingCompanyModal({ trigger, onSubmit, onClose, initialData }
             </div>
 
             <div className="grid grid-cols-2 gap-4">
-              <FormField
-                control={form.control}
-                name="phone"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>{t("phone")}</FormLabel>
-                    <FormControl>
-                      <Input {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
 
               <FormField
                 control={form.control}
-                name="email"
+                name="manager"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>{t("email")}</FormLabel>
+                    <FormLabel>{t("manager")}</FormLabel>
                     <FormControl>
-                      <Input type="email" {...field} />
+                      <Input {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -149,10 +131,10 @@ export function ShippingCompanyModal({ trigger, onSubmit, onClose, initialData }
 
             <FormField
               control={form.control}
-              name="address"
+              name="phone"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>{t("address")}</FormLabel>
+                  <FormLabel>{t("phone")}</FormLabel>
                   <FormControl>
                     <Input {...field} />
                   </FormControl>

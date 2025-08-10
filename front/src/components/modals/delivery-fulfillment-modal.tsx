@@ -33,11 +33,17 @@ interface DeliveryFulfillmentModalProps {
   trigger?: React.ReactNode;
   onSubmit?: (data: DeliveryFulfillmentFormData) => void;
   onClose?: () => void;
+  initialData?: Partial<DeliveryFulfillmentFormData>;
 }
 
-export function DeliveryFulfillmentModal({ trigger, onSubmit, onClose }: DeliveryFulfillmentModalProps) {
+export function DeliveryFulfillmentModal({ trigger, onSubmit, onClose, initialData }: DeliveryFulfillmentModalProps) {
   const tval = useTranslations("deliveryFulfillment.validation");
   const t = useTranslations("deliveryFulfillment");
+
+  const getTodayDate = () => {
+    if (typeof window === 'undefined') return '';
+    return new Date().toISOString().split('T')[0];
+  };
 
   const deliveryItemSchema = z.object({
     shipment_id: z.string().min(1, tval("shipment-id")),
@@ -64,14 +70,14 @@ export function DeliveryFulfillmentModal({ trigger, onSubmit, onClose }: Deliver
   const form = useForm<DeliveryFulfillmentFormData>({
     resolver: zodResolver(deliveryFulfillmentSchema),
     defaultValues: {
-      delivery_id: "",
-      issue_date: new Date().toISOString().split('T')[0],
-      validity_date: new Date().toISOString().split('T')[0],
-      warehouse: 0,
-      sales_proforma: 0,
-      description: "",
-      shipping_company: 0,
-      items: [{ shipment_id: "", shipment_price: 0, product: 0, weight: 0, vehicle_type: "truck", receiver: 0 }],
+      delivery_id: initialData?.delivery_id || "",
+      issue_date: initialData?.issue_date || getTodayDate(),
+      validity_date: initialData?.validity_date || getTodayDate(),
+      warehouse: initialData?.warehouse || 0,
+      sales_proforma: initialData?.sales_proforma || 0,
+      description: initialData?.description || "",
+      shipping_company: initialData?.shipping_company || 0,
+      items: initialData?.items || [{ shipment_id: "", shipment_price: 0, product: 0, weight: 0, vehicle_type: "truck", receiver: 0 }],
     },
   });
 

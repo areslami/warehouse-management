@@ -29,11 +29,17 @@ interface WarehouseReceiptModalProps {
   trigger?: React.ReactNode;
   onSubmit?: (data: WarehouseReceiptFormData) => void;
   onClose?: () => void;
+  initialData?: Partial<WarehouseReceiptFormData>;
 }
 
-export function WarehouseReceiptModal({ trigger, onSubmit, onClose }: WarehouseReceiptModalProps) {
+export function WarehouseReceiptModal({ trigger, onSubmit, onClose, initialData }: WarehouseReceiptModalProps) {
   const tval = useTranslations("warehouseReceipt.validation");
   const t = useTranslations("warehouseReceipt");
+
+  const getTodayDate = () => {
+    if (typeof window === 'undefined') return '';
+    return new Date().toISOString().split('T')[0];
+  };
 
   const receiptItemSchema = z.object({
     product: z.number().min(1, tval("product-required")),
@@ -56,14 +62,14 @@ export function WarehouseReceiptModal({ trigger, onSubmit, onClose }: WarehouseR
   const form = useForm<WarehouseReceiptFormData>({
     resolver: zodResolver(warehouseReceiptSchema),
     defaultValues: {
-      receipt_id: "",
-      receipt_type: "purchase",
-      date: new Date().toISOString().split('T')[0],
-      warehouse: 0,
-      description: "",
-      cottage_serial_number: "",
-      proforma: 0,
-      items: [{ product: 0, weight: 0 }],
+      receipt_id: initialData?.receipt_id || "",
+      receipt_type: initialData?.receipt_type || "purchase",
+      date: initialData?.date || getTodayDate(),
+      warehouse: initialData?.warehouse || 0,
+      description: initialData?.description || "",
+      cottage_serial_number: initialData?.cottage_serial_number || "",
+      proforma: initialData?.proforma || 0,
+      items: initialData?.items || [{ product: 0, weight: 0 }],
     },
   });
 

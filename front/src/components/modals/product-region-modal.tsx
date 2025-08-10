@@ -19,9 +19,10 @@ interface ProductRegionModalProps {
   trigger?: React.ReactNode;
   onSubmit?: (data: ProductRegionFormData) => void;
   onClose?: () => void;
+  initialData?: Partial<ProductRegionFormData>;
 }
 
-export function ProductRegionModal({ trigger, onSubmit, onClose }: ProductRegionModalProps) {
+export function ProductRegionModal({ trigger, onSubmit, onClose, initialData }: ProductRegionModalProps) {
   const tval = useTranslations("productRegion.validation");
   const t = useTranslations("productRegion");
 
@@ -35,8 +36,8 @@ export function ProductRegionModal({ trigger, onSubmit, onClose }: ProductRegion
   const form = useForm<ProductRegionFormData>({
     resolver: zodResolver(productRegionSchema),
     defaultValues: {
-      name: "",
-      description: "",
+      name: initialData?.name || "",
+      description: initialData?.description || "",
     },
   });
 

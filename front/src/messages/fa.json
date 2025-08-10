@@ -307,8 +307,94 @@
     "save": "ذخیره",
     "cancel": "لغو"
   },
-  "header": {
-    "welcome": "خوش آمدید",
-    "logout": "خروج"
+  "warehouse": {
+    "validation": {
+      "name": "نام انبار الزامی است",
+      "address": "آدرس انبار الزامی است",
+      "manager": "نام مدیر الزامی است",
+      "phone": "شماره تلفن الزامی است"
+    },
+    "title": "انبار",
+    "name": "نام انبار",
+    "address": "آدرس",
+    "manager": "مدیر",
+    "phone": "تلفن",
+    "description": "توضیحات",
+    "save": "ذخیره",
+    "cancel": "لغو"
+  },
+  "warehouse_page": {
+    "title": "انبار",
+    "select_warehouse_label": "انتخاب انبار",
+    "select_warehouse_placeholder": "لطفا انبار مورد نظر را انتخاب کنید",
+    "add_warehouse": "افزودن انبار",
+    "edit_warehouse": "ویرایش",
+    "delete_warehouse": "حذف",
+    "confirm_delete_warehouse": "آیا از حذف این انبار اطمینان دارید؟",
+    "warehouse_address": "آدرس",
+    "warehouse_manager": "مدیر",
+    "warehouse_phone": "تلفن",
+    "warehouse_description": "توضیحات",
+    "receipts_tab": " رسید انبار",
+    "issue_tab": " صدور حواله",
+    "fullfilment_tab": " تحویل کالا",
+    "receipts": {
+      "title": "گزارش رسیدها",
+      "table": {
+        "id": "ردیف",
+        "receipt_id": "شناسه رسید",
+        "receipt_type": "نوع رسید",
+        "date": "تاریخ",
+        "warehouse": "انبار",
+        "description": "توضیحات",
+        "total_weight": "وزن کل",
+        "cottage_serial_number": "شماره سریال کوتاژ",
+        "proforma": "پیش فاکتور",
+        "operations": "عملیات"
+      },
+      "new_receipt": "رسید جدید",
+      "edit": "ویرایش",
+      "delete": "حذف",
+      "confirm_delete": "آیا از حذف این رسید اطمینان دارید؟",
+      "loading": "در حال بارگذاری رسیدها...",
+      "search_placeholder": "جستجوی رسیدها...",
+      "no_receipts": "هیچ رسیدی یافت نشد"
+    },
+    "issues": {
+      "title": "گزارش حواله‌ها",
+      "table": {
+        "id": "ردیف",
+        "dispatch_id": "شناسه حواله",
+        "issue_date": "تاریخ صدور",
+        "validity_date": "تاریخ اعتبار",
+        "warehouse": "انبار",
+        "total_weight": "وزن کل",
+        "shipping_company": "شرکت حمل",
+        "operations": "عملیات"
+      },
+      "new_issue": "حواله جدید",
+      "edit": "ویرایش",
+      "delete": "حذف",
+      "confirm_delete": "آیا از حذف این حواله اطمینان دارید؟",
+      "loading": "در حال بارگذاری حواله‌ها..."
+    },
+    "deliveries": {
+      "title": "گزارش تحویل‌ها",
+      "table": {
+        "id": "ردیف",
+        "delivery_id": "شناسه تحویل",
+        "issue_date": "تاریخ صدور",
+        "validity_date": "تاریخ اعتبار",
+        "warehouse": "انبار",
+        "total_weight": "وزن کل",
+        "shipping_company": "شرکت حمل",
+        "operations": "عملیات"
+      },
+      "new_delivery": "تحویل جدید",
+      "edit": "ویرایش",
+      "delete": "حذف",
+      "confirm_delete": "آیا از حذف این تحویل اطمینان دارید؟",
+      "loading": "در حال بارگذاری تحویل‌ها..."
+    }
   }
 }

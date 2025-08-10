@@ -26,9 +26,10 @@ interface SupplierModalProps {
   trigger?: React.ReactNode;
   onSubmit?: (data: SupplierFormData) => void;
   onClose?: () => void;
+  initialData?: Partial<SupplierFormData>;
 }
 
-export function SupplierModal({ trigger, onSubmit, onClose }: SupplierModalProps) {
+export function SupplierModal({ trigger, onSubmit, onClose, initialData }: SupplierModalProps) {
   const tval = useTranslations("supplier.validation");
   const t = useTranslations("supplier");
 
@@ -57,15 +58,15 @@ export function SupplierModal({ trigger, onSubmit, onClose }: SupplierModalProps
   const form = useForm<SupplierFormData>({
     resolver: zodResolver(supplierSchema),
     defaultValues: {
-      supplier_type: "Individual",
-      company_name: "",
-      national_id: "",
-      full_name: "",
-      personal_code: "",
-      economic_code: "",
-      phone: "",
-      address: "",
-      description: "",
+      supplier_type: initialData?.supplier_type || "Individual",
+      company_name: initialData?.company_name || "",
+      national_id: initialData?.national_id || "",
+      full_name: initialData?.full_name || "",
+      personal_code: initialData?.personal_code || "",
+      economic_code: initialData?.economic_code || "",
+      phone: initialData?.phone || "",
+      address: initialData?.address || "",
+      description: initialData?.description || "",
     },
   });
 

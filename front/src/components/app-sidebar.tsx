@@ -10,30 +10,30 @@ import { WarehouseReceiptModal } from "./modals/warehouse-receipt-modal";
 import { DispatchIssueModal } from "./modals/dispatch-issue-modal";
 import { DeliveryFulfillmentModal } from "./modals/delivery-fulfillment-modal";
 
-import { Warehouse, Cable, Truck, User, DollarSign, ChevronLeft } from "lucide-react";
+import { Warehouse, Cable, Truck, User, DollarSign, ChevronLeft, BadgeCent } from "lucide-react";
 export function AppSidebar() {
     const t = useTranslations('sidebar')
     const { openModal } = useModal();
 
     const coreItems = [
-        { 
-            name: t("products"), 
-            icon: Warehouse, 
+        {
+            name: t("products"),
+            icon: Warehouse,
             href: "/products"
         },
-        { 
-            name: t("supplier"), 
-            icon: Cable, 
+        {
+            name: t("supplier"),
+            icon: Cable,
             href: "/suppliers"
         },
-        { 
-            name: t("recivers"), 
-            icon: Truck, 
+        {
+            name: t("recivers"),
+            icon: Truck,
             href: "/receivers"
         },
-        { 
-            name: t("customers"), 
-            icon: User, 
+        {
+            name: t("customers"),
+            icon: User,
             href: "/customers"
         },
     ];
@@ -51,7 +51,7 @@ export function AppSidebar() {
                             coreItems.map((item) => {
                                 return <SidebarMenuItem key={item.name} >
                                     <a href={item.href}>
-                                        <SidebarMenuButton 
+                                        <SidebarMenuButton
                                             className="bg-[#2f323a] hover:bg-[#40444f] hover:text-black transition-colors duration-300 my-0.5"
                                         >
                                             <div className="flex items-center gap-2 text-white">
@@ -73,7 +73,7 @@ export function AppSidebar() {
                                 <a href="/warehouse" className="flex-1">
                                     <SidebarMenuButton className="bg-[#2f323a] hover:bg-[#40444f] hover:text-black transition-colors duration-300 my-0.5 w-full">
                                         <h3 className="flex items-center gap-2 text-white text-lg cursor-pointer">
-                                            <DollarSign />
+                                            <Warehouse />
                                             <span>{t("warehouse")}</span>
                                         </h3>
                                     </SidebarMenuButton>
@@ -85,7 +85,7 @@ export function AppSidebar() {
                                 </CollapsibleTrigger>
                             </div>
                             <CollapsibleContent className="mx-3.5 mt-0.5">
-                                <SidebarMenuSub 
+                                <SidebarMenuSub
                                     className="border-l-0 border-r-1 border-gray-50/50 hover:border-gray-100 px-2.5 my-0 py-1.5 cursor-pointer"
                                     onClick={() => {
                                         openModal(WarehouseReceiptModal, {
@@ -97,7 +97,7 @@ export function AppSidebar() {
                                 >
                                     <SidebarMenuSubItem className="text-sm text-white/50 px-1 hover:text-white">{t("warehouse-receipt")}</ SidebarMenuSubItem>
                                 </SidebarMenuSub>
-                                <SidebarMenuSub 
+                                <SidebarMenuSub
                                     className="border-l-0 border-r-1 border-gray-50/50 hover:border-gray-100 px-2.5 my-0 py-1.5 cursor-pointer"
                                     onClick={() => {
                                         openModal(DispatchIssueModal, {
@@ -109,7 +109,7 @@ export function AppSidebar() {
                                 >
                                     <SidebarMenuSubItem className="text-sm text-white/50 px-1 hover:text-white">{t("dispatch-issue")}</ SidebarMenuSubItem>
                                 </SidebarMenuSub>
-                                <SidebarMenuSub 
+                                <SidebarMenuSub
                                     className="border-l-0 border-r-1 border-gray-50/50 hover:border-gray-100 px-2.5 my-0 py-1.5 cursor-pointer"
                                     onClick={() => {
                                         openModal(DeliveryFulfillmentModal, {
@@ -131,7 +131,7 @@ export function AppSidebar() {
                                 <a href="/b2b" className="flex-1">
                                     <SidebarMenuButton className="bg-[#2f323a] hover:bg-[#40444f] hover:text-black transition-colors duration-300 my-0.5 w-full">
                                         <h3 className="flex items-center gap-2 text-white text-lg cursor-pointer">
-                                            <DollarSign />
+                                            <BadgeCent />
                                             <span>{t("b2b")}</span>
                                         </h3>
                                     </SidebarMenuButton>
@@ -191,7 +191,7 @@ export function AppSidebar() {
                                 >
                                     <SidebarMenuSubItem className="text-sm text-white/50 px-1 hover:text-white">{t("sale-proforma")}</ SidebarMenuSubItem>
                                 </SidebarMenuSub>
-                                <SidebarMenuSub 
+                                <SidebarMenuSub
                                     className="border-l-0 border-r-1 border-gray-50/50 hover:border-gray-100 px-2.5 my-0 py-1.5 cursor-pointer"
                                     onClick={() => {
                                         openModal(PurchaseProformaModal, {
@@ -206,44 +206,6 @@ export function AppSidebar() {
                             </CollapsibleContent>
                         </SidebarMenuItem>
                     </Collapsible>
-                </SidebarGroup>
-                
-                <SidebarGroup>
-                    <SidebarGroupContent className="flex flex-col gap-1 mt-4">
-                        <SidebarMenuItem>
-                            <a href="/settings/product-categories">
-                                <SidebarMenuButton 
-                                    className="bg-[#2f323a] hover:bg-[#40444f] hover:text-black transition-colors duration-300 my-0.5"
-                                >
-                                    <div className="flex items-center gap-2 text-white text-sm">
-                                        <span>{t("product-category")}</span>
-                                    </div>
-                                </SidebarMenuButton>
-                            </a>
-                        </SidebarMenuItem>
-                        <SidebarMenuItem>
-                            <a href="/settings/product-regions">
-                                <SidebarMenuButton 
-                                    className="bg-[#2f323a] hover:bg-[#40444f] hover:text-black transition-colors duration-300 my-0.5"
-                                >
-                                    <div className="flex items-center gap-2 text-white text-sm">
-                                        <span>{t("product-region")}</span>
-                                    </div>
-                                </SidebarMenuButton>
-                            </a>
-                        </SidebarMenuItem>
-                        <SidebarMenuItem>
-                            <a href="/settings/shipping-companies">
-                                <SidebarMenuButton 
-                                    className="bg-[#2f323a] hover:bg-[#40444f] hover:text-black transition-colors duration-300 my-0.5"
-                                >
-                                    <div className="flex items-center gap-2 text-white text-sm">
-                                        <span>{t("shipping-company")}</span>
-                                    </div>
-                                </SidebarMenuButton>
-                            </a>
-                        </SidebarMenuItem>
-                    </SidebarGroupContent>
                 </SidebarGroup>
 
             </SidebarContent >

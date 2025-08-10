@@ -31,11 +31,17 @@ interface DispatchIssueModalProps {
   trigger?: React.ReactNode;
   onSubmit?: (data: DispatchIssueFormData) => void;
   onClose?: () => void;
+  initialData?: Partial<DispatchIssueFormData>;
 }
 
-export function DispatchIssueModal({ trigger, onSubmit, onClose }: DispatchIssueModalProps) {
+export function DispatchIssueModal({ trigger, onSubmit, onClose, initialData }: DispatchIssueModalProps) {
   const tval = useTranslations("dispatchIssue.validation");
   const t = useTranslations("dispatchIssue");
+
+  const getTodayDate = () => {
+    if (typeof window === 'undefined') return '';
+    return new Date().toISOString().split('T')[0];
+  };
 
   const dispatchItemSchema = z.object({
     product: z.number().min(1, tval("product-required")),
@@ -60,14 +66,14 @@ export function DispatchIssueModal({ trigger, onSubmit, onClose }: DispatchIssue
   const form = useForm<DispatchIssueFormData>({
     resolver: zodResolver(dispatchIssueSchema),
     defaultValues: {
-      dispatch_id: "",
-      warehouse: 0,
-      sales_proforma: 0,
-      issue_date: new Date().toISOString().split('T')[0],
-      validity_date: new Date().toISOString().split('T')[0],
-      description: "",
-      shipping_company: 0,
-      items: [{ product: 0, weight: 0, vehicle_type: "truck", receiver: 0 }],
+      dispatch_id: initialData?.dispatch_id || "",
+      warehouse: initialData?.warehouse || 0,
+      sales_proforma: initialData?.sales_proforma || 0,
+      issue_date: initialData?.issue_date || getTodayDate(),
+      validity_date: initialData?.validity_date || getTodayDate(),
+      description: initialData?.description || "",
+      shipping_company: initialData?.shipping_company || 0,
+      items: initialData?.items || [{ product: 0, weight: 0, vehicle_type: "truck", receiver: 0 }],
     },
   });
 

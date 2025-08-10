@@ -84,7 +84,16 @@ export const createWarehouseReceipt = (
 
 export const updateWarehouseReceipt = (
   id: number,
-  data: Partial<WarehouseReceipt>
+  data: {
+    receipt_id?: string;
+    receipt_type?: "import_cottage" | "distribution_cottage" | "purchase";
+    date?: string;
+    warehouse?: number;
+    description?: string;
+    cottage_serial_number?: string;
+    proforma?: number;
+    items?: { product: number; weight: number }[];
+  }
 ) =>
   apiFetch<WarehouseReceipt>(`${API_BASE_URL}receipts/${id}/`, {
     method: "PATCH",
@@ -119,7 +128,24 @@ export const createDispatchIssue = (
     body: data,
   });
 
-export const updateDispatchIssue = (id: number, data: Partial<DispatchIssue>) =>
+export const updateDispatchIssue = (
+  id: number,
+  data: {
+    dispatch_id?: string;
+    warehouse?: number;
+    sales_proforma?: number;
+    issue_date?: string;
+    validity_date?: string;
+    description?: string;
+    shipping_company?: number;
+    items?: {
+      product: number;
+      weight: number;
+      vehicle_type: "truck" | "pickup" | "van" | "container" | "other";
+      receiver: number;
+    }[];
+  }
+) =>
   apiFetch<DispatchIssue>(`${API_BASE_URL}dispatches/${id}/`, {
     method: "PATCH",
     body: data,
@@ -148,7 +174,23 @@ export const createDeliveryFulfillment = (
 
 export const updateDeliveryFulfillment = (
   id: number,
-  data: Partial<DeliveryFulfillment>
+  data: {
+    delivery_id?: string;
+    issue_date?: string;
+    validity_date?: string;
+    warehouse?: number;
+    sales_proforma?: number;
+    description?: string;
+    shipping_company?: number;
+    items?: {
+      shipment_id: string;
+      shipment_price: number;
+      product: number;
+      weight: number;
+      vehicle_type: "truck" | "pickup" | "van" | "container" | "other";
+      receiver: number;
+    }[];
+  }
 ) =>
   apiFetch<DeliveryFulfillment>(`${API_BASE_URL}deliveries/${id}/`, {
     method: "PATCH",

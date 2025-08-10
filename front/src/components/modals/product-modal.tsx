@@ -23,9 +23,10 @@ interface ProductModalProps {
   trigger?: React.ReactNode;
   onSubmit?: (data: ProductFormData) => void;
   onClose?: () => void;
+  initialData?: Partial<ProductFormData>;
 }
 
-export function ProductModal({ trigger, onSubmit, onClose }: ProductModalProps) {
+export function ProductModal({ trigger, onSubmit, onClose, initialData }: ProductModalProps) {
   const tval = useTranslations("product.validation");
   const t = useTranslations("product");
 
@@ -43,12 +44,12 @@ export function ProductModal({ trigger, onSubmit, onClose }: ProductModalProps) 
   const form = useForm<ProductFormData>({
     resolver: zodResolver(productSchema),
     defaultValues: {
-      name: "",
-      code: "",
-      b2bcode: "",
-      b2bregion: 0,
-      category: 0,
-      description: "",
+      name: initialData?.name || "",
+      code: initialData?.code || "",
+      b2bcode: initialData?.b2bcode || "",
+      b2bregion: initialData?.b2bregion || 0,
+      category: initialData?.category || 0,
+      description: initialData?.description || "",
     },
   });
 
