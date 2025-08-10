@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Supplier, Customer, Reciever, PartyType, Product, ProductCategory, ProductReigon
+from .models import Supplier, Customer, Receiver, PartyType, Product, ProductCategory, ProductRegion
 
 
 class ProductCategorySerializer(serializers.ModelSerializer):
@@ -9,9 +9,9 @@ class ProductCategorySerializer(serializers.ModelSerializer):
         read_only_fields = ['created_at', 'updated_at']
 
 
-class ProductReigonSerializer(serializers.ModelSerializer):
+class ProductRegionSerializer(serializers.ModelSerializer):
     class Meta:
-        model = ProductReigon
+        model = ProductRegion
         fields = ['id', 'name', 'description', 'created_at', 'updated_at']
         read_only_fields = ['created_at', 'updated_at']
 
@@ -102,9 +102,9 @@ class CustomerSerializer(serializers.ModelSerializer):
         return data
 
 
-class RecieverSerializer(serializers.ModelSerializer):
+class ReceiverSerializer(serializers.ModelSerializer):
     class Meta:
-        model = Reciever
+        model = Receiver
         fields = [
             'id', 'reciever_type', 'system_id', 'unique_id', 'company_name',
             'national_id', 'full_name', 'personal_code', 'economic_code',
@@ -136,7 +136,7 @@ class RecieverSerializer(serializers.ModelSerializer):
 
 class ProductListSerializer(serializers.ModelSerializer):
     category = ProductCategorySerializer(read_only=True)
-    b2breigon = ProductReigonSerializer(read_only=True)
+    b2bregion = ProductRegionSerializer(read_only=True)
     
     class Meta:
         model = Product

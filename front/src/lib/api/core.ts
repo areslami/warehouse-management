@@ -1,11 +1,10 @@
-// api/core.ts
 import type {
   Product,
   ProductCategory,
-  ProductReigon,
+  ProductRegion,
   Supplier,
   Customer,
-  Reciever,
+  Receiver,
   ShippingCompany,
 } from "./../interfaces/core";
 
@@ -70,25 +69,25 @@ export const updateProductCategory = (
 export const deleteProductCategory = (id: number) =>
   apiFetch(`${API_BASE_URL}product-categories/${id}/`, { method: "DELETE" });
 
-// ------------------  Product Reigon ------------------
-export const fetchProductReigons = () =>
+// ------------------  Product Region ------------------
+export const fetchProductRegions = () =>
   apiFetch(`${API_BASE_URL}product-regions/`);
 
-export const fetchProductReigonById = (id: number) =>
+export const fetchProductRegionById = (id: number) =>
   apiFetch(`${API_BASE_URL}product-regions/${id}/`);
 
-export const createProductReigon = (
-  data: Omit<ProductReigon, "id" | "created_at" | "updated_at">
+export const createProductRegion = (
+  data: Omit<ProductRegion, "id" | "created_at" | "updated_at">
 ) =>
   apiFetch(`${API_BASE_URL}product-regions/`, { method: "POST", body: data });
 
-export const updateProductReigon = (id: number, data: Partial<ProductReigon>) =>
+export const updateProductRegion = (id: number, data: Partial<ProductRegion>) =>
   apiFetch(`${API_BASE_URL}product-regions/${id}/`, {
     method: "PATCH",
     body: data,
   });
 
-export const deleteProductReigon = (id: number) =>
+export const deleteProductRegion = (id: number) =>
   apiFetch(`${API_BASE_URL}product-regions/${id}/`, { method: "DELETE" });
 
 // ------------------  Product ------------------
@@ -142,20 +141,20 @@ export const updateCustomer = (id: number, data: Partial<Customer>) =>
 export const deleteCustomer = (id: number) =>
   apiFetch(`${API_BASE_URL}customers/${id}/`, { method: "DELETE" });
 
-// ------------------  Reviever ------------------
-export const fetchRecievers = () => apiFetch(`${API_BASE_URL}receivers/`);
+// ------------------  Receiver ------------------
+export const fetchReceivers = () => apiFetch(`${API_BASE_URL}receivers/`);
 
-export const fetchRecieverById = (id: number) =>
+export const fetchReceiverById = (id: number) =>
   apiFetch(`${API_BASE_URL}receivers/${id}/`);
 
-export const createReciever = (
-  data: Omit<Reciever, "id" | "created_at" | "updated_at">
+export const createReceiver = (
+  data: Omit<Receiver, "id" | "created_at" | "updated_at">
 ) => apiFetch(`${API_BASE_URL}receivers/`, { method: "POST", body: data });
 
-export const updateReciever = (id: number, data: Partial<Reciever>) =>
+export const updateReceiver = (id: number, data: Partial<Receiver>) =>
   apiFetch(`${API_BASE_URL}receivers/${id}/`, { method: "PATCH", body: data });
 
-export const deleteReciever = (id: number) =>
+export const deleteReceiver = (id: number) =>
   apiFetch(`${API_BASE_URL}receivers/${id}/`, { method: "DELETE" });
 
 export const fetchShippingCompanies = () =>

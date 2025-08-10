@@ -6,7 +6,7 @@ export interface ProductCategory {
   updated_at: string;
 }
 
-export interface ProductReigon {
+export interface ProductRegion {
   id: number;
   name: string;
   description: string;
@@ -19,7 +19,7 @@ export interface Product {
   name: string;
   code: string;
   b2bcode: string;
-  b2breigon: ProductReigon;
+  b2bregion: ProductRegion;
   category: ProductCategory;
   description: string;
   created_at: string;
@@ -41,9 +41,9 @@ export interface Supplier {
   updated_at: string;
 }
 
-export interface Reciever {
+export interface Receiver {
   id: number;
-  reciever_type: "Individual" | "Corporate";
+  receiver_type: "Individual" | "Corporate";
   system_id: string;
   unique_id: string;
   company_name: string;

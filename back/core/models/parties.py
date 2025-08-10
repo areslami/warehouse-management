@@ -60,8 +60,8 @@ class Customer(BaseParty):
             return f"{self.company_name} ({self.economic_code})"
         return f"{self.full_name} ({self.economic_code})"
 
-class Reciever(BaseParty):
-    reciever_type = models.CharField(max_length=10, choices=PartyType.choices,null=False)
+class Receiver(BaseParty):
+    receiver_type = models.CharField(max_length=10, choices=PartyType.choices,null=False)
     system_id = models.CharField(max_length=50, unique=True)
     unique_id = models.CharField(max_length=50)
     
@@ -84,6 +84,6 @@ class Reciever(BaseParty):
     updated_at = models.DateTimeField(auto_now=True)
     
     def __str__(self):
-        if self.reciever_type == PartyType.CORPORATE:
+        if self.receiver_type == PartyType.CORPORATE:
             return f"{self.company_name} ({self.system_id})"
         return f"{self.full_name} ({self.system_id})"

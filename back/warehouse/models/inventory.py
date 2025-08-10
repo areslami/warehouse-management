@@ -72,7 +72,7 @@ class DispatchIssueItem(models.Model):
     product = models.ForeignKey('core.Product', on_delete=models.CASCADE)
     weight = models.DecimalField(max_digits=60, decimal_places=8)
     vehicle_type = models.CharField(max_length=20, choices=VEHICLE_TYPES)
-    receiver = models.ForeignKey('core.Reciever', on_delete=models.PROTECT)
+    receiver = models.ForeignKey('core.Receiver', on_delete=models.PROTECT)
     
 class DeliveryFulfillment(models.Model):
     
@@ -96,9 +96,9 @@ class DeliveryFulfillment(models.Model):
 class DeliveryFulfillmentItem(models.Model):
     delivery = models.ForeignKey(DeliveryFulfillment, related_name='items', on_delete=models.CASCADE)
     shipment_id = models.CharField(max_length=50, unique=True, null=False)
-    shippment_price = models.DecimalField(max_digits=16, decimal_places=8)
+    shipment_price = models.DecimalField(max_digits=16, decimal_places=8)
     product = models.ForeignKey('core.Product', on_delete=models.PROTECT)
     weight = models.DecimalField(max_digits=16, decimal_places=8)
     vehicle_type = models.CharField(max_length=20, choices=VEHICLE_TYPES)
-    receiver = models.ForeignKey('core.Reciever', on_delete=models.PROTECT)
+    receiver = models.ForeignKey('core.Receiver', on_delete=models.PROTECT)
 

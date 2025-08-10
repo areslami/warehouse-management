@@ -133,7 +133,7 @@ class DeliveryFulfillmentItemSerializer(serializers.ModelSerializer):
     class Meta:
         model = DeliveryFulfillmentItem
         fields = [
-            'id', 'shippment_id', 'shippment_price', 'product', 'product_name',
+            'id', 'shipment_id', 'shipment_price', 'product', 'product_name',
             'weight', 'vehicle_type', 'receiver', 'receiver_name'
         ]
     

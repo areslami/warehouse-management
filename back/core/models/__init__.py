@@ -1,2 +1,2 @@
-from .parties import Supplier, Customer, Reciever, BaseParty, PartyType
-from .product import Product, ProductCategory, ProductReigon
+from .parties import Supplier, Customer, Receiver, BaseParty, PartyType
+from .product import Product, ProductCategory, ProductRegion

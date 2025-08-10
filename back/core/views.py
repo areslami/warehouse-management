@@ -6,11 +6,11 @@ from django_filters.rest_framework import DjangoFilterBackend
 from django.core.cache import cache
 
 
-from .models import Supplier, Customer, Reciever, Product, ProductCategory, ProductReigon
+from .models import Supplier, Customer, Receiver, Product, ProductCategory, ProductRegion
 from .serializers import (
-    SupplierSerializer, CustomerSerializer, RecieverSerializer,
+    SupplierSerializer, CustomerSerializer, ReceiverSerializer,
     ProductSerializer, ProductListSerializer, ProductCategorySerializer,
-    ProductReigonSerializer
+    ProductRegionSerializer
 )
 
 
@@ -42,9 +42,9 @@ class ProductCategoryViewSet(viewsets.ModelViewSet):
             
 
 
-class ProductReigonViewSet(viewsets.ModelViewSet):
-    queryset = ProductReigon.objects.all()
-    serializer_class = ProductReigonSerializer
+class ProductRegionViewSet(viewsets.ModelViewSet):
+    queryset = ProductRegion.objects.all()
+    serializer_class = ProductRegionSerializer
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     search_fields = ['name', 'description']
     ordering_fields = ['name', 'created_at']
@@ -168,9 +168,9 @@ class CustomerViewSet(viewsets.ModelViewSet):
         return Response(data)
 
 
-class RecieverViewSet(viewsets.ModelViewSet):
-    queryset = Reciever.objects.all()
-    serializer_class = RecieverSerializer
+class ReceiverViewSet(viewsets.ModelViewSet):
+    queryset = Receiver.objects.all()
+    serializer_class = ReceiverSerializer
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_fields = ['reciever_type']
     search_fields = ['company_name', 'full_name', 'economic_code', 'phone', 'system_id', 'unique_id']

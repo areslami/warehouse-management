@@ -1,4 +1,4 @@
-import type { Product, Reciever } from "./core";
+import type { Product, Receiver } from "./core";
 import type { SalesProforma, PurchaseProforma } from "./finance";
 
 export interface Warehouse {
@@ -55,7 +55,7 @@ export interface DispatchIssueItem {
   product: Product;
   weight: number;
   vehicle_type: "truck" | "pickup" | "van" | "container" | "other";
-  receiver: Reciever;
+  receiver: Receiver;
 }
 
 export interface DeliveryFulfillment {
@@ -77,9 +77,9 @@ export interface DeliveryFulfillmentItem {
   id: number;
   delivery: number;
   shipment_id: string;
-  shippment_price: number;
+  shipment_price: number;
   product: Product;
   weight: number;
   vehicle_type: "truck" | "pickup" | "van" | "container" | "other";
-  receiver: Reciever;
+  receiver: Receiver;
 }
