@@ -22,7 +22,7 @@ interface PersianDatePickerProps {
 export function PersianDatePicker({
   value,
   onChange,
-  placeholder = 'انتخاب تاریخ',
+  placeholder = 'Select Date',
   disabled = false,
   className = '',
   id,

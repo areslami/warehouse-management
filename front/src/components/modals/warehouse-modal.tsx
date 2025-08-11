@@ -52,6 +52,11 @@ export function WarehouseModal({ trigger, onSubmit, onClose, initialData }: Ware
 
   const handleSubmit = (data: WarehouseFormData) => {
     onSubmit?.(data);
+    if (trigger) {
+      setOpen(false);
+    } else {
+      onClose?.();
+    }
     form.reset();
   };
 

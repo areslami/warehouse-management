@@ -4,9 +4,15 @@ import React, { createContext, useContext, useState, type ReactNode, type Elemen
 
 type ModalProps<T extends ElementType> = ComponentProps<T>;
 
+interface Modal {
+    id: string;
+    component: ElementType;
+    props: object;
+}
+
 interface ModalContextType {
     openModal: <T extends ElementType>(component: T, props?: ModalProps<T>) => void;
-    closeModal: () => void;
+    closeModal: (id?: string) => void;
 }
 
 const ModalContext = createContext<ModalContextType | undefined>(undefined);
@@ -16,24 +22,39 @@ interface ModalProviderProps {
 }
 
 export const ModalProvider = ({ children }: ModalProviderProps) => {
-    const [modal, setModal] = useState<{ isOpen: boolean; component: ElementType | null; props: object }>({
-        isOpen: false,
-        component: null,
-        props: {},
-    });
+    const [modals, setModals] = useState<Modal[]>([]);
 
     const openModal = <T extends ElementType>(component: T, props: ModalProps<T> = {} as ModalProps<T>) => {
-        setModal({ isOpen: true, component, props });
+        const id = Date.now().toString();
+        setModals(prevModals => [...prevModals, { id, component, props }]);
     };
 
-    const closeModal = () => {
-        setModal({ isOpen: false, component: null, props: {} });
+    const closeModal = (id?: string) => {
+        if (id) {
+            setModals(prevModals => prevModals.filter(modal => modal.id !== id));
+        } else {
+            // Close the most recent modal
+            setModals(prevModals => prevModals.slice(0, -1));
+        }
     };
 
     return (
         <ModalContext.Provider value={{ openModal, closeModal }}>
             {children}
-            {modal.isOpen && modal.component && React.createElement(modal.component, { ...modal.props, onClose: closeModal })}
+            {modals.map((modal) => (
+                <div key={modal.id} style={{ position: 'relative', zIndex: 1000 + modals.indexOf(modal) }}>
+                    {React.createElement(modal.component, { 
+                        ...modal.props, 
+                        onClose: () => {
+                            // Call the original onClose if it exists
+                            if (modal.props && typeof (modal.props as any).onClose === 'function') {
+                                (modal.props as any).onClose();
+                            }
+                            closeModal(modal.id);
+                        }
+                    })}
+                </div>
+            ))}
         </ModalContext.Provider>
     );
 };

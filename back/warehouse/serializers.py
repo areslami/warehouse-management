@@ -180,7 +180,7 @@ class WarehouseReceiptListSerializer(serializers.ModelSerializer):
     class Meta:
         model = WarehouseReceipt
         fields = [
-            'id', 'receipt_id', 'receipt_type', 'date', 'warehouse_name',
+            'id', 'receipt_id', 'receipt_type', 'date', 'warehouse', 'warehouse_name',
             'total_weight', 'items_count', 'created_at'
         ]
     
