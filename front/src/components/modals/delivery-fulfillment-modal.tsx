@@ -55,7 +55,6 @@ export function DeliveryFulfillmentModal({ trigger, onSubmit, onClose, initialDa
   const { data, refreshData } = useCoreData();
   const { openModal, closeModal } = useModal();
   
-  // State for child modals
   const [showWarehouseModal, setShowWarehouseModal] = useState(false);
   const [showProductModal, setShowProductModal] = useState(false);
   const [showReceiverModal, setShowReceiverModal] = useState(false);
@@ -65,7 +64,6 @@ export function DeliveryFulfillmentModal({ trigger, onSubmit, onClose, initialDa
   const [pendingReceiverIndex, setPendingReceiverIndex] = useState<number | null>(null);
   
   useEffect(() => {
-    // Refresh data when modal opens
     if (data.warehouses.length === 0) {
       refreshData('warehouses');
     }
@@ -574,7 +572,6 @@ export function DeliveryFulfillmentModal({ trigger, onSubmit, onClose, initialDa
       </DialogContent>
     </Dialog>
 
-    {/* Child Modals */}
     {showWarehouseModal && (
       <WarehouseModal
         onSubmit={async (newWarehouse: any) => {

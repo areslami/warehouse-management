@@ -49,14 +49,12 @@ export function WarehouseReceiptModal({ trigger, onSubmit, onClose, initialData 
   const { data, refreshData } = useCoreData();
   const { openModal, closeModal } = useModal();
   
-  // State for child modals
   const [showWarehouseModal, setShowWarehouseModal] = useState(false);
   const [showProductModal, setShowProductModal] = useState(false);
   const [showProformaModal, setShowProformaModal] = useState(false);
   const [pendingProductIndex, setPendingProductIndex] = useState<number | null>(null);
   
   useEffect(() => {
-    // Refresh warehouses and products when modal opens
     if (data.warehouses.length === 0) {
       refreshData('warehouses');
     }
@@ -449,7 +447,6 @@ export function WarehouseReceiptModal({ trigger, onSubmit, onClose, initialData 
       </DialogContent>
     </Dialog>
 
-    {/* Child Modals */}
     {showWarehouseModal && (
       <WarehouseModal
         onSubmit={async (newWarehouse: any) => {

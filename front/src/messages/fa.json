@@ -24,7 +24,7 @@
     "validation": {
       "product-required": "محصول الزامی است",
       "weight": "وزن باید بزرگتر از 0 باشد",
-      "unit_price": "قیمت واحد باید بزرگتر از 0 باشد",
+      "unit-price": "قیمت واحد باید بزرگتر از 0 باشد",
       "serialnumber": " شماره سریال الزامی است",
       "date": " تاریخ الزامی است",
       "tax": " مالیات نمیتواند منفی باشد",
@@ -34,7 +34,7 @@
     },
     "payment_cash": "نقدی",
     "payment_credit": "اعتباری",
-    "payment_others": "دیگر",
+    "payment_other": "سایر",
     "title": "پیش فاکتور فروش",
     "serialnumber": "شماره سریال",
     "customer": "مشتری",
@@ -45,12 +45,29 @@
     "product": "محصول",
     "weight": "وزن",
     "tax": "مالیات",
-    "discount": "مالیات",
+    "discount": "تخفیف",
     "unit_price": "قیمت واحد",
     "total_price": "مجموع قیمت",
     "date": "تاریخ",
+    "select-date": "انتخاب تاریخ",
+    "select-customer": "انتخاب مشتری",
+    "select-product": "انتخاب محصول",
+    "create-new-customer": "ایجاد مشتری جدید",
+    "create-new-product": "ایجاد محصول جدید",
     "save": "ذخیره",
-    "cancel": "لغو"
+    "cancel": "لغو",
+    "sales_proformas": "پیش‌فاکتورهای فروش",
+    "add_sales_proforma": "افزودن پیش‌فاکتور فروش",
+    "table_caption": "لیست پیش‌فاکتورهای فروش",
+    "serial_number": "شماره سریال",
+    "total_amount": "مبلغ کل",
+    "status": "وضعیت",
+    "status_draft": "پیش‌نویس",
+    "status_pending": "در انتظار",
+    "status_approved": "تایید شده",
+    "actions": "عملیات",
+    "no_proformas": "هیچ پیش‌فاکتوری یافت نشد",
+    "confirm_delete": "آیا از حذف این پیش‌فاکتور اطمینان دارید؟"
   },
   "purchaseProforma": {
     "validation": {
@@ -75,8 +92,25 @@
     "discount": "تخفیف",
     "unit_price": "قیمت واحد",
     "date": "تاریخ",
+    "select-date": "انتخاب تاریخ",
+    "select-supplier": "انتخاب تامین کننده",
+    "select-product": "انتخاب محصول",
+    "create-new-supplier": "ایجاد تامین کننده جدید",
+    "create-new-product": "ایجاد محصول جدید",
     "save": "ذخیره",
-    "cancel": "لغو"
+    "cancel": "لغو",
+    "purchase_proformas": "پیش‌فاکتورهای خرید",
+    "add_purchase_proforma": "افزودن پیش‌فاکتور خرید",
+    "table_caption": "لیست پیش‌فاکتورهای خرید",
+    "serial_number": "شماره سریال",
+    "total_amount": "مبلغ کل",
+    "status": "وضعیت",
+    "status_draft": "پیش‌نویس",
+    "status_pending": "در انتظار",
+    "status_approved": "تایید شده",
+    "actions": "عملیات",
+    "no_proformas": "هیچ پیش‌فاکتوری یافت نشد",
+    "confirm_delete": "آیا از حذف این پیش‌فاکتور اطمینان دارید؟"
   },
   "warehouseReceipt": {
     "validation": {
@@ -434,5 +468,14 @@
       "loading": "در حال بارگذاری تحویل‌ها...",
       "search_placeholder": "جستجو در تحویل‌ها..."
     }
+  },
+  "finance_page": {
+    "title": "امور مالی",
+    "document_type_label": "نوع سند:",
+    "proforma": "پیش‌فاکتور",
+    "invoice": "فاکتور",
+    "sales_proforma_tab": "پیش‌فاکتور فروش",
+    "purchase_proforma_tab": "پیش‌فاکتور خرید",
+    "invoice_coming_soon": "بخش فاکتور به زودی راه‌اندازی می‌شود..."
   }
 }

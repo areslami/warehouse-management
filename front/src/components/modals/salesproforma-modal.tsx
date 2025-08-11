@@ -1,15 +1,22 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useForm, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "../ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "../ui/dialog";
 import { Button } from "../ui/button";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "../ui/form";
 import { Input } from "../ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select";
 import { Plus, Trash2 } from "lucide-react";
 import { useTranslations } from "next-intl";
+import { useCoreData } from "@/lib/core-data-context";
+import { PersianDatePicker } from "../ui/persian-date-picker";
+import { getTodayGregorian } from "@/lib/utils/persian-date";
+import { CustomerModal } from "./customer-modal";
+import { ProductModal } from "./product-modal";
+import { createCustomer, createProduct } from "@/lib/api/core";
 
 type SalesProformaFormData = {
   serial_number: string;
@@ -26,20 +33,39 @@ type SalesProformaFormData = {
   }[];
 };
 
-
 interface SalesProformaModalProps {
   trigger?: React.ReactNode;
   onSubmit?: (data: SalesProformaFormData) => void;
   onClose?: () => void;
+  initialData?: Partial<SalesProformaFormData>;
 }
 
-export function SalesProformaModal({ trigger, onSubmit, onClose }: SalesProformaModalProps) {
+export function SalesProformaModal({ trigger, onSubmit, onClose, initialData }: SalesProformaModalProps) {
   const tval = useTranslations("salesProforma.validation");
   const t = useTranslations("salesProforma");
+  const { data, refreshData } = useCoreData();
+  
+  const [showCustomerModal, setShowCustomerModal] = useState(false);
+  const [showProductModal, setShowProductModal] = useState(false);
+  const [pendingProductIndex, setPendingProductIndex] = useState<number | null>(null);
+  
+  useEffect(() => {
+    if (data.customers.length === 0) {
+      refreshData('customers');
+    }
+    if (data.products.length === 0) {
+      refreshData('products');
+    }
+  }, []);
+
+  const getTodayDate = () => {
+    if (typeof window === 'undefined') return '';
+    return getTodayGregorian();
+  };
 
   const proformaLineSchema = z.object({
     product: z.number().min(1, tval("product-required")),
-    weight: z.number().min(0, tval("weight")),
+    weight: z.number().min(0.00000001, tval("weight")),
     unit_price: z.number().min(0, tval("unit-price")),
   });
 
@@ -54,21 +80,19 @@ export function SalesProformaModal({ trigger, onSubmit, onClose }: SalesProforma
     lines: z.array(proformaLineSchema).min(1, tval('lines')),
   });
 
-
-
   const [open, setOpen] = useState(trigger ? false : true);
 
   const form = useForm<SalesProformaFormData>({
     resolver: zodResolver(salesProformaSchema),
     defaultValues: {
-      serial_number: "",
-      date: new Date().toISOString().split('T')[0],
-      tax: 0,
-      discount: 0,
-      payment_type: "cash",
-      payment_description: "",
-      customer: 0,
-      lines: [{ product: 0, weight: 0, unit_price: 0 }],
+      serial_number: initialData?.serial_number || "",
+      date: initialData?.date || getTodayDate(),
+      tax: initialData?.tax || 0,
+      discount: initialData?.discount || 0,
+      payment_type: initialData?.payment_type || "cash",
+      payment_description: initialData?.payment_description || "",
+      customer: initialData?.customer || 0,
+      lines: initialData?.lines || [{ product: 0, weight: 0, unit_price: 0 }],
     },
   });
 
@@ -96,6 +120,7 @@ export function SalesProformaModal({ trigger, onSubmit, onClose }: SalesProforma
   };
 
   return (
+    <>
     <Dialog open={open} onOpenChange={trigger ? setOpen : handleClose}>
       {trigger && (
         <DialogTrigger asChild>
@@ -105,6 +130,7 @@ export function SalesProformaModal({ trigger, onSubmit, onClose }: SalesProforma
       <DialogContent dir="rtl" className="min-w-[80%] max-h-[90vh] overflow-y-auto scrollbar-hide  p-0 my-0 mx-auto [&>button]:hidden">
         <DialogHeader className="px-3.5 py-4.5  justify-start" style={{ backgroundColor: "#f6d265" }}>
           <DialogTitle className="font-bold text-white text-right">{t("title")}</DialogTitle>
+          <DialogDescription className="sr-only">Create or edit sales proforma</DialogDescription>
         </DialogHeader>
 
         <Form {...form} >
@@ -131,7 +157,11 @@ export function SalesProformaModal({ trigger, onSubmit, onClose }: SalesProforma
                   <FormItem>
                     <FormLabel>{t('date')}</FormLabel>
                     <FormControl>
-                      <Input type="date" {...field} />
+                      <PersianDatePicker
+                        value={field.value}
+                        onChange={field.onChange}
+                        placeholder={t("select-date")}
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -147,11 +177,38 @@ export function SalesProformaModal({ trigger, onSubmit, onClose }: SalesProforma
                   <FormItem>
                     <FormLabel>{t('customer')}</FormLabel>
                     <FormControl>
-                      <Input
-                        type="number"
-                        {...field}
-                        onChange={(e) => field.onChange(Number(e.target.value))}
-                      />
+                      <Select
+                        value={field.value > 0 ? field.value.toString() : ""}
+                        onValueChange={(value) => {
+                          if (value === "new") {
+                            setShowCustomerModal(true);
+                          } else if (value) {
+                            field.onChange(Number(value));
+                          }
+                        }}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder={t("select-customer")} />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem 
+                            value="new" 
+                            className="font-semibold text-[#f6d265]"
+                            onPointerDown={(e) => e.preventDefault()}
+                          >
+                            <Plus className="inline-block w-4 h-4 mr-2" />
+                            {t("create-new-customer")}
+                          </SelectItem>
+                          {data.customers.length > 0 && (
+                            <div className="border-t my-1" />
+                          )}
+                          {data.customers.map((customer) => (
+                            <SelectItem key={customer.id} value={customer.id.toString()}>
+                              {customer.name} (#{customer.id})
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -254,11 +311,39 @@ export function SalesProformaModal({ trigger, onSubmit, onClose }: SalesProforma
                       <FormItem>
                         <FormLabel>{t("product")}</FormLabel>
                         <FormControl>
-                          <Input
-                            type="number"
-                            {...field}
-                            onChange={(e) => field.onChange(Number(e.target.value))}
-                          />
+                          <Select
+                            value={field.value > 0 ? field.value.toString() : ""}
+                            onValueChange={(value) => {
+                              if (value === "new") {
+                                setPendingProductIndex(index);
+                                setShowProductModal(true);
+                              } else if (value) {
+                                field.onChange(Number(value));
+                              }
+                            }}
+                          >
+                            <SelectTrigger>
+                              <SelectValue placeholder={t("select-product")} />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem 
+                                value="new" 
+                                className="font-semibold text-[#f6d265]"
+                                onPointerDown={(e) => e.preventDefault()}
+                              >
+                                <Plus className="inline-block w-4 h-4 mr-2" />
+                                {t("create-new-product")}
+                              </SelectItem>
+                              {data.products.length > 0 && (
+                                <div className="border-t my-1" />
+                              )}
+                              {data.products.map((product) => (
+                                <SelectItem key={product.id} value={product.id.toString()}>
+                                  {product.name} (#{product.id})
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -327,6 +412,41 @@ export function SalesProformaModal({ trigger, onSubmit, onClose }: SalesProforma
           </form>
         </Form>
       </DialogContent>
-    </Dialog >
+    </Dialog>
+
+    {showCustomerModal && (
+      <CustomerModal
+        onSubmit={async (newCustomer: any) => {
+          const created = await createCustomer(newCustomer);
+          if (created) {
+            await refreshData('customers');
+            form.setValue('customer', created.id);
+            setShowCustomerModal(false);
+          }
+        }}
+        onClose={() => setShowCustomerModal(false)}
+      />
+    )}
+
+    {showProductModal && (
+      <ProductModal
+        onSubmit={async (newProduct: any) => {
+          const created = await createProduct(newProduct);
+          if (created) {
+            await refreshData('products');
+            if (pendingProductIndex !== null) {
+              form.setValue(`lines.${pendingProductIndex}.product`, created.id);
+            }
+            setShowProductModal(false);
+            setPendingProductIndex(null);
+          }
+        }}
+        onClose={() => {
+          setShowProductModal(false);
+          setPendingProductIndex(null);
+        }}
+      />
+    )}
+    </>
   );
 }

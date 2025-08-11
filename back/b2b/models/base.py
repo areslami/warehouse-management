@@ -88,7 +88,6 @@ class B2BSale(models.Model):
     
     offer_status = models.CharField(max_length=10, choices=STATUS_CHOICES)
     
-    # ! not in warehouse receipt
     entry_customs = models.CharField(max_length=200,blank=True,)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
