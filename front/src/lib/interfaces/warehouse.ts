@@ -22,7 +22,8 @@ export interface WarehouseReceipt {
   description: string;
   total_weight: number;
   cottage_serial_number: string | null;
-  proforma: PurchaseProforma | null;
+  proforma: number | null; // proforma ID
+  proforma_serial?: string; // Only in detailed view
   created_at: string;
   updated_at: string;
   items: WarehouseReceiptItem[];
@@ -42,11 +43,13 @@ export interface DispatchIssue {
   dispatch_id: string;
   warehouse: number; // warehouse ID
   warehouse_name: string;
-  sales_proforma: SalesProforma;
+  sales_proforma: number; // sales_proforma ID
+  sales_proforma_serial?: string; // Only in detailed view
   issue_date: string;
   validity_date: string;
   description: string;
-  shipping_company: number;
+  shipping_company: number; // shipping_company ID
+  shipping_company_name?: string;
   total_weight: number;
   created_at: string;
   updated_at: string;
@@ -56,10 +59,12 @@ export interface DispatchIssue {
 export interface DispatchIssueItem {
   id: number;
   dispatch: number;
-  product?: Product; // Can be object or ID
+  product: number; // product ID
+  product_name?: string;
   weight: number;
   vehicle_type: "truck" | "pickup" | "van" | "container" | "other";
-  receiver?: Receiver; // Can be object or ID
+  receiver: number; // receiver ID
+  receiver_name?: string;
 }
 
 export interface DeliveryFulfillment {
@@ -69,9 +74,11 @@ export interface DeliveryFulfillment {
   validity_date: string;
   warehouse: number; // warehouse ID
   warehouse_name: string;
-  sales_proforma: SalesProforma;
+  sales_proforma: number; // sales_proforma ID
+  sales_proforma_serial?: string; // Only in detailed view
   description: string;
-  shipping_company: number;
+  shipping_company: number; // shipping_company ID
+  shipping_company_name?: string;
   total_weight: number;
   created_at: string;
   updated_at: string;
@@ -83,8 +90,10 @@ export interface DeliveryFulfillmentItem {
   delivery: number;
   shipment_id: string;
   shipment_price: number;
-  product?: Product; // Can be object or ID
+  product: number; // product ID
+  product_name?: string;
   weight: number;
   vehicle_type: "truck" | "pickup" | "van" | "container" | "other";
-  receiver?: Receiver; // Can be object or ID
+  receiver: number; // receiver ID
+  receiver_name?: string;
 }

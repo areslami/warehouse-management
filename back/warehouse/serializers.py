@@ -91,7 +91,8 @@ class DispatchIssueItemSerializer(serializers.ModelSerializer):
         ]
     
     def get_receiver_name(self, obj):
-        if obj.receiver.receiver_type == 'Corporate':
+        from core.models import PartyType
+        if obj.receiver.receiver_type == PartyType.CORPORATE:
             return obj.receiver.company_name
         return obj.receiver.full_name
 
@@ -138,7 +139,8 @@ class DeliveryFulfillmentItemSerializer(serializers.ModelSerializer):
         ]
     
     def get_receiver_name(self, obj):
-        if obj.receiver.receiver_type == 'Corporate':
+        from core.models import PartyType
+        if obj.receiver.receiver_type == PartyType.CORPORATE:
             return obj.receiver.company_name
         return obj.receiver.full_name
 

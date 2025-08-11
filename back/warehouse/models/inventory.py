@@ -70,7 +70,7 @@ class DispatchIssueItem(models.Model):
 
     dispatch = models.ForeignKey(DispatchIssue, related_name='items', on_delete=models.CASCADE)
     product = models.ForeignKey('core.Product', on_delete=models.CASCADE)
-    weight = models.DecimalField(max_digits=60, decimal_places=8)
+    weight = models.DecimalField(max_digits=10, decimal_places=2)
     vehicle_type = models.CharField(max_length=20, choices=VEHICLE_TYPES)
     receiver = models.ForeignKey('core.Receiver', on_delete=models.PROTECT)
     

@@ -54,40 +54,10 @@ export interface DeliveryFulfillmentCreate {
   }[];
 }
 import { getCoreContext } from "../core-data-context";
+import { apiFetch } from "./api-client";
+import { toast } from "../toast-helper";
 
-const API_BASE_URL = "http://127.0.0.1:8000/warehouse/";
-
-interface FetchOptions {
-  method: "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
-  body?: unknown;
-}
-
-const apiFetch = async <T>(
-  url: string,
-  options: FetchOptions = { method: "GET" }
-): Promise<T | null> => {
-  const headers = {
-    "Content-Type": "application/json",
-  };
-
-  const config: RequestInit = {
-    method: options.method,
-    headers,
-    body: options.body ? JSON.stringify(options.body) : undefined,
-  };
-
-  const response = await fetch(url, config);
-
-  if (!response.ok) {
-    throw new Error(`API error: ${response.statusText}`);
-  }
-
-  if (response.status === 204) {
-    return null;
-  }
-
-  return response.json();
-};
+const API_BASE_URL = "http://localhost:8000/warehouse/";
 
 export const fetchWarehouses = () =>
   apiFetch<Warehouse[]>(`${API_BASE_URL}warehouses/`);

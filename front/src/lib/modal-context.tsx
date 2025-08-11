@@ -43,8 +43,8 @@ export const ModalProvider = ({ children }: ModalProviderProps) => {
             {children}
             {modals.map((modal) => (
                 <div key={modal.id} style={{ position: 'relative', zIndex: 1000 + modals.indexOf(modal) }}>
-                    {React.createElement(modal.component, { 
-                        ...modal.props, 
+                    {React.createElement(modal.component, {
+                        ...modal.props,
                         onClose: () => {
                             // Call the original onClose if it exists
                             if (modal.props && typeof (modal.props as any).onClose === 'function') {

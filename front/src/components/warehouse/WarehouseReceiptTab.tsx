@@ -13,6 +13,7 @@ import {
   deleteWarehouseReceipt 
 } from "@/lib/api/warehouse";
 import { useModal } from "@/lib/modal-context";
+import { toast } from "@/lib/toast-helper";
 import { WarehouseReceiptModal } from "@/components/modals/warehouse-receipt-modal";
 import { TableHeader as TableHeaderSection } from "./TableHeader";
 import { TableActions } from "./TableActions";
@@ -45,6 +46,7 @@ export function WarehouseReceiptTab({ selectedWarehouseId }: WarehouseReceiptTab
       }
     } catch (error) {
       console.error('Failed to load receipts:', error);
+      toast.error('خطا در بارگیری رسیدها');
     } finally {
       setLoading(false);
     }
@@ -79,8 +81,10 @@ export function WarehouseReceiptTab({ selectedWarehouseId }: WarehouseReceiptTab
           const receiptData = prepareReceiptData(data);
           await createWarehouseReceipt(receiptData);
           await loadReceipts();
+          toast.success('رسید با موفقیت ایجاد شد');
         } catch (error) {
           console.error("Failed to create receipt:", error);
+          toast.error('خطا در ایجاد رسید');
         }
       }
     });
@@ -109,11 +113,13 @@ export function WarehouseReceiptTab({ selectedWarehouseId }: WarehouseReceiptTab
             const receiptData = prepareReceiptData(data);
             await updateWarehouseReceipt(receipt.id, receiptData);
             await loadReceipts();
+            toast.success('رسید با موفقیت بروزرسانی شد');
           }
         });
       }
     } catch (error) {
       console.error("Failed to fetch receipt details:", error);
+      toast.error('خطا در بارگیری جزئیات رسید');
     }
   };
 
@@ -122,6 +128,7 @@ export function WarehouseReceiptTab({ selectedWarehouseId }: WarehouseReceiptTab
     if (confirm(t("confirm_delete"))) {
       await deleteWarehouseReceipt(receipt.id);
       await loadReceipts();
+      toast.success('رسید با موفقیت حذف شد');
     }
   };
 
