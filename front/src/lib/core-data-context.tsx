@@ -1,6 +1,7 @@
 "use client";
 
 import { createContext, useContext, useEffect, useState } from "react";
+import { toast } from "./toast-helper";
 
 import { ProductCategory, ProductRegion, Product, Supplier, Receiver, Customer, ShippingCompany, } from "@/lib/interfaces/core";
 import { Warehouse } from "@/lib/interfaces/warehouse";
@@ -24,7 +25,7 @@ interface AppData {
     salesProformas: SalesProforma[];
 }
 
-interface CoreContextType {
+interface CoreContextType extends AppData {
     data: AppData;
     updateData: <T extends keyof AppData>(key: T, newData: AppData[T]) => void;
     addItem: <T extends keyof AppData>(key: T, item: AppData[T][0]) => void;
@@ -91,6 +92,7 @@ export const CoreDataProvider = ({ children }: { children: React.ReactNode }) =>
 
         } catch (error) {
             console.error('Failed to fetch initial data:', error);
+            toast.error('خطا در بارگیری اطلاعات اولیه');
         }
     };
     const updateData = <T extends keyof AppData>(key: T, newData: AppData[T]) => {
@@ -155,7 +157,7 @@ export const CoreDataProvider = ({ children }: { children: React.ReactNode }) =>
         }
     };
 
-    const value = { data, updateData, addItem, updateItem, deleteItem, refreshData };
+    const value = { ...data, data, updateData, addItem, updateItem, deleteItem, refreshData };
 
     // Set global reference
     globalCoreContext = value;

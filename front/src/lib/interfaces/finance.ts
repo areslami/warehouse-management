@@ -8,30 +8,33 @@ interface Proforma {
   tax: number;
   discount: number;
   final_price: number;
+  created_at: string;
+  updated_at: string;
 }
 
 export interface PurchaseProforma extends Proforma {
-  supplier: Supplier;
+  supplier: number; // supplier ID
+  supplier_name?: string;
+  lines?: ProformaLine[];
 }
 
 export interface SalesProforma extends Proforma {
   payment_type: "cash" | "credit" | "other";
   payment_description: string | null;
-  customer: Customer;
+  customer: number; // customer ID
+  customer_name?: string;
+  lines?: ProformaLine[];
 }
 
 export interface ProformaLine {
   id: number;
-
-  proforma: SalesProforma | PurchaseProforma;
-  product: Product;
+  proforma?: number; // proforma ID
+  product: number; // product ID
+  product_name?: string;
+  product_code?: string;
   weight: number;
   unit_price: number;
-
   total_price: number;
-
-  created_at: string;
-  updated_at: string;
 }
 
 export interface ProformaLineCreate {

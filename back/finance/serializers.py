@@ -11,24 +11,25 @@ class ProformaLineSerializer(serializers.ModelSerializer):
         fields=[
             'id',
             'product',
+            'product_name',
+            'product_code',
             'weight',
             'unit_price',
             'total_price',
-            'created_at',
-            'updated_at',
         ]
-        read_only_fields=['created_at','updated_at','total_price']
+        read_only_fields=['total_price']
         
 class PurchaseProformaSerializer(serializers.ModelSerializer):
     lines=ProformaLineSerializer(many=True,required=False)
     supplier_name=serializers.SerializerMethodField()
     class Meta:
         model = PurchaseProforma
-        fields = ['id','serial_number','date','subtotal','tax','discount' ,'final_price' ,'supplier','supplier_name','created_at','updated_at','lines']
-        read_only_fields=['created_at','updated_at']
+        fields = ['id','serial_number','date','subtotal','tax','discount' ,'final_price' ,'supplier','supplier_name','lines','created_at','updated_at']
+        read_only_fields=['subtotal','final_price','created_at','updated_at']
     
     def get_supplier_name(self, obj):
-        if obj.supplier.supplier_type == 'Corporate':
+        from core.models import PartyType
+        if obj.supplier.supplier_type == PartyType.CORPORATE:
             return obj.supplier.company_name
         return obj.supplier.full_name
 
@@ -70,11 +71,12 @@ class SalesProformaSerializer(serializers.ModelSerializer):
     customer_name=serializers.SerializerMethodField()
     class Meta:
         model = SalesProforma
-        fields = ['id','serial_number','date','subtotal','tax','discount' ,'final_price','payment_type',"payment_description",'customer','customer_name','created_at','updated_at' ,'lines']
-        read_only_fields=['created_at','updated_at']
+        fields = ['id','serial_number','date','subtotal','tax','discount' ,'final_price','payment_type',"payment_description",'customer','customer_name','lines','created_at','updated_at']
+        read_only_fields=['subtotal','final_price','created_at','updated_at']
     
     def get_customer_name(self, obj):
-        if obj.customer.customer_type == 'Corporate':
+        from core.models import PartyType
+        if obj.customer.customer_type == PartyType.CORPORATE:
             return obj.customer.company_name
         return obj.customer.full_name
 

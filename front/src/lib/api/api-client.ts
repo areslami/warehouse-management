@@ -26,7 +26,7 @@ export const apiFetch = async <T>(
       
       if (options.showError !== false) {
         // Import toast dynamically to avoid circular dependencies
-        const { toast } = await import('./toast-helper');
+        const { toast } = await import('../toast-helper');
         toast.error(errorMessage);
       }
       
@@ -42,7 +42,7 @@ export const apiFetch = async <T>(
     const errorMessage = error instanceof Error ? error.message : 'خطای نامشخص در ارتباط با سرور';
     
     if (options.showError !== false) {
-      const { toast } = await import('./toast-helper');
+      const { toast } = await import('../toast-helper');
       toast.error(errorMessage);
     }
     

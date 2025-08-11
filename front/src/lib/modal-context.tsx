@@ -7,7 +7,7 @@ type ModalProps<T extends ElementType> = ComponentProps<T>;
 interface Modal {
     id: string;
     component: ElementType;
-    props: object;
+    props: Record<string, unknown>;
 }
 
 interface ModalContextType {
@@ -47,8 +47,9 @@ export const ModalProvider = ({ children }: ModalProviderProps) => {
                         ...modal.props,
                         onClose: () => {
                             // Call the original onClose if it exists
-                            if (modal.props && typeof (modal.props as any).onClose === 'function') {
-                                (modal.props as any).onClose();
+                            const originalOnClose = modal.props?.onClose;
+                            if (typeof originalOnClose === 'function') {
+                                originalOnClose();
                             }
                             closeModal(modal.id);
                         }

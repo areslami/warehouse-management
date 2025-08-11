@@ -2,6 +2,7 @@
   "sidebar": {
     "title": "شمس تجارت خوشنام",
     "products": "محصولات",
+    "parties": "اشخاص",
     "supplier": "تامین کنندگان",
     "recivers": "تحیل گیرندگان",
     "customers": "مشتریان",
@@ -477,5 +478,40 @@
     "sales_proforma_tab": "پیش‌فاکتور فروش",
     "purchase_proforma_tab": "پیش‌فاکتور خرید",
     "invoice_coming_soon": "بخش فاکتور به زودی راه‌اندازی می‌شود..."
+  },
+  "products_page": {
+    "title": "محصولات",
+    "products": "محصولات",
+    "product_categories": "دسته‌بندی محصولات",
+    "product_regions": "مناطق محصولات",
+    "add_product": "افزودن محصول",
+    "add_category": "افزودن دسته‌بندی",
+    "add_region": "افزودن منطقه",
+    "no_products": "محصولی یافت نشد",
+    "no_categories": "دسته‌بندی یافت نشد",
+    "no_regions": "منطقه‌ای یافت نشد",
+    "confirm_delete_product": "آیا از حذف این محصول اطمینان دارید؟",
+    "confirm_delete_category": "آیا از حذف این دسته‌بندی اطمینان دارید؟",
+    "confirm_delete_region": "آیا از حذف این منطقه اطمینان دارید؟"
+  },
+  "parties_page": {
+    "title": "اشخاص",
+    "suppliers": "تامین کنندگان",
+    "customers": "مشتریان",
+    "receivers": "تحویل گیرندگان",
+    "shipping_companies": "شرکت‌های حمل و نقل",
+    "add_supplier": "افزودن تامین کننده",
+    "add_customer": "افزودن مشتری",
+    "add_receiver": "افزودن تحویل گیرنده",
+    "add_shipping": "افزودن شرکت حمل و نقل",
+    "no_suppliers": "تامین کننده‌ای یافت نشد",
+    "no_customers": "مشتری یافت نشد",
+    "no_receivers": "تحویل گیرنده‌ای یافت نشد",
+    "no_shipping": "شرکت حمل و نقلی یافت نشد",
+    "unnamed": "بدون نام",
+    "confirm_delete_supplier": "آیا از حذف این تامین کننده اطمینان دارید؟",
+    "confirm_delete_customer": "آیا از حذف این مشتری اطمینان دارید؟",
+    "confirm_delete_receiver": "آیا از حذف این تحویل گیرنده اطمینان دارید؟",
+    "confirm_delete_shipping": "آیا از حذف این شرکت حمل و نقل اطمینان دارید؟"
   }
 }

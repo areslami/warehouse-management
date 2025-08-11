@@ -10,7 +10,7 @@ import { WarehouseReceiptModal } from "./modals/warehouse-receipt-modal";
 import { DispatchIssueModal } from "./modals/dispatch-issue-modal";
 import { DeliveryFulfillmentModal } from "./modals/delivery-fulfillment-modal";
 
-import { Warehouse, Cable, Truck, User, DollarSign, ChevronLeft, BadgeCent } from "lucide-react";
+import { Warehouse, Cable, Truck, User, DollarSign, ChevronLeft, BadgeCent, Package, Users } from "lucide-react";
 export function AppSidebar() {
     const t = useTranslations('sidebar')
     const { openModal } = useModal();
@@ -18,23 +18,13 @@ export function AppSidebar() {
     const coreItems = [
         {
             name: t("products"),
-            icon: Warehouse,
+            icon: Package,
             href: "/products"
         },
         {
-            name: t("supplier"),
-            icon: Cable,
-            href: "/suppliers"
-        },
-        {
-            name: t("recivers"),
-            icon: Truck,
-            href: "/receivers"
-        },
-        {
-            name: t("customers"),
-            icon: User,
-            href: "/customers"
+            name: t("parties"),
+            icon: Users,
+            href: "/parties"
         },
     ];
     return (
