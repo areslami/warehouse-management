@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState } from "react";
 import { Plus, Edit2, Trash2, Package, Tag, MapPin } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -25,16 +25,6 @@ export default function ProductsPage() {
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [editingCategory, setEditingCategory] = useState<ProductCategory | null>(null);
   const [editingRegion, setEditingRegion] = useState<ProductRegion | null>(null);
-
-  const loadData = useCallback(() => {
-    refreshData("products");
-    refreshData("productCategories");
-    refreshData("productRegions");
-  }, [refreshData]);
-
-  useEffect(() => {
-    loadData();
-  }, [loadData]);
 
   const handleDeleteProduct = async (id: number) => {
     if (confirm(t("confirm_delete_product"))) {
