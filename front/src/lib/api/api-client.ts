@@ -4,6 +4,25 @@ interface FetchOptions {
   showError?: boolean;
 }
 
+const getErrorMessage = (data: any, status: number): string => {
+  if (typeof data === 'string') return data;
+  if (data?.detail) return Array.isArray(data.detail) ? data.detail.join(', ') : data.detail;
+  if (data?.message) return data.message;
+  if (data?.error) return data.error;
+  if (Array.isArray(data)) return data.join(', ');
+  
+  const fieldErrors = Object.entries(data || {})
+    .filter(([key]) => key !== 'detail' && key !== 'non_field_errors')
+    .map(([field, errors]) => {
+      const errorList = Array.isArray(errors) ? errors : [errors];
+      return errorList.map(e => `${field}: ${e}`).join(', ');
+    })
+    .filter(Boolean)
+    .join(' | ');
+    
+  return fieldErrors || `Error ${status}`;
+};
+
 export const apiFetch = async <T>(
   url: string,
   options: FetchOptions = { method: "GET", showError: true }
@@ -22,10 +41,16 @@ export const apiFetch = async <T>(
     const response = await fetch(url, config);
 
     if (!response.ok) {
-      const errorMessage = `خطا در ارتباط با سرور: ${response.status} ${response.statusText}`;
+      let errorMessage = '';
+      
+      try {
+        const errorData = await response.json();
+        errorMessage = getErrorMessage(errorData, response.status);
+      } catch {
+        errorMessage = `Error ${response.status}`;
+      }
       
       if (options.showError !== false) {
-        // Import toast dynamically to avoid circular dependencies
         const { toast } = await import('../toast-helper');
         toast.error(errorMessage);
       }
@@ -39,11 +64,9 @@ export const apiFetch = async <T>(
 
     return response.json();
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : 'خطای نامشخص در ارتباط با سرور';
-    
-    if (options.showError !== false) {
+    if (options.showError !== false && error instanceof Error && !error.message.startsWith('Error ')) {
       const { toast } = await import('../toast-helper');
-      toast.error(errorMessage);
+      toast.error(error.message);
     }
     
     console.error('API Error:', error);

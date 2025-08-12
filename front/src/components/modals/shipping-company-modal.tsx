@@ -14,9 +14,9 @@ type ShippingCompanyFormData = {
   name: string;
   contact_person: string;
   phone: string;
-  email: string;
-  address: string;
-  description: string;
+  email?: string;
+  address?: string;
+  description?: string;
 };
 
 interface ShippingCompanyModalProps {
@@ -34,11 +34,11 @@ export function ShippingCompanyModal({ trigger, onSubmit, onClose, initialData }
     name: z.string().min(1, tval("name")),
     contact_person: z.string().min(1, tval("contact-person")),
     phone: z.string().min(1, tval("phone")),
-    email: z.string().refine((val) => val === "" || z.string().email().safeParse(val).success, {
+    email: z.string().optional().refine((val) => !val || z.string().email().safeParse(val).success, {
       message: tval("email")
     }),
-    address: z.string().min(1, tval("address")),
-    description: z.string(),
+    address: z.string().optional(),
+    description: z.string().optional(),
   });
 
   const [open, setOpen] = useState(trigger ? false : true);

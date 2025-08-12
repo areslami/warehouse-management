@@ -14,6 +14,7 @@ import { useTranslations } from "next-intl";
 import { useCoreData } from "@/lib/core-data-context";
 import { PersianDatePicker } from "../ui/persian-date-picker";
 import { getTodayGregorian } from "@/lib/utils/persian-date";
+import { getPartyDisplayName } from "@/lib/utils/party-utils";
 import { SupplierModal } from "./supplier-modal";
 import { ProductModal } from "./product-modal";
 import { createSupplier, createProduct } from "@/lib/api/core";
@@ -197,7 +198,7 @@ export function PurchaseProformaModal({ trigger, onSubmit, onClose, initialData 
                         )}
                         {data.suppliers.map((supplier) => (
                           <SelectItem key={supplier.id} value={supplier.id.toString()}>
-                            {supplier.name} (#{supplier.id})
+                            {getPartyDisplayName(supplier)}
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -299,7 +300,7 @@ export function PurchaseProformaModal({ trigger, onSubmit, onClose, initialData 
                               )}
                               {data.products.map((product) => (
                                 <SelectItem key={product.id} value={product.id.toString()}>
-                                  {product.name} (#{product.id})
+                                  {product.name}
                                 </SelectItem>
                               ))}
                             </SelectContent>

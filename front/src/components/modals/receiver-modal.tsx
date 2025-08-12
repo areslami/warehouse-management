@@ -21,7 +21,7 @@ type ReceiverFormData = {
   economic_code: string;
   phone: string;
   address: string;
-  description: string;
+  description?: string;
   postal_code: string;
 };
 
@@ -47,7 +47,7 @@ export function ReceiverModal({ trigger, onSubmit, onClose, initialData }: Recei
     economic_code: z.string().min(1, tval("economic-code")),
     phone: z.string().min(1, tval("phone")),
     address: z.string().min(1, tval("address")),
-    description: z.string(),
+    description: z.string().optional(),
     postal_code: z.string(),
   }).refine((data) => {
     if (data.receiver_type === "Corporate") {

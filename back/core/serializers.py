@@ -3,6 +3,8 @@ from .models import Supplier, Customer, Receiver, PartyType, Product, ProductCat
 
 
 class ProductCategorySerializer(serializers.ModelSerializer):
+    description = serializers.CharField(required=False, allow_blank=True, allow_null=True, max_length=255)
+    
     class Meta:
         model = ProductCategory
         fields = ['id', 'name', 'description', 'created_at', 'updated_at']
@@ -10,6 +12,8 @@ class ProductCategorySerializer(serializers.ModelSerializer):
 
 
 class ProductRegionSerializer(serializers.ModelSerializer):
+    description = serializers.CharField(required=False, allow_blank=True, allow_null=True, max_length=255)
+    
     class Meta:
         model = ProductRegion
         fields = ['id', 'name', 'description', 'created_at', 'updated_at']
@@ -19,6 +23,9 @@ class ProductRegionSerializer(serializers.ModelSerializer):
 class ProductSerializer(serializers.ModelSerializer):
     category_name = serializers.CharField(source='category.name', read_only=True)
     region_name = serializers.CharField(source='b2bregion.name', read_only=True)
+    description = serializers.CharField(required=False, allow_blank=True, allow_null=True)
+    b2bregion = serializers.PrimaryKeyRelatedField(queryset=ProductRegion.objects.all(), required=False, allow_null=True)
+    category = serializers.PrimaryKeyRelatedField(queryset=ProductCategory.objects.all(), required=False, allow_null=True)
     
     class Meta:
         model = Product
@@ -28,15 +35,17 @@ class ProductSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = ['created_at', 'updated_at']
 
-    def validate(self, data):
-        if data.get('b2bregion') is None:
-            raise serializers.ValidationError("B2B region is required")
-        if data.get('category') is None:
-            raise serializers.ValidationError("Product category is required")
-        return data
+    # Removed validation for optional fields
 
 
 class SupplierSerializer(serializers.ModelSerializer):
+    # Fields that are blank=True in the model
+    company_name = serializers.CharField(required=False, allow_blank=True, max_length=200)
+    national_id = serializers.CharField(required=False, allow_blank=True, max_length=11)
+    full_name = serializers.CharField(required=False, allow_blank=True, max_length=100)
+    personal_code = serializers.CharField(required=False, allow_blank=True, max_length=10)
+    description = serializers.CharField(required=False, allow_blank=True)
+    
     class Meta:
         model = Supplier
         fields = [
@@ -71,6 +80,14 @@ class SupplierSerializer(serializers.ModelSerializer):
 
 
 class CustomerSerializer(serializers.ModelSerializer):
+    # Fields that are blank=True in the model
+    company_name = serializers.CharField(required=False, allow_blank=True, max_length=200)
+    national_id = serializers.CharField(required=False, allow_blank=True, max_length=11)
+    full_name = serializers.CharField(required=False, allow_blank=True, max_length=100)
+    personal_code = serializers.CharField(required=False, allow_blank=True, max_length=10)
+    description = serializers.CharField(required=False, allow_blank=True)
+    tags = serializers.CharField(required=False, allow_blank=True, max_length=200)
+    
     class Meta:
         model = Customer
         fields = [
@@ -103,6 +120,13 @@ class CustomerSerializer(serializers.ModelSerializer):
 
 
 class ReceiverSerializer(serializers.ModelSerializer):
+    # Fields that are blank=True in the model
+    company_name = serializers.CharField(required=False, allow_blank=True, max_length=200)
+    national_id = serializers.CharField(required=False, allow_blank=True, max_length=11)
+    full_name = serializers.CharField(required=False, allow_blank=True, max_length=100)
+    personal_code = serializers.CharField(required=False, allow_blank=True, max_length=10)
+    description = serializers.CharField(required=False, allow_blank=True)
+    
     class Meta:
         model = Receiver
         fields = [

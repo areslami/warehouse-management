@@ -30,7 +30,7 @@ type DispatchIssueFormData = {
   sales_proforma: number;
   issue_date: string;
   validity_date: string;
-  description: string;
+  description?: string;
   shipping_company: number;
   items: {
     product: number;
@@ -97,7 +97,7 @@ export function DispatchIssueModal({ trigger, onSubmit, onClose, initialData }: 
     sales_proforma: z.number().min(1, tval("sales-proforma")),
     issue_date: z.string().min(1, tval("issue-date")),
     validity_date: z.string().min(1, tval("validity-date")),
-    description: z.string(),
+    description: z.string().optional(),
     shipping_company: z.number().min(1, tval("shipping-company")),
     items: z.array(dispatchItemSchema).min(1, tval("items")),
   });
@@ -413,7 +413,7 @@ export function DispatchIssueModal({ trigger, onSubmit, onClose, initialData }: 
                               )}
                               {data.products.map((product) => (
                                 <SelectItem key={product.id} value={product.id.toString()}>
-                                  {product.name} (#{product.id})
+                                  {product.name}
                                 </SelectItem>
                               ))}
                             </SelectContent>

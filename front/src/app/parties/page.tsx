@@ -3,7 +3,6 @@
 import { useState } from "react";
 import { Plus, Edit2, Trash2, Users, UserCheck, Truck, Ship } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
 import { useTranslations } from "next-intl";
 import { SupplierModal } from "@/components/modals/supplier-modal";
 import { CustomerModal } from "@/components/modals/customer-modal";
@@ -17,6 +16,15 @@ import {
   createReceiver, updateReceiver, deleteReceiver,
   createShippingCompany, updateShippingCompany, deleteShippingCompany
 } from "@/lib/api/core";
+import { getPartyDisplayName } from "@/lib/utils/party-utils";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 
 export default function PartiesPage() {
   const t = useTranslations("parties_page");
@@ -58,20 +66,14 @@ export default function PartiesPage() {
     }
   };
 
-  const getPartyName = (party: Supplier | Customer | Receiver | ShippingCompany) => {
-    if ('company_name' in party && party.company_name) return party.company_name;
-    if ('full_name' in party && party.full_name) return party.full_name;
-    if ('name' in party && party.name) return party.name;
-    return t("unnamed");
-  };
-
   return (
     <div className="flex-1 p-6 min-h-screen bg-gray-50" dir="rtl">
       <h1 className="text-3xl font-bold mb-8 text-gray-800">{t("title")}</h1>
       
       <div className="space-y-8">
-        <div>
-          <div className="flex items-center justify-between mb-4">
+        {/* Suppliers Section */}
+        <div className="bg-white rounded-lg shadow">
+          <div className="p-4 border-b border-gray-200 flex items-center justify-between">
             <h2 className="text-xl font-semibold text-gray-700 flex items-center gap-2">
               <Users className="w-5 h-5 text-[#f6d265]" />
               {t("suppliers")}
@@ -88,48 +90,61 @@ export default function PartiesPage() {
               {t("add_supplier")}
             </Button>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+          <div className="p-4">
             {suppliers.length === 0 ? (
-              <p className="text-gray-500 col-span-full text-center py-8">{t("no_suppliers")}</p>
+              <p className="text-gray-500 text-center py-8">{t("no_suppliers")}</p>
             ) : (
-              suppliers.map((supplier) => (
-                <Card key={supplier.id} className="bg-white border border-gray-200 shadow-md hover:shadow-lg transition-shadow">
-                  <CardContent className="p-4">
-                    <div className="flex justify-between items-start mb-2">
-                      <h3 className="font-medium text-gray-800">{getPartyName(supplier)}</h3>
-                      <div className="flex gap-1">
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          className="h-8 w-8 p-0 hover:bg-gray-100"
-                          onClick={() => {
-                            setEditingSupplier(supplier);
-                            setShowSupplierModal(true);
-                          }}
-                        >
-                          <Edit2 className="w-4 h-4 text-gray-600" />
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          className="h-8 w-8 p-0 hover:bg-gray-100"
-                          onClick={() => handleDeleteSupplier(supplier.id)}
-                        >
-                          <Trash2 className="w-4 h-4 text-red-500" />
-                        </Button>
-                      </div>
-                    </div>
-                    <p className="text-sm text-gray-600">کد اقتصادی: {supplier.economic_code}</p>
-                    <p className="text-sm text-gray-600">تلفن: {supplier.phone}</p>
-                  </CardContent>
-                </Card>
-              ))
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="text-right">نام/شرکت</TableHead>
+                    <TableHead className="text-right">نوع</TableHead>
+                    <TableHead className="text-right">کد اقتصادی</TableHead>
+                    <TableHead className="text-right">تلفن</TableHead>
+                    <TableHead className="text-right">آدرس</TableHead>
+                    <TableHead className="text-center">عملیات</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {suppliers.map((supplier) => (
+                    <TableRow key={supplier.id}>
+                      <TableCell className="font-medium">{getPartyDisplayName(supplier)}</TableCell>
+                      <TableCell>{supplier.supplier_type === "Corporate" ? "شرکتی" : "حقیقی"}</TableCell>
+                      <TableCell>{supplier.economic_code}</TableCell>
+                      <TableCell>{supplier.phone}</TableCell>
+                      <TableCell>{supplier.address}</TableCell>
+                      <TableCell className="text-center">
+                        <div className="flex gap-2 justify-center">
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => {
+                              setEditingSupplier(supplier);
+                              setShowSupplierModal(true);
+                            }}
+                          >
+                            <Edit2 className="w-4 h-4 text-gray-600" />
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => handleDeleteSupplier(supplier.id)}
+                          >
+                            <Trash2 className="w-4 h-4 text-red-500" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
             )}
           </div>
         </div>
 
-        <div>
-          <div className="flex items-center justify-between mb-4">
+        {/* Customers Section */}
+        <div className="bg-white rounded-lg shadow">
+          <div className="p-4 border-b border-gray-200 flex items-center justify-between">
             <h2 className="text-xl font-semibold text-gray-700 flex items-center gap-2">
               <UserCheck className="w-5 h-5 text-[#f6d265]" />
               {t("customers")}
@@ -146,48 +161,61 @@ export default function PartiesPage() {
               {t("add_customer")}
             </Button>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+          <div className="p-4">
             {customers.length === 0 ? (
-              <p className="text-gray-500 col-span-full text-center py-8">{t("no_customers")}</p>
+              <p className="text-gray-500 text-center py-8">{t("no_customers")}</p>
             ) : (
-              customers.map((customer) => (
-                <Card key={customer.id} className="bg-white border border-gray-200 shadow-md hover:shadow-lg transition-shadow">
-                  <CardContent className="p-4">
-                    <div className="flex justify-between items-start mb-2">
-                      <h3 className="font-medium text-gray-800">{getPartyName(customer)}</h3>
-                      <div className="flex gap-1">
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          className="h-8 w-8 p-0 hover:bg-gray-100"
-                          onClick={() => {
-                            setEditingCustomer(customer);
-                            setShowCustomerModal(true);
-                          }}
-                        >
-                          <Edit2 className="w-4 h-4 text-gray-600" />
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          className="h-8 w-8 p-0 hover:bg-gray-100"
-                          onClick={() => handleDeleteCustomer(customer.id)}
-                        >
-                          <Trash2 className="w-4 h-4 text-red-500" />
-                        </Button>
-                      </div>
-                    </div>
-                    <p className="text-sm text-gray-600">کد اقتصادی: {customer.economic_code}</p>
-                    <p className="text-sm text-gray-600">تلفن: {customer.phone}</p>
-                  </CardContent>
-                </Card>
-              ))
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="text-right">نام/شرکت</TableHead>
+                    <TableHead className="text-right">نوع</TableHead>
+                    <TableHead className="text-right">کد اقتصادی</TableHead>
+                    <TableHead className="text-right">تلفن</TableHead>
+                    <TableHead className="text-right">آدرس</TableHead>
+                    <TableHead className="text-center">عملیات</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {customers.map((customer) => (
+                    <TableRow key={customer.id}>
+                      <TableCell className="font-medium">{getPartyDisplayName(customer)}</TableCell>
+                      <TableCell>{customer.customer_type === "Corporate" ? "شرکتی" : "حقیقی"}</TableCell>
+                      <TableCell>{customer.economic_code}</TableCell>
+                      <TableCell>{customer.phone}</TableCell>
+                      <TableCell>{customer.address}</TableCell>
+                      <TableCell className="text-center">
+                        <div className="flex gap-2 justify-center">
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => {
+                              setEditingCustomer(customer);
+                              setShowCustomerModal(true);
+                            }}
+                          >
+                            <Edit2 className="w-4 h-4 text-gray-600" />
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => handleDeleteCustomer(customer.id)}
+                          >
+                            <Trash2 className="w-4 h-4 text-red-500" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
             )}
           </div>
         </div>
 
-        <div>
-          <div className="flex items-center justify-between mb-4">
+        {/* Receivers Section */}
+        <div className="bg-white rounded-lg shadow">
+          <div className="p-4 border-b border-gray-200 flex items-center justify-between">
             <h2 className="text-xl font-semibold text-gray-700 flex items-center gap-2">
               <Truck className="w-5 h-5 text-[#f6d265]" />
               {t("receivers")}
@@ -204,48 +232,65 @@ export default function PartiesPage() {
               {t("add_receiver")}
             </Button>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+          <div className="p-4">
             {receivers.length === 0 ? (
-              <p className="text-gray-500 col-span-full text-center py-8">{t("no_receivers")}</p>
+              <p className="text-gray-500 text-center py-8">{t("no_receivers")}</p>
             ) : (
-              receivers.map((receiver) => (
-                <Card key={receiver.id} className="bg-white border border-gray-200 shadow-md hover:shadow-lg transition-shadow">
-                  <CardContent className="p-4">
-                    <div className="flex justify-between items-start mb-2">
-                      <h3 className="font-medium text-gray-800">{getPartyName(receiver)}</h3>
-                      <div className="flex gap-1">
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          className="h-8 w-8 p-0 hover:bg-gray-100"
-                          onClick={() => {
-                            setEditingReceiver(receiver);
-                            setShowReceiverModal(true);
-                          }}
-                        >
-                          <Edit2 className="w-4 h-4 text-gray-600" />
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          className="h-8 w-8 p-0 hover:bg-gray-100"
-                          onClick={() => handleDeleteReceiver(receiver.id)}
-                        >
-                          <Trash2 className="w-4 h-4 text-red-500" />
-                        </Button>
-                      </div>
-                    </div>
-                    <p className="text-sm text-gray-600">کد سیستمی: {receiver.system_id}</p>
-                    <p className="text-sm text-gray-600">تلفن: {receiver.phone}</p>
-                  </CardContent>
-                </Card>
-              ))
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="text-right">نام/شرکت</TableHead>
+                    <TableHead className="text-right">نوع</TableHead>
+                    <TableHead className="text-right">کد سیستمی</TableHead>
+                    <TableHead className="text-right">کد یکتا</TableHead>
+                    <TableHead className="text-right">کد اقتصادی</TableHead>
+                    <TableHead className="text-right">تلفن</TableHead>
+                    <TableHead className="text-right">آدرس</TableHead>
+                    <TableHead className="text-center">عملیات</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {receivers.map((receiver) => (
+                    <TableRow key={receiver.id}>
+                      <TableCell className="font-medium">{getPartyDisplayName(receiver)}</TableCell>
+                      <TableCell>{receiver.receiver_type === "Corporate" ? "شرکتی" : "حقیقی"}</TableCell>
+                      <TableCell>{receiver.system_id}</TableCell>
+                      <TableCell>{receiver.unique_id}</TableCell>
+                      <TableCell>{receiver.economic_code}</TableCell>
+                      <TableCell>{receiver.phone}</TableCell>
+                      <TableCell>{receiver.address}</TableCell>
+                      <TableCell className="text-center">
+                        <div className="flex gap-2 justify-center">
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => {
+                              setEditingReceiver(receiver);
+                              setShowReceiverModal(true);
+                            }}
+                          >
+                            <Edit2 className="w-4 h-4 text-gray-600" />
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => handleDeleteReceiver(receiver.id)}
+                          >
+                            <Trash2 className="w-4 h-4 text-red-500" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
             )}
           </div>
         </div>
 
-        <div>
-          <div className="flex items-center justify-between mb-4">
+        {/* Shipping Companies Section */}
+        <div className="bg-white rounded-lg shadow">
+          <div className="p-4 border-b border-gray-200 flex items-center justify-between">
             <h2 className="text-xl font-semibold text-gray-700 flex items-center gap-2">
               <Ship className="w-5 h-5 text-[#f6d265]" />
               {t("shipping_companies")}
@@ -262,42 +307,54 @@ export default function PartiesPage() {
               {t("add_shipping")}
             </Button>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+          <div className="p-4">
             {shippingCompanies.length === 0 ? (
-              <p className="text-gray-500 col-span-full text-center py-8">{t("no_shipping")}</p>
+              <p className="text-gray-500 text-center py-8">{t("no_shipping")}</p>
             ) : (
-              shippingCompanies.map((company) => (
-                <Card key={company.id} className="bg-white border border-gray-200 shadow-md hover:shadow-lg transition-shadow">
-                  <CardContent className="p-4">
-                    <div className="flex justify-between items-start mb-2">
-                      <h3 className="font-medium text-gray-800">{company.name}</h3>
-                      <div className="flex gap-1">
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          className="h-8 w-8 p-0 hover:bg-gray-100"
-                          onClick={() => {
-                            setEditingShipping(company);
-                            setShowShippingModal(true);
-                          }}
-                        >
-                          <Edit2 className="w-4 h-4 text-gray-600" />
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          className="h-8 w-8 p-0 hover:bg-gray-100"
-                          onClick={() => handleDeleteShipping(company.id)}
-                        >
-                          <Trash2 className="w-4 h-4 text-red-500" />
-                        </Button>
-                      </div>
-                    </div>
-                    <p className="text-sm text-gray-600">شخص تماس: {company.contact_person}</p>
-                    <p className="text-sm text-gray-600">تلفن: {company.phone}</p>
-                  </CardContent>
-                </Card>
-              ))
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="text-right">نام شرکت</TableHead>
+                    <TableHead className="text-right">شخص تماس</TableHead>
+                    <TableHead className="text-right">تلفن</TableHead>
+                    <TableHead className="text-right">ایمیل</TableHead>
+                    <TableHead className="text-right">آدرس</TableHead>
+                    <TableHead className="text-center">عملیات</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {shippingCompanies.map((company) => (
+                    <TableRow key={company.id}>
+                      <TableCell className="font-medium">{company.name}</TableCell>
+                      <TableCell>{company.contact_person}</TableCell>
+                      <TableCell>{company.phone}</TableCell>
+                      <TableCell>{company.email}</TableCell>
+                      <TableCell>{company.address}</TableCell>
+                      <TableCell className="text-center">
+                        <div className="flex gap-2 justify-center">
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => {
+                              setEditingShipping(company);
+                              setShowShippingModal(true);
+                            }}
+                          >
+                            <Edit2 className="w-4 h-4 text-gray-600" />
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => handleDeleteShipping(company.id)}
+                          >
+                            <Trash2 className="w-4 h-4 text-red-500" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
             )}
           </div>
         </div>

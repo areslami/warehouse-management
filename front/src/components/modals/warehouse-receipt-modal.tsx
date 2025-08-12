@@ -15,6 +15,7 @@ import { useCoreData } from "@/lib/core-data-context";
 import { useModal } from "@/lib/modal-context";
 import { PersianDatePicker } from "../ui/persian-date-picker";
 import { getTodayGregorian } from "@/lib/utils/persian-date";
+import { getPartyDisplayName } from "@/lib/utils/party-utils";
 import { WarehouseModal } from "./warehouse-modal";
 import { ProductModal } from "./product-modal";
 import { PurchaseProformaModal } from "./purchaseproforma-modal";
@@ -27,7 +28,7 @@ type WarehouseReceiptFormData = {
   receipt_type: "import_cottage" | "distribution_cottage" | "purchase";
   date: string;
   warehouse: number;
-  description: string;
+  description?: string;
   cottage_serial_number?: string;
   proforma?: number;
   items: {
@@ -81,7 +82,7 @@ export function WarehouseReceiptModal({ trigger, onSubmit, onClose, initialData 
     receipt_type: z.enum(["import_cottage", "distribution_cottage", "purchase"]),
     date: z.string().min(1, tval("date")),
     warehouse: z.number().min(1, tval("warehouse")),
-    description: z.string(),
+    description: z.string().optional(),
     cottage_serial_number: z.string().optional(),
     proforma: z.number().optional(),
     items: z.array(receiptItemSchema).min(1, tval("items")),
@@ -386,7 +387,7 @@ export function WarehouseReceiptModal({ trigger, onSubmit, onClose, initialData 
                               {data.products && data.products.length > 0 ? (
                                 data.products.map((product) => (
                                   <SelectItem key={product.id} value={product.id.toString()}>
-                                    {product.name} (#{product.id})
+                                    {product.name}
                                   </SelectItem>
                                 ))
                               ) : (

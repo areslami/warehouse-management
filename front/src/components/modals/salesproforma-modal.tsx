@@ -14,6 +14,7 @@ import { useTranslations } from "next-intl";
 import { useCoreData } from "@/lib/core-data-context";
 import { PersianDatePicker } from "../ui/persian-date-picker";
 import { getTodayGregorian } from "@/lib/utils/persian-date";
+import { getPartyDisplayName } from "@/lib/utils/party-utils";
 import { CustomerModal } from "./customer-modal";
 import { ProductModal } from "./product-modal";
 import { createCustomer, createProduct } from "@/lib/api/core";
@@ -204,7 +205,7 @@ export function SalesProformaModal({ trigger, onSubmit, onClose, initialData }: 
                           )}
                           {data.customers.map((customer) => (
                             <SelectItem key={customer.id} value={customer.id.toString()}>
-                              {customer.name} (#{customer.id})
+                              {getPartyDisplayName(customer)}
                             </SelectItem>
                           ))}
                         </SelectContent>
@@ -339,7 +340,7 @@ export function SalesProformaModal({ trigger, onSubmit, onClose, initialData }: 
                               )}
                               {data.products.map((product) => (
                                 <SelectItem key={product.id} value={product.id.toString()}>
-                                  {product.name} (#{product.id})
+                                  {product.name}
                                 </SelectItem>
                               ))}
                             </SelectContent>

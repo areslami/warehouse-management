@@ -12,12 +12,12 @@ import { useTranslations } from "next-intl";
 
 type ProductCategoryFormData = {
   name: string;
-  description: string;
+  description?: string;
 };
 
 interface ProductCategoryModalProps {
   trigger?: React.ReactNode;
-  onSubmit?: (data: ProductCategoryFormData) => void;
+  onSubmit?: (data: ProductCategoryFormData) => Promise<void>;
   onClose?: () => void;
   initialData?: Partial<ProductCategoryFormData>;
 }
@@ -28,7 +28,7 @@ export function ProductCategoryModal({ trigger, onSubmit, onClose, initialData }
 
   const productCategorySchema = z.object({
     name: z.string().min(1, tval("name")),
-    description: z.string(),
+    description: z.string().optional(),
   });
 
   const [open, setOpen] = useState(trigger ? false : true);
@@ -41,14 +41,18 @@ export function ProductCategoryModal({ trigger, onSubmit, onClose, initialData }
     },
   });
 
-  const handleSubmit = (data: ProductCategoryFormData) => {
-    onSubmit?.(data);
-    if (trigger) {
-      setOpen(false);
-    } else {
-      onClose?.();
+  const handleSubmit = async (data: ProductCategoryFormData) => {
+    try {
+      await onSubmit?.(data);
+      if (trigger) {
+        setOpen(false);
+      } else {
+        onClose?.();
+      }
+      form.reset();
+    } catch (error) {
+      console.error("Error submitting category:", error);
     }
-    form.reset();
   };
 
   const handleClose = () => {
@@ -92,9 +96,9 @@ export function ProductCategoryModal({ trigger, onSubmit, onClose, initialData }
               name="description"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>{t("description")}</FormLabel>
+                  <FormLabel>{t("description")} <span className="text-gray-400 text-sm">(اختیاری)</span></FormLabel>
                   <FormControl>
-                    <Input {...field} />
+                    <Input {...field} placeholder={t("description-placeholder")} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>

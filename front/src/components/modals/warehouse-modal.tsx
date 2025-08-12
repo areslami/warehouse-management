@@ -15,7 +15,7 @@ type WarehouseFormData = {
   address: string;
   manager: string;
   phone: string;
-  description: string;
+  description?: string;
 };
 
 interface WarehouseModalProps {
@@ -34,7 +34,7 @@ export function WarehouseModal({ trigger, onSubmit, onClose, initialData }: Ware
     address: z.string().min(1, tval("address")),
     manager: z.string().min(1, tval("manager")),
     phone: z.string().min(1, tval("phone")),
-    description: z.string(),
+    description: z.string().optional(),
   });
 
   const [open, setOpen] = useState(trigger ? false : true);

@@ -15,6 +15,7 @@ import { useCoreData } from "@/lib/core-data-context";
 import { useModal } from "@/lib/modal-context";
 import { PersianDatePicker } from "../ui/persian-date-picker";
 import { getTodayGregorian } from "@/lib/utils/persian-date";
+import { getPartyDisplayName } from "@/lib/utils/party-utils";
 import { WarehouseModal } from "./warehouse-modal";
 import { ProductModal } from "./product-modal";
 import { ReceiverModal } from "./receiver-modal";
@@ -30,7 +31,7 @@ type DeliveryFulfillmentFormData = {
   validity_date: string;
   warehouse: number;
   sales_proforma: number;
-  description: string;
+  description?: string;
   shipping_company: number;
   items: {
     shipment_id: string;
@@ -101,7 +102,7 @@ export function DeliveryFulfillmentModal({ trigger, onSubmit, onClose, initialDa
     validity_date: z.string().min(1, tval("validity-date")),
     warehouse: z.number().min(1, tval("warehouse")),
     sales_proforma: z.number().min(1, tval("sales-proforma")),
-    description: z.string(),
+    description: z.string().optional(),
     shipping_company: z.number().min(1, tval("shipping-company")),
     items: z.array(deliveryItemSchema).min(1, tval("items")),
   });
@@ -302,7 +303,7 @@ export function DeliveryFulfillmentModal({ trigger, onSubmit, onClose, initialDa
                           )}
                           {data.shippingCompanies.map((company) => (
                             <SelectItem key={company.id} value={company.id.toString()}>
-                              {company.name} (#{company.id})
+                              {company.name}
                             </SelectItem>
                           ))}
                         </SelectContent>
@@ -450,7 +451,7 @@ export function DeliveryFulfillmentModal({ trigger, onSubmit, onClose, initialDa
                               )}
                               {data.products.map((product) => (
                                 <SelectItem key={product.id} value={product.id.toString()}>
-                                  {product.name} (#{product.id})
+                                  {product.name}
                                 </SelectItem>
                               ))}
                             </SelectContent>
@@ -535,7 +536,7 @@ export function DeliveryFulfillmentModal({ trigger, onSubmit, onClose, initialDa
                               )}
                               {data.receivers.map((receiver) => (
                                 <SelectItem key={receiver.id} value={receiver.id.toString()}>
-                                  {receiver.name} (#{receiver.id})
+                                  {getPartyDisplayName(receiver)}
                                 </SelectItem>
                               ))}
                             </SelectContent>

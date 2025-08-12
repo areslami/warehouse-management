@@ -12,12 +12,12 @@ import { useTranslations } from "next-intl";
 
 type ProductRegionFormData = {
   name: string;
-  description: string;
+  description?: string;
 };
 
 interface ProductRegionModalProps {
   trigger?: React.ReactNode;
-  onSubmit?: (data: ProductRegionFormData) => void;
+  onSubmit?: (data: ProductRegionFormData) => Promise<void>;
   onClose?: () => void;
   initialData?: Partial<ProductRegionFormData>;
 }
@@ -28,7 +28,7 @@ export function ProductRegionModal({ trigger, onSubmit, onClose, initialData }: 
 
   const productRegionSchema = z.object({
     name: z.string().min(1, tval("name")),
-    description: z.string(),
+    description: z.string().optional(),
   });
 
   const [open, setOpen] = useState(trigger ? false : true);
@@ -41,14 +41,18 @@ export function ProductRegionModal({ trigger, onSubmit, onClose, initialData }: 
     },
   });
 
-  const handleSubmit = (data: ProductRegionFormData) => {
-    onSubmit?.(data);
-    if (trigger) {
-      setOpen(false);
-    } else {
-      onClose?.();
+  const handleSubmit = async (data: ProductRegionFormData) => {
+    try {
+      await onSubmit?.(data);
+      if (trigger) {
+        setOpen(false);
+      } else {
+        onClose?.();
+      }
+      form.reset();
+    } catch (error) {
+      console.error("Error submitting region:", error);
     }
-    form.reset();
   };
 
   const handleClose = () => {
@@ -92,9 +96,9 @@ export function ProductRegionModal({ trigger, onSubmit, onClose, initialData }: 
               name="description"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>{t("description")}</FormLabel>
+                  <FormLabel>{t("description")} <span className="text-gray-400 text-sm">(اختیاری)</span></FormLabel>
                   <FormControl>
-                    <Input {...field} />
+                    <Input {...field} placeholder={t("description-placeholder")} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>

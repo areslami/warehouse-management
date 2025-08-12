@@ -19,7 +19,7 @@ type SupplierFormData = {
   economic_code: string;
   phone: string;
   address: string;
-  description: string;
+  description?: string;
 };
 
 interface SupplierModalProps {
@@ -42,7 +42,7 @@ export function SupplierModal({ trigger, onSubmit, onClose, initialData }: Suppl
     economic_code: z.string().min(1, tval("economic-code")),
     phone: z.string().min(1, tval("phone")),
     address: z.string().min(1, tval("address")),
-    description: z.string(),
+    description: z.string().optional(),
   }).refine((data) => {
     if (data.supplier_type === "Corporate") {
       return data.company_name.length > 0 && data.national_id.length > 0;

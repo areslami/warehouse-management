@@ -9,8 +9,12 @@ import { Button } from "../ui/button";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "../ui/form";
 import { Input } from "../ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select";
+import { Plus } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useCoreData } from "@/lib/core-data-context";
+import { ProductCategoryModal } from "./product-category-modal";
+import { ProductRegionModal } from "./product-region-modal";
+import { createProductCategory, createProductRegion } from "@/lib/api/core";
 
 type ProductFormData = {
   name: string;
@@ -18,7 +22,7 @@ type ProductFormData = {
   b2bcode: string;
   b2bregion: number;
   category: number;
-  description: string;
+  description?: string;
 };
 
 interface ProductModalProps {
@@ -32,6 +36,8 @@ export function ProductModal({ trigger, onSubmit, onClose, initialData }: Produc
   const tval = useTranslations("product.validation");
   const t = useTranslations("product");
   const { data, refreshData } = useCoreData();
+  const [showCategoryModal, setShowCategoryModal] = useState(false);
+  const [showRegionModal, setShowRegionModal] = useState(false);
   
   useEffect(() => {
     if (data.productCategories.length === 0) {
@@ -48,7 +54,7 @@ export function ProductModal({ trigger, onSubmit, onClose, initialData }: Produc
     b2bcode: z.string().min(1, tval("b2bcode")),
     b2bregion: z.number().min(1, tval("b2bregion")),
     category: z.number().min(1, tval("category")),
-    description: z.string(),
+    description: z.string().optional(),
   });
 
   const [open, setOpen] = useState(trigger ? false : true);
@@ -79,6 +85,7 @@ export function ProductModal({ trigger, onSubmit, onClose, initialData }: Produc
   };
 
   return (
+    <>
     <Dialog open={open} onOpenChange={trigger ? setOpen : handleClose}>
       {trigger && (
         <DialogTrigger asChild>
@@ -147,12 +154,29 @@ export function ProductModal({ trigger, onSubmit, onClose, initialData }: Produc
                     <FormControl>
                       <Select
                         value={field.value > 0 ? field.value.toString() : ""}
-                        onValueChange={(value) => field.onChange(Number(value))}
+                        onValueChange={(value) => {
+                          if (value === "new") {
+                            setShowCategoryModal(true);
+                          } else if (value) {
+                            field.onChange(Number(value));
+                          }
+                        }}
                       >
                         <SelectTrigger>
                           <SelectValue placeholder={t("select-category")} />
                         </SelectTrigger>
                         <SelectContent>
+                          <SelectItem 
+                            value="new" 
+                            className="font-semibold text-[#f6d265]"
+                            onPointerDown={(e) => e.preventDefault()}
+                          >
+                            <Plus className="inline-block w-4 h-4 mr-2" />
+                            {t("create-new-category")}
+                          </SelectItem>
+                          {data.productCategories.length > 0 && (
+                            <div className="border-t my-1" />
+                          )}
                           {data.productCategories.map((category) => (
                             <SelectItem key={category.id} value={category.id.toString()}>
                               {category.name}
@@ -176,12 +200,29 @@ export function ProductModal({ trigger, onSubmit, onClose, initialData }: Produc
                   <FormControl>
                     <Select
                       value={field.value > 0 ? field.value.toString() : ""}
-                      onValueChange={(value) => field.onChange(Number(value))}
+                      onValueChange={(value) => {
+                        if (value === "new") {
+                          setShowRegionModal(true);
+                        } else if (value) {
+                          field.onChange(Number(value));
+                        }
+                      }}
                     >
                       <SelectTrigger>
                         <SelectValue placeholder={t("select-region")} />
                       </SelectTrigger>
                       <SelectContent>
+                        <SelectItem 
+                          value="new" 
+                          className="font-semibold text-[#f6d265]"
+                          onPointerDown={(e) => e.preventDefault()}
+                        >
+                          <Plus className="inline-block w-4 h-4 mr-2" />
+                          {t("create-new-region")}
+                        </SelectItem>
+                        {data.productRegions.length > 0 && (
+                          <div className="border-t my-1" />
+                        )}
                         {data.productRegions.map((region) => (
                           <SelectItem key={region.id} value={region.id.toString()}>
                             {region.name}
@@ -218,6 +259,35 @@ export function ProductModal({ trigger, onSubmit, onClose, initialData }: Produc
           </form>
         </Form>
       </DialogContent>
-    </Dialog >
+    </Dialog>
+    
+    {showCategoryModal && (
+      <ProductCategoryModal
+        onSubmit={async (newCategory) => {
+          const created = await createProductCategory(newCategory);
+          if (created) {
+            await refreshData('productCategories');
+            form.setValue('category', created.id);
+            setShowCategoryModal(false);
+          }
+        }}
+        onClose={() => setShowCategoryModal(false)}
+      />
+    )}
+
+    {showRegionModal && (
+      <ProductRegionModal
+        onSubmit={async (newRegion) => {
+          const created = await createProductRegion(newRegion);
+          if (created) {
+            await refreshData('productRegions');
+            form.setValue('b2bregion', created.id);
+            setShowRegionModal(false);
+          }
+        }}
+        onClose={() => setShowRegionModal(false)}
+      />
+    )}
+    </>
   );
 }

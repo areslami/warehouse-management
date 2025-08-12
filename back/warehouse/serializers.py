@@ -6,6 +6,8 @@ from .models import (
 
 
 class WarehouseSerializer(serializers.ModelSerializer):
+    description = serializers.CharField(required=False, allow_blank=True)
+    
     class Meta:
         model = Warehouse
         fields = [
@@ -16,6 +18,9 @@ class WarehouseSerializer(serializers.ModelSerializer):
 
 
 class ShippingCompanySerializer(serializers.ModelSerializer):
+    email = serializers.EmailField(required=False, allow_blank=True)
+    description = serializers.CharField(required=False, allow_blank=True)
+    
     class Meta:
         model = ShippingCompany
         fields = [
@@ -38,6 +43,9 @@ class WarehouseReceiptSerializer(serializers.ModelSerializer):
     items = WarehouseReceiptItemSerializer(many=True, required=False)
     warehouse_name = serializers.CharField(source='warehouse.name', read_only=True)
     proforma_serial = serializers.CharField(source='proforma.serial_number', read_only=True)
+    receipt_id = serializers.CharField(required=False, allow_blank=True, allow_null=True, max_length=50)
+    description = serializers.CharField(required=False, allow_blank=True)
+    cottage_serial_number = serializers.CharField(required=False, allow_blank=True, allow_null=True, max_length=100)
     
     class Meta:
         model = WarehouseReceipt
@@ -102,6 +110,8 @@ class DispatchIssueSerializer(serializers.ModelSerializer):
     warehouse_name = serializers.CharField(source='warehouse.name', read_only=True)
     shipping_company_name = serializers.CharField(source='shipping_company.name', read_only=True)
     sales_proforma_serial = serializers.CharField(source='sales_proforma.serial_number', read_only=True)
+    dispatch_id = serializers.CharField(required=False, allow_blank=True, allow_null=True)
+    description = serializers.CharField(required=False, allow_blank=True)
     
     class Meta:
         model = DispatchIssue
