@@ -272,16 +272,16 @@
     "validation": {
       "name": "نام محصول الزامی است",
       "code": "کد محصول الزامی است",
-      "b2bcode": "کد B2B الزامی است",
-      "b2bregion": "منطقه B2B الزامی است",
-      "b2breigon": "منطقه B2B الزامی است",
+      "b2bcode": "کد بازارگاه الزامی است",
+      "b2bregion": "منطقه بازارگاه الزامی است",
+      "b2breigon": "منطقه بازارگاه الزامی است",
       "category": "دسته بندی الزامی است"
     },
     "title": "محصول",
     "name": "نام",
     "code": "کد",
-    "b2bcode": "کد B2B",
-    "b2breigon": "منطقه B2B",
+    "b2bcode": "کد بازارگاه",
+    "b2breigon": "منطقه بازارگاه",
     "category": "دسته بندی",
     "select-category": "انتخاب دسته بندی",
     "select-region": "انتخاب منطقه",
@@ -482,7 +482,7 @@
     },
     "errors": {
       "create_failed": "خطا در ایجاد",
-      "update_failed": "خطا در بروزرسانی", 
+      "update_failed": "خطا در بروزرسانی",
       "delete_failed": "خطا در حذف",
       "fetch_failed": "خطا در دریافت اطلاعات",
       "success_create": "با موفقیت ایجاد شد",
@@ -708,7 +708,7 @@
     "all_warehouses": "همه انبارها"
   },
   "dashboard": {
-    "title": "داشبورد مدیریت", 
+    "title": "داشبورد مدیریت",
     "coming_soon": "به زودی..."
   },
   "b2b_page": {
