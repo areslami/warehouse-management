@@ -14,9 +14,9 @@ import { B2BDistributionModal } from "@/components/modals/b2b-distribution-modal
 import { B2BSaleModal } from "@/components/modals/b2b-sale-modal";
 import { B2BOffer, B2BSale, B2BDistribution } from "@/lib/interfaces/b2b";
 import {
-  fetchB2BOffers, createB2BOffer, updateB2BOffer, deleteB2BOffer,
-  fetchB2BSales, createB2BSale, updateB2BSale, deleteB2BSale,
-  fetchB2BDistributions, createB2BDistribution, updateB2BDistribution, deleteB2BDistribution
+  fetchB2BOffers, fetchB2BOfferById, createB2BOffer, updateB2BOffer, deleteB2BOffer,
+  fetchB2BSales, fetchB2BSaleById, createB2BSale, updateB2BSale, deleteB2BSale,
+  fetchB2BDistributions, fetchB2BDistributionById, createB2BDistribution, updateB2BDistribution, deleteB2BDistribution
 } from "@/lib/api/b2b";
 
 export default function B2BPage() {
@@ -213,10 +213,16 @@ export default function B2BPage() {
                             <Button
                               size="sm"
                               variant="ghost"
-                              onClick={(e) => {
+                              onClick={async (e) => {
                                 e.stopPropagation();
-                                setEditingOffer(offer);
-                                setShowOfferModal(true);
+                                try {
+                                  const fullOffer = await fetchB2BOfferById(offer.id);
+                                  setEditingOffer(fullOffer);
+                                  setShowOfferModal(true);
+                                } catch (error) {
+                                  console.error("Error fetching offer details:", error);
+                                  toast.error(t("errors.fetch_failed"));
+                                }
                               }}
                             >
                               <Edit2 className="w-4 h-4 text-gray-600" />
@@ -297,10 +303,16 @@ export default function B2BPage() {
                             <Button
                               size="sm"
                               variant="ghost"
-                              onClick={(e) => {
+                              onClick={async (e) => {
                                 e.stopPropagation();
-                                setEditingDistribution(distribution);
-                                setShowDistributionModal(true);
+                                try {
+                                  const fullDistribution = await fetchB2BDistributionById(distribution.id);
+                                  setEditingDistribution(fullDistribution);
+                                  setShowDistributionModal(true);
+                                } catch (error) {
+                                  console.error("Error fetching distribution details:", error);
+                                  toast.error(t("errors.fetch_failed"));
+                                }
                               }}
                             >
                               <Edit2 className="w-4 h-4 text-gray-600" />
@@ -372,10 +384,16 @@ export default function B2BPage() {
                             <Button
                               size="sm"
                               variant="ghost"
-                              onClick={(e) => {
+                              onClick={async (e) => {
                                 e.stopPropagation();
-                                setEditingSale(sale);
-                                setShowSaleModal(true);
+                                try {
+                                  const fullSale = await fetchB2BSaleById(sale.id);
+                                  setEditingSale(fullSale);
+                                  setShowSaleModal(true);
+                                } catch (error) {
+                                  console.error("Error fetching sale details:", error);
+                                  toast.error(t("errors.fetch_failed"));
+                                }
                               }}
                             >
                               <Edit2 className="w-4 h-4 text-gray-600" />
@@ -508,18 +526,26 @@ export default function B2BPage() {
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => {
-                    if (selectedType === 'offer') {
-                      setEditingOffer(selectedItem as B2BOffer);
-                      setShowOfferModal(true);
-                    } else if (selectedType === 'distribution') {
-                      setEditingDistribution(selectedItem as B2BDistribution);
-                      setShowDistributionModal(true);
-                    } else if (selectedType === 'sale') {
-                      setEditingSale(selectedItem as B2BSale);
-                      setShowSaleModal(true);
+                  onClick={async () => {
+                    try {
+                      if (selectedType === 'offer') {
+                        const fullOffer = await fetchB2BOfferById(selectedItem.id);
+                        setEditingOffer(fullOffer);
+                        setShowOfferModal(true);
+                      } else if (selectedType === 'distribution') {
+                        const fullDistribution = await fetchB2BDistributionById(selectedItem.id);
+                        setEditingDistribution(fullDistribution);
+                        setShowDistributionModal(true);
+                      } else if (selectedType === 'sale') {
+                        const fullSale = await fetchB2BSaleById(selectedItem.id);
+                        setEditingSale(fullSale);
+                        setShowSaleModal(true);
+                      }
+                      setSheetOpen(false);
+                    } catch (error) {
+                      console.error("Error fetching details:", error);
+                      toast.error(t("errors.fetch_failed"));
                     }
-                    setSheetOpen(false);
                   }}
                 >
                   <Edit2 className="h-4 w-4 ml-1" />

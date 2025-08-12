@@ -10,11 +10,11 @@ class Supplier(models.Model):
     
     # corporate
     company_name = models.CharField(max_length=200, blank=True)
-    national_id = models.CharField(max_length=11, blank=True, unique=True)
+    national_id = models.CharField(max_length=11, blank=True, null=True, unique=True)
     
     # indicidual
     full_name = models.CharField(max_length=100, blank=True)
-    personal_code = models.CharField(max_length=10, blank=True, unique=True)
+    personal_code = models.CharField(max_length=10, blank=True, null=True, unique=True)
     
     
     economic_code = models.CharField(max_length=20, unique=True)
@@ -38,11 +38,11 @@ class Customer(BaseParty):
     
     # corporate
     company_name = models.CharField(max_length=200, blank=True)
-    national_id = models.CharField(max_length=11, blank=True, unique=True)
+    national_id = models.CharField(max_length=11, blank=True, null=True, unique=True)
     
     # indicidual
     full_name = models.CharField(max_length=100, blank=True)
-    personal_code = models.CharField(max_length=10, blank=True, unique=True)
+    personal_code = models.CharField(max_length=10, blank=True, null=True, unique=True)
     
     
     economic_code = models.CharField(max_length=20, unique=True)
@@ -67,11 +67,11 @@ class Receiver(BaseParty):
     
     # corporate
     company_name = models.CharField(max_length=200, blank=True)
-    national_id = models.CharField(max_length=11, blank=True, unique=True)
+    national_id = models.CharField(max_length=11, blank=True, null=True, unique=True)
     
     # indicidual
     full_name = models.CharField(max_length=100, blank=True)
-    personal_code = models.CharField(max_length=10, blank=True, unique=True)
+    personal_code = models.CharField(max_length=10, blank=True, null=True, unique=True)
     
     
     economic_code = models.CharField(max_length=20, unique=True)

@@ -26,7 +26,8 @@ type B2BOfferFormData = {
   warehouse_receipt: number;
   offer_weight: number;
   unit_price: number;
-  status: 'Active' | 'Pending' | 'Sold' | 'Expired';
+  status: 'active' | 'pending' | 'sold' | 'expired' | 'draft' | 'cancelled';
+  offer_type?: 'cash' | 'credit' | 'agreement';
   offer_date: string;
   offer_exp_date: string;
   description?: string;
@@ -69,7 +70,8 @@ export function B2BOfferModal({ trigger, onSubmit, onClose, initialData }: B2BOf
     warehouse_receipt: z.number().min(1, tval("warehouse-receipt")),
     offer_weight: z.number().positive(tval("offer-weight")),
     unit_price: z.number().positive(tval("unit-price")),
-    status: z.enum(['Active', 'Pending', 'Sold', 'Expired']),
+    status: z.enum(['active', 'pending', 'sold', 'expired', 'draft', 'cancelled']),
+    offer_type: z.enum(['cash', 'credit', 'agreement']).optional(),
     offer_date: z.string().min(1, tval("offer-date")),
     offer_exp_date: z.string().min(1, tval("offer-exp-date")),
     description: z.string().optional(),
@@ -85,7 +87,8 @@ export function B2BOfferModal({ trigger, onSubmit, onClose, initialData }: B2BOf
       warehouse_receipt: initialData?.warehouse_receipt || 0,
       offer_weight: initialData?.offer_weight || 0,
       unit_price: initialData?.unit_price || 0,
-      status: initialData?.status || 'Pending',
+      status: initialData?.status || 'pending',
+      offer_type: initialData?.offer_type || 'cash',
       offer_date: initialData?.offer_date || "",
       offer_exp_date: initialData?.offer_exp_date || "",
       description: initialData?.description || "",
@@ -155,10 +158,35 @@ export function B2BOfferModal({ trigger, onSubmit, onClose, initialData }: B2BOf
                         <SelectValue placeholder={t("select-status")} />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="Active">{t("status-active")}</SelectItem>
-                        <SelectItem value="Pending">{t("status-pending")}</SelectItem>
-                        <SelectItem value="Sold">{t("status-sold")}</SelectItem>
-                        <SelectItem value="Expired">{t("status-expired")}</SelectItem>
+                        <SelectItem value="draft">پیش نویس</SelectItem>
+                        <SelectItem value="pending">در انتظار</SelectItem>
+                        <SelectItem value="active">فعال</SelectItem>
+                        <SelectItem value="sold">فروخته شده</SelectItem>
+                        <SelectItem value="expired">منقضی شده</SelectItem>
+                        <SelectItem value="cancelled">لغو شده</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="offer_type"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>نوع پیشنهاد</FormLabel>
+                    <Select value={field.value} onValueChange={field.onChange}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="انتخاب نوع پیشنهاد" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="cash">نقدی</SelectItem>
+                        <SelectItem value="credit">اعتباری</SelectItem>
+                        <SelectItem value="agreement">قراردادی</SelectItem>
                       </SelectContent>
                     </Select>
                     <FormMessage />

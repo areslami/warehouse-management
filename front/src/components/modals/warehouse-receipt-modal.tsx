@@ -83,7 +83,7 @@ export function WarehouseReceiptModal({ trigger, onSubmit, onClose, initialData 
     warehouse: z.number().min(1, tval("warehouse")),
     description: z.string().optional(),
     cottage_serial_number: z.string().optional(),
-    proforma: z.number().min(1).optional().or(z.literal(undefined)),
+    proforma: z.number().positive().optional(),
     items: z.array(receiptItemSchema).min(1, tval("items")),
   });
 
@@ -294,7 +294,7 @@ export function WarehouseReceiptModal({ trigger, onSubmit, onClose, initialData 
                     <FormLabel>{t("proforma")}</FormLabel>
                     <FormControl>
                       <Select
-                        value={field.value?.toString() || ""}
+                        value={field.value !== undefined && field.value !== null && field.value > 0 ? field.value.toString() : "none"}
                         onValueChange={(value) => {
                           if (value === "new") {
                             openModal(PurchaseProformaModal, {

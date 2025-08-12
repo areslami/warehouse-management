@@ -23,6 +23,10 @@ export async function fetchB2BOffers(): Promise<B2BOffer[]> {
   return fetchWithAuth(`${API_BASE_URL}offers/`);
 }
 
+export async function fetchB2BOfferById(id: number): Promise<B2BOffer> {
+  return fetchWithAuth(`${API_BASE_URL}offers/${id}/`);
+}
+
 export async function createB2BOffer(offer: Partial<B2BOffer>): Promise<B2BOffer> {
   return fetchWithAuth(`${API_BASE_URL}offers/`, {
     method: 'POST',
@@ -46,6 +50,10 @@ export async function deleteB2BOffer(id: number): Promise<void> {
 // B2B Sale APIs
 export async function fetchB2BSales(): Promise<B2BSale[]> {
   return fetchWithAuth(`${API_BASE_URL}sales/`);
+}
+
+export async function fetchB2BSaleById(id: number): Promise<B2BSale> {
+  return fetchWithAuth(`${API_BASE_URL}sales/${id}/`);
 }
 
 export async function createB2BSale(sale: Partial<B2BSale>): Promise<B2BSale> {
@@ -96,6 +104,10 @@ export async function deleteB2BPurchase(id: number): Promise<void> {
 // B2B Distribution APIs
 export async function fetchB2BDistributions(): Promise<B2BDistribution[]> {
   return fetchWithAuth(`${API_BASE_URL}distributions/`);
+}
+
+export async function fetchB2BDistributionById(id: number): Promise<B2BDistribution> {
+  return fetchWithAuth(`${API_BASE_URL}distributions/${id}/`);
 }
 
 export async function createB2BDistribution(distribution: Partial<B2BDistribution>): Promise<B2BDistribution> {

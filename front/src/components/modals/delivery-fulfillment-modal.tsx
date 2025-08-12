@@ -24,6 +24,9 @@ import { SalesProformaModal } from "./salesproforma-modal";
 import { createWarehouse } from "@/lib/api/warehouse";
 import { createProduct, createReceiver, createShippingCompany } from "@/lib/api/core";
 import { createSalesProforma } from "@/lib/api/finance";
+import { ShippingCompany, Product, Receiver } from "@/lib/interfaces/core";
+import { Warehouse } from "@/lib/interfaces/warehouse";
+import { SalesProformaCreate } from "@/lib/interfaces/finance";
 
 type DeliveryFulfillmentFormData = {
   delivery_id: string;
@@ -189,8 +192,8 @@ export function DeliveryFulfillmentModal({ trigger, onSubmit, onClose, initialDa
                           onValueChange={(value) => {
                             if (value === "new") {
                               openModal(WarehouseModal, {
-                                onSubmit: async (newWarehouse: any) => {
-                                  const created = await createWarehouse(newWarehouse);
+                                onSubmit: async (newWarehouse: unknown) => {
+                                  const created = await createWarehouse(newWarehouse as Omit<Warehouse, 'id' | 'created_at' | 'updated_at'>);
                                   if (created) {
                                     await refreshData('warehouses');
                                     form.setValue('warehouse', created.id);
@@ -244,8 +247,8 @@ export function DeliveryFulfillmentModal({ trigger, onSubmit, onClose, initialDa
                           onValueChange={(value) => {
                             if (value === "new") {
                               openModal(SalesProformaModal, {
-                                onSubmit: async (newProforma: any) => {
-                                  const created = await createSalesProforma(newProforma);
+                                onSubmit: async (newProforma: unknown) => {
+                                  const created = await createSalesProforma(newProforma as SalesProformaCreate);
                                   if (created) {
                                     await refreshData('salesProformas');
                                     form.setValue('sales_proforma', created.id);
@@ -297,8 +300,8 @@ export function DeliveryFulfillmentModal({ trigger, onSubmit, onClose, initialDa
                           onValueChange={(value) => {
                             if (value === "new") {
                               openModal(ShippingCompanyModal, {
-                                onSubmit: async (newCompany: any) => {
-                                  const created = await createShippingCompany(newCompany);
+                                onSubmit: async (newCompany: unknown) => {
+                                  const created = await createShippingCompany(newCompany as Omit<ShippingCompany, 'id' | 'created_at' | 'updated_at'>);
                                   if (created) {
                                     await refreshData('shippingCompanies');
                                     form.setValue('shipping_company', created.id);
@@ -453,8 +456,8 @@ export function DeliveryFulfillmentModal({ trigger, onSubmit, onClose, initialDa
                                 if (value === "new") {
                                   const currentIndex = index;
                                   openModal(ProductModal, {
-                                    onSubmit: async (newProduct: any) => {
-                                      const created = await createProduct(newProduct);
+                                    onSubmit: async (newProduct: unknown) => {
+                                      const created = await createProduct(newProduct as Omit<Product, 'id' | 'created_at' | 'updated_at'>);
                                       if (created) {
                                         await refreshData('products');
                                         const items = form.getValues('items');
@@ -548,8 +551,8 @@ export function DeliveryFulfillmentModal({ trigger, onSubmit, onClose, initialDa
                                 if (value === "new") {
                                   const currentIndex = index;
                                   openModal(ReceiverModal, {
-                                    onSubmit: async (newReceiver: any) => {
-                                      const created = await createReceiver(newReceiver);
+                                    onSubmit: async (newReceiver: unknown) => {
+                                      const created = await createReceiver(newReceiver as Omit<Receiver, 'id' | 'created_at' | 'updated_at'>);
                                       if (created) {
                                         await refreshData('receivers');
                                         const items = form.getValues('items');

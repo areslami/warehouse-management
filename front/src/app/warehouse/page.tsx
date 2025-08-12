@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { Plus, Edit2, Trash2, Package, FileText, Truck, Search } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
@@ -13,13 +13,15 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { WarehouseReceiptModal } from "@/components/modals/warehouse-receipt-modal";
 import { DispatchIssueModal } from "@/components/modals/dispatch-issue-modal";
 import { DeliveryFulfillmentModal } from "@/components/modals/delivery-fulfillment-modal";
+import { WarehouseModal } from "@/components/modals/warehouse-modal";
 import { useCoreData } from "@/lib/core-data-context";
 import { 
-  fetchWarehouseReceipts, createWarehouseReceipt, updateWarehouseReceipt, deleteWarehouseReceipt,
-  fetchDispatchIssues, createDispatchIssue, updateDispatchIssue, deleteDispatchIssue,
-  fetchDeliveryFulfillments, createDeliveryFulfillment, updateDeliveryFulfillment, deleteDeliveryFulfillment
+  fetchWarehouseReceipts, fetchWarehouseReceiptById, createWarehouseReceipt, updateWarehouseReceipt, deleteWarehouseReceipt,
+  fetchDispatchIssues, fetchDispatchIssueById, createDispatchIssue, updateDispatchIssue, deleteDispatchIssue,
+  fetchDeliveryFulfillments, fetchDeliveryFulfillmentById, createDeliveryFulfillment, updateDeliveryFulfillment, deleteDeliveryFulfillment,
+  createWarehouse, updateWarehouse, deleteWarehouse
 } from "@/lib/api/warehouse";
-import { WarehouseReceipt, DispatchIssue, DeliveryFulfillment } from "@/lib/interfaces/warehouse";
+import { Warehouse, WarehouseReceipt, DispatchIssue, DeliveryFulfillment } from "@/lib/interfaces/warehouse";
 import { translateReceiptType } from "@/lib/utils/translations";
 
 export default function WarehousePage() {
@@ -33,10 +35,12 @@ export default function WarehousePage() {
   const [showReceiptModal, setShowReceiptModal] = useState(false);
   const [showDispatchModal, setShowDispatchModal] = useState(false);
   const [showDeliveryModal, setShowDeliveryModal] = useState(false);
+  const [showWarehouseModal, setShowWarehouseModal] = useState(false);
   
   const [editingReceipt, setEditingReceipt] = useState<WarehouseReceipt | null>(null);
   const [editingDispatch, setEditingDispatch] = useState<DispatchIssue | null>(null);
   const [editingDelivery, setEditingDelivery] = useState<DeliveryFulfillment | null>(null);
+  const [editingWarehouse, setEditingWarehouse] = useState<Warehouse | null>(null);
   
   const [sheetOpen, setSheetOpen] = useState(false);
   const [selectedItem, setSelectedItem] = useState<WarehouseReceipt | DispatchIssue | DeliveryFulfillment | null>(null);
@@ -45,25 +49,25 @@ export default function WarehousePage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedWarehouse, setSelectedWarehouse] = useState<string>("all");
 
-  useEffect(() => {
-    loadData();
-  }, []);
-
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     try {
       const [receiptsData, dispatchesData, deliveriesData] = await Promise.all([
         fetchWarehouseReceipts(),
         fetchDispatchIssues(),
         fetchDeliveryFulfillments()
       ]);
-      setReceipts(receiptsData);
-      setDispatches(dispatchesData);
-      setDeliveries(deliveriesData);
+      setReceipts(receiptsData || []);
+      setDispatches(dispatchesData || []);
+      setDeliveries(deliveriesData || []);
     } catch (error) {
       console.error("Error loading data:", error);
       toast.error(t("errors.fetch_failed"));
     }
-  };
+  }, [t]);
+
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
 
   const handleRowClick = (item: WarehouseReceipt | DispatchIssue | DeliveryFulfillment, type: 'receipt' | 'dispatch' | 'delivery') => {
     setSelectedItem(item);
@@ -109,10 +113,23 @@ export default function WarehousePage() {
       }
     }
   };
+
+  const handleDeleteWarehouse = async (id: number) => {
+    if (confirm(t("confirm_delete_warehouse"))) {
+      try {
+        await deleteWarehouse(id);
+        toast.success(t("errors.success_delete"));
+        refreshCoreData('warehouses');
+      } catch (error) {
+        console.error("Error deleting warehouse:", error);
+        toast.error(t("errors.delete_failed"));
+      }
+    }
+  };
   
   const filteredReceipts = useMemo(() => {
     return receipts.filter(receipt => {
-      const matchesSearch = receipt.receipt_id.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      const matchesSearch = (receipt.receipt_id || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
         new Date(receipt.date).toLocaleDateString('fa-IR').includes(searchTerm);
       const matchesWarehouse = selectedWarehouse === "all" || receipt.warehouse === parseInt(selectedWarehouse);
       return matchesSearch && matchesWarehouse;
@@ -121,7 +138,7 @@ export default function WarehousePage() {
   
   const filteredDispatches = useMemo(() => {
     return dispatches.filter(dispatch => {
-      const matchesSearch = dispatch.dispatch_id.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      const matchesSearch = (dispatch.dispatch_id || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
         new Date(dispatch.issue_date).toLocaleDateString('fa-IR').includes(searchTerm);
       const matchesWarehouse = selectedWarehouse === "all" || dispatch.warehouse === parseInt(selectedWarehouse);
       return matchesSearch && matchesWarehouse;
@@ -130,7 +147,7 @@ export default function WarehousePage() {
   
   const filteredDeliveries = useMemo(() => {
     return deliveries.filter(delivery => {
-      const matchesSearch = delivery.delivery_id.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      const matchesSearch = (delivery.delivery_id || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
         new Date(delivery.issue_date).toLocaleDateString('fa-IR').includes(searchTerm);
       const matchesWarehouse = selectedWarehouse === "all" || delivery.warehouse === parseInt(selectedWarehouse);
       return matchesSearch && matchesWarehouse;
@@ -163,7 +180,10 @@ export default function WarehousePage() {
               </Select>
               <Button
                 className="bg-[#f6d265] hover:bg-[#f5c842] text-black"
-                onClick={() => toast.info(t("add_warehouse_message"))}
+                onClick={() => {
+                  setEditingWarehouse(null);
+                  setShowWarehouseModal(true);
+                }}
               >
                 <Plus className="w-4 h-4 ml-1" />
                 {t("add_warehouse")}
@@ -188,7 +208,10 @@ export default function WarehousePage() {
                         <Button
                           variant="outline"
                           size="sm"
-                          onClick={() => toast.info(`${t("edit_warehouse")}: ${warehouse.name}`)}
+                          onClick={() => {
+                            setEditingWarehouse(warehouse);
+                            setShowWarehouseModal(true);
+                          }}
                         >
                           <Edit2 className="h-4 w-4 ml-1" />
                           {t("edit_warehouse")}
@@ -197,11 +220,7 @@ export default function WarehousePage() {
                           variant="outline"
                           size="sm"
                           className="text-red-600 hover:bg-red-50"
-                          onClick={() => {
-                            if (confirm(t("confirm_delete_warehouse"))) {
-                              toast.info(`${t("delete_warehouse")}: ${warehouse.name}`);
-                            }
-                          }}
+                          onClick={() => handleDeleteWarehouse(warehouse.id)}
                         >
                           <Trash2 className="h-4 w-4 ml-1" />
                           {t("delete_warehouse")}
@@ -269,10 +288,16 @@ export default function WarehousePage() {
                   <TableRow key={receipt.id} className="cursor-pointer hover:bg-gray-50" onClick={() => handleRowClick(receipt, 'receipt')}>
                     <TableCell>
                       <div className="flex gap-2 justify-center">
-                        <Button size="sm" variant="ghost" onClick={(e) => {
+                        <Button size="sm" variant="ghost" onClick={async (e) => {
                           e.stopPropagation();
-                          setEditingReceipt(receipt);
-                          setShowReceiptModal(true);
+                          try {
+                            const fullReceipt = await fetchWarehouseReceiptById(receipt.id);
+                            setEditingReceipt(fullReceipt);
+                            setShowReceiptModal(true);
+                          } catch (error) {
+                            console.error("Error fetching receipt details:", error);
+                            toast.error(t("errors.fetch_failed"));
+                          }
                         }}>
                           <Edit2 className="w-4 h-4" />
                         </Button>
@@ -322,10 +347,16 @@ export default function WarehousePage() {
                   <TableRow key={dispatch.id} className="cursor-pointer hover:bg-gray-50" onClick={() => handleRowClick(dispatch, 'dispatch')}>
                     <TableCell>
                       <div className="flex gap-2 justify-center">
-                        <Button size="sm" variant="ghost" onClick={(e) => {
+                        <Button size="sm" variant="ghost" onClick={async (e) => {
                           e.stopPropagation();
-                          setEditingDispatch(dispatch);
-                          setShowDispatchModal(true);
+                          try {
+                            const fullDispatch = await fetchDispatchIssueById(dispatch.id);
+                            setEditingDispatch(fullDispatch);
+                            setShowDispatchModal(true);
+                          } catch (error) {
+                            console.error("Error fetching dispatch details:", error);
+                            toast.error(t("errors.fetch_failed"));
+                          }
                         }}>
                           <Edit2 className="w-4 h-4" />
                         </Button>
@@ -375,10 +406,16 @@ export default function WarehousePage() {
                   <TableRow key={delivery.id} className="cursor-pointer hover:bg-gray-50" onClick={() => handleRowClick(delivery, 'delivery')}>
                     <TableCell>
                       <div className="flex gap-2 justify-center">
-                        <Button size="sm" variant="ghost" onClick={(e) => {
+                        <Button size="sm" variant="ghost" onClick={async (e) => {
                           e.stopPropagation();
-                          setEditingDelivery(delivery);
-                          setShowDeliveryModal(true);
+                          try {
+                            const fullDelivery = await fetchDeliveryFulfillmentById(delivery.id);
+                            setEditingDelivery(fullDelivery);
+                            setShowDeliveryModal(true);
+                          } catch (error) {
+                            console.error("Error fetching delivery details:", error);
+                            toast.error(t("errors.fetch_failed"));
+                          }
                         }}>
                           <Edit2 className="w-4 h-4" />
                         </Button>
@@ -417,18 +454,26 @@ export default function WarehousePage() {
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => {
-                    if (selectedType === 'receipt') {
-                      setEditingReceipt(selectedItem as WarehouseReceipt);
-                      setShowReceiptModal(true);
-                    } else if (selectedType === 'dispatch') {
-                      setEditingDispatch(selectedItem as DispatchIssue);
-                      setShowDispatchModal(true);
-                    } else if (selectedType === 'delivery') {
-                      setEditingDelivery(selectedItem as DeliveryFulfillment);
-                      setShowDeliveryModal(true);
+                  onClick={async () => {
+                    try {
+                      if (selectedType === 'receipt') {
+                        const fullReceipt = await fetchWarehouseReceiptById(selectedItem.id);
+                        setEditingReceipt(fullReceipt);
+                        setShowReceiptModal(true);
+                      } else if (selectedType === 'dispatch') {
+                        const fullDispatch = await fetchDispatchIssueById(selectedItem.id);
+                        setEditingDispatch(fullDispatch);
+                        setShowDispatchModal(true);
+                      } else if (selectedType === 'delivery') {
+                        const fullDelivery = await fetchDeliveryFulfillmentById(selectedItem.id);
+                        setEditingDelivery(fullDelivery);
+                        setShowDeliveryModal(true);
+                      }
+                      setSheetOpen(false);
+                    } catch (error) {
+                      console.error("Error fetching details:", error);
+                      toast.error(t("errors.fetch_failed"));
                     }
-                    setSheetOpen(false);
                   }}
                 >
                   <Edit2 className="h-4 w-4 ml-1" />
@@ -468,13 +513,13 @@ export default function WarehousePage() {
               <div className="mt-6 space-y-4 p-4 bg-gray-50 rounded-lg">
               {selectedType === 'receipt' && (
                 <>
-                  <div><strong>شناسه رسید:</strong> {selectedItem.receipt_id}</div>
-                  <div><strong>تاریخ:</strong> {new Date(selectedItem.date).toLocaleDateString('fa-IR')}</div>
+                  <div><strong>شناسه رسید:</strong> {(selectedItem as WarehouseReceipt).receipt_id}</div>
+                  <div><strong>تاریخ:</strong> {new Date((selectedItem as WarehouseReceipt).date).toLocaleDateString('fa-IR')}</div>
                   <div><strong>انبار:</strong> {warehouses.find(w => w.id === selectedItem.warehouse)?.name}</div>
                   <div><strong>وزن کل:</strong> {selectedItem.total_weight} کیلوگرم</div>
-                  <div><strong>نوع رسید:</strong> {translateReceiptType(selectedItem.receipt_type)}</div>
+                  <div><strong>نوع رسید:</strong> {translateReceiptType((selectedItem as WarehouseReceipt).receipt_type)}</div>
                   {selectedItem.description && <div><strong>توضیحات:</strong> {selectedItem.description}</div>}
-                  {selectedItem.items?.length > 0 && (
+                  {(selectedItem as WarehouseReceipt).items?.length > 0 && (
                     <div>
                       <strong>اقلام:</strong>
                       <ul className="mt-2 space-y-2">
@@ -491,9 +536,9 @@ export default function WarehousePage() {
               )}
               {selectedType === 'dispatch' && (
                 <>
-                  <div><strong>شناسه حواله:</strong> {selectedItem.dispatch_id}</div>
-                  <div><strong>تاریخ صدور:</strong> {new Date(selectedItem.issue_date).toLocaleDateString('fa-IR')}</div>
-                  <div><strong>تاریخ اعتبار:</strong> {new Date(selectedItem.validity_date).toLocaleDateString('fa-IR')}</div>
+                  <div><strong>شناسه حواله:</strong> {(selectedItem as DispatchIssue).dispatch_id}</div>
+                  <div><strong>تاریخ صدور:</strong> {new Date((selectedItem as DispatchIssue).issue_date).toLocaleDateString('fa-IR')}</div>
+                  <div><strong>تاریخ اعتبار:</strong> {new Date((selectedItem as DispatchIssue).validity_date).toLocaleDateString('fa-IR')}</div>
                   <div><strong>انبار:</strong> {warehouses.find(w => w.id === selectedItem.warehouse)?.name}</div>
                   <div><strong>وزن کل:</strong> {selectedItem.total_weight} کیلوگرم</div>
                   {selectedItem.description && <div><strong>توضیحات:</strong> {selectedItem.description}</div>}
@@ -501,14 +546,14 @@ export default function WarehousePage() {
               )}
               {selectedType === 'delivery' && (
                 <>
-                  <div><strong>شناسه تحویل:</strong> {selectedItem.delivery_id}</div>
-                  <div><strong>تاریخ صدور:</strong> {new Date(selectedItem.issue_date).toLocaleDateString('fa-IR')}</div>
-                  <div><strong>تاریخ اعتبار:</strong> {new Date(selectedItem.validity_date).toLocaleDateString('fa-IR')}</div>
+                  <div><strong>شناسه تحویل:</strong> {(selectedItem as DeliveryFulfillment).delivery_id}</div>
+                  <div><strong>تاریخ صدور:</strong> {new Date((selectedItem as DeliveryFulfillment).issue_date).toLocaleDateString('fa-IR')}</div>
+                  <div><strong>تاریخ اعتبار:</strong> {new Date((selectedItem as DeliveryFulfillment).validity_date).toLocaleDateString('fa-IR')}</div>
                   <div><strong>انبار:</strong> {warehouses.find(w => w.id === selectedItem.warehouse)?.name}</div>
-                  <div><strong>شرکت حمل:</strong> {selectedItem.shipping_company_name || selectedItem.shipping_company}</div>
-                  <div><strong>پیش‌فاکتور فروش:</strong> {selectedItem.sales_proforma_serial || selectedItem.sales_proforma}</div>
+                  <div><strong>شرکت حمل:</strong> {(selectedItem as DeliveryFulfillment).shipping_company_name || (selectedItem as DeliveryFulfillment).shipping_company}</div>
+                  <div><strong>پیش‌فاکتور فروش:</strong> {(selectedItem as DeliveryFulfillment).sales_proforma_serial || (selectedItem as DeliveryFulfillment).sales_proforma}</div>
                   <div><strong>وزن کل:</strong> {selectedItem.total_weight} کیلوگرم</div>
-                  <div><strong>تعداد اقلام:</strong> {selectedItem.items?.length || 0}</div>
+                  <div><strong>تعداد اقلام:</strong> {(selectedItem as DeliveryFulfillment).items?.length || 0}</div>
                   {selectedItem.description && <div><strong>توضیحات:</strong> {selectedItem.description}</div>}
                 </>
               )}
@@ -520,7 +565,12 @@ export default function WarehousePage() {
 
       {showReceiptModal && (
         <WarehouseReceiptModal
-          initialData={editingReceipt || undefined}
+          initialData={editingReceipt ? {
+            ...editingReceipt,
+            receipt_id: editingReceipt.receipt_id || undefined,
+            cottage_serial_number: editingReceipt.cottage_serial_number || undefined,
+            proforma: editingReceipt.proforma || undefined
+          } : undefined}
           onSubmit={async (data) => {
             try {
               // Clean the data - remove empty strings and undefined values for optional fields
@@ -559,11 +609,19 @@ export default function WarehousePage() {
           initialData={editingDispatch || undefined}
           onSubmit={async (data) => {
             try {
+              // Calculate total weight from items
+              const totalWeight = data.items.reduce((sum, item) => sum + item.weight, 0);
+              const submitData = { 
+                ...data, 
+                total_weight: totalWeight,
+                description: data.description || ""
+              };
+              
               if (editingDispatch) {
-                await updateDispatchIssue(editingDispatch.id, data);
+                await updateDispatchIssue(editingDispatch.id, submitData);
                 toast.success(t("errors.success_update"));
               } else {
-                await createDispatchIssue(data);
+                await createDispatchIssue(submitData);
                 toast.success(t("errors.success_create"));
               }
               await loadData();
@@ -586,11 +644,19 @@ export default function WarehousePage() {
           initialData={editingDelivery || undefined}
           onSubmit={async (data) => {
             try {
+              // Calculate total weight from items
+              const totalWeight = data.items.reduce((sum, item) => sum + item.weight, 0);
+              const submitData = { 
+                ...data, 
+                total_weight: totalWeight,
+                description: data.description || ""
+              };
+              
               if (editingDelivery) {
-                await updateDeliveryFulfillment(editingDelivery.id, data);
+                await updateDeliveryFulfillment(editingDelivery.id, submitData);
                 toast.success(t("errors.success_update"));
               } else {
-                await createDeliveryFulfillment(data);
+                await createDeliveryFulfillment(submitData);
                 toast.success(t("errors.success_create"));
               }
               await loadData();
@@ -604,6 +670,37 @@ export default function WarehousePage() {
           onClose={() => {
             setShowDeliveryModal(false);
             setEditingDelivery(null);
+          }}
+        />
+      )}
+
+      {showWarehouseModal && (
+        <WarehouseModal
+          initialData={editingWarehouse || undefined}
+          onSubmit={async (data) => {
+            try {
+              if (editingWarehouse) {
+                await updateWarehouse(editingWarehouse.id, data);
+                toast.success(t("errors.success_update"));
+              } else {
+                const warehouseData = {
+                  ...data,
+                  description: data.description || ""
+                };
+                await createWarehouse(warehouseData);
+                toast.success(t("errors.success_create"));
+              }
+              await refreshCoreData('warehouses');
+              setShowWarehouseModal(false);
+              setEditingWarehouse(null);
+            } catch (error) {
+              console.error("Error saving warehouse:", error);
+              toast.error(editingWarehouse ? t("errors.update_failed") : t("errors.create_failed"));
+            }
+          }}
+          onClose={() => {
+            setShowWarehouseModal(false);
+            setEditingWarehouse(null);
           }}
         />
       )}
