@@ -90,7 +90,7 @@ export function PurchaseProformaTab() {
           ) : (
             data.purchaseProformas.map((proforma) => (
               <TableRow key={proforma.id}>
-                <TableCell className="font-medium">{proforma.serialnumber}</TableCell>
+                <TableCell className="font-medium">{proforma.serial_number}</TableCell>
                 <TableCell>{proforma.supplier_display || proforma.supplier}</TableCell>
                 <TableCell>{proforma.date}</TableCell>
                 <TableCell>{proforma.total_amount || '-'}</TableCell>

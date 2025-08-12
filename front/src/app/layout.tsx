@@ -1,4 +1,4 @@
-import { SidebarProvider } from "@/components/ui/sidebar"
+import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar"
 import { AppSidebar } from "@/components/app-sidebar"
 import { NextIntlClientProvider } from "next-intl"
 import fa from "@/messages/fa.json"
@@ -24,6 +24,9 @@ export default function Layout({ children }: { children: React.ReactNode }) {
               <SidebarProvider>
                 <AppSidebar />
                 <main className="p-5 pt-[5vh] w-full">
+                  <div className="flex items-center gap-2 mb-4">
+                    <SidebarTrigger />
+                  </div>
                   {children}
                 </main>
               </SidebarProvider>

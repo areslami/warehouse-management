@@ -38,15 +38,7 @@ export default function FinancePage() {
 
   const [searchTerm, setSearchTerm] = useState("");
 
-  const loadDataCallback = useCallback(() => {
-    loadData();
-  }, []);
-  
-  useEffect(() => {
-    loadDataCallback();
-  }, [loadDataCallback]);
-
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     try {
       const [salesData, purchaseData] = await Promise.all([
         fetchSalesProformas(),
@@ -58,7 +50,11 @@ export default function FinancePage() {
       console.error("Error loading data:", error);
       toast.error(t("errors.fetch_failed"));
     }
-  };
+  }, [t]);
+
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
 
   const handleRowClick = (item: SalesProforma | PurchaseProforma, type: 'sales' | 'purchase') => {
     setSelectedItem(item);

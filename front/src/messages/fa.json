@@ -655,12 +655,25 @@
     "unknown_error": "خطای نامشخص",
     "success_create": "با موفقیت ایجاد شد",
     "success_update": "با موفقیت بروزرسانی شد",
-    "success_delete": "با موفقیت حذف شد"
+    "success_delete": "با موفقیت حذف شد",
+    "server_error": "خطا در ارتباط با سرور",
+    "not_found": "موردی یافت نشد",
+    "forbidden": "شما اجازه دسترسی به این بخش را ندارید",
+    "unauthorized": "لطفا ابتدا وارد سیستم شوید",
+    "bad_request": "درخواست نامعتبر",
+    "field_required": "این فیلد الزامی است",
+    "field_blank": "این فیلد نمی‌تواند خالی باشد",
+    "field_unique": "این مقدار قبلا ثبت شده است",
+    "invalid_email": "ایمیل معتبر وارد کنید"
   },
   "common": {
     "search": "جستجو...",
     "filter_warehouse": "فیلتر انبار",
     "all_warehouses": "همه انبارها"
+  },
+  "dashboard": {
+    "title": "داشبورد مدیریت", 
+    "coming_soon": "به زودی..."
   },
   "b2b_page": {
     "title": "بازارگاه",
@@ -704,18 +717,5 @@
     "sale_details": "جزئیات فروش",
     "edit": "ویرایش",
     "delete": "حذف"
-  },
-  "errors": {
-    "server_error": "خطا در ارتباط با سرور",
-    "unknown_error": "خطای نامشخص",
-    "validation_error": "خطا در اعتبارسنجی داده‌ها",
-    "not_found": "موردی یافت نشد",
-    "forbidden": "شما اجازه دسترسی به این بخش را ندارید",
-    "unauthorized": "لطفا ابتدا وارد سیستم شوید",
-    "bad_request": "درخواست نامعتبر",
-    "field_required": "این فیلد الزامی است",
-    "field_blank": "این فیلد نمی‌تواند خالی باشد",
-    "field_unique": "این مقدار قبلا ثبت شده است",
-    "invalid_email": "ایمیل معتبر وارد کنید"
   }
 }

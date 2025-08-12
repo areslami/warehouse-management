@@ -54,7 +54,7 @@ export function DeliveryFulfillmentModal({ trigger, onSubmit, onClose, initialDa
   const tval = useTranslations("deliveryFulfillment.validation");
   const t = useTranslations("deliveryFulfillment");
   const { data, refreshData } = useCoreData();
-  const { openModal, closeModal } = useModal();
+  const { } = useModal();
 
   const [showWarehouseModal, setShowWarehouseModal] = useState(false);
   const [showProductModal, setShowProductModal] = useState(false);
@@ -80,7 +80,7 @@ export function DeliveryFulfillmentModal({ trigger, onSubmit, onClose, initialDa
     if (data.salesProformas.length === 0) {
       refreshData('salesProformas');
     }
-  }, []);
+  }, [data.warehouses.length, data.products.length, data.receivers.length, data.shippingCompanies.length, data.salesProformas.length, refreshData]);
 
   const getTodayDate = () => {
     if (typeof window === 'undefined') return '';
@@ -575,6 +575,7 @@ export function DeliveryFulfillmentModal({ trigger, onSubmit, onClose, initialDa
 
       {showWarehouseModal && (
         <WarehouseModal
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           onSubmit={async (newWarehouse: any) => {
             const created = await createWarehouse(newWarehouse);
             if (created) {
@@ -589,6 +590,7 @@ export function DeliveryFulfillmentModal({ trigger, onSubmit, onClose, initialDa
 
       {showSalesProformaModal && (
         <SalesProformaModal
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           onSubmit={async (newProforma: any) => {
             const created = await createSalesProforma(newProforma);
             if (created) {
@@ -603,6 +605,7 @@ export function DeliveryFulfillmentModal({ trigger, onSubmit, onClose, initialDa
 
       {showShippingCompanyModal && (
         <ShippingCompanyModal
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           onSubmit={async (newCompany: any) => {
             const created = await createShippingCompany(newCompany);
             if (created) {
@@ -617,6 +620,7 @@ export function DeliveryFulfillmentModal({ trigger, onSubmit, onClose, initialDa
 
       {showProductModal && (
         <ProductModal
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           onSubmit={async (newProduct: any) => {
             const created = await createProduct(newProduct);
             if (created) {
@@ -637,6 +641,7 @@ export function DeliveryFulfillmentModal({ trigger, onSubmit, onClose, initialDa
 
       {showReceiverModal && (
         <ReceiverModal
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           onSubmit={async (newReceiver: any) => {
             const created = await createReceiver(newReceiver);
             if (created) {

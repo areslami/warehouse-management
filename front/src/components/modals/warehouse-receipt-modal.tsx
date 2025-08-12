@@ -309,7 +309,7 @@ export function WarehouseReceiptModal({ trigger, onSubmit, onClose, initialData 
                           )}
                           {data.purchaseProformas.map((proforma) => (
                             <SelectItem key={proforma.id} value={proforma.id.toString()}>
-                              {proforma.serialnumber} - {proforma.supplier_display || proforma.supplier}
+                              {proforma.serial_number} - {proforma.supplier_display || proforma.supplier}
                             </SelectItem>
                           ))}
                         </SelectContent>

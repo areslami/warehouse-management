@@ -34,7 +34,9 @@ export function AppSidebar() {
         <Sidebar dir="rtl" side="right" className="m-0 p-0 w-[20%] list-none">
             <SidebarHeader className="m-0 p-0">
                 <SidebarMenuItem className="px-2.5 py-3.5" style={{ backgroundColor: "#f6d265" }}>
-                    <h1 className="font-bold text-white">{t("title")}</h1>
+                    <a href="/" className="block w-full">
+                        <h1 className="font-bold text-white hover:text-gray-200 transition-colors cursor-pointer">{t("title")}</h1>
+                    </a>
                 </SidebarMenuItem>
             </SidebarHeader>
             <SidebarContent className="px-4 py-2.5" style={{ backgroundColor: "#2f323a" }}>

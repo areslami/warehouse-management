@@ -504,9 +504,10 @@ export default function WarehousePage() {
                   <div><strong>تاریخ صدور:</strong> {new Date(selectedItem.issue_date).toLocaleDateString('fa-IR')}</div>
                   <div><strong>تاریخ اعتبار:</strong> {new Date(selectedItem.validity_date).toLocaleDateString('fa-IR')}</div>
                   <div><strong>انبار:</strong> {warehouses.find(w => w.id === selectedItem.warehouse)?.name}</div>
+                  <div><strong>شرکت حمل:</strong> {selectedItem.shipping_company_name || selectedItem.shipping_company}</div>
+                  <div><strong>پیش‌فاکتور فروش:</strong> {selectedItem.sales_proforma_serial || selectedItem.sales_proforma}</div>
                   <div><strong>وزن کل:</strong> {selectedItem.total_weight} کیلوگرم</div>
-                  <div><strong>شناسه محموله:</strong> {selectedItem.shipment_id}</div>
-                  <div><strong>قیمت حمل:</strong> {selectedItem.shipment_price?.toLocaleString()} ریال</div>
+                  <div><strong>تعداد اقلام:</strong> {selectedItem.items?.length || 0}</div>
                   {selectedItem.description && <div><strong>توضیحات:</strong> {selectedItem.description}</div>}
                 </>
               )}
