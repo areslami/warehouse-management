@@ -399,10 +399,12 @@
   },
   "warehouse_page": {
     "title": "انبار",
+    "warehouse_selection": "انتخاب انبار",
     "select_warehouse_label": "انتخاب انبار",
     "select_warehouse_placeholder": "لطفا انبار مورد نظر را انتخاب کنید",
     "all_warehouses": "همه انبارها",
     "add_warehouse": "افزودن انبار",
+    "add_warehouse_message": "قابلیت افزودن انبار جدید به زودی...",
     "edit_warehouse": "ویرایش",
     "delete_warehouse": "حذف",
     "confirm_delete_warehouse": "آیا از حذف این انبار اطمینان دارید؟",
@@ -410,10 +412,13 @@
     "warehouse_manager": "مدیر",
     "warehouse_phone": "تلفن",
     "warehouse_description": "توضیحات",
-    "receipts_tab": " رسید انبار",
-    "issue_tab": " صدور حواله",
-    "fullfilment_tab": " تحویل کالا",
+    "edit": "ویرایش",
+    "delete": "حذف",
+    "receipts_tab": "رسید انبار",
+    "issue_tab": "صدور حواله",
+    "fullfilment_tab": "تحویل کالا",
     "receipts": {
+      "details": "جزئیات رسید انبار",
       "title": "گزارش رسیدها",
       "table": {
         "id": "ردیف",
@@ -436,6 +441,7 @@
       "no_receipts": "هیچ رسیدی یافت نشد"
     },
     "issues": {
+      "details": "جزئیات حواله",
       "title": "گزارش حواله‌ها",
       "table": {
         "id": "ردیف",
@@ -455,6 +461,7 @@
       "search_placeholder": "جستجو در حواله‌ها..."
     },
     "deliveries": {
+      "details": "جزئیات تحویل",
       "title": "گزارش تحویل‌ها",
       "table": {
         "id": "ردیف",
@@ -481,7 +488,35 @@
     "invoice": "فاکتور",
     "sales_proforma_tab": "پیش‌فاکتور فروش",
     "purchase_proforma_tab": "پیش‌فاکتور خرید",
-    "invoice_coming_soon": "بخش فاکتور به زودی راه‌اندازی می‌شود..."
+    "sales_invoice_tab": "فاکتور فروش",
+    "purchase_invoice_tab": "فاکتور خرید",
+    "invoice_coming_soon": "بخش فاکتور به زودی راه‌اندازی می‌شود...",
+    "search": "جستجو در پیش‌فاکتورها...",
+    "edit": "ویرایش",
+    "delete": "حذف",
+    "sales": {
+      "title": "پیش‌فاکتورهای فروش",
+      "details": "جزئیات پیش‌فاکتور فروش",
+      "add_proforma": "افزودن پیش‌فاکتور",
+      "serial_number": "شماره سریال",
+      "customer": "مشتری",
+      "date": "تاریخ",
+      "total_amount": "مبلغ کل",
+      "payment_type": "نوع پرداخت",
+      "operations": "عملیات",
+      "confirm_delete": "آیا از حذف این پیش‌فاکتور اطمینان دارید؟"
+    },
+    "purchase": {
+      "title": "پیش‌فاکتورهای خرید",
+      "details": "جزئیات پیش‌فاکتور خرید",
+      "add_proforma": "افزودن پیش‌فاکتور",
+      "serial_number": "شماره سریال",
+      "supplier": "تامین کننده",
+      "date": "تاریخ",
+      "total_amount": "مبلغ کل",
+      "operations": "عملیات",
+      "confirm_delete": "آیا از حذف این پیش‌فاکتور اطمینان دارید؟"
+    }
   },
   "products_page": {
     "title": "محصولات",
@@ -500,6 +535,7 @@
   },
   "parties_page": {
     "title": "اشخاص",
+    "search": "جستجو در اشخاص...",
     "suppliers": "تامین کنندگان",
     "customers": "مشتریان",
     "receivers": "تحویل گیرندگان",
@@ -516,7 +552,9 @@
     "confirm_delete_supplier": "آیا از حذف این تامین کننده اطمینان دارید؟",
     "confirm_delete_customer": "آیا از حذف این مشتری اطمینان دارید؟",
     "confirm_delete_receiver": "آیا از حذف این تحویل گیرنده اطمینان دارید؟",
-    "confirm_delete_shipping": "آیا از حذف این شرکت حمل و نقل اطمینان دارید؟"
+    "confirm_delete_shipping": "آیا از حذف این شرکت حمل و نقل اطمینان دارید؟",
+    "edit": "ویرایش",
+    "delete": "حذف"
   },
   "b2bOffer": {
     "validation": {
@@ -588,6 +626,7 @@
     "title": "فروش بازارگاه",
     "product-offer": "عرضه محصول",
     "purchases": "خریدها",
+    "select-date": "انتخاب تاریخ",
     "purchase": "خرید",
     "add-purchase": "افزودن خرید",
     "buyer-name": "نام خریدار",
@@ -600,12 +639,32 @@
     "purchase-date": "تاریخ خرید",
     "description": "توضیحات",
     "select-offer": "انتخاب عرضه",
+    "no-offers": "عرضه‌ای یافت نشد",
+    "create-new-offer": "ایجاد عرضه جدید",
     "select-type": "انتخاب نوع",
     "save": "ذخیره",
     "cancel": "لغو"
   },
+  "errors": {
+    "create_failed": "خطا در ایجاد",
+    "update_failed": "خطا در بروزرسانی",
+    "delete_failed": "خطا در حذف",
+    "fetch_failed": "خطا در دریافت اطلاعات",
+    "network_error": "خطای شبکه",
+    "validation_error": "خطای اعتبارسنجی",
+    "unknown_error": "خطای نامشخص",
+    "success_create": "با موفقیت ایجاد شد",
+    "success_update": "با موفقیت بروزرسانی شد",
+    "success_delete": "با موفقیت حذف شد"
+  },
+  "common": {
+    "search": "جستجو...",
+    "filter_warehouse": "فیلتر انبار",
+    "all_warehouses": "همه انبارها"
+  },
   "b2b_page": {
     "title": "بازارگاه",
+    "search": "جستجو در بازارگاه...",
     "offers_tab": "عرضه کالا",
     "distributions_tab": "عاملیت توزیع",
     "sales_tab": "فروش بازارگاه",
@@ -639,7 +698,12 @@
     "actions": "عملیات",
     "confirm_delete_offer": "آیا از حذف این عرضه اطمینان دارید؟",
     "confirm_delete_distribution": "آیا از حذف این عاملیت اطمینان دارید؟",
-    "confirm_delete_sale": "آیا از حذف این فروش اطمینان دارید؟"
+    "confirm_delete_sale": "آیا از حذف این فروش اطمینان دارید؟",
+    "offer_details": "جزئیات عرضه",
+    "distribution_details": "جزئیات عاملیت توزیع",
+    "sale_details": "جزئیات فروش",
+    "edit": "ویرایش",
+    "delete": "حذف"
   },
   "errors": {
     "server_error": "خطا در ارتباط با سرور",

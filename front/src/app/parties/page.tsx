@@ -1,9 +1,12 @@
 "use client";
 
-import { useState } from "react";
-import { Plus, Edit2, Trash2, Users, UserCheck, Truck, Ship } from "lucide-react";
+import { useState, useMemo } from "react";
+import { Plus, Edit2, Trash2, Users, UserCheck, Truck, Ship, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { useTranslations } from "next-intl";
+import { toast } from "sonner";
 import { SupplierModal } from "@/components/modals/supplier-modal";
 import { CustomerModal } from "@/components/modals/customer-modal";
 import { ReceiverModal } from "@/components/modals/receiver-modal";
@@ -37,41 +40,109 @@ export default function PartiesPage() {
   const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null);
   const [editingReceiver, setEditingReceiver] = useState<Receiver | null>(null);
   const [editingShipping, setEditingShipping] = useState<ShippingCompany | null>(null);
+  
+  const [searchTerm, setSearchTerm] = useState("");
+  const [sheetOpen, setSheetOpen] = useState(false);
+  const [selectedItem, setSelectedItem] = useState<Supplier | Customer | Receiver | ShippingCompany | null>(null);
+  const [selectedType, setSelectedType] = useState<'supplier' | 'customer' | 'receiver' | 'shipping'>('supplier');
 
   const handleDeleteSupplier = async (id: number) => {
     if (confirm(t("confirm_delete_supplier"))) {
-      await deleteSupplier(id);
-      refreshData("suppliers");
+      try {
+        await deleteSupplier(id);
+        toast.success(t("errors.success_delete"));
+        refreshData("suppliers");
+      } catch (error) {
+        console.error("Error deleting supplier:", error);
+        toast.error(t("errors.delete_failed"));
+      }
     }
   };
 
   const handleDeleteCustomer = async (id: number) => {
     if (confirm(t("confirm_delete_customer"))) {
-      await deleteCustomer(id);
-      refreshData("customers");
+      try {
+        await deleteCustomer(id);
+        toast.success(t("errors.success_delete"));
+        refreshData("customers");
+      } catch (error) {
+        console.error("Error deleting customer:", error);
+        toast.error(t("errors.delete_failed"));
+      }
     }
   };
 
   const handleDeleteReceiver = async (id: number) => {
     if (confirm(t("confirm_delete_receiver"))) {
-      await deleteReceiver(id);
-      refreshData("receivers");
+      try {
+        await deleteReceiver(id);
+        toast.success(t("errors.success_delete"));
+        refreshData("receivers");
+      } catch (error) {
+        console.error("Error deleting receiver:", error);
+        toast.error(t("errors.delete_failed"));
+      }
     }
   };
 
   const handleDeleteShipping = async (id: number) => {
     if (confirm(t("confirm_delete_shipping"))) {
-      await deleteShippingCompany(id);
-      refreshData("shippingCompanies");
+      try {
+        await deleteShippingCompany(id);
+        toast.success(t("errors.success_delete"));
+        refreshData("shippingCompanies");
+      } catch (error) {
+        console.error("Error deleting shipping company:", error);
+        toast.error(t("errors.delete_failed"));
+      }
     }
   };
+  
+  const handleRowClick = (item: Supplier | Customer | Receiver | ShippingCompany, type: 'supplier' | 'customer' | 'receiver' | 'shipping') => {
+    setSelectedItem(item);
+    setSelectedType(type);
+    setSheetOpen(true);
+  };
+  
+  const filteredSuppliers = useMemo(() => 
+    suppliers.filter(s => getPartyDisplayName(s).toLowerCase().includes(searchTerm.toLowerCase()) ||
+      s.economic_code?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      s.phone?.toLowerCase().includes(searchTerm.toLowerCase()))
+  , [suppliers, searchTerm]);
+  
+  const filteredCustomers = useMemo(() => 
+    customers.filter(c => getPartyDisplayName(c).toLowerCase().includes(searchTerm.toLowerCase()) ||
+      c.economic_code?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      c.phone?.toLowerCase().includes(searchTerm.toLowerCase()))
+  , [customers, searchTerm]);
+  
+  const filteredReceivers = useMemo(() => 
+    receivers.filter(r => getPartyDisplayName(r).toLowerCase().includes(searchTerm.toLowerCase()) ||
+      r.economic_code?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      r.system_id?.toLowerCase().includes(searchTerm.toLowerCase()))
+  , [receivers, searchTerm]);
+  
+  const filteredShipping = useMemo(() => 
+    shippingCompanies.filter(s => s.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      s.contact_person?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      s.phone?.toLowerCase().includes(searchTerm.toLowerCase()))
+  , [shippingCompanies, searchTerm]);
 
   return (
     <div className="flex-1 p-6 min-h-screen bg-gray-50" dir="rtl">
       <h1 className="text-3xl font-bold mb-8 text-gray-800">{t("title")}</h1>
       
+      <div className="relative mb-6">
+        <Search className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+        <Input
+          placeholder={t("search")}
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          className="pr-10"
+        />
+      </div>
+      
       <div className="space-y-8">
-        {/* Suppliers Section */}
         <div className="bg-white rounded-lg shadow">
           <div className="p-4 border-b border-gray-200 flex items-center justify-between">
             <h2 className="text-xl font-semibold text-gray-700 flex items-center gap-2">
@@ -91,34 +162,30 @@ export default function PartiesPage() {
             </Button>
           </div>
           <div className="p-4">
-            {suppliers.length === 0 ? (
+            {filteredSuppliers.length === 0 ? (
               <p className="text-gray-500 text-center py-8">{t("no_suppliers")}</p>
             ) : (
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead className="text-right">نام/شرکت</TableHead>
-                    <TableHead className="text-right">نوع</TableHead>
-                    <TableHead className="text-right">کد اقتصادی</TableHead>
-                    <TableHead className="text-right">تلفن</TableHead>
-                    <TableHead className="text-right">آدرس</TableHead>
                     <TableHead className="text-center">عملیات</TableHead>
+                    <TableHead className="text-right">آدرس</TableHead>
+                    <TableHead className="text-right">تلفن</TableHead>
+                    <TableHead className="text-right">کد اقتصادی</TableHead>
+                    <TableHead className="text-right">نوع</TableHead>
+                    <TableHead className="text-right">نام/شرکت</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {suppliers.map((supplier) => (
-                    <TableRow key={supplier.id}>
-                      <TableCell className="font-medium">{getPartyDisplayName(supplier)}</TableCell>
-                      <TableCell>{supplier.supplier_type === "Corporate" ? "شرکتی" : "حقیقی"}</TableCell>
-                      <TableCell>{supplier.economic_code}</TableCell>
-                      <TableCell>{supplier.phone}</TableCell>
-                      <TableCell>{supplier.address}</TableCell>
+                  {filteredSuppliers.map((supplier) => (
+                    <TableRow key={supplier.id} className="cursor-pointer hover:bg-gray-50" onClick={() => handleRowClick(supplier, 'supplier')}>
                       <TableCell className="text-center">
                         <div className="flex gap-2 justify-center">
                           <Button
                             size="sm"
                             variant="ghost"
-                            onClick={() => {
+                            onClick={(e) => {
+                              e.stopPropagation();
                               setEditingSupplier(supplier);
                               setShowSupplierModal(true);
                             }}
@@ -128,12 +195,20 @@ export default function PartiesPage() {
                           <Button
                             size="sm"
                             variant="ghost"
-                            onClick={() => handleDeleteSupplier(supplier.id)}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDeleteSupplier(supplier.id);
+                            }}
                           >
                             <Trash2 className="w-4 h-4 text-red-500" />
                           </Button>
                         </div>
                       </TableCell>
+                      <TableCell>{supplier.address}</TableCell>
+                      <TableCell>{supplier.phone}</TableCell>
+                      <TableCell>{supplier.economic_code}</TableCell>
+                      <TableCell>{supplier.supplier_type === "Corporate" ? "شرکتی" : "حقیقی"}</TableCell>
+                      <TableCell className="font-medium">{getPartyDisplayName(supplier)}</TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
@@ -142,7 +217,6 @@ export default function PartiesPage() {
           </div>
         </div>
 
-        {/* Customers Section */}
         <div className="bg-white rounded-lg shadow">
           <div className="p-4 border-b border-gray-200 flex items-center justify-between">
             <h2 className="text-xl font-semibold text-gray-700 flex items-center gap-2">
@@ -162,34 +236,30 @@ export default function PartiesPage() {
             </Button>
           </div>
           <div className="p-4">
-            {customers.length === 0 ? (
+            {filteredCustomers.length === 0 ? (
               <p className="text-gray-500 text-center py-8">{t("no_customers")}</p>
             ) : (
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead className="text-right">نام/شرکت</TableHead>
-                    <TableHead className="text-right">نوع</TableHead>
-                    <TableHead className="text-right">کد اقتصادی</TableHead>
-                    <TableHead className="text-right">تلفن</TableHead>
-                    <TableHead className="text-right">آدرس</TableHead>
                     <TableHead className="text-center">عملیات</TableHead>
+                    <TableHead className="text-right">آدرس</TableHead>
+                    <TableHead className="text-right">تلفن</TableHead>
+                    <TableHead className="text-right">کد اقتصادی</TableHead>
+                    <TableHead className="text-right">نوع</TableHead>
+                    <TableHead className="text-right">نام/شرکت</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {customers.map((customer) => (
-                    <TableRow key={customer.id}>
-                      <TableCell className="font-medium">{getPartyDisplayName(customer)}</TableCell>
-                      <TableCell>{customer.customer_type === "Corporate" ? "شرکتی" : "حقیقی"}</TableCell>
-                      <TableCell>{customer.economic_code}</TableCell>
-                      <TableCell>{customer.phone}</TableCell>
-                      <TableCell>{customer.address}</TableCell>
+                  {filteredCustomers.map((customer) => (
+                    <TableRow key={customer.id} className="cursor-pointer hover:bg-gray-50" onClick={() => handleRowClick(customer, 'customer')}>
                       <TableCell className="text-center">
                         <div className="flex gap-2 justify-center">
                           <Button
                             size="sm"
                             variant="ghost"
-                            onClick={() => {
+                            onClick={(e) => {
+                              e.stopPropagation();
                               setEditingCustomer(customer);
                               setShowCustomerModal(true);
                             }}
@@ -199,12 +269,20 @@ export default function PartiesPage() {
                           <Button
                             size="sm"
                             variant="ghost"
-                            onClick={() => handleDeleteCustomer(customer.id)}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDeleteCustomer(customer.id);
+                            }}
                           >
                             <Trash2 className="w-4 h-4 text-red-500" />
                           </Button>
                         </div>
                       </TableCell>
+                      <TableCell>{customer.address}</TableCell>
+                      <TableCell>{customer.phone}</TableCell>
+                      <TableCell>{customer.economic_code}</TableCell>
+                      <TableCell>{customer.customer_type === "Corporate" ? "شرکتی" : "حقیقی"}</TableCell>
+                      <TableCell className="font-medium">{getPartyDisplayName(customer)}</TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
@@ -213,7 +291,6 @@ export default function PartiesPage() {
           </div>
         </div>
 
-        {/* Receivers Section */}
         <div className="bg-white rounded-lg shadow">
           <div className="p-4 border-b border-gray-200 flex items-center justify-between">
             <h2 className="text-xl font-semibold text-gray-700 flex items-center gap-2">
@@ -233,38 +310,32 @@ export default function PartiesPage() {
             </Button>
           </div>
           <div className="p-4">
-            {receivers.length === 0 ? (
+            {filteredReceivers.length === 0 ? (
               <p className="text-gray-500 text-center py-8">{t("no_receivers")}</p>
             ) : (
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead className="text-right">نام/شرکت</TableHead>
-                    <TableHead className="text-right">نوع</TableHead>
-                    <TableHead className="text-right">کد سیستمی</TableHead>
-                    <TableHead className="text-right">کد یکتا</TableHead>
-                    <TableHead className="text-right">کد اقتصادی</TableHead>
-                    <TableHead className="text-right">تلفن</TableHead>
-                    <TableHead className="text-right">آدرس</TableHead>
                     <TableHead className="text-center">عملیات</TableHead>
+                    <TableHead className="text-right">آدرس</TableHead>
+                    <TableHead className="text-right">تلفن</TableHead>
+                    <TableHead className="text-right">کد اقتصادی</TableHead>
+                    <TableHead className="text-right">کد یکتا</TableHead>
+                    <TableHead className="text-right">کد سیستمی</TableHead>
+                    <TableHead className="text-right">نوع</TableHead>
+                    <TableHead className="text-right">نام/شرکت</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {receivers.map((receiver) => (
-                    <TableRow key={receiver.id}>
-                      <TableCell className="font-medium">{getPartyDisplayName(receiver)}</TableCell>
-                      <TableCell>{receiver.receiver_type === "Corporate" ? "شرکتی" : "حقیقی"}</TableCell>
-                      <TableCell>{receiver.system_id}</TableCell>
-                      <TableCell>{receiver.unique_id}</TableCell>
-                      <TableCell>{receiver.economic_code}</TableCell>
-                      <TableCell>{receiver.phone}</TableCell>
-                      <TableCell>{receiver.address}</TableCell>
+                  {filteredReceivers.map((receiver) => (
+                    <TableRow key={receiver.id} className="cursor-pointer hover:bg-gray-50" onClick={() => handleRowClick(receiver, 'receiver')}>
                       <TableCell className="text-center">
                         <div className="flex gap-2 justify-center">
                           <Button
                             size="sm"
                             variant="ghost"
-                            onClick={() => {
+                            onClick={(e) => {
+                              e.stopPropagation();
                               setEditingReceiver(receiver);
                               setShowReceiverModal(true);
                             }}
@@ -274,12 +345,22 @@ export default function PartiesPage() {
                           <Button
                             size="sm"
                             variant="ghost"
-                            onClick={() => handleDeleteReceiver(receiver.id)}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDeleteReceiver(receiver.id);
+                            }}
                           >
                             <Trash2 className="w-4 h-4 text-red-500" />
                           </Button>
                         </div>
                       </TableCell>
+                      <TableCell>{receiver.address}</TableCell>
+                      <TableCell>{receiver.phone}</TableCell>
+                      <TableCell>{receiver.economic_code}</TableCell>
+                      <TableCell>{receiver.unique_id}</TableCell>
+                      <TableCell>{receiver.system_id}</TableCell>
+                      <TableCell>{receiver.receiver_type === "Corporate" ? "شرکتی" : "حقیقی"}</TableCell>
+                      <TableCell className="font-medium">{getPartyDisplayName(receiver)}</TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
@@ -288,7 +369,6 @@ export default function PartiesPage() {
           </div>
         </div>
 
-        {/* Shipping Companies Section */}
         <div className="bg-white rounded-lg shadow">
           <div className="p-4 border-b border-gray-200 flex items-center justify-between">
             <h2 className="text-xl font-semibold text-gray-700 flex items-center gap-2">
@@ -308,34 +388,30 @@ export default function PartiesPage() {
             </Button>
           </div>
           <div className="p-4">
-            {shippingCompanies.length === 0 ? (
+            {filteredShipping.length === 0 ? (
               <p className="text-gray-500 text-center py-8">{t("no_shipping")}</p>
             ) : (
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead className="text-right">نام شرکت</TableHead>
-                    <TableHead className="text-right">شخص تماس</TableHead>
-                    <TableHead className="text-right">تلفن</TableHead>
-                    <TableHead className="text-right">ایمیل</TableHead>
-                    <TableHead className="text-right">آدرس</TableHead>
                     <TableHead className="text-center">عملیات</TableHead>
+                    <TableHead className="text-right">آدرس</TableHead>
+                    <TableHead className="text-right">ایمیل</TableHead>
+                    <TableHead className="text-right">تلفن</TableHead>
+                    <TableHead className="text-right">شخص تماس</TableHead>
+                    <TableHead className="text-right">نام شرکت</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {shippingCompanies.map((company) => (
-                    <TableRow key={company.id}>
-                      <TableCell className="font-medium">{company.name}</TableCell>
-                      <TableCell>{company.contact_person}</TableCell>
-                      <TableCell>{company.phone}</TableCell>
-                      <TableCell>{company.email}</TableCell>
-                      <TableCell>{company.address}</TableCell>
+                  {filteredShipping.map((company) => (
+                    <TableRow key={company.id} className="cursor-pointer hover:bg-gray-50" onClick={() => handleRowClick(company, 'shipping')}>
                       <TableCell className="text-center">
                         <div className="flex gap-2 justify-center">
                           <Button
                             size="sm"
                             variant="ghost"
-                            onClick={() => {
+                            onClick={(e) => {
+                              e.stopPropagation();
                               setEditingShipping(company);
                               setShowShippingModal(true);
                             }}
@@ -345,12 +421,20 @@ export default function PartiesPage() {
                           <Button
                             size="sm"
                             variant="ghost"
-                            onClick={() => handleDeleteShipping(company.id)}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDeleteShipping(company.id);
+                            }}
                           >
                             <Trash2 className="w-4 h-4 text-red-500" />
                           </Button>
                         </div>
                       </TableCell>
+                      <TableCell>{company.address}</TableCell>
+                      <TableCell>{company.email}</TableCell>
+                      <TableCell>{company.phone}</TableCell>
+                      <TableCell>{company.contact_person}</TableCell>
+                      <TableCell className="font-medium">{company.name}</TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
@@ -360,18 +444,145 @@ export default function PartiesPage() {
         </div>
       </div>
 
+      <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
+        <SheetContent side="left" className="w-[400px] sm:w-[540px] overflow-y-auto p-6" dir="rtl">
+          <SheetHeader>
+            <SheetTitle className="text-2xl font-bold text-[#f6d265]">
+              {selectedType === 'supplier' && "جزئیات تامین کننده"}
+              {selectedType === 'customer' && "جزئیات مشتری"}
+              {selectedType === 'receiver' && "جزئیات تحویل گیرنده"}
+              {selectedType === 'shipping' && "جزئیات شرکت حمل"}
+            </SheetTitle>
+          </SheetHeader>
+          {selectedItem && (
+            <>
+              <div className="flex gap-2 mt-4">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    if (selectedType === 'supplier') {
+                      setEditingSupplier(selectedItem as Supplier);
+                      setShowSupplierModal(true);
+                    } else if (selectedType === 'customer') {
+                      setEditingCustomer(selectedItem as Customer);
+                      setShowCustomerModal(true);
+                    } else if (selectedType === 'receiver') {
+                      setEditingReceiver(selectedItem as Receiver);
+                      setShowReceiverModal(true);
+                    } else if (selectedType === 'shipping') {
+                      setEditingShipping(selectedItem as ShippingCompany);
+                      setShowShippingModal(true);
+                    }
+                    setSheetOpen(false);
+                  }}
+                >
+                  <Edit2 className="h-4 w-4 ml-1" />
+                  {t("edit")}
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="text-red-600 hover:bg-red-50"
+                  onClick={async () => {
+                    const confirmMessage = selectedType === 'supplier' ? t("confirm_delete_supplier") :
+                                         selectedType === 'customer' ? t("confirm_delete_customer") :
+                                         selectedType === 'receiver' ? t("confirm_delete_receiver") :
+                                         t("confirm_delete_shipping");
+                    if (confirm(confirmMessage)) {
+                      try {
+                        if (selectedType === 'supplier') {
+                          await deleteSupplier(selectedItem.id);
+                        } else if (selectedType === 'customer') {
+                          await deleteCustomer(selectedItem.id);
+                        } else if (selectedType === 'receiver') {
+                          await deleteReceiver(selectedItem.id);
+                        } else if (selectedType === 'shipping') {
+                          await deleteShippingCompany(selectedItem.id);
+                        }
+                        toast.success(t("errors.success_delete"));
+                        await refreshData(selectedType === 'shipping' ? 'shippingCompanies' : `${selectedType}s`);
+                        setSheetOpen(false);
+                      } catch (error) {
+                        console.error("Error deleting:", error);
+                        toast.error(t("errors.delete_failed"));
+                      }
+                    }
+                  }}
+                >
+                  <Trash2 className="h-4 w-4 ml-1" />
+                  {t("delete")}
+                </Button>
+              </div>
+              <div className="mt-6 space-y-4 p-4 bg-gray-50 rounded-lg">
+              {(selectedType === 'supplier' || selectedType === 'customer' || selectedType === 'receiver') && (
+                <>
+                  <div><strong>نام:</strong> {getPartyDisplayName(selectedItem)}</div>
+                  <div><strong>نوع:</strong> {
+                    selectedItem[`${selectedType}_type`] === "Corporate" ? "شرکتی" : "حقیقی"
+                  }</div>
+                  {selectedItem[`${selectedType}_type`] === "Corporate" ? (
+                    <>
+                      <div><strong>نام شرکت:</strong> {selectedItem.company_name || '-'}</div>
+                      <div><strong>شناسه ملی:</strong> {selectedItem.national_id || '-'}</div>
+                    </>
+                  ) : (
+                    <>
+                      <div><strong>نام کامل:</strong> {selectedItem.full_name || '-'}</div>
+                      <div><strong>کد ملی:</strong> {selectedItem.personal_code || '-'}</div>
+                    </>
+                  )}
+                  <div><strong>کد اقتصادی:</strong> {selectedItem.economic_code || '-'}</div>
+                  <div><strong>تلفن:</strong> {selectedItem.phone || '-'}</div>
+                  <div><strong>آدرس:</strong> {selectedItem.address || '-'}</div>
+                  {selectedItem.description && <div><strong>توضیحات:</strong> {selectedItem.description}</div>}
+                  {selectedType === 'receiver' && (
+                    <>
+                      <div><strong>کد سیستمی:</strong> {selectedItem.system_id || '-'}</div>
+                      <div><strong>کد یکتا:</strong> {selectedItem.unique_id || '-'}</div>
+                      {selectedItem.postal_code && <div><strong>کد پستی:</strong> {selectedItem.postal_code}</div>}
+                    </>
+                  )}
+                  {selectedType === 'customer' && selectedItem.tags && (
+                    <div><strong>برچسب‌ها:</strong> {selectedItem.tags}</div>
+                  )}
+                </>
+              )}
+              {selectedType === 'shipping' && (
+                <>
+                  <div><strong>نام شرکت:</strong> {selectedItem.name}</div>
+                  <div><strong>شخص تماس:</strong> {selectedItem.contact_person || '-'}</div>
+                  <div><strong>تلفن:</strong> {selectedItem.phone || '-'}</div>
+                  <div><strong>ایمیل:</strong> {selectedItem.email || '-'}</div>
+                  <div><strong>آدرس:</strong> {selectedItem.address || '-'}</div>
+                  {selectedItem.description && <div><strong>توضیحات:</strong> {selectedItem.description}</div>}
+                </>
+              )}
+            </div>
+            </>
+          )}
+        </SheetContent>
+      </Sheet>
+
       {showSupplierModal && (
         <SupplierModal
           initialData={editingSupplier || undefined}
           onSubmit={async (data) => {
-            if (editingSupplier) {
-              await updateSupplier(editingSupplier.id, data);
-            } else {
-              await createSupplier(data);
+            try {
+              if (editingSupplier) {
+                await updateSupplier(editingSupplier.id, data);
+                toast.success(t("errors.success_update"));
+              } else {
+                await createSupplier(data);
+                toast.success(t("errors.success_create"));
+              }
+              await refreshData("suppliers");
+              setShowSupplierModal(false);
+              setEditingSupplier(null);
+            } catch (error) {
+              console.error("Error saving supplier:", error);
+              toast.error(editingSupplier ? t("errors.update_failed") : t("errors.create_failed"));
             }
-            await refreshData("suppliers");
-            setShowSupplierModal(false);
-            setEditingSupplier(null);
           }}
           onClose={() => {
             setShowSupplierModal(false);
@@ -384,14 +595,21 @@ export default function PartiesPage() {
         <CustomerModal
           initialData={editingCustomer || undefined}
           onSubmit={async (data) => {
-            if (editingCustomer) {
-              await updateCustomer(editingCustomer.id, data);
-            } else {
-              await createCustomer(data);
+            try {
+              if (editingCustomer) {
+                await updateCustomer(editingCustomer.id, data);
+                toast.success(t("errors.success_update"));
+              } else {
+                await createCustomer(data);
+                toast.success(t("errors.success_create"));
+              }
+              await refreshData("customers");
+              setShowCustomerModal(false);
+              setEditingCustomer(null);
+            } catch (error) {
+              console.error("Error saving customer:", error);
+              toast.error(editingCustomer ? t("errors.update_failed") : t("errors.create_failed"));
             }
-            await refreshData("customers");
-            setShowCustomerModal(false);
-            setEditingCustomer(null);
           }}
           onClose={() => {
             setShowCustomerModal(false);
@@ -404,14 +622,21 @@ export default function PartiesPage() {
         <ReceiverModal
           initialData={editingReceiver || undefined}
           onSubmit={async (data) => {
-            if (editingReceiver) {
-              await updateReceiver(editingReceiver.id, data);
-            } else {
-              await createReceiver(data);
+            try {
+              if (editingReceiver) {
+                await updateReceiver(editingReceiver.id, data);
+                toast.success(t("errors.success_update"));
+              } else {
+                await createReceiver(data);
+                toast.success(t("errors.success_create"));
+              }
+              await refreshData("receivers");
+              setShowReceiverModal(false);
+              setEditingReceiver(null);
+            } catch (error) {
+              console.error("Error saving receiver:", error);
+              toast.error(editingReceiver ? t("errors.update_failed") : t("errors.create_failed"));
             }
-            await refreshData("receivers");
-            setShowReceiverModal(false);
-            setEditingReceiver(null);
           }}
           onClose={() => {
             setShowReceiverModal(false);
@@ -424,14 +649,21 @@ export default function PartiesPage() {
         <ShippingCompanyModal
           initialData={editingShipping || undefined}
           onSubmit={async (data) => {
-            if (editingShipping) {
-              await updateShippingCompany(editingShipping.id, data);
-            } else {
-              await createShippingCompany(data);
+            try {
+              if (editingShipping) {
+                await updateShippingCompany(editingShipping.id, data);
+                toast.success(t("errors.success_update"));
+              } else {
+                await createShippingCompany(data);
+                toast.success(t("errors.success_create"));
+              }
+              await refreshData("shippingCompanies");
+              setShowShippingModal(false);
+              setEditingShipping(null);
+            } catch (error) {
+              console.error("Error saving shipping company:", error);
+              toast.error(editingShipping ? t("errors.update_failed") : t("errors.create_failed"));
             }
-            await refreshData("shippingCompanies");
-            setShowShippingModal(false);
-            setEditingShipping(null);
           }}
           onClose={() => {
             setShowShippingModal(false);

@@ -9,6 +9,9 @@ import { PurchaseProformaModal } from "./modals/purchaseproforma-modal";
 import { WarehouseReceiptModal } from "./modals/warehouse-receipt-modal";
 import { DispatchIssueModal } from "./modals/dispatch-issue-modal";
 import { DeliveryFulfillmentModal } from "./modals/delivery-fulfillment-modal";
+import { B2BOfferModal } from "./modals/b2b-offer-modal";
+import { B2BDistributionModal } from "./modals/b2b-distribution-modal";
+import { B2BSaleModal } from "./modals/b2b-sale-modal";
 
 import { Warehouse, Cable, Truck, User, DollarSign, ChevronLeft, BadgeCent, Package, Users } from "lucide-react";
 export function AppSidebar() {
@@ -133,20 +136,41 @@ export function AppSidebar() {
                                 </CollapsibleTrigger>
                             </div>
                             <CollapsibleContent className="mx-3.5 mt-0.5">
-                                <SidebarMenuSub className="border-l-0 border-r-1 border-gray-50/50 hover:border-gray-100 px-2.5 my-0 py-1.5">
-                                    <a href="/b2b/offers">
-                                        <SidebarMenuSubItem className="text-sm text-white/50 px-1 hover:text-white cursor-pointer">{t("b2b-offer")}</ SidebarMenuSubItem>
-                                    </a>
+                                <SidebarMenuSub 
+                                    className="border-l-0 border-r-1 border-gray-50/50 hover:border-gray-100 px-2.5 my-0 py-1.5 cursor-pointer"
+                                    onClick={() => {
+                                        openModal(B2BOfferModal, {
+                                            onSubmit: (data) => {
+                                                console.log('B2B Offer Data:', data);
+                                            }
+                                        })
+                                    }}
+                                >
+                                    <SidebarMenuSubItem className="text-sm text-white/50 px-1 hover:text-white">{t("b2b-offer")}</ SidebarMenuSubItem>
                                 </SidebarMenuSub>
-                                <SidebarMenuSub className="border-l-0 border-r-1 border-gray-50/50 hover:border-gray-100 px-2.5 my-0 py-1.5">
-                                    <a href="/b2b/distributions">
-                                        <SidebarMenuSubItem className="text-sm text-white/50 px-1 hover:text-white cursor-pointer">{t("b2b-distribution")}</ SidebarMenuSubItem>
-                                    </a>
+                                <SidebarMenuSub 
+                                    className="border-l-0 border-r-1 border-gray-50/50 hover:border-gray-100 px-2.5 my-0 py-1.5 cursor-pointer"
+                                    onClick={() => {
+                                        openModal(B2BDistributionModal, {
+                                            onSubmit: (data) => {
+                                                console.log('B2B Distribution Data:', data);
+                                            }
+                                        })
+                                    }}
+                                >
+                                    <SidebarMenuSubItem className="text-sm text-white/50 px-1 hover:text-white">{t("b2b-distribution")}</ SidebarMenuSubItem>
                                 </SidebarMenuSub>
-                                <SidebarMenuSub className="border-l-0 border-r-1 border-gray-50/50 hover:border-gray-100 px-2.5 my-0 py-1.5">
-                                    <a href="/b2b/sales">
-                                        <SidebarMenuSubItem className="text-sm text-white/50 px-1 hover:text-white cursor-pointer">{t("b2b-sale")}</ SidebarMenuSubItem>
-                                    </a>
+                                <SidebarMenuSub 
+                                    className="border-l-0 border-r-1 border-gray-50/50 hover:border-gray-100 px-2.5 my-0 py-1.5 cursor-pointer"
+                                    onClick={() => {
+                                        openModal(B2BSaleModal, {
+                                            onSubmit: (data) => {
+                                                console.log('B2B Sale Data:', data);
+                                            }
+                                        })
+                                    }}
+                                >
+                                    <SidebarMenuSubItem className="text-sm text-white/50 px-1 hover:text-white">{t("b2b-sale")}</ SidebarMenuSubItem>
                                 </SidebarMenuSub>
                             </CollapsibleContent>
                         </SidebarMenuItem>

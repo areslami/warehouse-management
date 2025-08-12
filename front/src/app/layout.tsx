@@ -8,7 +8,7 @@ import './globals.css'
 import { Vazirmatn } from "next/font/google";
 import { ModalProvider } from "@/lib/modal-context"
 import { CoreDataProvider } from "@/lib/core-data-context"
-import { ToastProvider } from "@/lib/toast-context"
+import { ToastProvider } from "@/components/providers/toast-provider"
 
 const vazir = Vazirmatn({
   subsets: ["arabic"],
@@ -20,16 +20,15 @@ export default function Layout({ children }: { children: React.ReactNode }) {
       <body className={vazir.className} style={{ fontWeight: "300" }}>
         <NextIntlClientProvider locale="fa" messages={fa}>
           <CoreDataProvider>
-            <ToastProvider>
-              <ModalProvider>
-                <SidebarProvider>
-                  <AppSidebar />
-                  <main className="p-5 pt-[5vh] w-full">
-                    {children}
-                  </main>
-                </SidebarProvider>
-              </ModalProvider>
-            </ToastProvider>
+            <ModalProvider>
+              <SidebarProvider>
+                <AppSidebar />
+                <main className="p-5 pt-[5vh] w-full">
+                  {children}
+                </main>
+              </SidebarProvider>
+            </ModalProvider>
+            <ToastProvider />
           </CoreDataProvider>
         </NextIntlClientProvider>
       </body>
