@@ -65,7 +65,7 @@ class SupplierSerializer(serializers.ModelSerializer):
                 raise serializers.ValidationError("National ID is required for corporate suppliers")
             # Clear individual fields for corporate
             data['full_name'] = ''
-            data['personal_code'] = ''
+            data['personal_code'] = None  # Set to None for unique field
             
         elif supplier_type == PartyType.INDIVIDUAL:
             if not data.get('full_name'):
@@ -74,7 +74,7 @@ class SupplierSerializer(serializers.ModelSerializer):
                 raise serializers.ValidationError("Personal code is required for individual suppliers")
             # Clear corporate fields for individual
             data['company_name'] = ''
-            data['national_id'] = ''
+            data['national_id'] = None  # Set to None for unique field
         
         return data
 
@@ -106,7 +106,7 @@ class CustomerSerializer(serializers.ModelSerializer):
             if not data.get('national_id'):
                 raise serializers.ValidationError("National ID is required for corporate customers")
             data['full_name'] = ''
-            data['personal_code'] = ''
+            data['personal_code'] = None  # Set to None for unique field
             
         elif customer_type == PartyType.INDIVIDUAL:
             if not data.get('full_name'):
@@ -114,7 +114,7 @@ class CustomerSerializer(serializers.ModelSerializer):
             if not data.get('personal_code'):
                 raise serializers.ValidationError("Personal code is required for individual customers")
             data['company_name'] = ''
-            data['national_id'] = ''
+            data['national_id'] = None  # Set to None for unique field
         
         return data
 
@@ -145,7 +145,7 @@ class ReceiverSerializer(serializers.ModelSerializer):
             if not data.get('national_id'):
                 raise serializers.ValidationError("National ID is required for corporate receivers")
             data['full_name'] = ''
-            data['personal_code'] = ''
+            data['personal_code'] = None  # Set to None for unique field
             
         elif receiver_type == PartyType.INDIVIDUAL:
             if not data.get('full_name'):
@@ -153,7 +153,7 @@ class ReceiverSerializer(serializers.ModelSerializer):
             if not data.get('personal_code'):
                 raise serializers.ValidationError("Personal code is required for individual receivers")
             data['company_name'] = ''
-            data['national_id'] = ''
+            data['national_id'] = None  # Set to None for unique field
         
         return data
 

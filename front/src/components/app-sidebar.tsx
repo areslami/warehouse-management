@@ -4,6 +4,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "./ui/collap
 import { Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent, SidebarHeader, SidebarMenuButton, SidebarMenuItem, SidebarMenuSub, SidebarMenuSubItem } from "./ui/sidebar";
 import { useTranslations } from "next-intl";
 import { useModal } from "@/lib/modal-context";
+import { toast } from "sonner";
 import { SalesProformaModal } from "./modals/salesproforma-modal";
 import { PurchaseProformaModal } from "./modals/purchaseproforma-modal";
 import { WarehouseReceiptModal } from "./modals/warehouse-receipt-modal";
@@ -14,6 +15,9 @@ import { B2BDistributionModal } from "./modals/b2b-distribution-modal";
 import { B2BSaleModal } from "./modals/b2b-sale-modal";
 
 import { Warehouse, Cable, Truck, User, DollarSign, ChevronLeft, BadgeCent, Package, Users } from "lucide-react";
+import { createWarehouseReceipt, createDispatchIssue, createDeliveryFulfillment } from "@/lib/api/warehouse";
+import { createB2BOffer, createB2BDistribution, createB2BSale } from "@/lib/api/b2b";
+import { createSalesProforma, createPurchaseProforma } from "@/lib/api/finance";
 export function AppSidebar() {
     const t = useTranslations('sidebar')
     const { openModal } = useModal();
@@ -84,8 +88,23 @@ export function AppSidebar() {
                                     className="border-l-0 border-r-1 border-gray-50/50 hover:border-gray-100 px-2.5 my-0 py-1.5 cursor-pointer"
                                     onClick={() => {
                                         openModal(WarehouseReceiptModal, {
-                                            onSubmit: (data) => {
-                                                console.log('Warehouse Receipt Data:', data);
+                                            onSubmit: async (data) => {
+                                                try {
+                                                    // Clean the data - remove empty strings and undefined values for optional fields
+                                                    const cleanData = {
+                                                        ...data,
+                                                        receipt_id: data.receipt_id?.trim() || undefined,
+                                                        description: data.description?.trim() || undefined,
+                                                        cottage_serial_number: data.cottage_serial_number?.trim() || undefined,
+                                                        proforma: data.proforma && data.proforma > 0 ? data.proforma : undefined,
+                                                    };
+                                                    await createWarehouseReceipt(cleanData);
+                                                    toast.success(t("warehouse-receipt") + ' - ' + 'با موفقیت ایجاد شد');
+                                                } catch (error) {
+                                                    console.error('Error creating warehouse receipt:', error);
+                                                    toast.error('خطا در ایجاد رسید انبار');
+                                                    throw error; // Re-throw to prevent modal from closing
+                                                }
                                             }
                                         })
                                     }}
@@ -96,8 +115,15 @@ export function AppSidebar() {
                                     className="border-l-0 border-r-1 border-gray-50/50 hover:border-gray-100 px-2.5 my-0 py-1.5 cursor-pointer"
                                     onClick={() => {
                                         openModal(DispatchIssueModal, {
-                                            onSubmit: (data) => {
-                                                console.log('Dispatch Issue Data:', data);
+                                            onSubmit: async (data) => {
+                                                try {
+                                                    await createDispatchIssue(data);
+                                                    toast.success(t("dispatch-issue") + ' - ' + 'با موفقیت ایجاد شد');
+                                                } catch (error) {
+                                                    console.error('Error creating dispatch issue:', error);
+                                                    toast.error('خطا در ایجاد حواله خروج');
+                                                    throw error; // Re-throw to prevent modal from closing
+                                                }
                                             }
                                         })
                                     }}
@@ -108,8 +134,15 @@ export function AppSidebar() {
                                     className="border-l-0 border-r-1 border-gray-50/50 hover:border-gray-100 px-2.5 my-0 py-1.5 cursor-pointer"
                                     onClick={() => {
                                         openModal(DeliveryFulfillmentModal, {
-                                            onSubmit: (data) => {
-                                                console.log('Delivery Fulfillment Data:', data);
+                                            onSubmit: async (data) => {
+                                                try {
+                                                    await createDeliveryFulfillment(data);
+                                                    toast.success(t("delivery-fulfillment") + ' - ' + 'با موفقیت ایجاد شد');
+                                                } catch (error) {
+                                                    console.error('Error creating delivery fulfillment:', error);
+                                                    toast.error('خطا در ایجاد تحویل کالا');
+                                                    throw error; // Re-throw to prevent modal from closing
+                                                }
                                             }
                                         })
                                     }}
@@ -142,8 +175,15 @@ export function AppSidebar() {
                                     className="border-l-0 border-r-1 border-gray-50/50 hover:border-gray-100 px-2.5 my-0 py-1.5 cursor-pointer"
                                     onClick={() => {
                                         openModal(B2BOfferModal, {
-                                            onSubmit: (data) => {
-                                                console.log('B2B Offer Data:', data);
+                                            onSubmit: async (data) => {
+                                                try {
+                                                    await createB2BOffer(data);
+                                                    toast.success(t("b2b-offer") + ' - ' + 'با موفقیت ایجاد شد');
+                                                } catch (error) {
+                                                    console.error('Error creating B2B offer:', error);
+                                                    toast.error('خطا در ایجاد پیشنهاد B2B');
+                                                    throw error;
+                                                }
                                             }
                                         })
                                     }}
@@ -154,8 +194,15 @@ export function AppSidebar() {
                                     className="border-l-0 border-r-1 border-gray-50/50 hover:border-gray-100 px-2.5 my-0 py-1.5 cursor-pointer"
                                     onClick={() => {
                                         openModal(B2BDistributionModal, {
-                                            onSubmit: (data) => {
-                                                console.log('B2B Distribution Data:', data);
+                                            onSubmit: async (data) => {
+                                                try {
+                                                    await createB2BDistribution(data);
+                                                    toast.success(t("b2b-distribution") + ' - ' + 'با موفقیت ایجاد شد');
+                                                } catch (error) {
+                                                    console.error('Error creating B2B distribution:', error);
+                                                    toast.error('خطا در ایجاد توزیع B2B');
+                                                    throw error;
+                                                }
                                             }
                                         })
                                     }}
@@ -166,8 +213,15 @@ export function AppSidebar() {
                                     className="border-l-0 border-r-1 border-gray-50/50 hover:border-gray-100 px-2.5 my-0 py-1.5 cursor-pointer"
                                     onClick={() => {
                                         openModal(B2BSaleModal, {
-                                            onSubmit: (data) => {
-                                                console.log('B2B Sale Data:', data);
+                                            onSubmit: async (data) => {
+                                                try {
+                                                    await createB2BSale(data);
+                                                    toast.success(t("b2b-sale") + ' - ' + 'با موفقیت ایجاد شد');
+                                                } catch (error) {
+                                                    console.error('Error creating B2B sale:', error);
+                                                    toast.error('خطا در ایجاد فروش B2B');
+                                                    throw error;
+                                                }
                                             }
                                         })
                                     }}

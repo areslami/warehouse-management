@@ -11,8 +11,7 @@ export interface WarehouseReceiptCreate {
   receipt_type: "import_cottage" | "distribution_cottage" | "purchase";
   date: string;
   warehouse: number;
-  description: string;
-  total_weight: number;
+  description?: string;
   cottage_serial_number?: string;
   proforma?: number;
   items: { product: number; weight: number }[];

@@ -20,6 +20,7 @@ import {
   fetchDeliveryFulfillments, createDeliveryFulfillment, updateDeliveryFulfillment, deleteDeliveryFulfillment
 } from "@/lib/api/warehouse";
 import { WarehouseReceipt, DispatchIssue, DeliveryFulfillment } from "@/lib/interfaces/warehouse";
+import { translateReceiptType } from "@/lib/utils/translations";
 
 export default function WarehousePage() {
   const t = useTranslations("warehouse_page");
@@ -471,7 +472,7 @@ export default function WarehousePage() {
                   <div><strong>تاریخ:</strong> {new Date(selectedItem.date).toLocaleDateString('fa-IR')}</div>
                   <div><strong>انبار:</strong> {warehouses.find(w => w.id === selectedItem.warehouse)?.name}</div>
                   <div><strong>وزن کل:</strong> {selectedItem.total_weight} کیلوگرم</div>
-                  <div><strong>نوع رسید:</strong> {selectedItem.receipt_type}</div>
+                  <div><strong>نوع رسید:</strong> {translateReceiptType(selectedItem.receipt_type)}</div>
                   {selectedItem.description && <div><strong>توضیحات:</strong> {selectedItem.description}</div>}
                   {selectedItem.items?.length > 0 && (
                     <div>
@@ -522,11 +523,20 @@ export default function WarehousePage() {
           initialData={editingReceipt || undefined}
           onSubmit={async (data) => {
             try {
+              // Clean the data - remove empty strings and undefined values for optional fields
+              const cleanData = {
+                ...data,
+                receipt_id: data.receipt_id?.trim() || undefined,
+                description: data.description?.trim() || undefined,
+                cottage_serial_number: data.cottage_serial_number?.trim() || undefined,
+                proforma: data.proforma && data.proforma > 0 ? data.proforma : undefined,
+              };
+
               if (editingReceipt) {
-                await updateWarehouseReceipt(editingReceipt.id, data);
+                await updateWarehouseReceipt(editingReceipt.id, cleanData);
                 toast.success(t("errors.success_update"));
               } else {
-                await createWarehouseReceipt(data);
+                await createWarehouseReceipt(cleanData);
                 toast.success(t("errors.success_create"));
               }
               await loadData();

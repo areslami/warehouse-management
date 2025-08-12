@@ -54,15 +54,7 @@ export function DeliveryFulfillmentModal({ trigger, onSubmit, onClose, initialDa
   const tval = useTranslations("deliveryFulfillment.validation");
   const t = useTranslations("deliveryFulfillment");
   const { data, refreshData } = useCoreData();
-  const { } = useModal();
-
-  const [showWarehouseModal, setShowWarehouseModal] = useState(false);
-  const [showProductModal, setShowProductModal] = useState(false);
-  const [showReceiverModal, setShowReceiverModal] = useState(false);
-  const [showShippingCompanyModal, setShowShippingCompanyModal] = useState(false);
-  const [showSalesProformaModal, setShowSalesProformaModal] = useState(false);
-  const [pendingProductIndex, setPendingProductIndex] = useState<number | null>(null);
-  const [pendingReceiverIndex, setPendingReceiverIndex] = useState<number | null>(null);
+  const { openModal } = useModal();
 
   useEffect(() => {
     if (data.warehouses.length === 0) {
@@ -128,14 +120,22 @@ export function DeliveryFulfillmentModal({ trigger, onSubmit, onClose, initialDa
     name: "items",
   });
 
-  const handleSubmit = (data: DeliveryFulfillmentFormData) => {
-    onSubmit?.(data);
-    if (trigger) {
-      setOpen(false);
-    } else {
-      onClose?.();
+  const handleSubmit = async (data: DeliveryFulfillmentFormData) => {
+    try {
+      if (onSubmit) {
+        await onSubmit(data);
+      }
+      // Only close and reset if successful
+      if (trigger) {
+        setOpen(false);
+      } else {
+        onClose?.();
+      }
+      form.reset();
+    } catch (error) {
+      console.error("Error in form submission:", error);
+      // Don't close the modal if there's an error
     }
-    form.reset();
   };
 
   const handleClose = () => {
@@ -188,7 +188,15 @@ export function DeliveryFulfillmentModal({ trigger, onSubmit, onClose, initialDa
                           value={field.value > 0 ? field.value.toString() : ""}
                           onValueChange={(value) => {
                             if (value === "new") {
-                              setShowWarehouseModal(true);
+                              openModal(WarehouseModal, {
+                                onSubmit: async (newWarehouse: any) => {
+                                  const created = await createWarehouse(newWarehouse);
+                                  if (created) {
+                                    await refreshData('warehouses');
+                                    form.setValue('warehouse', created.id);
+                                  }
+                                }
+                              });
                             } else if (value) {
                               field.onChange(Number(value));
                             }
@@ -211,7 +219,7 @@ export function DeliveryFulfillmentModal({ trigger, onSubmit, onClose, initialDa
                             )}
                             {data.warehouses.map((warehouse) => (
                               <SelectItem key={warehouse.id} value={warehouse.id.toString()}>
-                                {warehouse.name} (#{warehouse.id})
+                                {warehouse.name}
                               </SelectItem>
                             ))}
                           </SelectContent>
@@ -235,7 +243,15 @@ export function DeliveryFulfillmentModal({ trigger, onSubmit, onClose, initialDa
                           value={field.value > 0 ? field.value.toString() : ""}
                           onValueChange={(value) => {
                             if (value === "new") {
-                              setShowSalesProformaModal(true);
+                              openModal(SalesProformaModal, {
+                                onSubmit: async (newProforma: any) => {
+                                  const created = await createSalesProforma(newProforma);
+                                  if (created) {
+                                    await refreshData('salesProformas');
+                                    form.setValue('sales_proforma', created.id);
+                                  }
+                                }
+                              });
                             } else if (value) {
                               field.onChange(Number(value));
                             }
@@ -258,7 +274,7 @@ export function DeliveryFulfillmentModal({ trigger, onSubmit, onClose, initialDa
                             )}
                             {data.salesProformas.map((proforma) => (
                               <SelectItem key={proforma.id} value={proforma.id.toString()}>
-                                {proforma.serial_number} (#{proforma.id})
+                                {proforma.serial_number}
                               </SelectItem>
                             ))}
                           </SelectContent>
@@ -280,7 +296,15 @@ export function DeliveryFulfillmentModal({ trigger, onSubmit, onClose, initialDa
                           value={field.value > 0 ? field.value.toString() : ""}
                           onValueChange={(value) => {
                             if (value === "new") {
-                              setShowShippingCompanyModal(true);
+                              openModal(ShippingCompanyModal, {
+                                onSubmit: async (newCompany: any) => {
+                                  const created = await createShippingCompany(newCompany);
+                                  if (created) {
+                                    await refreshData('shippingCompanies');
+                                    form.setValue('shipping_company', created.id);
+                                  }
+                                }
+                              });
                             } else if (value) {
                               field.onChange(Number(value));
                             }
@@ -427,8 +451,18 @@ export function DeliveryFulfillmentModal({ trigger, onSubmit, onClose, initialDa
                               value={field.value > 0 ? field.value.toString() : ""}
                               onValueChange={(value) => {
                                 if (value === "new") {
-                                  setPendingProductIndex(index);
-                                  setShowProductModal(true);
+                                  const currentIndex = index;
+                                  openModal(ProductModal, {
+                                    onSubmit: async (newProduct: any) => {
+                                      const created = await createProduct(newProduct);
+                                      if (created) {
+                                        await refreshData('products');
+                                        const items = form.getValues('items');
+                                        items[currentIndex].product = created.id;
+                                        form.setValue('items', items);
+                                      }
+                                    }
+                                  });
                                 } else if (value) {
                                   field.onChange(Number(value));
                                 }
@@ -512,8 +546,18 @@ export function DeliveryFulfillmentModal({ trigger, onSubmit, onClose, initialDa
                               value={field.value > 0 ? field.value.toString() : ""}
                               onValueChange={(value) => {
                                 if (value === "new") {
-                                  setPendingReceiverIndex(index);
-                                  setShowReceiverModal(true);
+                                  const currentIndex = index;
+                                  openModal(ReceiverModal, {
+                                    onSubmit: async (newReceiver: any) => {
+                                      const created = await createReceiver(newReceiver);
+                                      if (created) {
+                                        await refreshData('receivers');
+                                        const items = form.getValues('items');
+                                        items[currentIndex].receiver = created.id;
+                                        form.setValue('items', items);
+                                      }
+                                    }
+                                  });
                                 } else if (value) {
                                   field.onChange(Number(value));
                                 }
@@ -572,93 +616,6 @@ export function DeliveryFulfillmentModal({ trigger, onSubmit, onClose, initialDa
           </Form>
         </DialogContent>
       </Dialog>
-
-      {showWarehouseModal && (
-        <WarehouseModal
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          onSubmit={async (newWarehouse: any) => {
-            const created = await createWarehouse(newWarehouse);
-            if (created) {
-              await refreshData('warehouses');
-              form.setValue('warehouse', created.id);
-              setShowWarehouseModal(false);
-            }
-          }}
-          onClose={() => setShowWarehouseModal(false)}
-        />
-      )}
-
-      {showSalesProformaModal && (
-        <SalesProformaModal
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          onSubmit={async (newProforma: any) => {
-            const created = await createSalesProforma(newProforma);
-            if (created) {
-              await refreshData('salesProformas');
-              form.setValue('sales_proforma', created.id);
-              setShowSalesProformaModal(false);
-            }
-          }}
-          onClose={() => setShowSalesProformaModal(false)}
-        />
-      )}
-
-      {showShippingCompanyModal && (
-        <ShippingCompanyModal
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          onSubmit={async (newCompany: any) => {
-            const created = await createShippingCompany(newCompany);
-            if (created) {
-              await refreshData('shippingCompanies');
-              form.setValue('shipping_company', created.id);
-              setShowShippingCompanyModal(false);
-            }
-          }}
-          onClose={() => setShowShippingCompanyModal(false)}
-        />
-      )}
-
-      {showProductModal && (
-        <ProductModal
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          onSubmit={async (newProduct: any) => {
-            const created = await createProduct(newProduct);
-            if (created) {
-              await refreshData('products');
-              if (pendingProductIndex !== null) {
-                form.setValue(`items.${pendingProductIndex}.product`, created.id);
-              }
-              setShowProductModal(false);
-              setPendingProductIndex(null);
-            }
-          }}
-          onClose={() => {
-            setShowProductModal(false);
-            setPendingProductIndex(null);
-          }}
-        />
-      )}
-
-      {showReceiverModal && (
-        <ReceiverModal
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          onSubmit={async (newReceiver: any) => {
-            const created = await createReceiver(newReceiver);
-            if (created) {
-              await refreshData('receivers');
-              if (pendingReceiverIndex !== null) {
-                form.setValue(`items.${pendingReceiverIndex}.receiver`, created.id);
-              }
-              setShowReceiverModal(false);
-              setPendingReceiverIndex(null);
-            }
-          }}
-          onClose={() => {
-            setShowReceiverModal(false);
-            setPendingReceiverIndex(null);
-          }}
-        />
-      )}
     </>
   );
 }

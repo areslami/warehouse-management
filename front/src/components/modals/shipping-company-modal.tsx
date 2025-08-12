@@ -55,8 +55,10 @@ export function ShippingCompanyModal({ trigger, onSubmit, onClose, initialData }
     },
   });
 
-  const handleSubmit = (data: ShippingCompanyFormData) => {
-    onSubmit?.(data);
+  const handleSubmit = async (data: ShippingCompanyFormData) => {
+    if (onSubmit) {
+      await onSubmit(data);
+    }
     if (trigger) {
       setOpen(false);
     } else {

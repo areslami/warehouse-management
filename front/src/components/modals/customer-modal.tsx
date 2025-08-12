@@ -75,8 +75,10 @@ export function CustomerModal({ trigger, onSubmit, onClose, initialData }: Custo
 
   const customerType = form.watch("customer_type");
 
-  const handleSubmit = (data: CustomerFormData) => {
-    onSubmit?.(data);
+  const handleSubmit = async (data: CustomerFormData) => {
+    if (onSubmit) {
+      await onSubmit(data);
+    }
     if (trigger) {
       setOpen(false);
     } else {

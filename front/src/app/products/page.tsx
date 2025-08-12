@@ -5,6 +5,7 @@ import { Plus, Edit2, Trash2, Package, Tag, MapPin } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { useTranslations } from "next-intl";
+import { toast } from "sonner";
 import { ProductModal } from "@/components/modals/product-modal";
 import { ProductCategoryModal } from "@/components/modals/product-category-modal";
 import { ProductRegionModal } from "@/components/modals/product-region-modal";
@@ -28,22 +29,40 @@ export default function ProductsPage() {
 
   const handleDeleteProduct = async (id: number) => {
     if (confirm(t("confirm_delete_product"))) {
-      await deleteProduct(id);
-      refreshData("products");
+      try {
+        await deleteProduct(id);
+        refreshData("products");
+        toast.success("محصول با موفقیت حذف شد");
+      } catch (error) {
+        console.error("Error deleting product:", error);
+        toast.error("خطا در حذف محصول");
+      }
     }
   };
 
   const handleDeleteCategory = async (id: number) => {
     if (confirm(t("confirm_delete_category"))) {
-      await deleteProductCategory(id);
-      refreshData("productCategories");
+      try {
+        await deleteProductCategory(id);
+        refreshData("productCategories");
+        toast.success("دسته‌بندی با موفقیت حذف شد");
+      } catch (error) {
+        console.error("Error deleting category:", error);
+        toast.error("خطا در حذف دسته‌بندی");
+      }
     }
   };
 
   const handleDeleteRegion = async (id: number) => {
     if (confirm(t("confirm_delete_region"))) {
-      await deleteProductRegion(id);
-      refreshData("productRegions");
+      try {
+        await deleteProductRegion(id);
+        refreshData("productRegions");
+        toast.success("منطقه با موفقیت حذف شد");
+      } catch (error) {
+        console.error("Error deleting region:", error);
+        toast.error("خطا در حذف منطقه");
+      }
     }
   };
 
@@ -239,14 +258,21 @@ export default function ProductsPage() {
             category: editingProduct.category?.id || editingProduct.category
           } : undefined}
           onSubmit={async (data) => {
-            if (editingProduct) {
-              await updateProduct(editingProduct.id, data);
-            } else {
-              await createProduct(data);
+            try {
+              if (editingProduct) {
+                await updateProduct(editingProduct.id, data);
+                toast.success("محصول با موفقیت به‌روزرسانی شد");
+              } else {
+                await createProduct(data);
+                toast.success("محصول با موفقیت ایجاد شد");
+              }
+              await refreshData("products");
+              setShowProductModal(false);
+              setEditingProduct(null);
+            } catch (error) {
+              console.error("Error saving product:", error);
+              toast.error(editingProduct ? "خطا در به‌روزرسانی محصول" : "خطا در ایجاد محصول");
             }
-            await refreshData("products");
-            setShowProductModal(false);
-            setEditingProduct(null);
           }}
           onClose={() => {
             setShowProductModal(false);
@@ -259,14 +285,21 @@ export default function ProductsPage() {
         <ProductCategoryModal
           initialData={editingCategory || undefined}
           onSubmit={async (data) => {
-            if (editingCategory) {
-              await updateProductCategory(editingCategory.id, data);
-            } else {
-              await createProductCategory(data);
+            try {
+              if (editingCategory) {
+                await updateProductCategory(editingCategory.id, data);
+                toast.success("دسته‌بندی با موفقیت به‌روزرسانی شد");
+              } else {
+                await createProductCategory(data);
+                toast.success("دسته‌بندی با موفقیت ایجاد شد");
+              }
+              await refreshData("productCategories");
+              setShowCategoryModal(false);
+              setEditingCategory(null);
+            } catch (error) {
+              console.error("Error saving category:", error);
+              toast.error(editingCategory ? "خطا در به‌روزرسانی دسته‌بندی" : "خطا در ایجاد دسته‌بندی");
             }
-            await refreshData("productCategories");
-            setShowCategoryModal(false);
-            setEditingCategory(null);
           }}
           onClose={() => {
             setShowCategoryModal(false);
@@ -279,14 +312,21 @@ export default function ProductsPage() {
         <ProductRegionModal
           initialData={editingRegion || undefined}
           onSubmit={async (data) => {
-            if (editingRegion) {
-              await updateProductRegion(editingRegion.id, data);
-            } else {
-              await createProductRegion(data);
+            try {
+              if (editingRegion) {
+                await updateProductRegion(editingRegion.id, data);
+                toast.success("منطقه با موفقیت به‌روزرسانی شد");
+              } else {
+                await createProductRegion(data);
+                toast.success("منطقه با موفقیت ایجاد شد");
+              }
+              await refreshData("productRegions");
+              setShowRegionModal(false);
+              setEditingRegion(null);
+            } catch (error) {
+              console.error("Error saving region:", error);
+              toast.error(editingRegion ? "خطا در به‌روزرسانی منطقه" : "خطا در ایجاد منطقه");
             }
-            await refreshData("productRegions");
-            setShowRegionModal(false);
-            setEditingRegion(null);
           }}
           onClose={() => {
             setShowRegionModal(false);

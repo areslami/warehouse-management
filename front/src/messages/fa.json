@@ -479,6 +479,15 @@
       "confirm_delete": "آیا از حذف این تحویل اطمینان دارید؟",
       "loading": "در حال بارگذاری تحویل‌ها...",
       "search_placeholder": "جستجو در تحویل‌ها..."
+    },
+    "errors": {
+      "create_failed": "خطا در ایجاد",
+      "update_failed": "خطا در بروزرسانی", 
+      "delete_failed": "خطا در حذف",
+      "fetch_failed": "خطا در دریافت اطلاعات",
+      "success_create": "با موفقیت ایجاد شد",
+      "success_update": "با موفقیت بروزرسانی شد",
+      "success_delete": "با موفقیت حذف شد"
     }
   },
   "finance_page": {
@@ -516,6 +525,15 @@
       "total_amount": "مبلغ کل",
       "operations": "عملیات",
       "confirm_delete": "آیا از حذف این پیش‌فاکتور اطمینان دارید؟"
+    },
+    "errors": {
+      "create_failed": "خطا در ایجاد",
+      "update_failed": "خطا در بروزرسانی",
+      "delete_failed": "خطا در حذف",
+      "fetch_failed": "خطا در دریافت اطلاعات",
+      "success_create": "با موفقیت ایجاد شد",
+      "success_update": "با موفقیت بروزرسانی شد",
+      "success_delete": "با موفقیت حذف شد"
     }
   },
   "products_page": {
@@ -531,7 +549,16 @@
     "no_regions": "منطقه‌ای یافت نشد",
     "confirm_delete_product": "آیا از حذف این محصول اطمینان دارید؟",
     "confirm_delete_category": "آیا از حذف این دسته‌بندی اطمینان دارید؟",
-    "confirm_delete_region": "آیا از حذف این منطقه اطمینان دارید؟"
+    "confirm_delete_region": "آیا از حذف این منطقه اطمینان دارید؟",
+    "errors": {
+      "create_failed": "خطا در ایجاد",
+      "update_failed": "خطا در بروزرسانی",
+      "delete_failed": "خطا در حذف",
+      "fetch_failed": "خطا در دریافت اطلاعات",
+      "success_create": "با موفقیت ایجاد شد",
+      "success_update": "با موفقیت بروزرسانی شد",
+      "success_delete": "با موفقیت حذف شد"
+    }
   },
   "parties_page": {
     "title": "اشخاص",
@@ -554,7 +581,16 @@
     "confirm_delete_receiver": "آیا از حذف این تحویل گیرنده اطمینان دارید؟",
     "confirm_delete_shipping": "آیا از حذف این شرکت حمل و نقل اطمینان دارید؟",
     "edit": "ویرایش",
-    "delete": "حذف"
+    "delete": "حذف",
+    "errors": {
+      "create_failed": "خطا در ایجاد",
+      "update_failed": "خطا در بروزرسانی",
+      "delete_failed": "خطا در حذف",
+      "fetch_failed": "خطا در دریافت اطلاعات",
+      "success_create": "با موفقیت ایجاد شد",
+      "success_update": "با موفقیت بروزرسانی شد",
+      "success_delete": "با موفقیت حذف شد"
+    }
   },
   "b2bOffer": {
     "validation": {
@@ -716,6 +752,15 @@
     "distribution_details": "جزئیات عاملیت توزیع",
     "sale_details": "جزئیات فروش",
     "edit": "ویرایش",
-    "delete": "حذف"
+    "delete": "حذف",
+    "errors": {
+      "create_failed": "خطا در ایجاد",
+      "update_failed": "خطا در بروزرسانی",
+      "delete_failed": "خطا در حذف",
+      "fetch_failed": "خطا در دریافت اطلاعات",
+      "success_create": "با موفقیت ایجاد شد",
+      "success_update": "با موفقیت بروزرسانی شد",
+      "success_delete": "با موفقیت حذف شد"
+    }
   }
 }

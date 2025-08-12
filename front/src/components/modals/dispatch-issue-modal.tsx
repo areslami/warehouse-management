@@ -15,6 +15,7 @@ import { useCoreData } from "@/lib/core-data-context";
 import { useModal } from "@/lib/modal-context";
 import { PersianDatePicker } from "../ui/persian-date-picker";
 import { getTodayGregorian } from "@/lib/utils/persian-date";
+import { getPartyDisplayName } from "@/lib/utils/party-utils";
 import { WarehouseModal } from "./warehouse-modal";
 import { ProductModal } from "./product-modal";
 import { ReceiverModal } from "./receiver-modal";
@@ -53,13 +54,6 @@ export function DispatchIssueModal({ trigger, onSubmit, onClose, initialData }: 
   const { data, refreshData } = useCoreData();
   const { openModal, closeModal } = useModal();
   
-  const [showWarehouseModal, setShowWarehouseModal] = useState(false);
-  const [showProductModal, setShowProductModal] = useState(false);
-  const [showReceiverModal, setShowReceiverModal] = useState(false);
-  const [showShippingCompanyModal, setShowShippingCompanyModal] = useState(false);
-  const [showSalesProformaModal, setShowSalesProformaModal] = useState(false);
-  const [pendingProductIndex, setPendingProductIndex] = useState<number | null>(null);
-  const [pendingReceiverIndex, setPendingReceiverIndex] = useState<number | null>(null);
   
   useEffect(() => {
     if (data.warehouses.length === 0) {
@@ -123,14 +117,22 @@ export function DispatchIssueModal({ trigger, onSubmit, onClose, initialData }: 
     name: "items",
   });
 
-  const handleSubmit = (data: DispatchIssueFormData) => {
-    onSubmit?.(data);
-    if (trigger) {
-      setOpen(false);
-    } else {
-      onClose?.();
+  const handleSubmit = async (data: DispatchIssueFormData) => {
+    try {
+      if (onSubmit) {
+        await onSubmit(data);
+      }
+      // Only close and reset if successful
+      if (trigger) {
+        setOpen(false);
+      } else {
+        onClose?.();
+      }
+      form.reset();
+    } catch (error) {
+      console.error("Error in form submission:", error);
+      // Don't close the modal if there's an error
     }
-    form.reset();
   };
 
   const handleClose = () => {
@@ -183,7 +185,15 @@ export function DispatchIssueModal({ trigger, onSubmit, onClose, initialData }: 
                         value={field.value > 0 ? field.value.toString() : ""}
                         onValueChange={(value) => {
                           if (value === "new") {
-                            setShowWarehouseModal(true);
+                            openModal(WarehouseModal, {
+                              onSubmit: async (newWarehouse: any) => {
+                                const created = await createWarehouse(newWarehouse);
+                                if (created) {
+                                  await refreshData('warehouses');
+                                  form.setValue('warehouse', created.id);
+                                }
+                              }
+                            });
                           } else if (value) {
                             field.onChange(Number(value));
                           }
@@ -206,7 +216,7 @@ export function DispatchIssueModal({ trigger, onSubmit, onClose, initialData }: 
                           )}
                           {data.warehouses.map((warehouse) => (
                             <SelectItem key={warehouse.id} value={warehouse.id.toString()}>
-                              {warehouse.name} (#{warehouse.id})
+                              {warehouse.name}
                             </SelectItem>
                           ))}
                         </SelectContent>
@@ -230,7 +240,15 @@ export function DispatchIssueModal({ trigger, onSubmit, onClose, initialData }: 
                         value={field.value > 0 ? field.value.toString() : ""}
                         onValueChange={(value) => {
                           if (value === "new") {
-                            setShowSalesProformaModal(true);
+                            openModal(SalesProformaModal, {
+                              onSubmit: async (newProforma: any) => {
+                                const created = await createSalesProforma(newProforma);
+                                if (created) {
+                                  await refreshData('salesProformas');
+                                  form.setValue('sales_proforma', created.id);
+                                }
+                              }
+                            });
                           } else if (value) {
                             field.onChange(Number(value));
                           }
@@ -253,7 +271,7 @@ export function DispatchIssueModal({ trigger, onSubmit, onClose, initialData }: 
                           )}
                           {data.salesProformas.map((proforma) => (
                             <SelectItem key={proforma.id} value={proforma.id.toString()}>
-                              {proforma.serial_number} (#{proforma.id})
+                              {proforma.serial_number}
                             </SelectItem>
                           ))}
                         </SelectContent>
@@ -275,7 +293,15 @@ export function DispatchIssueModal({ trigger, onSubmit, onClose, initialData }: 
                         value={field.value > 0 ? field.value.toString() : ""}
                         onValueChange={(value) => {
                           if (value === "new") {
-                            setShowShippingCompanyModal(true);
+                            openModal(ShippingCompanyModal, {
+                              onSubmit: async (newCompany: any) => {
+                                const created = await createShippingCompany(newCompany);
+                                if (created) {
+                                  await refreshData('shippingCompanies');
+                                  form.setValue('shipping_company', created.id);
+                                }
+                              }
+                            });
                           } else if (value) {
                             field.onChange(Number(value));
                           }
@@ -298,7 +324,7 @@ export function DispatchIssueModal({ trigger, onSubmit, onClose, initialData }: 
                           )}
                           {data.shippingCompanies.map((company) => (
                             <SelectItem key={company.id} value={company.id.toString()}>
-                              {company.name} (#{company.id})
+                              {company.name}
                             </SelectItem>
                           ))}
                         </SelectContent>
@@ -389,8 +415,18 @@ export function DispatchIssueModal({ trigger, onSubmit, onClose, initialData }: 
                             value={field.value > 0 ? field.value.toString() : ""}
                             onValueChange={(value) => {
                               if (value === "new") {
-                                setPendingProductIndex(index);
-                                setShowProductModal(true);
+                                const currentIndex = index;
+                                openModal(ProductModal, {
+                                  onSubmit: async (newProduct: any) => {
+                                    const created = await createProduct(newProduct);
+                                    if (created) {
+                                      await refreshData('products');
+                                      const items = form.getValues('items');
+                                      items[currentIndex].product = created.id;
+                                      form.setValue('items', items);
+                                    }
+                                  }
+                                });
                               } else if (value) {
                                 field.onChange(Number(value));
                               }
@@ -474,8 +510,18 @@ export function DispatchIssueModal({ trigger, onSubmit, onClose, initialData }: 
                             value={field.value > 0 ? field.value.toString() : ""}
                             onValueChange={(value) => {
                               if (value === "new") {
-                                setPendingReceiverIndex(index);
-                                setShowReceiverModal(true);
+                                const currentIndex = index;
+                                openModal(ReceiverModal, {
+                                  onSubmit: async (newReceiver: any) => {
+                                    const created = await createReceiver(newReceiver);
+                                    if (created) {
+                                      await refreshData('receivers');
+                                      const items = form.getValues('items');
+                                      items[currentIndex].receiver = created.id;
+                                      form.setValue('items', items);
+                                    }
+                                  }
+                                });
                               } else if (value) {
                                 field.onChange(Number(value));
                               }
@@ -498,7 +544,7 @@ export function DispatchIssueModal({ trigger, onSubmit, onClose, initialData }: 
                               )}
                               {data.receivers.map((receiver) => (
                                 <SelectItem key={receiver.id} value={receiver.id.toString()}>
-                                  {receiver.name} (#{receiver.id})
+                                  {getPartyDisplayName(receiver)}
                                 </SelectItem>
                               ))}
                             </SelectContent>
@@ -535,87 +581,6 @@ export function DispatchIssueModal({ trigger, onSubmit, onClose, initialData }: 
       </DialogContent>
     </Dialog>
 
-    {showWarehouseModal && (
-      <WarehouseModal
-        onSubmit={async (newWarehouse: any) => {
-          const created = await createWarehouse(newWarehouse);
-          if (created) {
-            await refreshData('warehouses');
-            form.setValue('warehouse', created.id);
-            setShowWarehouseModal(false);
-          }
-        }}
-        onClose={() => setShowWarehouseModal(false)}
-      />
-    )}
-
-    {showSalesProformaModal && (
-      <SalesProformaModal
-        onSubmit={async (newProforma: any) => {
-          const created = await createSalesProforma(newProforma);
-          if (created) {
-            await refreshData('salesProformas');
-            form.setValue('sales_proforma', created.id);
-            setShowSalesProformaModal(false);
-          }
-        }}
-        onClose={() => setShowSalesProformaModal(false)}
-      />
-    )}
-
-    {showShippingCompanyModal && (
-      <ShippingCompanyModal
-        onSubmit={async (newCompany: any) => {
-          const created = await createShippingCompany(newCompany);
-          if (created) {
-            await refreshData('shippingCompanies');
-            form.setValue('shipping_company', created.id);
-            setShowShippingCompanyModal(false);
-          }
-        }}
-        onClose={() => setShowShippingCompanyModal(false)}
-      />
-    )}
-
-    {showProductModal && (
-      <ProductModal
-        onSubmit={async (newProduct: any) => {
-          const created = await createProduct(newProduct);
-          if (created) {
-            await refreshData('products');
-            if (pendingProductIndex !== null) {
-              form.setValue(`items.${pendingProductIndex}.product`, created.id);
-            }
-            setShowProductModal(false);
-            setPendingProductIndex(null);
-          }
-        }}
-        onClose={() => {
-          setShowProductModal(false);
-          setPendingProductIndex(null);
-        }}
-      />
-    )}
-
-    {showReceiverModal && (
-      <ReceiverModal
-        onSubmit={async (newReceiver: any) => {
-          const created = await createReceiver(newReceiver);
-          if (created) {
-            await refreshData('receivers');
-            if (pendingReceiverIndex !== null) {
-              form.setValue(`items.${pendingReceiverIndex}.receiver`, created.id);
-            }
-            setShowReceiverModal(false);
-            setPendingReceiverIndex(null);
-          }
-        }}
-        onClose={() => {
-          setShowReceiverModal(false);
-          setPendingReceiverIndex(null);
-        }}
-      />
-    )}
     </>
   );
 }

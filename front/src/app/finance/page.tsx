@@ -12,6 +12,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { SalesProformaModal } from "@/components/modals/salesproforma-modal";
 import { PurchaseProformaModal } from "@/components/modals/purchaseproforma-modal";
 import { useCoreData } from "@/lib/core-data-context";
+import { useModal } from "@/lib/modal-context";
 import {
   fetchSalesProformas, createSalesProforma, updateSalesProforma, deleteSalesProforma,
   fetchPurchaseProformas, createPurchaseProforma, updatePurchaseProforma, deletePurchaseProforma
@@ -22,15 +23,10 @@ import { getPartyDisplayName } from "@/lib/utils/party-utils";
 export default function FinancePage() {
   const t = useTranslations("finance_page");
   const { customers, suppliers, products } = useCoreData();
+  const { openModal } = useModal();
 
   const [salesProformas, setSalesProformas] = useState<SalesProforma[]>([]);
   const [purchaseProformas, setPurchaseProformas] = useState<PurchaseProforma[]>([]);
-
-  const [showSalesModal, setShowSalesModal] = useState(false);
-  const [showPurchaseModal, setShowPurchaseModal] = useState(false);
-
-  const [editingSales, setEditingSales] = useState<SalesProforma | null>(null);
-  const [editingPurchase, setEditingPurchase] = useState<PurchaseProforma | null>(null);
 
   const [sheetOpen, setSheetOpen] = useState(false);
   const [selectedItem, setSelectedItem] = useState<SalesProforma | PurchaseProforma | null>(null);
@@ -169,8 +165,22 @@ export default function FinancePage() {
             <div className="p-4 border-b flex justify-between items-center">
               <h2 className="text-xl font-semibold">{t("sales.title")}</h2>
               <Button className="bg-[#f6d265] hover:bg-[#f5c842] text-black" onClick={() => {
-                setEditingSales(null);
-                setShowSalesModal(true);
+                openModal(SalesProformaModal, {
+                  onSubmit: async (data) => {
+                    try {
+                      const apiData = {
+                        ...data,
+                        payment_description: data.payment_description || null
+                      };
+                      await createSalesProforma(apiData);
+                      toast.success(t("errors.success_create"));
+                      await loadData();
+                    } catch (error) {
+                      console.error("Error saving sales proforma:", error);
+                      toast.error(t("errors.create_failed"));
+                    }
+                  }
+                });
               }}>
                 <Plus className="w-4 h-4 mr-1" />
                 {t("sales.add_proforma")}
@@ -194,8 +204,26 @@ export default function FinancePage() {
                       <div className="flex gap-2 justify-center">
                         <Button size="sm" variant="ghost" onClick={(e) => {
                           e.stopPropagation();
-                          setEditingSales(proforma);
-                          setShowSalesModal(true);
+                          openModal(SalesProformaModal, {
+                            initialData: {
+                              ...proforma,
+                              payment_description: proforma.payment_description || undefined
+                            },
+                            onSubmit: async (data) => {
+                              try {
+                                const apiData = {
+                                  ...data,
+                                  payment_description: data.payment_description || null
+                                };
+                                await updateSalesProforma(proforma.id, apiData);
+                                toast.success(t("errors.success_update"));
+                                await loadData();
+                              } catch (error) {
+                                console.error("Error saving sales proforma:", error);
+                                toast.error(t("errors.update_failed"));
+                              }
+                            }
+                          });
                         }}>
                           <Edit2 className="w-4 h-4" />
                         </Button>
@@ -228,8 +256,18 @@ export default function FinancePage() {
             <div className="p-4 border-b flex justify-between items-center">
               <h2 className="text-xl font-semibold">{t("purchase.title")}</h2>
               <Button className="bg-[#f6d265] hover:bg-[#f5c842] text-black" onClick={() => {
-                setEditingPurchase(null);
-                setShowPurchaseModal(true);
+                openModal(PurchaseProformaModal, {
+                  onSubmit: async (data) => {
+                    try {
+                      await createPurchaseProforma(data);
+                      toast.success(t("errors.success_create"));
+                      await loadData();
+                    } catch (error) {
+                      console.error("Error saving purchase proforma:", error);
+                      toast.error(t("errors.create_failed"));
+                    }
+                  }
+                });
               }}>
                 <Plus className="w-4 h-4 mr-1" />
                 {t("purchase.add_proforma")}
@@ -252,8 +290,19 @@ export default function FinancePage() {
                       <div className="flex gap-2 justify-center">
                         <Button size="sm" variant="ghost" onClick={(e) => {
                           e.stopPropagation();
-                          setEditingPurchase(proforma);
-                          setShowPurchaseModal(true);
+                          openModal(PurchaseProformaModal, {
+                            initialData: proforma,
+                            onSubmit: async (data) => {
+                              try {
+                                await updatePurchaseProforma(proforma.id, data);
+                                toast.success(t("errors.success_update"));
+                                await loadData();
+                              } catch (error) {
+                                console.error("Error saving purchase proforma:", error);
+                                toast.error(t("errors.update_failed"));
+                              }
+                            }
+                          });
                         }}>
                           <Edit2 className="w-4 h-4" />
                         </Button>
@@ -293,11 +342,42 @@ export default function FinancePage() {
                   size="sm"
                   onClick={() => {
                     if (selectedType === 'sales') {
-                      setEditingSales(selectedItem as SalesProforma);
-                      setShowSalesModal(true);
+                      const proforma = selectedItem as SalesProforma;
+                      openModal(SalesProformaModal, {
+                        initialData: {
+                          ...proforma,
+                          payment_description: proforma.payment_description || undefined
+                        },
+                        onSubmit: async (data) => {
+                          try {
+                            const apiData = {
+                              ...data,
+                              payment_description: data.payment_description || null
+                            };
+                            await updateSalesProforma(proforma.id, apiData);
+                            toast.success(t("errors.success_update"));
+                            await loadData();
+                          } catch (error) {
+                            console.error("Error saving sales proforma:", error);
+                            toast.error(t("errors.update_failed"));
+                          }
+                        }
+                      });
                     } else {
-                      setEditingPurchase(selectedItem as PurchaseProforma);
-                      setShowPurchaseModal(true);
+                      const proforma = selectedItem as PurchaseProforma;
+                      openModal(PurchaseProformaModal, {
+                        initialData: proforma,
+                        onSubmit: async (data) => {
+                          try {
+                            await updatePurchaseProforma(proforma.id, data);
+                            toast.success(t("errors.success_update"));
+                            await loadData();
+                          } catch (error) {
+                            console.error("Error saving purchase proforma:", error);
+                            toast.error(t("errors.update_failed"));
+                          }
+                        }
+                      });
                     }
                     setSheetOpen(false);
                   }}
@@ -368,75 +448,6 @@ export default function FinancePage() {
           )}
         </SheetContent>
       </Sheet>
-
-      {showSalesModal && (
-        <SalesProformaModal
-          initialData={editingSales ? {
-            ...editingSales,
-            payment_description: editingSales.payment_description || undefined
-          } : undefined}
-          onSubmit={async (data) => {
-            try {
-              const apiData = {
-                ...data,
-                payment_description: data.payment_description || null
-              };
-              if (editingSales) {
-                await updateSalesProforma(editingSales.id, apiData);
-                toast.success(t("errors.success_update"));
-              } else {
-                await createSalesProforma(apiData);
-                toast.success(t("errors.success_create"));
-              }
-              await loadData();
-              setShowSalesModal(false);
-              setEditingSales(null);
-            } catch (error) {
-              console.error("Error saving sales proforma:", error);
-              toast.error(editingSales ? t("errors.update_failed") : t("errors.create_failed"));
-            }
-          }}
-          onClose={() => {
-            setShowSalesModal(false);
-            setEditingSales(null);
-          }}
-        />
-      )}
-
-      {showPurchaseModal && (
-        <PurchaseProformaModal
-          initialData={editingPurchase || undefined}
-          onSubmit={async (data) => {
-            try {
-              const apiData = {
-                serial_number: data.serialnumber,
-                date: data.date,
-                tax: data.tax,
-                discount: data.discount,
-                supplier: data.supplier,
-                lines: data.lines
-              };
-              if (editingPurchase) {
-                await updatePurchaseProforma(editingPurchase.id, apiData);
-                toast.success(t("errors.success_update"));
-              } else {
-                await createPurchaseProforma(apiData);
-                toast.success(t("errors.success_create"));
-              }
-              await loadData();
-              setShowPurchaseModal(false);
-              setEditingPurchase(null);
-            } catch (error) {
-              console.error("Error saving purchase proforma:", error);
-              toast.error(editingPurchase ? t("errors.update_failed") : t("errors.create_failed"));
-            }
-          }}
-          onClose={() => {
-            setShowPurchaseModal(false);
-            setEditingPurchase(null);
-          }}
-        />
-      )}
     </div>
   );
 }

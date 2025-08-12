@@ -12,6 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from ".
 import { Plus, Trash2 } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useCoreData } from "@/lib/core-data-context";
+import { useModal } from "@/lib/modal-context";
 import { PersianDatePicker } from "../ui/persian-date-picker";
 import { getTodayGregorian } from "@/lib/utils/persian-date";
 import { getPartyDisplayName } from "@/lib/utils/party-utils";
@@ -20,7 +21,7 @@ import { ProductModal } from "./product-modal";
 import { createSupplier, createProduct } from "@/lib/api/core";
 
 type PurchaseProformaFormData = {
-  serialnumber: string;
+  serial_number: string;
   date: string;
   tax: number;
   discount: number;
@@ -43,10 +44,7 @@ export function PurchaseProformaModal({ trigger, onSubmit, onClose, initialData 
   const tval = useTranslations("purchaseProforma.validation");
   const t = useTranslations("purchaseProforma");
   const { data, refreshData } = useCoreData();
-  
-  const [showSupplierModal, setShowSupplierModal] = useState(false);
-  const [showProductModal, setShowProductModal] = useState(false);
-  const [pendingProductIndex, setPendingProductIndex] = useState<number | null>(null);
+  const { openModal } = useModal();
   
   useEffect(() => {
     if (data.suppliers.length === 0) {
@@ -69,7 +67,7 @@ export function PurchaseProformaModal({ trigger, onSubmit, onClose, initialData 
   });
 
   const purchaseProformaSchema = z.object({
-    serialnumber: z.string().min(1, tval('serialnumber')).max(20, tval('serialnumber')),
+    serial_number: z.string().min(1, tval('serialnumber')).max(20, tval('serialnumber')),
     date: z.string().min(1, tval('date')),
     tax: z.number().min(0, tval('tax')),
     discount: z.number().min(0, tval('discount')),
@@ -82,7 +80,7 @@ export function PurchaseProformaModal({ trigger, onSubmit, onClose, initialData 
   const form = useForm<PurchaseProformaFormData>({
     resolver: zodResolver(purchaseProformaSchema),
     defaultValues: {
-      serialnumber: initialData?.serialnumber || "",
+      serial_number: initialData?.serial_number || "",
       date: initialData?.date || getTodayDate(),
       tax: initialData?.tax || 0,
       discount: initialData?.discount || 0,
@@ -96,8 +94,10 @@ export function PurchaseProformaModal({ trigger, onSubmit, onClose, initialData 
     name: "lines",
   });
 
-  const handleSubmit = (data: PurchaseProformaFormData) => {
-    onSubmit?.(data);
+  const handleSubmit = async (data: PurchaseProformaFormData) => {
+    if (onSubmit) {
+      await onSubmit(data);
+    }
     if (trigger) {
       setOpen(false);
     } else {
@@ -133,7 +133,7 @@ export function PurchaseProformaModal({ trigger, onSubmit, onClose, initialData 
             <div className="grid grid-cols-2 gap-4">
               <FormField
                 control={form.control}
-                name="serialnumber"
+                name="serial_number"
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>{t('serialnumber')}</FormLabel>
@@ -175,7 +175,15 @@ export function PurchaseProformaModal({ trigger, onSubmit, onClose, initialData 
                       value={field.value > 0 ? field.value.toString() : ""}
                       onValueChange={(value) => {
                         if (value === "new") {
-                          setShowSupplierModal(true);
+                          openModal(SupplierModal, {
+                            onSubmit: async (newSupplier: any) => {
+                              const created = await createSupplier(newSupplier);
+                              if (created) {
+                                await refreshData('suppliers');
+                                form.setValue('supplier', created.id);
+                              }
+                            }
+                          });
                         } else if (value) {
                           field.onChange(Number(value));
                         }
@@ -276,8 +284,18 @@ export function PurchaseProformaModal({ trigger, onSubmit, onClose, initialData 
                             value={field.value > 0 ? field.value.toString() : ""}
                             onValueChange={(value) => {
                               if (value === "new") {
-                                setPendingProductIndex(index);
-                                setShowProductModal(true);
+                                const currentIndex = index;
+                                openModal(ProductModal, {
+                                  onSubmit: async (newProduct: any) => {
+                                    const created = await createProduct(newProduct);
+                                    if (created) {
+                                      await refreshData('products');
+                                      const lines = form.getValues('lines');
+                                      lines[currentIndex].product = created.id;
+                                      form.setValue('lines', lines);
+                                    }
+                                  }
+                                });
                               } else if (value) {
                                 field.onChange(Number(value));
                               }
@@ -374,40 +392,6 @@ export function PurchaseProformaModal({ trigger, onSubmit, onClose, initialData 
         </Form>
       </DialogContent>
     </Dialog>
-
-    {showSupplierModal && (
-      <SupplierModal
-        onSubmit={async (newSupplier: any) => {
-          const created = await createSupplier(newSupplier);
-          if (created) {
-            await refreshData('suppliers');
-            form.setValue('supplier', created.id);
-            setShowSupplierModal(false);
-          }
-        }}
-        onClose={() => setShowSupplierModal(false)}
-      />
-    )}
-
-    {showProductModal && (
-      <ProductModal
-        onSubmit={async (newProduct: any) => {
-          const created = await createProduct(newProduct);
-          if (created) {
-            await refreshData('products');
-            if (pendingProductIndex !== null) {
-              form.setValue(`lines.${pendingProductIndex}.product`, created.id);
-            }
-            setShowProductModal(false);
-            setPendingProductIndex(null);
-          }
-        }}
-        onClose={() => {
-          setShowProductModal(false);
-          setPendingProductIndex(null);
-        }}
-      />
-    )}
     </>
   );
 }

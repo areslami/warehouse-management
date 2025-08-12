@@ -24,7 +24,7 @@ import { createProduct } from "@/lib/api/core";
 import { createPurchaseProforma } from "@/lib/api/finance";
 
 type WarehouseReceiptFormData = {
-  receipt_id: string;
+  receipt_id?: string;
   receipt_type: "import_cottage" | "distribution_cottage" | "purchase";
   date: string;
   warehouse: number;
@@ -50,10 +50,6 @@ export function WarehouseReceiptModal({ trigger, onSubmit, onClose, initialData 
   const { data, refreshData } = useCoreData();
   const { openModal, closeModal } = useModal();
   
-  const [showWarehouseModal, setShowWarehouseModal] = useState(false);
-  const [showProductModal, setShowProductModal] = useState(false);
-  const [showProformaModal, setShowProformaModal] = useState(false);
-  const [pendingProductIndex, setPendingProductIndex] = useState<number | null>(null);
   
   useEffect(() => {
     if (data.warehouses.length === 0) {
@@ -64,6 +60,9 @@ export function WarehouseReceiptModal({ trigger, onSubmit, onClose, initialData 
     }
     if (data.purchaseProformas.length === 0) {
       refreshData('purchaseProformas');
+    }
+    if (data.suppliers.length === 0) {
+      refreshData('suppliers');
     }
   }, []);
 
@@ -78,13 +77,13 @@ export function WarehouseReceiptModal({ trigger, onSubmit, onClose, initialData 
   });
 
   const warehouseReceiptSchema = z.object({
-    receipt_id: z.string().min(1, tval("receipt-id")),
+    receipt_id: z.string().optional(),
     receipt_type: z.enum(["import_cottage", "distribution_cottage", "purchase"]),
     date: z.string().min(1, tval("date")),
     warehouse: z.number().min(1, tval("warehouse")),
     description: z.string().optional(),
     cottage_serial_number: z.string().optional(),
-    proforma: z.number().optional(),
+    proforma: z.number().min(1).optional().or(z.literal(undefined)),
     items: z.array(receiptItemSchema).min(1, tval("items")),
   });
 
@@ -99,7 +98,7 @@ export function WarehouseReceiptModal({ trigger, onSubmit, onClose, initialData 
       warehouse: initialData?.warehouse || 0,
       description: initialData?.description || "",
       cottage_serial_number: initialData?.cottage_serial_number || "",
-      proforma: initialData?.proforma || 0,
+      proforma: initialData?.proforma || undefined,
       items: initialData?.items || [{ product: 0, weight: 0 }],
     },
   });
@@ -111,19 +110,25 @@ export function WarehouseReceiptModal({ trigger, onSubmit, onClose, initialData 
   
   const receiptType = form.watch("receipt_type");
 
-  const handleSubmit = (data: WarehouseReceiptFormData) => {
+  const handleSubmit = async (data: WarehouseReceiptFormData) => {
     console.log("Form submitted with data:", data);
-    if (onSubmit) {
-      onSubmit(data);
-    } else {
-      console.log("No onSubmit handler provided");
+    try {
+      if (onSubmit) {
+        await onSubmit(data);
+      } else {
+        console.log("No onSubmit handler provided");
+      }
+      // Only close and reset if successful
+      if (trigger) {
+        setOpen(false);
+      } else {
+        onClose?.();
+      }
+      form.reset();
+    } catch (error) {
+      console.error("Error in form submission:", error);
+      // Don't close the modal if there's an error
     }
-    if (trigger) {
-      setOpen(false);
-    } else {
-      onClose?.();
-    }
-    form.reset();
   };
 
   const handleClose = () => {
@@ -214,7 +219,16 @@ export function WarehouseReceiptModal({ trigger, onSubmit, onClose, initialData 
                         value={field.value > 0 ? field.value.toString() : ""}
                         onValueChange={(value) => {
                           if (value === "new") {
-                            setShowWarehouseModal(true);
+                            openModal(WarehouseModal, {
+                              onSubmit: async (newWarehouse: any) => {
+                                const created = await createWarehouse(newWarehouse);
+                                if (created) {
+                                  await refreshData('warehouses');
+                                  form.setValue('warehouse', created.id);
+                                  // Don't call closeModal() here - let the modal close itself
+                                }
+                              }
+                            });
                           } else if (value) {
                             field.onChange(Number(value));
                           }
@@ -238,7 +252,7 @@ export function WarehouseReceiptModal({ trigger, onSubmit, onClose, initialData 
                           {data.warehouses && data.warehouses.length > 0 ? (
                             data.warehouses.map((warehouse) => (
                               <SelectItem key={warehouse.id} value={warehouse.id.toString()}>
-                                {warehouse.name} (#{warehouse.id})
+                                {warehouse.name}
                               </SelectItem>
                             ))
                           ) : (
@@ -283,7 +297,18 @@ export function WarehouseReceiptModal({ trigger, onSubmit, onClose, initialData 
                         value={field.value?.toString() || ""}
                         onValueChange={(value) => {
                           if (value === "new") {
-                            setShowProformaModal(true);
+                            openModal(PurchaseProformaModal, {
+                              onSubmit: async (newProforma: any) => {
+                                const created = await createPurchaseProforma(newProforma);
+                                if (created) {
+                                  await refreshData('purchaseProformas');
+                                  form.setValue('proforma', created.id);
+                                  // Force the select to update with the new value
+                                  form.trigger('proforma');
+                                  // Don't call closeModal() here - let the modal close itself
+                                }
+                              }
+                            });
                           } else {
                             field.onChange(value === "none" ? undefined : Number(value));
                           }
@@ -309,7 +334,7 @@ export function WarehouseReceiptModal({ trigger, onSubmit, onClose, initialData 
                           )}
                           {data.purchaseProformas.map((proforma) => (
                             <SelectItem key={proforma.id} value={proforma.id.toString()}>
-                              {proforma.serial_number} - {proforma.supplier_display || proforma.supplier}
+                              {proforma.serial_number} - {getPartyDisplayName(data.suppliers.find(s => s.id === proforma.supplier))}
                             </SelectItem>
                           ))}
                         </SelectContent>
@@ -362,8 +387,19 @@ export function WarehouseReceiptModal({ trigger, onSubmit, onClose, initialData 
                             value={field.value > 0 ? field.value.toString() : ""}
                             onValueChange={(value) => {
                               if (value === "new") {
-                                setPendingProductIndex(index);
-                                setShowProductModal(true);
+                                const currentIndex = index;
+                                openModal(ProductModal, {
+                                  onSubmit: async (newProduct: any) => {
+                                    const created = await createProduct(newProduct);
+                                    if (created) {
+                                      await refreshData('products');
+                                      const items = form.getValues('items');
+                                      items[currentIndex].product = created.id;
+                                      form.setValue('items', items);
+                                      // Don't call closeModal() here - let the modal close itself
+                                    }
+                                  }
+                                });
                               } else if (value) {
                                 field.onChange(Number(value));
                               }
@@ -448,53 +484,6 @@ export function WarehouseReceiptModal({ trigger, onSubmit, onClose, initialData 
       </DialogContent>
     </Dialog>
 
-    {showWarehouseModal && (
-      <WarehouseModal
-        onSubmit={async (newWarehouse: any) => {
-          const created = await createWarehouse(newWarehouse);
-          if (created) {
-            await refreshData('warehouses');
-            form.setValue('warehouse', created.id);
-            setShowWarehouseModal(false);
-          }
-        }}
-        onClose={() => setShowWarehouseModal(false)}
-      />
-    )}
-
-    {showProductModal && (
-      <ProductModal
-        onSubmit={async (newProduct: any) => {
-          const created = await createProduct(newProduct);
-          if (created) {
-            await refreshData('products');
-            if (pendingProductIndex !== null) {
-              form.setValue(`items.${pendingProductIndex}.product`, created.id);
-            }
-            setShowProductModal(false);
-            setPendingProductIndex(null);
-          }
-        }}
-        onClose={() => {
-          setShowProductModal(false);
-          setPendingProductIndex(null);
-        }}
-      />
-    )}
-
-    {showProformaModal && (
-      <PurchaseProformaModal
-        onSubmit={async (newProforma: any) => {
-          const created = await createPurchaseProforma(newProforma);
-          if (created) {
-            await refreshData('purchaseProformas');
-            form.setValue('proforma', created.id);
-            setShowProformaModal(false);
-          }
-        }}
-        onClose={() => setShowProformaModal(false)}
-      />
-    )}
     </>
   );
 }

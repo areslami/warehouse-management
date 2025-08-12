@@ -81,8 +81,10 @@ export function ReceiverModal({ trigger, onSubmit, onClose, initialData }: Recei
 
   const receiverType = form.watch("receiver_type");
 
-  const handleSubmit = (data: ReceiverFormData) => {
-    onSubmit?.(data);
+  const handleSubmit = async (data: ReceiverFormData) => {
+    if (onSubmit) {
+      await onSubmit(data);
+    }
     if (trigger) {
       setOpen(false);
     } else {

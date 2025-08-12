@@ -12,6 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from ".
 import { Plus, Trash2 } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useCoreData } from "@/lib/core-data-context";
+import { useModal } from "@/lib/modal-context";
 import { PersianDatePicker } from "../ui/persian-date-picker";
 import { getTodayGregorian } from "@/lib/utils/persian-date";
 import { getPartyDisplayName } from "@/lib/utils/party-utils";
@@ -45,10 +46,7 @@ export function SalesProformaModal({ trigger, onSubmit, onClose, initialData }: 
   const tval = useTranslations("salesProforma.validation");
   const t = useTranslations("salesProforma");
   const { data, refreshData } = useCoreData();
-  
-  const [showCustomerModal, setShowCustomerModal] = useState(false);
-  const [showProductModal, setShowProductModal] = useState(false);
-  const [pendingProductIndex, setPendingProductIndex] = useState<number | null>(null);
+  const { openModal } = useModal();
   
   useEffect(() => {
     if (data.customers.length === 0) {
@@ -102,8 +100,10 @@ export function SalesProformaModal({ trigger, onSubmit, onClose, initialData }: 
     name: "lines",
   });
 
-  const handleSubmit = (data: SalesProformaFormData) => {
-    onSubmit?.(data);
+  const handleSubmit = async (data: SalesProformaFormData) => {
+    if (onSubmit) {
+      await onSubmit(data);
+    }
     if (trigger) {
       setOpen(false);
     } else {
@@ -182,7 +182,15 @@ export function SalesProformaModal({ trigger, onSubmit, onClose, initialData }: 
                         value={field.value > 0 ? field.value.toString() : ""}
                         onValueChange={(value) => {
                           if (value === "new") {
-                            setShowCustomerModal(true);
+                            openModal(CustomerModal, {
+                              onSubmit: async (newCustomer: any) => {
+                                const created = await createCustomer(newCustomer);
+                                if (created) {
+                                  await refreshData('customers');
+                                  form.setValue('customer', created.id);
+                                }
+                              }
+                            });
                           } else if (value) {
                             field.onChange(Number(value));
                           }
@@ -316,8 +324,18 @@ export function SalesProformaModal({ trigger, onSubmit, onClose, initialData }: 
                             value={field.value > 0 ? field.value.toString() : ""}
                             onValueChange={(value) => {
                               if (value === "new") {
-                                setPendingProductIndex(index);
-                                setShowProductModal(true);
+                                const currentIndex = index;
+                                openModal(ProductModal, {
+                                  onSubmit: async (newProduct: any) => {
+                                    const created = await createProduct(newProduct);
+                                    if (created) {
+                                      await refreshData('products');
+                                      const lines = form.getValues('lines');
+                                      lines[currentIndex].product = created.id;
+                                      form.setValue('lines', lines);
+                                    }
+                                  }
+                                });
                               } else if (value) {
                                 field.onChange(Number(value));
                               }
@@ -414,40 +432,6 @@ export function SalesProformaModal({ trigger, onSubmit, onClose, initialData }: 
         </Form>
       </DialogContent>
     </Dialog>
-
-    {showCustomerModal && (
-      <CustomerModal
-        onSubmit={async (newCustomer: any) => {
-          const created = await createCustomer(newCustomer);
-          if (created) {
-            await refreshData('customers');
-            form.setValue('customer', created.id);
-            setShowCustomerModal(false);
-          }
-        }}
-        onClose={() => setShowCustomerModal(false)}
-      />
-    )}
-
-    {showProductModal && (
-      <ProductModal
-        onSubmit={async (newProduct: any) => {
-          const created = await createProduct(newProduct);
-          if (created) {
-            await refreshData('products');
-            if (pendingProductIndex !== null) {
-              form.setValue(`lines.${pendingProductIndex}.product`, created.id);
-            }
-            setShowProductModal(false);
-            setPendingProductIndex(null);
-          }
-        }}
-        onClose={() => {
-          setShowProductModal(false);
-          setPendingProductIndex(null);
-        }}
-      />
-    )}
     </>
   );
 }

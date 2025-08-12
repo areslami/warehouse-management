@@ -50,8 +50,10 @@ export function WarehouseModal({ trigger, onSubmit, onClose, initialData }: Ware
     },
   });
 
-  const handleSubmit = (data: WarehouseFormData) => {
-    onSubmit?.(data);
+  const handleSubmit = async (data: WarehouseFormData) => {
+    if (onSubmit) {
+      await onSubmit(data);
+    }
     if (trigger) {
       setOpen(false);
     } else {

@@ -72,8 +72,10 @@ export function SupplierModal({ trigger, onSubmit, onClose, initialData }: Suppl
 
   const supplierType = form.watch("supplier_type");
 
-  const handleSubmit = (data: SupplierFormData) => {
-    onSubmit?.(data);
+  const handleSubmit = async (data: SupplierFormData) => {
+    if (onSubmit) {
+      await onSubmit(data);
+    }
     if (trigger) {
       setOpen(false);
     } else {

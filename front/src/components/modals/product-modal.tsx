@@ -12,6 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from ".
 import { Plus } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useCoreData } from "@/lib/core-data-context";
+import { useModal } from "@/lib/modal-context";
 import { ProductCategoryModal } from "./product-category-modal";
 import { ProductRegionModal } from "./product-region-modal";
 import { createProductCategory, createProductRegion } from "@/lib/api/core";
@@ -36,8 +37,7 @@ export function ProductModal({ trigger, onSubmit, onClose, initialData }: Produc
   const tval = useTranslations("product.validation");
   const t = useTranslations("product");
   const { data, refreshData } = useCoreData();
-  const [showCategoryModal, setShowCategoryModal] = useState(false);
-  const [showRegionModal, setShowRegionModal] = useState(false);
+  const { openModal } = useModal();
   
   useEffect(() => {
     if (data.productCategories.length === 0) {
@@ -71,8 +71,15 @@ export function ProductModal({ trigger, onSubmit, onClose, initialData }: Produc
     },
   });
 
-  const handleSubmit = (data: ProductFormData) => {
-    onSubmit?.(data);
+  const handleSubmit = async (data: ProductFormData) => {
+    if (onSubmit) {
+      await onSubmit(data);
+    }
+    if (trigger) {
+      setOpen(false);
+    } else {
+      onClose?.();
+    }
     form.reset();
   };
 
@@ -156,7 +163,15 @@ export function ProductModal({ trigger, onSubmit, onClose, initialData }: Produc
                         value={field.value > 0 ? field.value.toString() : ""}
                         onValueChange={(value) => {
                           if (value === "new") {
-                            setShowCategoryModal(true);
+                            openModal(ProductCategoryModal, {
+                              onSubmit: async (newCategory: any) => {
+                                const created = await createProductCategory(newCategory);
+                                if (created) {
+                                  await refreshData('productCategories');
+                                  form.setValue('category', created.id);
+                                }
+                              }
+                            });
                           } else if (value) {
                             field.onChange(Number(value));
                           }
@@ -202,7 +217,15 @@ export function ProductModal({ trigger, onSubmit, onClose, initialData }: Produc
                       value={field.value > 0 ? field.value.toString() : ""}
                       onValueChange={(value) => {
                         if (value === "new") {
-                          setShowRegionModal(true);
+                          openModal(ProductRegionModal, {
+                            onSubmit: async (newRegion: any) => {
+                              const created = await createProductRegion(newRegion);
+                              if (created) {
+                                await refreshData('productRegions');
+                                form.setValue('b2bregion', created.id);
+                              }
+                            }
+                          });
                         } else if (value) {
                           field.onChange(Number(value));
                         }
@@ -260,34 +283,6 @@ export function ProductModal({ trigger, onSubmit, onClose, initialData }: Produc
         </Form>
       </DialogContent>
     </Dialog>
-    
-    {showCategoryModal && (
-      <ProductCategoryModal
-        onSubmit={async (newCategory) => {
-          const created = await createProductCategory(newCategory);
-          if (created) {
-            await refreshData('productCategories');
-            form.setValue('category', created.id);
-            setShowCategoryModal(false);
-          }
-        }}
-        onClose={() => setShowCategoryModal(false)}
-      />
-    )}
-
-    {showRegionModal && (
-      <ProductRegionModal
-        onSubmit={async (newRegion) => {
-          const created = await createProductRegion(newRegion);
-          if (created) {
-            await refreshData('productRegions');
-            form.setValue('b2bregion', created.id);
-            setShowRegionModal(false);
-          }
-        }}
-        onClose={() => setShowRegionModal(false)}
-      />
-    )}
     </>
   );
 }
