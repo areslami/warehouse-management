@@ -4,6 +4,7 @@ import { useState, useEffect, useMemo, useCallback } from "react";
 import { Plus, Edit2, Trash2, Package, FileText, Truck, Search } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
+import { handleApiError } from "@/lib/api/error-handler";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -25,8 +26,8 @@ import { Warehouse, WarehouseReceipt, DispatchIssue, DeliveryFulfillment } from 
 
 export default function WarehousePage() {
   const t = useTranslations("pages.warehouse");
-  const tErrors = useTranslations("errors");
   const tCommon = useTranslations("common");
+  const tErrors = useTranslations("errors");
   const { warehouses, refreshData: refreshCoreData } = useCoreData();
 
   const [receipts, setReceipts] = useState<WarehouseReceipt[]>([]);
@@ -61,10 +62,11 @@ export default function WarehousePage() {
       setDispatches(dispatchesData || []);
       setDeliveries(deliveriesData || []);
     } catch (error) {
-      console.error("Error loading data:", error);
-      toast.error(tErrors("fetch_failed"));
+      console.error("Failed to load warehouse data:", error);
+      const errorMessage = handleApiError(error, "Loading warehouse data");
+      toast.error(errorMessage);
     }
-  }, [tErrors]);
+  }, []);
 
   useEffect(() => {
     loadData();
@@ -83,8 +85,9 @@ export default function WarehousePage() {
         toast.success(tErrors("success_delete"));
         loadData();
       } catch (error) {
-        console.error("Error deleting receipt:", error);
-        toast.error(tErrors("delete_failed"));
+        console.error("Failed to delete warehouse receipt:", error);
+        const errorMessage = handleApiError(error, "Deleting warehouse receipt");
+        toast.error(errorMessage);
       }
     }
   };
@@ -96,8 +99,9 @@ export default function WarehousePage() {
         toast.success(tErrors("success_delete"));
         loadData();
       } catch (error) {
-        console.error("Error deleting dispatch:", error);
-        toast.error(tErrors("delete_failed"));
+        console.error("Failed to delete dispatch issue:", error);
+        const errorMessage = handleApiError(error, "Deleting dispatch issue");
+        toast.error(errorMessage);
       }
     }
   };
@@ -109,8 +113,9 @@ export default function WarehousePage() {
         toast.success(tErrors("success_delete"));
         loadData();
       } catch (error) {
-        console.error("Error deleting delivery:", error);
-        toast.error(tErrors("delete_failed"));
+        console.error("Failed to delete delivery fulfillment:", error);
+        const errorMessage = handleApiError(error, "Deleting delivery fulfillment");
+        toast.error(errorMessage);
       }
     }
   };
@@ -122,8 +127,9 @@ export default function WarehousePage() {
         toast.success(tErrors("success_delete"));
         refreshCoreData('warehouses');
       } catch (error) {
-        console.error("Error deleting warehouse:", error);
-        toast.error(tErrors("delete_failed"));
+        console.error("Failed to delete warehouse:", error);
+        const errorMessage = handleApiError(error, "Deleting warehouse");
+        toast.error(errorMessage);
       }
     }
   };
@@ -296,8 +302,9 @@ export default function WarehousePage() {
                             setEditingReceipt(fullReceipt);
                             setShowReceiptModal(true);
                           } catch (error) {
-                            console.error("Error fetching receipt details:", error);
-                            toast.error(tErrors("fetch_failed"));
+                            console.error("Failed to fetch receipt details:", error);
+                            const errorMessage = handleApiError(error, "Fetching receipt details");
+                            toast.error(errorMessage);
                           }
                         }}>
                           <Edit2 className="w-4 h-4" />
@@ -355,8 +362,9 @@ export default function WarehousePage() {
                             setEditingDispatch(fullDispatch);
                             setShowDispatchModal(true);
                           } catch (error) {
-                            console.error("Error fetching dispatch details:", error);
-                            toast.error(tErrors("fetch_failed"));
+                            console.error("Failed to fetch dispatch details:", error);
+                            const errorMessage = handleApiError(error, "Fetching dispatch details");
+                            toast.error(errorMessage);
                           }
                         }}>
                           <Edit2 className="w-4 h-4" />
@@ -414,8 +422,9 @@ export default function WarehousePage() {
                             setEditingDelivery(fullDelivery);
                             setShowDeliveryModal(true);
                           } catch (error) {
-                            console.error("Error fetching delivery details:", error);
-                            toast.error(tErrors("fetch_failed"));
+                            console.error("Failed to fetch delivery details:", error);
+                            const errorMessage = handleApiError(error, "Fetching delivery details");
+                            toast.error(errorMessage);
                           }
                         }}>
                           <Edit2 className="w-4 h-4" />
@@ -472,8 +481,9 @@ export default function WarehousePage() {
                       }
                       setSheetOpen(false);
                     } catch (error) {
-                      console.error("Error fetching details:", error);
-                      toast.error(tErrors("fetch_failed"));
+                      console.error("Failed to fetch item details:", error);
+                      const errorMessage = handleApiError(error, "Fetching item details");
+                      toast.error(errorMessage);
                     }
                   }}
                 >
@@ -497,12 +507,13 @@ export default function WarehousePage() {
                         } else if (selectedType === 'delivery' && 'delivery_id' in selectedItem) {
                           await deleteDeliveryFulfillment(selectedItem.id);
                         }
-                        toast.success(tErrors("success_delete"));
+                        toast.success(tCommon("toast_messages.delete_success"));
                         await loadData();
                         setSheetOpen(false);
                       } catch (error) {
-                        console.error("Error deleting:", error);
-                        toast.error(tErrors("delete_failed"));
+                        console.error("Failed to delete item:", error);
+                        const errorMessage = handleApiError(error, "Deleting item");
+                        toast.error(errorMessage);
                       }
                     }
                   }}
@@ -585,17 +596,18 @@ export default function WarehousePage() {
 
               if (editingReceipt) {
                 await updateWarehouseReceipt(editingReceipt.id, cleanData);
-                toast.success(tErrors("success_update"));
+                toast.success(tCommon("toast_messages.update_success"));
               } else {
                 await createWarehouseReceipt(cleanData);
-                toast.success(tErrors("success_create"));
+                toast.success(tCommon("toast_messages.create_success"));
               }
               await loadData();
               setShowReceiptModal(false);
               setEditingReceipt(null);
             } catch (error) {
-              console.error("Error saving receipt:", error);
-              toast.error(editingReceipt ? tErrors("update_failed") : tErrors("create_failed"));
+              console.error("Failed to save warehouse receipt:", error);
+              const errorMessage = handleApiError(error, editingReceipt ? "Updating warehouse receipt" : "Creating warehouse receipt");
+              toast.error(errorMessage);
             }
           }}
           onClose={() => {
@@ -620,17 +632,18 @@ export default function WarehousePage() {
 
               if (editingDispatch) {
                 await updateDispatchIssue(editingDispatch.id, submitData);
-                toast.success(tErrors("success_update"));
+                toast.success(tCommon("toast_messages.update_success"));
               } else {
                 await createDispatchIssue(submitData);
-                toast.success(tErrors("success_create"));
+                toast.success(tCommon("toast_messages.create_success"));
               }
               await loadData();
               setShowDispatchModal(false);
               setEditingDispatch(null);
             } catch (error) {
-              console.error("Error saving dispatch:", error);
-              toast.error(editingDispatch ? tErrors("update_failed") : tErrors("create_failed"));
+              console.error("Failed to save dispatch issue:", error);
+              const errorMessage = handleApiError(error, editingDispatch ? "Updating dispatch issue" : "Creating dispatch issue");
+              toast.error(errorMessage);
             }
           }}
           onClose={() => {
@@ -655,17 +668,18 @@ export default function WarehousePage() {
 
               if (editingDelivery) {
                 await updateDeliveryFulfillment(editingDelivery.id, submitData);
-                toast.success(tErrors("success_update"));
+                toast.success(tCommon("toast_messages.update_success"));
               } else {
                 await createDeliveryFulfillment(submitData);
-                toast.success(tErrors("success_create"));
+                toast.success(tCommon("toast_messages.create_success"));
               }
               await loadData();
               setShowDeliveryModal(false);
               setEditingDelivery(null);
             } catch (error) {
-              console.error("Error saving delivery:", error);
-              toast.error(editingDelivery ? tErrors("update_failed") : tErrors("create_failed"));
+              console.error("Failed to save delivery fulfillment:", error);
+              const errorMessage = handleApiError(error, editingDelivery ? "Updating delivery fulfillment" : "Creating delivery fulfillment");
+              toast.error(errorMessage);
             }
           }}
           onClose={() => {
@@ -682,21 +696,22 @@ export default function WarehousePage() {
             try {
               if (editingWarehouse) {
                 await updateWarehouse(editingWarehouse.id, data);
-                toast.success(tErrors("success_update"));
+                toast.success(tCommon("toast_messages.update_success"));
               } else {
                 const warehouseData = {
                   ...data,
                   description: data.description || ""
                 };
                 await createWarehouse(warehouseData);
-                toast.success(tErrors("success_create"));
+                toast.success(tCommon("toast_messages.create_success"));
               }
               await refreshCoreData('warehouses');
               setShowWarehouseModal(false);
               setEditingWarehouse(null);
             } catch (error) {
-              console.error("Error saving warehouse:", error);
-              toast.error(editingWarehouse ? tErrors("update_failed") : tErrors("create_failed"));
+              console.error("Failed to save warehouse:", error);
+              const errorMessage = handleApiError(error, editingWarehouse ? "Updating warehouse" : "Creating warehouse");
+              toast.error(errorMessage);
             }
           }}
           onClose={() => {

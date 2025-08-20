@@ -1,29 +1,11 @@
 from django.db import models
 
-class ProductCategory(models.Model):
-    name = models.CharField(max_length=100,null=False)
-    description = models.CharField(max_length=255,null=True)
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
-    
-    def __str__(self):
-        return self.name
-    
-class ProductRegion(models.Model):
-    name = models.CharField(max_length=100,null=False)
-    description = models.CharField(max_length=255,null=True)
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
-    
-    def __str__(self):
-        return self.name
-    
 class Product(models.Model):
     name = models.CharField(max_length=100,null=False)
-    code = models.CharField(max_length=100,null=False, unique=True)
-    b2bcode = models.CharField(max_length=100,null=False)
-    b2bregion =models.ForeignKey(ProductRegion,on_delete=models.SET_NULL, null=True)
-    category = models.ForeignKey(ProductCategory,on_delete=models.SET_NULL, null=True)
+    code = models.CharField(max_length=10,null=False, unique=True)
+    b2bcode = models.CharField(max_length=10,null=False, unique=True)
+    b2bregion = models.CharField(max_length=10,null=False)
+    category =  models.CharField(max_length=10,null=False)
     description = models.TextField(blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

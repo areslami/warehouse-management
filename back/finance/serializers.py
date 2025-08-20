@@ -22,6 +22,7 @@ class ProformaLineSerializer(serializers.ModelSerializer):
 class PurchaseProformaSerializer(serializers.ModelSerializer):
     lines=ProformaLineSerializer(many=True,required=False)
     supplier_name=serializers.SerializerMethodField()
+    
     class Meta:
         model = PurchaseProforma
         fields = ['id','serial_number','date','subtotal','tax','discount' ,'final_price' ,'supplier','supplier_name','lines','created_at','updated_at']
@@ -92,14 +93,13 @@ class SalesProformaSerializer(serializers.ModelSerializer):
         proforma.save()
         return proforma
     
-    def update(self, instance, validated_data):
-        items_data = validated_data.pop('lines', None)
+    
+    def update(self,instance,validated_data):
+        items_data = validated_data.pop('lines',None)
         
-        # Update proforma fields
-        for attr, value in validated_data.items():
+        for attr,value in validated_data.items():
             setattr(instance, attr, value)
-        
-        # Handle items update if provided
+            
         if items_data is not None:
             # Delete existing items
             instance.lines.all().delete()
@@ -115,7 +115,6 @@ class SalesProformaSerializer(serializers.ModelSerializer):
         
         instance.save()
         return instance
-
     
     
 

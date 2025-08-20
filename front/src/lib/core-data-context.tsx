@@ -2,7 +2,7 @@
 
 import { createContext, useCallback, useContext, useEffect, useState } from "react";
 import { toast } from "./toast-helper";
-import { useTranslations } from 'next-intl';
+import { handleApiError } from "@/lib/api/error-handler";
 import { Product, Supplier, Receiver, Customer, ShippingCompany, } from "@/lib/interfaces/core";
 import { Warehouse } from "@/lib/interfaces/warehouse";
 import { PurchaseProforma, SalesProforma } from "@/lib/interfaces/finance";
@@ -48,7 +48,6 @@ export const CoreDataProvider = ({ children }: { children: React.ReactNode }) =>
         purchaseProformas: [],
         salesProformas: [],
     });
-    const t = useTranslations("");
     const fetchInitialData = useCallback(async () => {
         try {
             const [
@@ -82,11 +81,10 @@ export const CoreDataProvider = ({ children }: { children: React.ReactNode }) =>
 
         } catch (error) {
             console.error('Failed to fetch initial data:', error);
-
-
-            toast.error(t('common.initial_data_error'));
+            const errorMessage = handleApiError(error, "Loading initial application data");
+            toast.error(errorMessage);
         }
-    }, [t]);
+    }, []);
     const updateData = <T extends keyof AppData>(key: T, newData: AppData[T]) => {
         setData(prevData => ({ ...prevData, [key]: newData }));
     };

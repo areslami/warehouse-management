@@ -1,38 +1,16 @@
 from rest_framework import viewsets, filters
-from rest_framework.decorators import action
-from rest_framework.response import Response
 from django_filters.rest_framework import DjangoFilterBackend
 
-from .models import Supplier, Customer, Receiver, Product, ProductCategory, ProductRegion
+from .models import Supplier, Customer, Receiver, Product
 from .serializers import (
     SupplierSerializer, CustomerSerializer, ReceiverSerializer,
-    ProductSerializer, ProductListSerializer, ProductCategorySerializer,
-    ProductRegionSerializer
+    ProductSerializer, ProductListSerializer,
 )
 
 
-class ProductCategoryViewSet(viewsets.ModelViewSet):
-    queryset = ProductCategory.objects.all()
-    serializer_class = ProductCategorySerializer
-    filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
-    search_fields = ['name', 'description']
-    ordering_fields = ['name', 'created_at']
-    ordering = ['name']
-    
-            
-
-
-class ProductRegionViewSet(viewsets.ModelViewSet):
-    queryset = ProductRegion.objects.all()
-    serializer_class = ProductRegionSerializer
-    filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
-    search_fields = ['name', 'description']
-    ordering_fields = ['name', 'created_at']
-    ordering = ['name']
-
 
 class ProductViewSet(viewsets.ModelViewSet):
-    queryset = Product.objects.select_related('category', 'b2bregion').all()
+    queryset = Product.objects.all()
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_fields = ['category', 'b2bregion']
     search_fields = ['name', 'code', 'b2bcode', 'description']
@@ -43,16 +21,6 @@ class ProductViewSet(viewsets.ModelViewSet):
         if self.action == 'list':
             return ProductListSerializer
         return ProductSerializer
-    
-    @action(detail=False, methods=['get'])
-    def by_category(self, request):
-        category_id = request.query_params.get('category_id')
-        if category_id:
-            products = self.get_queryset().filter(category_id=category_id)
-            serializer = ProductListSerializer(products, many=True)
-            return Response(serializer.data)
-        return Response({'error': 'category_id parameter is required'}, status=400)
-
 
 class SupplierViewSet(viewsets.ModelViewSet):
     queryset = Supplier.objects.all()

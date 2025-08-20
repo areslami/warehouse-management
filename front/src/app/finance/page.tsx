@@ -4,6 +4,7 @@ import { useState, useEffect, useMemo, useCallback } from "react";
 import { Plus, Edit2, Trash2, DollarSign, Receipt, Search, FileText, Clock } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
+import { handleApiError } from "@/lib/api/error-handler";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
@@ -22,7 +23,6 @@ import { getPartyDisplayName } from "@/lib/utils/party-utils";
 
 export default function FinancePage() {
   const t = useTranslations("pages.finance");
-  const tErrors = useTranslations("errors");
   const tCommon = useTranslations("common");
   const { customers, suppliers, products } = useCoreData();
   const { openModal } = useModal();
@@ -45,10 +45,11 @@ export default function FinancePage() {
       setSalesProformas(salesData || []);
       setPurchaseProformas(purchaseData || []);
     } catch (error) {
-      console.error("Error loading data:", error);
-      toast.error(tErrors("fetch_failed"));
+      console.error("Failed to load finance data:", error);
+      const errorMessage = handleApiError(error, "Loading finance data");
+      toast.error(errorMessage);
     }
-  }, [tErrors]);
+  }, []);
 
   useEffect(() => {
     loadData();
@@ -64,11 +65,12 @@ export default function FinancePage() {
     if (confirm(t("sales.confirm_delete"))) {
       try {
         await deleteSalesProforma(id);
-        toast.success(tErrors("success_delete"));
+        toast.success(tCommon("toast_messages.delete_success"));
         loadData();
       } catch (error) {
-        console.error("Error deleting sales proforma:", error);
-        toast.error(tErrors("delete_failed"));
+        console.error("Failed to delete sales proforma:", error);
+        const errorMessage = handleApiError(error, "Deleting sales proforma");
+        toast.error(errorMessage);
       }
     }
   };
@@ -77,11 +79,12 @@ export default function FinancePage() {
     if (confirm(t("purchase.confirm_delete"))) {
       try {
         await deletePurchaseProforma(id);
-        toast.success(tErrors("success_delete"));
+        toast.success(tCommon("toast_messages.delete_success"));
         loadData();
       } catch (error) {
-        console.error("Error deleting purchase proforma:", error);
-        toast.error(tErrors("delete_failed"));
+        console.error("Failed to delete purchase proforma:", error);
+        const errorMessage = handleApiError(error, "Deleting purchase proforma");
+        toast.error(errorMessage);
       }
     }
   };
@@ -175,11 +178,12 @@ export default function FinancePage() {
                         payment_description: data.payment_description || null
                       };
                       await createSalesProforma(apiData);
-                      toast.success(tErrors("success_create"));
+                      toast.success(tCommon("toast_messages.create_success"));
                       await loadData();
                     } catch (error) {
-                      console.error("Error saving sales proforma:", error);
-                      toast.error(tErrors("create_failed"));
+                      console.error("Failed to create sales proforma:", error);
+                      const errorMessage = handleApiError(error, "Creating sales proforma");
+                      toast.error(errorMessage);
                     }
                   }
                 });
@@ -218,11 +222,12 @@ export default function FinancePage() {
                                   payment_description: data.payment_description || null
                                 };
                                 await updateSalesProforma(proforma.id, apiData);
-                                toast.success(tErrors("success_update"));
+                                toast.success(tCommon("toast_messages.update_success"));
                                 await loadData();
                               } catch (error) {
-                                console.error("Error saving sales proforma:", error);
-                                toast.error(tErrors("update_failed"));
+                                console.error("Failed to update sales proforma:", error);
+                                const errorMessage = handleApiError(error, "Updating sales proforma");
+                                toast.error(errorMessage);
                               }
                             }
                           });
@@ -262,11 +267,12 @@ export default function FinancePage() {
                   onSubmit: async (data) => {
                     try {
                       await createPurchaseProforma(data);
-                      toast.success(tErrors("success_create"));
+                      toast.success(tCommon("toast_messages.create_success"));
                       await loadData();
                     } catch (error) {
-                      console.error("Error saving purchase proforma:", error);
-                      toast.error(tErrors("create_failed"));
+                      console.error("Failed to create purchase proforma:", error);
+                      const errorMessage = handleApiError(error, "Creating purchase proforma");
+                      toast.error(errorMessage);
                     }
                   }
                 });
@@ -297,11 +303,12 @@ export default function FinancePage() {
                             onSubmit: async (data) => {
                               try {
                                 await updatePurchaseProforma(proforma.id, data);
-                                toast.success(tErrors("success_update"));
+                                toast.success(tCommon("toast_messages.update_success"));
                                 await loadData();
                               } catch (error) {
-                                console.error("Error saving purchase proforma:", error);
-                                toast.error(tErrors("update_failed"));
+                                console.error("Failed to update purchase proforma:", error);
+                                const errorMessage = handleApiError(error, "Updating purchase proforma");
+                                toast.error(errorMessage);
                               }
                             }
                           });
@@ -357,11 +364,12 @@ export default function FinancePage() {
                               payment_description: data.payment_description || null
                             };
                             await updateSalesProforma(proforma.id, apiData);
-                            toast.success(t("errors.success_update"));
+                            toast.success(tCommon("toast_messages.update_success"));
                             await loadData();
                           } catch (error) {
-                            console.error("Error saving sales proforma:", error);
-                            toast.error(t("errors.update_failed"));
+                            console.error("Failed to update sales proforma:", error);
+                            const errorMessage = handleApiError(error, "Updating sales proforma");
+                            toast.error(errorMessage);
                           }
                         }
                       });
@@ -372,11 +380,12 @@ export default function FinancePage() {
                         onSubmit: async (data) => {
                           try {
                             await updatePurchaseProforma(proforma.id, data);
-                            toast.success(t("errors.success_update"));
+                            toast.success(tCommon("toast_messages.update_success"));
                             await loadData();
                           } catch (error) {
-                            console.error("Error saving purchase proforma:", error);
-                            toast.error(t("errors.update_failed"));
+                            console.error("Failed to update purchase proforma:", error);
+                            const errorMessage = handleApiError(error, "Updating purchase proforma");
+                            toast.error(errorMessage);
                           }
                         }
                       });
@@ -400,12 +409,13 @@ export default function FinancePage() {
                         } else {
                           await deletePurchaseProforma(selectedItem.id);
                         }
-                        toast.success(tErrors("success_delete"));
+                        toast.success(tCommon("toast_messages.delete_success"));
                         await loadData();
                         setSheetOpen(false);
                       } catch (error) {
-                        console.error("Error deleting:", error);
-                        toast.error(tErrors("delete_failed"));
+                        console.error("Failed to delete proforma:", error);
+                        const errorMessage = handleApiError(error, "Deleting proforma");
+                        toast.error(errorMessage);
                       }
                     }
                   }}

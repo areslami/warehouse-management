@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 import { Table, TableBody, TableHead, TableHeader, TableRow, TableCell, TableRow as TableRowComponent } from "@/components/ui/table";
+import { handleApiError } from "@/lib/api/error-handler";
 import { PersianDateTableCell } from "@/components/ui/persian-date-table-cell";
 import { WarehouseReceipt as WarehouseReceiptType } from "@/lib/interfaces/warehouse";
 import {
@@ -46,11 +47,12 @@ export function WarehouseReceiptTab({ selectedWarehouseId }: WarehouseReceiptTab
       }
     } catch (error) {
       console.error('Failed to load receipts:', error);
-      toast.error(tCommon('toast_messages.receipt_loading_error'));
+      const errorMessage = handleApiError(error, "Loading warehouse receipts");
+      toast.error(errorMessage);
     } finally {
       setLoading(false);
     }
-  }, [selectedWarehouseId, tCommon]);
+  }, [selectedWarehouseId]);
 
   useEffect(() => {
     loadReceipts();
@@ -77,10 +79,11 @@ export function WarehouseReceiptTab({ selectedWarehouseId }: WarehouseReceiptTab
         try {
           await createWarehouseReceipt(data);
           await loadReceipts();
-          toast.success(tCommon('toast_messages.receipt_create_success'));
+          toast.success(tCommon("toast_messages.create_success"));
         } catch (error) {
           console.error("Failed to create receipt:", error);
-          toast.error(tCommon('toast_messages.receipt_create_error'));
+          const errorMessage = handleApiError(error, "Creating warehouse receipt");
+          toast.error(errorMessage);
         }
       }
     });
@@ -107,21 +110,28 @@ export function WarehouseReceiptTab({ selectedWarehouseId }: WarehouseReceiptTab
           onSubmit: async (data) => {
             await updateWarehouseReceipt(receipt.id, data);
             await loadReceipts();
-            toast.success(tCommon('toast_messages.receipt_update_success'));
+            toast.success(tCommon("toast_messages.update_success"));
           }
         });
       }
     } catch (error) {
       console.error("Failed to fetch receipt details:", error);
-      toast.error(tCommon('toast_messages.receipt_detail_error'));
+      const errorMessage = handleApiError(error, "Fetching receipt details");
+      toast.error(errorMessage);
     }
   };
 
   const handleDelete = async (receipt: WarehouseReceiptType) => {
     if (confirm(t("confirm_delete"))) {
-      await deleteWarehouseReceipt(receipt.id);
-      await loadReceipts();
-      toast.success(tCommon('toast_messages.receipt_delete_success'));
+      try {
+        await deleteWarehouseReceipt(receipt.id);
+        await loadReceipts();
+        toast.success(tCommon("toast_messages.delete_success"));
+      } catch (error) {
+        console.error("Failed to delete receipt:", error);
+        const errorMessage = handleApiError(error, "Deleting warehouse receipt");
+        toast.error(errorMessage);
+      }
     }
   };
 

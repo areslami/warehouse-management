@@ -3,6 +3,8 @@
 import { useCallback, useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 import { Table, TableBody, TableHead, TableHeader, TableRow, TableCell, TableRow as TableRowComponent } from "@/components/ui/table";
+import { handleApiError } from "@/lib/api/error-handler";
+import { toast } from "@/lib/toast-helper";
 import { PersianDateTableCell } from "@/components/ui/persian-date-table-cell";
 import { DispatchIssue, DispatchIssueCreate } from "@/lib/interfaces/warehouse";
 import {
@@ -43,6 +45,8 @@ export function DispatchIssueTab({ selectedWarehouseId }: DispatchIssueTabProps)
       }
     } catch (error) {
       console.error('Failed to load dispatches:', error);
+      const errorMessage = handleApiError(error, "Loading dispatch issues");
+      toast.error(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -62,13 +66,20 @@ export function DispatchIssueTab({ selectedWarehouseId }: DispatchIssueTabProps)
   const handleCreate = () => {
     openModal(DispatchIssueModal, {
       onSubmit: async (data) => {
-        const data2: DispatchIssueCreate = {
-          ...data,
-          total_weight: data.items.reduce((sum, item) => sum + (item.weight || 0), 0),
-          description: data.description || "",
+        try {
+          const data2: DispatchIssueCreate = {
+            ...data,
+            total_weight: data.items.reduce((sum, item) => sum + (item.weight || 0), 0),
+            description: data.description || "",
+          }
+          await createDispatchIssue(data2);
+          await loadDispatches();
+          toast.success(tCommon("toast_messages.create_success"));
+        } catch (error) {
+          console.error("Failed to create dispatch issue:", error);
+          const errorMessage = handleApiError(error, "Creating dispatch issue");
+          toast.error(errorMessage);
         }
-        await createDispatchIssue(data2);
-        await loadDispatches();
       }
     });
   };
@@ -94,20 +105,36 @@ export function DispatchIssueTab({ selectedWarehouseId }: DispatchIssueTabProps)
             })) || []
           },
           onSubmit: async (data) => {
-            await updateDispatchIssue(dispatch.id, data);
-            await loadDispatches();
+            try {
+              await updateDispatchIssue(dispatch.id, data);
+              await loadDispatches();
+              toast.success(tCommon("toast_messages.update_success"));
+            } catch (error) {
+              console.error("Failed to update dispatch issue:", error);
+              const errorMessage = handleApiError(error, "Updating dispatch issue");
+              toast.error(errorMessage);
+            }
           }
         });
       }
     } catch (error) {
       console.error("Failed to fetch dispatch details:", error);
+      const errorMessage = handleApiError(error, "Fetching dispatch details");
+      toast.error(errorMessage);
     }
   };
 
   const handleDelete = async (dispatch: DispatchIssue) => {
     if (confirm(t("confirm_delete"))) {
-      await deleteDispatchIssue(dispatch.id);
-      await loadDispatches();
+      try {
+        await deleteDispatchIssue(dispatch.id);
+        await loadDispatches();
+        toast.success(tCommon("toast_messages.delete_success"));
+      } catch (error) {
+        console.error("Failed to delete dispatch issue:", error);
+        const errorMessage = handleApiError(error, "Deleting dispatch issue");
+        toast.error(errorMessage);
+      }
     }
   };
 

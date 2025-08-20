@@ -18,6 +18,7 @@ import {
   fetchB2BSales, fetchB2BSaleById, createB2BSale, updateB2BSale, deleteB2BSale,
   fetchB2BDistributions, fetchB2BDistributionById, createB2BDistribution, updateB2BDistribution, deleteB2BDistribution
 } from "@/lib/api/b2b";
+import { handleApiError } from "@/lib/api/error-handler";
 
 export default function B2BPage() {
   const t = useTranslations("pages.b2b");
@@ -56,8 +57,9 @@ export default function B2BPage() {
       setSales(salesData);
       setDistributions(distributionsData);
     } catch (error) {
-      console.error("Error loading B2B data:", error);
-      toast.error(tErrors("fetch_failed"));
+      console.error("Failed to load B2B data:", error);
+      const errorMessage = handleApiError(error, "Load B2B data");
+      toast.error(errorMessage);
     }
   };
 
@@ -74,8 +76,9 @@ export default function B2BPage() {
         toast.success(tErrors("success_delete"));
         loadData();
       } catch (error) {
-        console.error("Error deleting offer:", error);
-        toast.error(tErrors("delete_failed"));
+        console.error("Failed to delete offer:", error);
+        const errorMessage = handleApiError(error, "Delete offer");
+        toast.error(errorMessage);
       }
     }
   };
@@ -87,8 +90,9 @@ export default function B2BPage() {
         toast.success(tErrors("success_delete"));
         loadData();
       } catch (error) {
-        console.error("Error deleting sale:", error);
-        toast.error(tErrors("delete_failed"));
+        console.error("Failed to delete sale:", error);
+        const errorMessage = handleApiError(error, "Delete sale");
+        toast.error(errorMessage);
       }
     }
   };
@@ -100,8 +104,9 @@ export default function B2BPage() {
         toast.success(tErrors("success_delete"));
         loadData();
       } catch (error) {
-        console.error("Error deleting distribution:", error);
-        toast.error(tErrors("delete_failed"));
+        console.error("Failed to delete distribution:", error);
+        const errorMessage = handleApiError(error, "Delete distribution");
+        toast.error(errorMessage);
       }
     }
   };
@@ -222,8 +227,9 @@ export default function B2BPage() {
                                   setEditingOffer(fullOffer);
                                   setShowOfferModal(true);
                                 } catch (error) {
-                                  console.error("Error fetching offer details:", error);
-                                  toast.error(tErrors("fetch_failed"));
+                                  console.error("Failed to fetch offer details:", error);
+                                  const errorMessage = handleApiError(error, "Fetch offer details");
+                                  toast.error(errorMessage);
                                 }
                               }}
                             >
@@ -312,8 +318,9 @@ export default function B2BPage() {
                                   setEditingDistribution(fullDistribution);
                                   setShowDistributionModal(true);
                                 } catch (error) {
-                                  console.error("Error fetching distribution details:", error);
-                                  toast.error(tErrors("fetch_failed"));
+                                  console.error("Failed to fetch distribution details:", error);
+                                  const errorMessage = handleApiError(error, "Fetch distribution details");
+                                  toast.error(errorMessage);
                                 }
                               }}
                             >
@@ -393,8 +400,9 @@ export default function B2BPage() {
                                   setEditingSale(fullSale);
                                   setShowSaleModal(true);
                                 } catch (error) {
-                                  console.error("Error fetching sale details:", error);
-                                  toast.error(tErrors("fetch_failed"));
+                                  console.error("Failed to fetch sale details:", error);
+                                  const errorMessage = handleApiError(error, "Fetch sale details");
+                                  toast.error(errorMessage);
                                 }
                               }}
                             >
@@ -444,8 +452,9 @@ export default function B2BPage() {
               setShowOfferModal(false);
               setEditingOffer(null);
             } catch (error) {
-              console.error("Error saving offer:", error);
-              toast.error(editingOffer ? tErrors("update_failed") : tErrors("create_failed"));
+              console.error(`Failed to ${editingOffer ? 'update' : 'create'} offer:`, error);
+              const errorMessage = handleApiError(error, `${editingOffer ? 'Update' : 'Create'} offer`);
+              toast.error(errorMessage);
             }
           }}
           onClose={() => {
@@ -471,8 +480,9 @@ export default function B2BPage() {
               setShowDistributionModal(false);
               setEditingDistribution(null);
             } catch (error) {
-              console.error("Error saving distribution:", error);
-              toast.error(editingDistribution ? tErrors("update_failed") : tErrors("create_failed"));
+              console.error(`Failed to ${editingDistribution ? 'update' : 'create'} distribution:`, error);
+              const errorMessage = handleApiError(error, `${editingDistribution ? 'Update' : 'Create'} distribution`);
+              toast.error(errorMessage);
             }
           }}
           onClose={() => {
@@ -502,8 +512,9 @@ export default function B2BPage() {
               setShowSaleModal(false);
               setEditingSale(null);
             } catch (error) {
-              console.error("Error saving sale:", error);
-              toast.error(editingSale ? tErrors("update_failed") : tErrors("create_failed"));
+              console.error(`Failed to ${editingSale ? 'update' : 'create'} sale:`, error);
+              const errorMessage = handleApiError(error, `${editingSale ? 'Update' : 'Create'} sale`);
+              toast.error(errorMessage);
             }
           }}
           onClose={() => {
@@ -545,8 +556,9 @@ export default function B2BPage() {
                       }
                       setSheetOpen(false);
                     } catch (error) {
-                      console.error("Error fetching details:", error);
-                      toast.error(tErrors("fetch_failed"));
+                      console.error("Failed to fetch details:", error);
+                      const errorMessage = handleApiError(error, "Fetch details");
+                      toast.error(errorMessage);
                     }
                   }}
                 >
@@ -574,8 +586,9 @@ export default function B2BPage() {
                         await loadData();
                         setSheetOpen(false);
                       } catch (error) {
-                        console.error("Error deleting:", error);
-                        toast.error(tErrors("delete_failed"));
+                        console.error("Failed to delete:", error);
+                        const errorMessage = handleApiError(error, "Delete item");
+                        toast.error(errorMessage);
                       }
                     }
                   }}

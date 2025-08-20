@@ -1,31 +1,14 @@
 from rest_framework import serializers
-from .models import Supplier, Customer, Receiver, PartyType, Product, ProductCategory, ProductRegion
+from .models import Supplier, Customer, Receiver, PartyType, Product
 
-
-class ProductCategorySerializer(serializers.ModelSerializer):
-    description = serializers.CharField(required=False, allow_blank=True, allow_null=True, max_length=255)
-    
-    class Meta:
-        model = ProductCategory
-        fields = ['id', 'name', 'description', 'created_at', 'updated_at']
-        read_only_fields = ['created_at', 'updated_at']
-
-
-class ProductRegionSerializer(serializers.ModelSerializer):
-    description = serializers.CharField(required=False, allow_blank=True, allow_null=True, max_length=255)
-    
-    class Meta:
-        model = ProductRegion
-        fields = ['id', 'name', 'description', 'created_at', 'updated_at']
-        read_only_fields = ['created_at', 'updated_at']
 
 
 class ProductSerializer(serializers.ModelSerializer):
     category_name = serializers.CharField(source='category.name', read_only=True)
     region_name = serializers.CharField(source='b2bregion.name', read_only=True)
     description = serializers.CharField(required=False, allow_blank=True, allow_null=True)
-    b2bregion = serializers.PrimaryKeyRelatedField(queryset=ProductRegion.objects.all(), required=False, allow_null=True)
-    category = serializers.PrimaryKeyRelatedField(queryset=ProductCategory.objects.all(), required=False, allow_null=True)
+    b2bregion = serializers.CharField(required=True)
+    category = serializers.CharField(required=True)
     
     class Meta:
         model = Product
@@ -35,11 +18,9 @@ class ProductSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = ['created_at', 'updated_at']
 
-    # Removed validation for optional fields
 
 
 class SupplierSerializer(serializers.ModelSerializer):
-    # Fields that are blank=True in the model
     company_name = serializers.CharField(required=False, allow_blank=True, max_length=200)
     national_id = serializers.CharField(required=False, allow_blank=True, max_length=11)
     full_name = serializers.CharField(required=False, allow_blank=True, max_length=100)
@@ -145,7 +126,7 @@ class ReceiverSerializer(serializers.ModelSerializer):
             if not data.get('national_id'):
                 raise serializers.ValidationError("National ID is required for corporate receivers")
             data['full_name'] = ''
-            data['personal_code'] = None  # Set to None for unique field
+            data['personal_code'] = None 
             
         elif receiver_type == PartyType.INDIVIDUAL:
             if not data.get('full_name'):
@@ -153,15 +134,12 @@ class ReceiverSerializer(serializers.ModelSerializer):
             if not data.get('personal_code'):
                 raise serializers.ValidationError("Personal code is required for individual receivers")
             data['company_name'] = ''
-            data['national_id'] = None  # Set to None for unique field
+            data['national_id'] = None  
         
         return data
 
 
 class ProductListSerializer(serializers.ModelSerializer):
-    category = ProductCategorySerializer(read_only=True)
-    b2bregion = ProductRegionSerializer(read_only=True)
-    
     class Meta:
         model = Product
         fields = [

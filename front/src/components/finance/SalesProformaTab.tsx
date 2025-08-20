@@ -3,6 +3,8 @@
 import { useEffect } from "react";
 import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
+import { handleApiError } from "@/lib/api/error-handler";
+import { toast } from "@/lib/toast-helper";
 import { Plus, Edit, Trash2 } from "lucide-react";
 import { useModal } from "@/lib/modal-context";
 import { useCoreData } from "@/lib/core-data-context";
@@ -33,8 +35,15 @@ export function SalesProformaTab() {
   const handleCreate = () => {
     openModal(SalesProformaModal, {
       onSubmit: async (formData) => {
-        await createSalesProforma(formData);
-        await refreshData('salesProformas');
+        try {
+          await createSalesProforma(formData);
+          await refreshData('salesProformas');
+          toast.success(tCommon("toast_messages.create_success"));
+        } catch (error) {
+          console.error("Failed to create sales proforma:", error);
+          const errorMessage = handleApiError(error, "Creating sales proforma");
+          toast.error(errorMessage);
+        }
       }
     });
   };
@@ -43,16 +52,30 @@ export function SalesProformaTab() {
     openModal(SalesProformaModal, {
       initialData: proforma,
       onSubmit: async (formData) => {
-        await updateSalesProforma(proforma.id, formData);
-        await refreshData('salesProformas');
+        try {
+          await updateSalesProforma(proforma.id, formData);
+          await refreshData('salesProformas');
+          toast.success(tCommon("toast_messages.update_success"));
+        } catch (error) {
+          console.error("Failed to update sales proforma:", error);
+          const errorMessage = handleApiError(error, "Updating sales proforma");
+          toast.error(errorMessage);
+        }
       }
     });
   };
 
   const handleDelete = async (id: number) => {
     if (confirm(t("confirm_delete"))) {
-      await deleteSalesProforma(id);
-      await refreshData('salesProformas');
+      try {
+        await deleteSalesProforma(id);
+        await refreshData('salesProformas');
+        toast.success(tCommon("toast_messages.delete_success"));
+      } catch (error) {
+        console.error("Failed to delete sales proforma:", error);
+        const errorMessage = handleApiError(error, "Deleting sales proforma");
+        toast.error(errorMessage);
+      }
     }
   };
 

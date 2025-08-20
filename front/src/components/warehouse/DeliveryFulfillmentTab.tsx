@@ -3,6 +3,8 @@
 import { useCallback, useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 import { Table, TableBody, TableHead, TableHeader, TableRow, TableCell, TableRow as TableRowComponent } from "@/components/ui/table";
+import { handleApiError } from "@/lib/api/error-handler";
+import { toast } from "@/lib/toast-helper";
 import { PersianDateTableCell } from "@/components/ui/persian-date-table-cell";
 import { DeliveryFulfillment, DeliveryFulfillmentCreate } from "@/lib/interfaces/warehouse";
 import {
@@ -43,6 +45,8 @@ export function DeliveryFulfillmentTab({ selectedWarehouseId }: DeliveryFulfillm
       }
     } catch (error) {
       console.error('Failed to load deliveries:', error);
+      const errorMessage = handleApiError(error, "Loading delivery fulfillments");
+      toast.error(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -61,16 +65,23 @@ export function DeliveryFulfillmentTab({ selectedWarehouseId }: DeliveryFulfillm
   const handleCreate = () => {
     openModal(DeliveryFulfillmentModal, {
       onSubmit: async (data) => {
-        const data2: DeliveryFulfillmentCreate = {
-          ...data,
-          total_weight: data.items.reduce(
-            (sum: number, item: { weight?: number }) => sum + (item.weight || 0),
-            0
-          ),
-          description: data.description || "",
+        try {
+          const data2: DeliveryFulfillmentCreate = {
+            ...data,
+            total_weight: data.items.reduce(
+              (sum: number, item: { weight?: number }) => sum + (item.weight || 0),
+              0
+            ),
+            description: data.description || "",
+          }
+          await createDeliveryFulfillment(data2);
+          await loadDeliveries();
+          toast.success(tCommon("toast_messages.create_success"));
+        } catch (error) {
+          console.error("Failed to create delivery fulfillment:", error);
+          const errorMessage = handleApiError(error, "Creating delivery fulfillment");
+          toast.error(errorMessage);
         }
-        await createDeliveryFulfillment(data2);
-        await loadDeliveries();
       }
     });
   };
@@ -98,28 +109,44 @@ export function DeliveryFulfillmentTab({ selectedWarehouseId }: DeliveryFulfillm
             })) || []
           },
           onSubmit: async (data) => {
-            const data2: DeliveryFulfillmentCreate = {
-              ...data,
-              total_weight: data.items.reduce(
-                (sum: number, item: { weight?: number }) => sum + (item.weight || 0),
-                0
-              ),
-              description: data.description || "",
-            };
-            await updateDeliveryFulfillment(delivery.id, data2);
-            await loadDeliveries();
+            try {
+              const data2: DeliveryFulfillmentCreate = {
+                ...data,
+                total_weight: data.items.reduce(
+                  (sum: number, item: { weight?: number }) => sum + (item.weight || 0),
+                  0
+                ),
+                description: data.description || "",
+              };
+              await updateDeliveryFulfillment(delivery.id, data2);
+              await loadDeliveries();
+              toast.success(tCommon("toast_messages.update_success"));
+            } catch (error) {
+              console.error("Failed to update delivery fulfillment:", error);
+              const errorMessage = handleApiError(error, "Updating delivery fulfillment");
+              toast.error(errorMessage);
+            }
           }
         });
       }
     } catch (error) {
       console.error("Failed to fetch delivery details:", error);
+      const errorMessage = handleApiError(error, "Fetching delivery details");
+      toast.error(errorMessage);
     }
   };
 
   const handleDelete = async (delivery: DeliveryFulfillment) => {
     if (confirm(t("confirm_delete"))) {
-      await deleteDeliveryFulfillment(delivery.id);
-      await loadDeliveries();
+      try {
+        await deleteDeliveryFulfillment(delivery.id);
+        await loadDeliveries();
+        toast.success(tCommon("toast_messages.delete_success"));
+      } catch (error) {
+        console.error("Failed to delete delivery fulfillment:", error);
+        const errorMessage = handleApiError(error, "Deleting delivery fulfillment");
+        toast.error(errorMessage);
+      }
     }
   };
 

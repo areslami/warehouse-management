@@ -11,8 +11,8 @@ import { useCoreData } from "@/lib/core-data-context";
 import { Product } from "@/lib/interfaces/core";
 import {
   createProduct, updateProduct, deleteProduct,
-
 } from "@/lib/api/core";
+import { handleApiError } from "@/lib/api/error-handler";
 
 export default function ProductsPage() {
   const t = useTranslations("pages.product");
@@ -29,8 +29,9 @@ export default function ProductsPage() {
         refreshData("products");
         toast.success(tErrors("success_delete"));
       } catch (error) {
-        console.error("Error deleting product:", error);
-        toast.error(tErrors("delete_failed"));
+        console.error("Failed to delete product:", error);
+        const errorMessage = handleApiError(error, "Delete product");
+        toast.error(errorMessage);
       }
     }
   };
@@ -93,7 +94,7 @@ export default function ProductsPage() {
                     </div>
                     <p className="text-sm text-gray-600">{tCommon('product_labels.product_code')} {product.code}</p>
                     {product.category && (
-                      <p className="text-sm text-gray-600">{tCommon('product_labels.product_category')} {typeof product.category === 'object' ? product.category.name : ''}</p>
+                      <p className="text-sm text-gray-600">{tCommon('product_labels.product_category')} {typeof product.category === 'object' ? product.category : ''}</p>
                     )}
                   </CardContent>
                 </Card>
@@ -108,8 +109,8 @@ export default function ProductsPage() {
         <ProductModal
           initialData={editingProduct ? {
             ...editingProduct,
-            b2bregion: editingProduct.b2bregion?.id || editingProduct.b2bregion,
-            category: editingProduct.category?.id || editingProduct.category
+            b2bregion: editingProduct.b2bregion,
+            category: editingProduct.category
           } : undefined}
           onSubmit={async (data) => {
             try {
@@ -124,8 +125,9 @@ export default function ProductsPage() {
               setShowProductModal(false);
               setEditingProduct(null);
             } catch (error) {
-              console.error("Error saving product:", error);
-              toast.error(editingProduct ? tErrors("update_failed") : tErrors("create_failed"));
+              console.error(`Failed to ${editingProduct ? 'update' : 'create'} product:`, error);
+              const errorMessage = handleApiError(error, `${editingProduct ? 'Update' : 'Create'} product`);
+              toast.error(errorMessage);
             }
           }}
           onClose={() => {

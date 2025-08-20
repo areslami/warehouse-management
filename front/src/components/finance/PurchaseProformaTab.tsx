@@ -3,6 +3,8 @@
 import { useEffect } from "react";
 import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
+import { handleApiError } from "@/lib/api/error-handler";
+import { toast } from "@/lib/toast-helper";
 import { Plus, Edit, Trash2, } from "lucide-react";
 import { useModal } from "@/lib/modal-context";
 import { useCoreData } from "@/lib/core-data-context";
@@ -28,13 +30,20 @@ export function PurchaseProformaTab() {
     if (data.purchaseProformas.length === 0) {
       refreshData('purchaseProformas');
     }
-  },);
+  }, [data.purchaseProformas.length, refreshData]);
 
   const handleCreate = () => {
     openModal(PurchaseProformaModal, {
       onSubmit: async (formData) => {
-        await createPurchaseProforma(formData);
-        await refreshData('purchaseProformas');
+        try {
+          await createPurchaseProforma(formData);
+          await refreshData('purchaseProformas');
+          toast.success(tCommon("toast_messages.create_success"));
+        } catch (error) {
+          console.error("Failed to create purchase proforma:", error);
+          const errorMessage = handleApiError(error, "Creating purchase proforma");
+          toast.error(errorMessage);
+        }
       }
     });
   };
@@ -43,16 +52,30 @@ export function PurchaseProformaTab() {
     openModal(PurchaseProformaModal, {
       initialData: proforma,
       onSubmit: async (formData) => {
-        await updatePurchaseProforma(proforma.id, formData);
-        await refreshData('purchaseProformas');
+        try {
+          await updatePurchaseProforma(proforma.id, formData);
+          await refreshData('purchaseProformas');
+          toast.success(tCommon("toast_messages.update_success"));
+        } catch (error) {
+          console.error("Failed to update purchase proforma:", error);
+          const errorMessage = handleApiError(error, "Updating purchase proforma");
+          toast.error(errorMessage);
+        }
       }
     });
   };
 
   const handleDelete = async (id: number) => {
     if (confirm(t("confirm_delete"))) {
-      await deletePurchaseProforma(id);
-      await refreshData('purchaseProformas');
+      try {
+        await deletePurchaseProforma(id);
+        await refreshData('purchaseProformas');
+        toast.success(tCommon("toast_messages.delete_success"));
+      } catch (error) {
+        console.error("Failed to delete purchase proforma:", error);
+        const errorMessage = handleApiError(error, "Deleting purchase proforma");
+        toast.error(errorMessage);
+      }
     }
   };
 

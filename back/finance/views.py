@@ -60,15 +60,6 @@ class SalesProformaViewSet(viewsets.ModelViewSet):
         return Response({'error': 'customer_id parameter is required'}, status=400)
 
     @action(detail=False, methods=['get'])
-    def by_payment_type(self, request):
-        payment_type = request.query_params.get('payment_type')
-        if payment_type:
-            proformas = self.get_queryset().filter(payment_type=payment_type)
-            serializer = self.get_serializer(proformas, many=True)
-            return Response(serializer.data)
-        return Response({'error': 'payment_type parameter is required'}, status=400)
-
-    @action(detail=False, methods=['get'])
     def by_date_range(self, request):
         start_date = request.query_params.get('start_date')
         end_date = request.query_params.get('end_date')
@@ -89,12 +80,3 @@ class ProformaLineViewSet(viewsets.ModelViewSet):
     search_fields = ['product__name', 'product__code']
     ordering_fields = ['created_at', 'unit_price', 'weight']
     ordering = ['-created_at']
-
-    @action(detail=False, methods=['get'])
-    def by_product(self, request):
-        product_id = request.query_params.get('product_id')
-        if product_id:
-            lines = self.get_queryset().filter(product_id=product_id)
-            serializer = self.get_serializer(lines, many=True)
-            return Response(serializer.data)
-        return Response({'error': 'product_id parameter is required'}, status=400)

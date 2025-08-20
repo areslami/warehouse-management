@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
+import { handleApiError } from "@/lib/api/error-handler";
 import { SupplierModal } from "@/components/modals/supplier-modal";
 import { CustomerModal } from "@/components/modals/customer-modal";
 import { ReceiverModal } from "@/components/modals/receiver-modal";
@@ -31,7 +32,6 @@ import {
 
 export default function PartiesPage() {
   const t = useTranslations("pages.parties");
-  const tErrors = useTranslations("errors");
   const { suppliers, customers, receivers, shippingCompanies, refreshData } = useCoreData();
   const [showSupplierModal, setShowSupplierModal] = useState(false);
   const [showCustomerModal, setShowCustomerModal] = useState(false);
@@ -51,11 +51,12 @@ export default function PartiesPage() {
     if (confirm(t("confirm_delete_supplier"))) {
       try {
         await deleteSupplier(id);
-        toast.success(tErrors("success_delete"));
+        toast.success(tCommon("toast_messages.delete_success"));
         refreshData("suppliers");
       } catch (error) {
-        console.error("Error deleting supplier:", error);
-        toast.error(tErrors("delete_failed"));
+        console.error("Failed to delete supplier:", error);
+        const errorMessage = handleApiError(error, "Deleting supplier");
+        toast.error(errorMessage);
       }
     }
   };
@@ -64,11 +65,12 @@ export default function PartiesPage() {
     if (confirm(t("confirm_delete_customer"))) {
       try {
         await deleteCustomer(id);
-        toast.success(tErrors("success_delete"));
+        toast.success(tCommon("toast_messages.delete_success"));
         refreshData("customers");
       } catch (error) {
-        console.error("Error deleting customer:", error);
-        toast.error(tErrors("delete_failed"));
+        console.error("Failed to delete customer:", error);
+        const errorMessage = handleApiError(error, "Deleting customer");
+        toast.error(errorMessage);
       }
     }
   };
@@ -77,11 +79,12 @@ export default function PartiesPage() {
     if (confirm(t("confirm_delete_receiver"))) {
       try {
         await deleteReceiver(id);
-        toast.success(tErrors("success_delete"));
+        toast.success(tCommon("toast_messages.delete_success"));
         refreshData("receivers");
       } catch (error) {
-        console.error("Error deleting receiver:", error);
-        toast.error(tErrors("delete_failed"));
+        console.error("Failed to delete receiver:", error);
+        const errorMessage = handleApiError(error, "Deleting receiver");
+        toast.error(errorMessage);
       }
     }
   };
@@ -90,11 +93,12 @@ export default function PartiesPage() {
     if (confirm(t("confirm_delete_shipping"))) {
       try {
         await deleteShippingCompany(id);
-        toast.success(tErrors("success_delete"));
+        toast.success(tCommon("toast_messages.delete_success"));
         refreshData("shippingCompanies");
       } catch (error) {
-        console.error("Error deleting shipping company:", error);
-        toast.error(tErrors("delete_failed"));
+        console.error("Failed to delete shipping company:", error);
+        const errorMessage = handleApiError(error, "Deleting shipping company");
+        toast.error(errorMessage);
       }
     }
   };
@@ -501,12 +505,13 @@ export default function PartiesPage() {
                         } else if (selectedType === 'shipping') {
                           await deleteShippingCompany(selectedItem.id);
                         }
-                        toast.success(tErrors("success_delete"));
+                        toast.success(tCommon("toast_messages.delete_success"));
                         await refreshData(selectedType === 'shipping' ? 'shippingCompanies' : `${selectedType}s`);
                         setSheetOpen(false);
                       } catch (error) {
-                        console.error("Error deleting:", error);
-                        toast.error(tErrors("delete_failed"));
+                        console.error("Failed to delete party:", error);
+                        const errorMessage = handleApiError(error, "Deleting party");
+                        toast.error(errorMessage);
                       }
                     }
                   }}
@@ -572,17 +577,18 @@ export default function PartiesPage() {
             try {
               if (editingSupplier) {
                 await updateSupplier(editingSupplier.id, data);
-                toast.success(tErrors("success_update"));
+                toast.success(tCommon("toast_messages.update_success"));
               } else {
                 await createSupplier(data);
-                toast.success(tErrors("success_create"));
+                toast.success(tCommon("toast_messages.create_success"));
               }
               await refreshData("suppliers");
               setShowSupplierModal(false);
               setEditingSupplier(null);
             } catch (error) {
-              console.error("Error saving supplier:", error);
-              toast.error(editingSupplier ? tErrors("update_failed") : tErrors("create_failed"));
+              console.error("Failed to save supplier:", error);
+              const errorMessage = handleApiError(error, editingSupplier ? "Updating supplier" : "Creating supplier");
+              toast.error(errorMessage);
             }
           }}
           onClose={() => {
@@ -599,17 +605,18 @@ export default function PartiesPage() {
             try {
               if (editingCustomer) {
                 await updateCustomer(editingCustomer.id, data);
-                toast.success(tErrors("success_update"));
+                toast.success(tCommon("toast_messages.update_success"));
               } else {
                 await createCustomer(data);
-                toast.success(tErrors("success_create"));
+                toast.success(tCommon("toast_messages.create_success"));
               }
               await refreshData("customers");
               setShowCustomerModal(false);
               setEditingCustomer(null);
             } catch (error) {
-              console.error("Error saving customer:", error);
-              toast.error(editingCustomer ? tErrors("update_failed") : tErrors("create_failed"));
+              console.error("Failed to save customer:", error);
+              const errorMessage = handleApiError(error, editingCustomer ? "Updating customer" : "Creating customer");
+              toast.error(errorMessage);
             }
           }}
           onClose={() => {
@@ -626,17 +633,18 @@ export default function PartiesPage() {
             try {
               if (editingReceiver) {
                 await updateReceiver(editingReceiver.id, data);
-                toast.success(tErrors("success_update"));
+                toast.success(tCommon("toast_messages.update_success"));
               } else {
                 await createReceiver(data);
-                toast.success(tErrors("success_create"));
+                toast.success(tCommon("toast_messages.create_success"));
               }
               await refreshData("receivers");
               setShowReceiverModal(false);
               setEditingReceiver(null);
             } catch (error) {
-              console.error("Error saving receiver:", error);
-              toast.error(editingReceiver ? tErrors("update_failed") : tErrors("create_failed"));
+              console.error("Failed to save receiver:", error);
+              const errorMessage = handleApiError(error, editingReceiver ? "Updating receiver" : "Creating receiver");
+              toast.error(errorMessage);
             }
           }}
           onClose={() => {
@@ -653,17 +661,18 @@ export default function PartiesPage() {
             try {
               if (editingShipping) {
                 await updateShippingCompany(editingShipping.id, data);
-                toast.success(tErrors("success_update"));
+                toast.success(tCommon("toast_messages.update_success"));
               } else {
                 await createShippingCompany(data);
-                toast.success(tErrors("success_create"));
+                toast.success(tCommon("toast_messages.create_success"));
               }
               await refreshData("shippingCompanies");
               setShowShippingModal(false);
               setEditingShipping(null);
             } catch (error) {
-              console.error("Error saving shipping company:", error);
-              toast.error(editingShipping ? tErrors("update_failed") : tErrors("create_failed"));
+              console.error("Failed to save shipping company:", error);
+              const errorMessage = handleApiError(error, editingShipping ? "Updating shipping company" : "Creating shipping company");
+              toast.error(errorMessage);
             }
           }}
           onClose={() => {
