@@ -4,41 +4,36 @@ import { useState, useEffect } from "react";
 import { useForm, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "../ui/dialog";
-import { Button } from "../ui/button";
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "../ui/form";
-import { Input } from "../ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "../../ui/dialog";
+import { Button } from "../../ui/button";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "../../ui/form";
+import { Input } from "../../ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../../ui/select";
 import { Plus, Trash2 } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useCoreData } from "@/lib/core-data-context";
 import { useModal } from "@/lib/modal-context";
-import { PersianDatePicker } from "../ui/persian-date-picker";
+import { PersianDatePicker } from "../../ui/persian-date-picker";
 import { getTodayGregorian } from "@/lib/utils/persian-date";
 import { getPartyDisplayName } from "@/lib/utils/party-utils";
-import { WarehouseModal } from "./warehouse-modal";
-import { ProductModal } from "./product-modal";
-import { ReceiverModal } from "./receiver-modal";
-import { ShippingCompanyModal } from "./shipping-company-modal";
-import { SalesProformaModal } from "./salesproforma-modal";
+import { WarehouseFormData, WarehouseModal } from "./warehouse-modal";
+import { ProductFormData, ProductModal } from "../product-modal";
+import { ReceiverFormData, ReceiverModal } from "../receiver-modal";
+import { ShippingCompanyFormData, ShippingCompanyModal } from "../shipping-company-modal";
+import { SalesProformaFormData, SalesProformaModal } from "../finance/salesproforma-modal";
 import { createWarehouse } from "@/lib/api/warehouse";
 import { createProduct, createReceiver, createShippingCompany } from "@/lib/api/core";
 import { createSalesProforma } from "@/lib/api/finance";
-import { ShippingCompany, Product, Receiver } from "@/lib/interfaces/core";
-import { Warehouse } from "@/lib/interfaces/warehouse";
-import { SalesProformaCreate } from "@/lib/interfaces/finance";
 
-type DeliveryFulfillmentFormData = {
-  delivery_id: string;
-  issue_date: string;
-  validity_date: string;
+type DispatchIssueFormData = {
+  dispatch_id: string;
   warehouse: number;
   sales_proforma: number;
+  issue_date: string;
+  validity_date: string;
   description?: string;
   shipping_company: number;
   items: {
-    shipment_id: string;
-    shipment_price: number;
     product: number;
     weight: number;
     vehicle_type: "truck" | "pickup" | "van" | "container" | "other";
@@ -46,18 +41,19 @@ type DeliveryFulfillmentFormData = {
   }[];
 };
 
-interface DeliveryFulfillmentModalProps {
+interface DispatchIssueModalProps {
   trigger?: React.ReactNode;
-  onSubmit?: (data: DeliveryFulfillmentFormData) => void;
+  onSubmit?: (data: DispatchIssueFormData) => void;
   onClose?: () => void;
-  initialData?: Partial<DeliveryFulfillmentFormData>;
+  initialData?: Partial<DispatchIssueFormData>;
 }
 
-export function DeliveryFulfillmentModal({ trigger, onSubmit, onClose, initialData }: DeliveryFulfillmentModalProps) {
-  const tval = useTranslations("deliveryFulfillment.validation");
-  const t = useTranslations("deliveryFulfillment");
+export function DispatchIssueModal({ trigger, onSubmit, onClose, initialData }: DispatchIssueModalProps) {
+  const tval = useTranslations("modals.dispatchIssue.validation");
+  const t = useTranslations("modals.dispatchIssue");
   const { data, refreshData } = useCoreData();
   const { openModal } = useModal();
+
 
   useEffect(() => {
     if (data.warehouses.length === 0) {
@@ -75,46 +71,44 @@ export function DeliveryFulfillmentModal({ trigger, onSubmit, onClose, initialDa
     if (data.salesProformas.length === 0) {
       refreshData('salesProformas');
     }
-  }, [data.warehouses.length, data.products.length, data.receivers.length, data.shippingCompanies.length, data.salesProformas.length, refreshData]);
+  }, [data.products.length, data.warehouses.length, data.receivers.length, data.shippingCompanies.length, data.salesProformas.length, refreshData]);
 
   const getTodayDate = () => {
     if (typeof window === 'undefined') return '';
     return getTodayGregorian();
   };
 
-  const deliveryItemSchema = z.object({
-    shipment_id: z.string().min(1, tval("shipment-id")),
-    shipment_price: z.number().min(0, tval("shipment-price")),
+  const dispatchItemSchema = z.object({
     product: z.number().min(1, tval("product-required")),
     weight: z.number().min(0.00000001, tval("weight")),
     vehicle_type: z.enum(["truck", "pickup", "van", "container", "other"]),
     receiver: z.number().min(1, tval("receiver")),
   });
 
-  const deliveryFulfillmentSchema = z.object({
-    delivery_id: z.string().min(1, tval("delivery-id")),
-    issue_date: z.string().min(1, tval("issue-date")),
-    validity_date: z.string().min(1, tval("validity-date")),
+  const dispatchIssueSchema = z.object({
+    dispatch_id: z.string().min(1, tval("dispatch-id")),
     warehouse: z.number().min(1, tval("warehouse")),
     sales_proforma: z.number().min(1, tval("sales-proforma")),
+    issue_date: z.string().min(1, tval("issue-date")),
+    validity_date: z.string().min(1, tval("validity-date")),
     description: z.string().optional(),
     shipping_company: z.number().min(1, tval("shipping-company")),
-    items: z.array(deliveryItemSchema).min(1, tval("items")),
+    items: z.array(dispatchItemSchema).min(1, tval("items")),
   });
 
   const [open, setOpen] = useState(trigger ? false : true);
 
-  const form = useForm<DeliveryFulfillmentFormData>({
-    resolver: zodResolver(deliveryFulfillmentSchema),
+  const form = useForm<DispatchIssueFormData>({
+    resolver: zodResolver(dispatchIssueSchema),
     defaultValues: {
-      delivery_id: initialData?.delivery_id || "",
-      issue_date: initialData?.issue_date || getTodayDate(),
-      validity_date: initialData?.validity_date || getTodayDate(),
+      dispatch_id: initialData?.dispatch_id || "",
       warehouse: initialData?.warehouse || 0,
       sales_proforma: initialData?.sales_proforma || 0,
+      issue_date: initialData?.issue_date || getTodayDate(),
+      validity_date: initialData?.validity_date || getTodayDate(),
       description: initialData?.description || "",
       shipping_company: initialData?.shipping_company || 0,
-      items: initialData?.items || [{ shipment_id: "", shipment_price: 0, product: 0, weight: 0, vehicle_type: "truck", receiver: 0 }],
+      items: initialData?.items || [{ product: 0, weight: 0, vehicle_type: "truck", receiver: 0 }],
     },
   });
 
@@ -123,7 +117,7 @@ export function DeliveryFulfillmentModal({ trigger, onSubmit, onClose, initialDa
     name: "items",
   });
 
-  const handleSubmit = async (data: DeliveryFulfillmentFormData) => {
+  const handleSubmit = async (data: DispatchIssueFormData) => {
     try {
       if (onSubmit) {
         await onSubmit(data);
@@ -157,21 +151,21 @@ export function DeliveryFulfillmentModal({ trigger, onSubmit, onClose, initialDa
             {trigger}
           </DialogTrigger>
         )}
-        <DialogContent dir="rtl" className="min-w-[85%] max-h-[90vh] overflow-y-auto scrollbar-hide  p-0 my-0 mx-auto [&>button]:hidden">
+        <DialogContent dir="rtl" className="min-w-[80%] max-h-[90vh] overflow-y-auto scrollbar-hide  p-0 my-0 mx-auto [&>button]:hidden">
           <DialogHeader className="px-3.5 py-4.5  justify-start" style={{ backgroundColor: "#f6d265" }}>
             <DialogTitle className="font-bold text-white text-right">{t("title")}</DialogTitle>
-            <DialogDescription className="sr-only">Create or edit delivery fulfillment</DialogDescription>
+            <DialogDescription className="sr-only">Create or edit dispatch issue</DialogDescription>
           </DialogHeader>
 
           <Form {...form} >
-            <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6 py-4 px-6">
+            <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6 py-4 px-12">
               <div className="grid grid-cols-2 gap-4">
                 <FormField
                   control={form.control}
-                  name="delivery_id"
+                  name="dispatch_id"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>{t("delivery-id")}</FormLabel>
+                      <FormLabel>{t("dispatch-id")}</FormLabel>
                       <FormControl>
                         <Input {...field} />
                       </FormControl>
@@ -192,8 +186,8 @@ export function DeliveryFulfillmentModal({ trigger, onSubmit, onClose, initialDa
                           onValueChange={(value) => {
                             if (value === "new") {
                               openModal(WarehouseModal, {
-                                onSubmit: async (newWarehouse: unknown) => {
-                                  const created = await createWarehouse(newWarehouse as Omit<Warehouse, 'id' | 'created_at' | 'updated_at'>);
+                                onSubmit: async (newWarehouse: WarehouseFormData) => {
+                                  const created = await createWarehouse(newWarehouse);
                                   if (created) {
                                     await refreshData('warehouses');
                                     form.setValue('warehouse', created.id);
@@ -247,8 +241,8 @@ export function DeliveryFulfillmentModal({ trigger, onSubmit, onClose, initialDa
                           onValueChange={(value) => {
                             if (value === "new") {
                               openModal(SalesProformaModal, {
-                                onSubmit: async (newProforma: unknown) => {
-                                  const created = await createSalesProforma(newProforma as SalesProformaCreate);
+                                onSubmit: async (newProforma: SalesProformaFormData) => {
+                                  const created = await createSalesProforma(newProforma);
                                   if (created) {
                                     await refreshData('salesProformas');
                                     form.setValue('sales_proforma', created.id);
@@ -300,8 +294,8 @@ export function DeliveryFulfillmentModal({ trigger, onSubmit, onClose, initialDa
                           onValueChange={(value) => {
                             if (value === "new") {
                               openModal(ShippingCompanyModal, {
-                                onSubmit: async (newCompany: unknown) => {
-                                  const created = await createShippingCompany(newCompany as Omit<ShippingCompany, 'id' | 'created_at' | 'updated_at'>);
+                                onSubmit: async (newCompany: ShippingCompanyFormData) => {
+                                  const created = await createShippingCompany(newCompany);
                                   if (created) {
                                     await refreshData('shippingCompanies');
                                     form.setValue('shipping_company', created.id);
@@ -401,7 +395,7 @@ export function DeliveryFulfillmentModal({ trigger, onSubmit, onClose, initialDa
                     type="button"
                     variant="outline"
                     size="sm"
-                    onClick={() => append({ shipment_id: "", shipment_price: 0, product: 0, weight: 0, vehicle_type: "truck", receiver: 0 })}
+                    onClick={() => append({ product: 0, weight: 0, vehicle_type: "truck", receiver: 0 })}
                   >
                     <Plus className="w-4 h-4 mr-2" />
                     {t("add-item")}
@@ -409,40 +403,7 @@ export function DeliveryFulfillmentModal({ trigger, onSubmit, onClose, initialDa
                 </div>
 
                 {fields.map((field, index) => (
-                  <div key={field.id} className="grid grid-cols-6 gap-4 p-4 border rounded-lg">
-                    <FormField
-                      control={form.control}
-                      name={`items.${index}.shipment_id`}
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>{t("shipment-id")}</FormLabel>
-                          <FormControl>
-                            <Input {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    <FormField
-                      control={form.control}
-                      name={`items.${index}.shipment_price`}
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>{t("shipment-price")}</FormLabel>
-                          <FormControl>
-                            <Input
-                              type="number"
-                              step="0.01"
-                              {...field}
-                              onChange={(e) => field.onChange(Number(e.target.value))}
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
+                  <div key={field.id} className="grid grid-cols-5 gap-4 p-4 border rounded-lg">
                     <FormField
                       control={form.control}
                       name={`items.${index}.product`}
@@ -456,8 +417,8 @@ export function DeliveryFulfillmentModal({ trigger, onSubmit, onClose, initialDa
                                 if (value === "new") {
                                   const currentIndex = index;
                                   openModal(ProductModal, {
-                                    onSubmit: async (newProduct: unknown) => {
-                                      const created = await createProduct(newProduct as Omit<Product, 'id' | 'created_at' | 'updated_at'>);
+                                    onSubmit: async (newProduct: ProductFormData) => {
+                                      const created = await createProduct(newProduct);
                                       if (created) {
                                         await refreshData('products');
                                         const items = form.getValues('items');
@@ -551,8 +512,8 @@ export function DeliveryFulfillmentModal({ trigger, onSubmit, onClose, initialDa
                                 if (value === "new") {
                                   const currentIndex = index;
                                   openModal(ReceiverModal, {
-                                    onSubmit: async (newReceiver: unknown) => {
-                                      const created = await createReceiver(newReceiver as Omit<Receiver, 'id' | 'created_at' | 'updated_at'>);
+                                    onSubmit: async (newReceiver: ReceiverFormData) => {
+                                      const created = await createReceiver(newReceiver);
                                       if (created) {
                                         await refreshData('receivers');
                                         const items = form.getValues('items');
@@ -619,6 +580,7 @@ export function DeliveryFulfillmentModal({ trigger, onSubmit, onClose, initialDa
           </Form>
         </DialogContent>
       </Dialog>
+
     </>
   );
 }

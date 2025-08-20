@@ -1,12 +1,12 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useEffect } from "react";
 import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
-import { Plus, Edit, Trash2, Eye } from "lucide-react";
+import { Plus, Edit, Trash2 } from "lucide-react";
 import { useModal } from "@/lib/modal-context";
 import { useCoreData } from "@/lib/core-data-context";
-import { SalesProformaModal } from "@/components/modals/salesproforma-modal";
+import { SalesProformaModal } from "@/components/modals/finance/salesproforma-modal";
 import { createSalesProforma, updateSalesProforma, deleteSalesProforma } from "@/lib/api/finance";
 import {
   Table,
@@ -17,9 +17,10 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { SalesProforma } from "@/lib/interfaces/finance";
 
 export function SalesProformaTab() {
-  const t = useTranslations("salesProforma");
+  const t = useTranslations("modals.salesProforma");
   const { openModal } = useModal();
   const { data, refreshData } = useCoreData();
 
@@ -27,7 +28,7 @@ export function SalesProformaTab() {
     if (data.salesProformas.length === 0) {
       refreshData('salesProformas');
     }
-  }, []);
+  }, [data.salesProformas.length, refreshData]);
 
   const handleCreate = () => {
     openModal(SalesProformaModal, {
@@ -38,7 +39,7 @@ export function SalesProformaTab() {
     });
   };
 
-  const handleEdit = (proforma: any) => {
+  const handleEdit = (proforma: SalesProforma) => {
     openModal(SalesProformaModal, {
       initialData: proforma,
       onSubmit: async (formData) => {
@@ -91,15 +92,14 @@ export function SalesProformaTab() {
             data.salesProformas.map((proforma) => (
               <TableRow key={proforma.id}>
                 <TableCell className="font-medium">{proforma.serial_number}</TableCell>
-                <TableCell>{proforma.customer_display || proforma.customer}</TableCell>
+                <TableCell>{proforma.customer}</TableCell>
                 <TableCell>{proforma.date}</TableCell>
-                <TableCell>{proforma.total_amount || '-'}</TableCell>
+                <TableCell>{proforma.subtotal}</TableCell>
                 <TableCell>
-                  <span className={`px-2 py-1 rounded text-xs ${
-                    proforma.status === 'approved' ? 'bg-green-100 text-green-800' :
-                    proforma.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
-                    'bg-gray-100 text-gray-800'
-                  }`}>
+                  <span className={`px-2 py-1 rounded text-xs ${proforma.status === 'Active' ? 'bg-green-100 text-green-800' :
+                    proforma.status === 'Pending' ? 'bg-yellow-100 text-yellow-800' :
+                      'bg-gray-100 text-gray-800'
+                    }`}>
                     {t(`status_${proforma.status || 'draft'}`)}
                   </span>
                 </TableCell>

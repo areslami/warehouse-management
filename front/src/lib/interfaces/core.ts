@@ -1,27 +1,11 @@
-export interface ProductCategory {
-  id: number;
-  name: string;
-  description: string;
-  created_at: string;
-  updated_at: string;
-}
-
-export interface ProductRegion {
-  id: number;
-  name: string;
-  description: string;
-  created_at: string;
-  updated_at: string;
-}
-
 export interface Product {
   id: number;
   name: string;
   code: string;
   b2bcode: string;
-  b2bregion: ProductRegion;
-  category: ProductCategory;
-  description: string;
+  b2bregion: string;
+  category: string;
+  description?: string;
   created_at: string;
   updated_at: string;
 }
@@ -36,7 +20,7 @@ export interface Supplier {
   economic_code: string;
   phone: string;
   address: string;
-  description: string;
+  description?: string;
   created_at: string;
   updated_at: string;
 }
@@ -53,7 +37,7 @@ export interface Receiver {
   economic_code: string;
   phone: string;
   address: string;
-  description: string;
+  description?: string;
   postal_code: string;
   created_at: string;
   updated_at: string;
@@ -69,8 +53,8 @@ export interface Customer {
   economic_code: string;
   phone: string;
   address: string;
-  description: string;
-  tags: string;
+  description?: string;
+  tags?: string;
   created_at: string;
   updated_at: string;
 }
@@ -80,9 +64,9 @@ export interface ShippingCompany {
   name: string;
   contact_person: string;
   phone: string;
-  email: string;
-  address: string;
-  description: string;
+  email?: string;
+  address?: string;
+  description?: string;
   created_at: string;
   updated_at: string;
 }

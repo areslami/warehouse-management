@@ -1,7 +1,7 @@
-import moment from 'moment-jalaali';
+import moment from "moment-jalaali";
 
 // Configure moment-jalaali
-moment.loadPersian({ dialect: 'persian-modern' });
+moment.loadPersian({ dialect: "persian-modern" });
 
 /**
  * Convert Gregorian date to Jalali date string
@@ -9,8 +9,11 @@ moment.loadPersian({ dialect: 'persian-modern' });
  * @param format - Output format (default: 'jYYYY/jMM/jDD')
  * @returns Jalali date string
  */
-export function toJalali(gregorianDate: string | Date, format: string = 'jYYYY/jMM/jDD'): string {
-  if (!gregorianDate) return '';
+export function toJalali(
+  gregorianDate: string | Date,
+  format: string = "jYYYY/jMM/jDD"
+): string {
+  if (!gregorianDate) return "";
   return moment(gregorianDate).format(format);
 }
 
@@ -23,10 +26,10 @@ export function toJalali(gregorianDate: string | Date, format: string = 'jYYYY/j
  */
 export function toGregorian(
   jalaliDate: string,
-  inputFormat: string = 'jYYYY/jMM/jDD',
-  outputFormat: string = 'YYYY-MM-DD'
+  inputFormat: string = "jYYYY/jMM/jDD",
+  outputFormat: string = "YYYY-MM-DD"
 ): string {
-  if (!jalaliDate) return '';
+  if (!jalaliDate) return "";
   return moment(jalaliDate, inputFormat).format(outputFormat);
 }
 
@@ -36,8 +39,8 @@ export function toGregorian(
  * @returns Formatted Persian date string with Persian numerals
  */
 export function formatPersianDate(gregorianDate: string | Date): string {
-  if (!gregorianDate) return '';
-  const persianDate = moment(gregorianDate).format('jDD jMMMM jYYYY');
+  if (!gregorianDate) return "";
+  const persianDate = moment(gregorianDate).format("jDD jMMMM jYYYY");
   return convertToPersianNumbers(persianDate);
 }
 
@@ -47,7 +50,7 @@ export function formatPersianDate(gregorianDate: string | Date): string {
  * @returns String with Persian numbers
  */
 export function convertToPersianNumbers(str: string): string {
-  const persianNumbers = ['۰', '۱', '۲', '۳', '۴', '۵', '۶', '۷', '۸', '۹'];
+  const persianNumbers = ["۰", "۱", "۲", "۳", "۴", "۵", "۶", "۷", "۸", "۹"];
   return str.replace(/[0-9]/g, (digit) => persianNumbers[parseInt(digit)]);
 }
 
@@ -57,10 +60,10 @@ export function convertToPersianNumbers(str: string): string {
  * @returns String with English numbers
  */
 export function convertToEnglishNumbers(str: string): string {
-  const persianNumbers = ['۰', '۱', '۲', '۳', '۴', '۵', '۶', '۷', '۸', '۹'];
+  const persianNumbers = ["۰", "۱", "۲", "۳", "۴", "۵", "۶", "۷", "۸", "۹"];
   let result = str;
   persianNumbers.forEach((persian, index) => {
-    const regex = new RegExp(persian, 'g');
+    const regex = new RegExp(persian, "g");
     result = result.replace(regex, index.toString());
   });
   return result;
@@ -71,7 +74,7 @@ export function convertToEnglishNumbers(str: string): string {
  * @param format - Output format (default: 'jYYYY/jMM/jDD')
  * @returns Today's Jalali date
  */
-export function getTodayJalali(format: string = 'jYYYY/jMM/jDD'): string {
+export function getTodayJalali(format: string = "jYYYY/jMM/jDD"): string {
   return moment().format(format);
 }
 
@@ -80,7 +83,7 @@ export function getTodayJalali(format: string = 'jYYYY/jMM/jDD'): string {
  * @returns Today's date in YYYY-MM-DD format
  */
 export function getTodayGregorian(): string {
-  return moment().format('YYYY-MM-DD');
+  return moment().format("YYYY-MM-DD");
 }
 
 /**
@@ -89,7 +92,10 @@ export function getTodayGregorian(): string {
  * @param format - Expected format (default: 'jYYYY/jMM/jDD')
  * @returns true if valid, false otherwise
  */
-export function isValidJalaliDate(jalaliDate: string, format: string = 'jYYYY/jMM/jDD'): boolean {
+export function isValidJalaliDate(
+  jalaliDate: string,
+  format: string = "jYYYY/jMM/jDD"
+): boolean {
   if (!jalaliDate) return false;
   const m = moment(jalaliDate, format);
   return m.isValid() && m.format(format) === jalaliDate;
@@ -100,15 +106,17 @@ export function isValidJalaliDate(jalaliDate: string, format: string = 'jYYYY/jM
  * @param jalaliDate - Jalali date string
  * @returns Object with year, month, day
  */
-export function parseJalaliDate(jalaliDate: string): { year: number; month: number; day: number } | null {
+export function parseJalaliDate(
+  jalaliDate: string
+): { year: number; month: number; day: number } | null {
   const cleanDate = convertToEnglishNumbers(jalaliDate);
-  const parts = cleanDate.split('/');
+  const parts = cleanDate.split("/");
   if (parts.length !== 3) return null;
-  
+
   return {
     year: parseInt(parts[0]),
     month: parseInt(parts[1]),
-    day: parseInt(parts[2])
+    day: parseInt(parts[2]),
   };
 }
 
@@ -118,7 +126,7 @@ export function parseJalaliDate(jalaliDate: string): { year: number; month: numb
  * @returns Formatted Persian datetime
  */
 export function formatPersianDateTime(datetime: string | Date): string {
-  if (!datetime) return '';
-  const formatted = moment(datetime).format('jYYYY/jMM/jDD - HH:mm');
+  if (!datetime) return "";
+  const formatted = moment(datetime).format("jYYYY/jMM/jDD - HH:mm");
   return convertToPersianNumbers(formatted);
 }

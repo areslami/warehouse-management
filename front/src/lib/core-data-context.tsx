@@ -1,13 +1,13 @@
 "use client";
 
-import { createContext, useContext, useEffect, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useState } from "react";
 import { toast } from "./toast-helper";
-
-import { ProductCategory, ProductRegion, Product, Supplier, Receiver, Customer, ShippingCompany, } from "@/lib/interfaces/core";
+import { useTranslations } from 'next-intl';
+import { Product, Supplier, Receiver, Customer, ShippingCompany, } from "@/lib/interfaces/core";
 import { Warehouse } from "@/lib/interfaces/warehouse";
 import { PurchaseProforma, SalesProforma } from "@/lib/interfaces/finance";
 import {
-    fetchCustomers, fetchSuppliers, fetchProducts, fetchProductCategories, fetchProductRegions, fetchReceivers, fetchShippingCompanies
+    fetchCustomers, fetchSuppliers, fetchProducts, fetchReceivers, fetchShippingCompanies
 } from "./api/core";
 import { fetchWarehouses } from "./api/warehouse";
 import { fetchPurchaseProformas, fetchSalesProformas } from "./api/finance";
@@ -16,8 +16,6 @@ interface AppData {
     customers: Customer[];
     suppliers: Supplier[];
     products: Product[];
-    productCategories: ProductCategory[];
-    productRegions: ProductRegion[];
     receivers: Receiver[];
     shippingCompanies: ShippingCompany[];
     warehouses: Warehouse[];
@@ -36,7 +34,6 @@ interface CoreContextType extends AppData {
 
 const CoreContext = createContext<CoreContextType | undefined>(undefined);
 
-// Global reference to context for API calls
 let globalCoreContext: CoreContextType | undefined;
 
 
@@ -45,34 +42,29 @@ export const CoreDataProvider = ({ children }: { children: React.ReactNode }) =>
         customers: [],
         suppliers: [],
         products: [],
-        productCategories: [],
-        productRegions: [],
         receivers: [],
         shippingCompanies: [],
         warehouses: [],
         purchaseProformas: [],
         salesProformas: [],
     });
-    const fetchInitialData = async () => {
+    const t = useTranslations("");
+    const fetchInitialData = useCallback(async () => {
         try {
             const [
-                customers, suppliers, products, productCategories,
-                productRegions, receivers, shippingCompanies, warehouses,
+                customers, suppliers, products, receivers, shippingCompanies, warehouses,
                 purchaseProformas, salesProformas
             ] = await Promise.all([
                 fetchCustomers(),
                 fetchSuppliers(),
                 fetchProducts(),
-                fetchProductCategories(),
-                fetchProductRegions(),
                 fetchReceivers(),
                 fetchShippingCompanies(),
                 fetchWarehouses(),
                 fetchPurchaseProformas().catch(() => null),
                 fetchSalesProformas().catch(() => null),
             ]) as [
-                    (Customer[] | null), (Supplier[] | null), (Product[] | null), (ProductCategory[] | null),
-                    (ProductRegion[] | null), (Receiver[] | null), (ShippingCompany[] | null), (Warehouse[] | null),
+                    (Customer[] | null), (Supplier[] | null), (Product[] | null), (Receiver[] | null), (ShippingCompany[] | null), (Warehouse[] | null),
                     (PurchaseProforma[] | null), (SalesProforma[] | null),
                 ];
 
@@ -81,8 +73,6 @@ export const CoreDataProvider = ({ children }: { children: React.ReactNode }) =>
                 customers: customers || [],
                 suppliers: suppliers || [],
                 products: products || [],
-                productCategories: productCategories || [],
-                productRegions: productRegions || [],
                 receivers: receivers || [],
                 shippingCompanies: shippingCompanies || [],
                 warehouses: warehouses || [],
@@ -92,9 +82,11 @@ export const CoreDataProvider = ({ children }: { children: React.ReactNode }) =>
 
         } catch (error) {
             console.error('Failed to fetch initial data:', error);
-            toast.error('خطا در بارگیری اطلاعات اولیه');
+
+
+            toast.error(t('common.initial_data_error'));
         }
-    };
+    }, [t]);
     const updateData = <T extends keyof AppData>(key: T, newData: AppData[T]) => {
         setData(prevData => ({ ...prevData, [key]: newData }));
     };
@@ -110,7 +102,7 @@ export const CoreDataProvider = ({ children }: { children: React.ReactNode }) =>
         setData(prevData => ({
             ...prevData,
             [key]: prevData[key].map((item: AppData[T][0]) =>
-                (item as {id: number}).id === id ? { ...item, ...updatedItem } : item
+                (item as { id: number }).id === id ? { ...item, ...updatedItem } : item
             ) as AppData[T]
         }));
     };
@@ -118,7 +110,7 @@ export const CoreDataProvider = ({ children }: { children: React.ReactNode }) =>
     const deleteItem = <T extends keyof AppData>(key: T, id: number) => {
         setData(prevData => ({
             ...prevData,
-            [key]: prevData[key].filter((item: AppData[T][0]) => (item as {id: number}).id !== id) as AppData[T]
+            [key]: prevData[key].filter((item: AppData[T][0]) => (item as { id: number }).id !== id) as AppData[T]
         }));
     };
 
@@ -126,8 +118,6 @@ export const CoreDataProvider = ({ children }: { children: React.ReactNode }) =>
         customers: fetchCustomers,
         suppliers: fetchSuppliers,
         products: fetchProducts,
-        productCategories: fetchProductCategories,
-        productRegions: fetchProductRegions,
         receivers: fetchReceivers,
         shippingCompanies: fetchShippingCompanies,
         warehouses: fetchWarehouses,
@@ -159,12 +149,11 @@ export const CoreDataProvider = ({ children }: { children: React.ReactNode }) =>
 
     const value = { ...data, data, updateData, addItem, updateItem, deleteItem, refreshData };
 
-    // Set global reference
     globalCoreContext = value;
 
     useEffect(() => {
         fetchInitialData();
-    }, []);
+    }, [fetchInitialData]);
     return (
         <CoreContext.Provider value={value}>
             {children}

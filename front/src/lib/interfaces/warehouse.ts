@@ -1,6 +1,3 @@
-import type { Product, Receiver } from "./core";
-import type { SalesProforma, PurchaseProforma } from "./finance";
-
 export interface Warehouse {
   id: number;
   name: string;
@@ -17,13 +14,13 @@ export interface WarehouseReceipt {
   receipt_id: string | null;
   receipt_type: "import_cottage" | "distribution_cottage" | "purchase";
   date: string;
-  warehouse: number; // warehouse ID
-  warehouse_name?: string; // Only in list view
+  warehouse: number;
+  warehouse_name?: string;
   description: string;
   total_weight: number;
   cottage_serial_number: string | null;
-  proforma: number | null; // proforma ID
-  proforma_serial?: string; // Only in detailed view
+  proforma: number | null;
+  proforma_serial?: string;
   created_at: string;
   updated_at: string;
   items: WarehouseReceiptItem[];
@@ -32,7 +29,7 @@ export interface WarehouseReceipt {
 export interface WarehouseReceiptItem {
   id: number;
   receipt: number;
-  product: number; // product ID
+  product: number;
   product_name?: string;
   product_code?: string;
   weight: number;
@@ -41,14 +38,14 @@ export interface WarehouseReceiptItem {
 export interface DispatchIssue {
   id: number;
   dispatch_id: string;
-  warehouse: number; // warehouse ID
+  warehouse: number;
   warehouse_name: string;
-  sales_proforma: number; // sales_proforma ID
-  sales_proforma_serial?: string; // Only in detailed view
+  sales_proforma: number;
+  sales_proforma_serial?: string;
   issue_date: string;
   validity_date: string;
   description: string;
-  shipping_company: number; // shipping_company ID
+  shipping_company: number;
   shipping_company_name?: string;
   total_weight: number;
   created_at: string;
@@ -59,11 +56,11 @@ export interface DispatchIssue {
 export interface DispatchIssueItem {
   id: number;
   dispatch: number;
-  product: number; // product ID
+  product: number;
   product_name?: string;
   weight: number;
   vehicle_type: "truck" | "pickup" | "van" | "container" | "other";
-  receiver: number; // receiver ID
+  receiver: number;
   receiver_name?: string;
 }
 
@@ -72,12 +69,12 @@ export interface DeliveryFulfillment {
   delivery_id: string;
   issue_date: string;
   validity_date: string;
-  warehouse: number; // warehouse ID
+  warehouse: number;
   warehouse_name: string;
-  sales_proforma: number; // sales_proforma ID
-  sales_proforma_serial?: string; // Only in detailed view
+  sales_proforma: number;
+  sales_proforma_serial?: string;
   description: string;
-  shipping_company: number; // shipping_company ID
+  shipping_company: number;
   shipping_company_name?: string;
   total_weight: number;
   created_at: string;
@@ -90,10 +87,56 @@ export interface DeliveryFulfillmentItem {
   delivery: number;
   shipment_id: string;
   shipment_price: number;
-  product: number; // product ID
+  product: number;
   product_name?: string;
   weight: number;
   vehicle_type: "truck" | "pickup" | "van" | "container" | "other";
-  receiver: number; // receiver ID
+  receiver: number;
   receiver_name?: string;
+}
+export interface WarehouseReceiptCreate {
+  receipt_id?: string;
+  receipt_type: "import_cottage" | "distribution_cottage" | "purchase";
+  date: string;
+  warehouse: number;
+  description?: string;
+  cottage_serial_number?: string;
+  proforma?: number;
+  items: { product: number; weight: number }[];
+}
+
+export interface DispatchIssueCreate {
+  dispatch_id: string;
+  warehouse: number;
+  sales_proforma: number;
+  issue_date: string;
+  validity_date: string;
+  description: string;
+  shipping_company: number;
+  total_weight: number;
+  items: {
+    product: number;
+    weight: number;
+    vehicle_type: "truck" | "pickup" | "van" | "container" | "other";
+    receiver: number;
+  }[];
+}
+
+export interface DeliveryFulfillmentCreate {
+  delivery_id: string;
+  issue_date: string;
+  validity_date: string;
+  warehouse: number;
+  sales_proforma: number;
+  description: string;
+  shipping_company: number;
+  total_weight: number;
+  items: {
+    shipment_id: string;
+    shipment_price: number;
+    product: number;
+    weight: number;
+    vehicle_type: "truck" | "pickup" | "van" | "container" | "other";
+    receiver: number;
+  }[];
 }

@@ -10,7 +10,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Input } from "../ui/input";
 import { useTranslations } from "next-intl";
 
-type SupplierFormData = {
+export type SupplierFormData = {
   supplier_type: "Individual" | "Corporate";
   company_name: string;
   national_id: string;
@@ -30,8 +30,8 @@ interface SupplierModalProps {
 }
 
 export function SupplierModal({ trigger, onSubmit, onClose, initialData }: SupplierModalProps) {
-  const tval = useTranslations("supplier.validation");
-  const t = useTranslations("supplier");
+  const tval = useTranslations("modals.supplier.validation");
+  const t = useTranslations("modals.supplier");
 
   const supplierSchema = z.object({
     supplier_type: z.enum(["Individual", "Corporate"]),

@@ -30,7 +30,8 @@ import {
 } from "@/components/ui/table";
 
 export default function PartiesPage() {
-  const t = useTranslations("parties_page");
+  const t = useTranslations("pages.parties");
+  const tErrors = useTranslations("errors");
   const { suppliers, customers, receivers, shippingCompanies, refreshData } = useCoreData();
   const [showSupplierModal, setShowSupplierModal] = useState(false);
   const [showCustomerModal, setShowCustomerModal] = useState(false);
@@ -50,11 +51,11 @@ export default function PartiesPage() {
     if (confirm(t("confirm_delete_supplier"))) {
       try {
         await deleteSupplier(id);
-        toast.success(t("errors.success_delete"));
+        toast.success(tErrors("success_delete"));
         refreshData("suppliers");
       } catch (error) {
         console.error("Error deleting supplier:", error);
-        toast.error(t("errors.delete_failed"));
+        toast.error(tErrors("delete_failed"));
       }
     }
   };
@@ -63,11 +64,11 @@ export default function PartiesPage() {
     if (confirm(t("confirm_delete_customer"))) {
       try {
         await deleteCustomer(id);
-        toast.success(t("errors.success_delete"));
+        toast.success(tErrors("success_delete"));
         refreshData("customers");
       } catch (error) {
         console.error("Error deleting customer:", error);
-        toast.error(t("errors.delete_failed"));
+        toast.error(tErrors("delete_failed"));
       }
     }
   };
@@ -76,11 +77,11 @@ export default function PartiesPage() {
     if (confirm(t("confirm_delete_receiver"))) {
       try {
         await deleteReceiver(id);
-        toast.success(t("errors.success_delete"));
+        toast.success(tErrors("success_delete"));
         refreshData("receivers");
       } catch (error) {
         console.error("Error deleting receiver:", error);
-        toast.error(t("errors.delete_failed"));
+        toast.error(tErrors("delete_failed"));
       }
     }
   };
@@ -89,11 +90,11 @@ export default function PartiesPage() {
     if (confirm(t("confirm_delete_shipping"))) {
       try {
         await deleteShippingCompany(id);
-        toast.success(t("errors.success_delete"));
+        toast.success(tErrors("success_delete"));
         refreshData("shippingCompanies");
       } catch (error) {
         console.error("Error deleting shipping company:", error);
-        toast.error(t("errors.delete_failed"));
+        toast.error(tErrors("delete_failed"));
       }
     }
   };
@@ -168,12 +169,12 @@ export default function PartiesPage() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead className="text-center">عملیات</TableHead>
-                    <TableHead className="text-right">آدرس</TableHead>
-                    <TableHead className="text-right">تلفن</TableHead>
-                    <TableHead className="text-right">کد اقتصادی</TableHead>
-                    <TableHead className="text-right">نوع</TableHead>
-                    <TableHead className="text-right">نام/شرکت</TableHead>
+                    <TableHead className="text-center">{tCommon('table_headers.operations')}</TableHead>
+                    <TableHead className="text-right">{tCommon('table_headers.address')}</TableHead>
+                    <TableHead className="text-right">{tCommon('table_headers.phone')}</TableHead>
+                    <TableHead className="text-right">{tCommon('table_headers.economic_code')}</TableHead>
+                    <TableHead className="text-right">{tCommon('table_headers.type')}</TableHead>
+                    <TableHead className="text-right">{tCommon('table_headers.name_company')}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -207,7 +208,7 @@ export default function PartiesPage() {
                       <TableCell>{supplier.address}</TableCell>
                       <TableCell>{supplier.phone}</TableCell>
                       <TableCell>{supplier.economic_code}</TableCell>
-                      <TableCell>{supplier.supplier_type === "Corporate" ? "شرکتی" : "حقیقی"}</TableCell>
+                      <TableCell>{supplier.supplier_type === "Corporate" ? tCommon('party_types.corporate') : tCommon('party_types.individual')}</TableCell>
                       <TableCell className="font-medium">{getPartyDisplayName(supplier)}</TableCell>
                     </TableRow>
                   ))}
@@ -242,12 +243,12 @@ export default function PartiesPage() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead className="text-center">عملیات</TableHead>
-                    <TableHead className="text-right">آدرس</TableHead>
-                    <TableHead className="text-right">تلفن</TableHead>
-                    <TableHead className="text-right">کد اقتصادی</TableHead>
-                    <TableHead className="text-right">نوع</TableHead>
-                    <TableHead className="text-right">نام/شرکت</TableHead>
+                    <TableHead className="text-center">{tCommon('table_headers.operations')}</TableHead>
+                    <TableHead className="text-right">{tCommon('table_headers.address')}</TableHead>
+                    <TableHead className="text-right">{tCommon('table_headers.phone')}</TableHead>
+                    <TableHead className="text-right">{tCommon('table_headers.economic_code')}</TableHead>
+                    <TableHead className="text-right">{tCommon('table_headers.type')}</TableHead>
+                    <TableHead className="text-right">{tCommon('table_headers.name_company')}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -281,7 +282,7 @@ export default function PartiesPage() {
                       <TableCell>{customer.address}</TableCell>
                       <TableCell>{customer.phone}</TableCell>
                       <TableCell>{customer.economic_code}</TableCell>
-                      <TableCell>{customer.customer_type === "Corporate" ? "شرکتی" : "حقیقی"}</TableCell>
+                      <TableCell>{customer.customer_type === "Corporate" ? tCommon('party_types.corporate') : tCommon('party_types.individual')}</TableCell>
                       <TableCell className="font-medium">{getPartyDisplayName(customer)}</TableCell>
                     </TableRow>
                   ))}
@@ -316,14 +317,14 @@ export default function PartiesPage() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead className="text-center">عملیات</TableHead>
-                    <TableHead className="text-right">آدرس</TableHead>
-                    <TableHead className="text-right">تلفن</TableHead>
-                    <TableHead className="text-right">کد اقتصادی</TableHead>
-                    <TableHead className="text-right">کد یکتا</TableHead>
-                    <TableHead className="text-right">کد سیستمی</TableHead>
-                    <TableHead className="text-right">نوع</TableHead>
-                    <TableHead className="text-right">نام/شرکت</TableHead>
+                    <TableHead className="text-center">{tCommon('table_headers.operations')}</TableHead>
+                    <TableHead className="text-right">{tCommon('table_headers.address')}</TableHead>
+                    <TableHead className="text-right">{tCommon('table_headers.phone')}</TableHead>
+                    <TableHead className="text-right">{tCommon('table_headers.economic_code')}</TableHead>
+                    <TableHead className="text-right">{tCommon('table_headers.unique_id')}</TableHead>
+                    <TableHead className="text-right">{tCommon('table_headers.system_id')}</TableHead>
+                    <TableHead className="text-right">{tCommon('table_headers.type')}</TableHead>
+                    <TableHead className="text-right">{tCommon('table_headers.name_company')}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -359,7 +360,7 @@ export default function PartiesPage() {
                       <TableCell>{receiver.economic_code}</TableCell>
                       <TableCell>{receiver.unique_id}</TableCell>
                       <TableCell>{receiver.system_id}</TableCell>
-                      <TableCell>{receiver.receiver_type === "Corporate" ? "شرکتی" : "حقیقی"}</TableCell>
+                      <TableCell>{receiver.receiver_type === "Corporate" ? tCommon('party_types.corporate') : tCommon('party_types.individual')}</TableCell>
                       <TableCell className="font-medium">{getPartyDisplayName(receiver)}</TableCell>
                     </TableRow>
                   ))}
@@ -394,12 +395,12 @@ export default function PartiesPage() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead className="text-center">عملیات</TableHead>
-                    <TableHead className="text-right">آدرس</TableHead>
-                    <TableHead className="text-right">ایمیل</TableHead>
-                    <TableHead className="text-right">تلفن</TableHead>
-                    <TableHead className="text-right">شخص تماس</TableHead>
-                    <TableHead className="text-right">نام شرکت</TableHead>
+                    <TableHead className="text-center">{tCommon('table_headers.operations')}</TableHead>
+                    <TableHead className="text-right">{tCommon('table_headers.address')}</TableHead>
+                    <TableHead className="text-right">{tCommon('table_headers.email')}</TableHead>
+                    <TableHead className="text-right">{tCommon('table_headers.phone')}</TableHead>
+                    <TableHead className="text-right">{tCommon('table_headers.contact_person')}</TableHead>
+                    <TableHead className="text-right">{tCommon('table_headers.company_name')}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -448,10 +449,10 @@ export default function PartiesPage() {
         <SheetContent side="left" className="w-[400px] sm:w-[540px] overflow-y-auto p-6" dir="rtl">
           <SheetHeader>
             <SheetTitle className="text-2xl font-bold text-[#f6d265]">
-              {selectedType === 'supplier' && "جزئیات تامین کننده"}
-              {selectedType === 'customer' && "جزئیات مشتری"}
-              {selectedType === 'receiver' && "جزئیات تحویل گیرنده"}
-              {selectedType === 'shipping' && "جزئیات شرکت حمل"}
+              {selectedType === 'supplier' && tCommon('sheet_titles.supplier_details')}
+              {selectedType === 'customer' && tCommon('sheet_titles.customer_details')}
+              {selectedType === 'receiver' && tCommon('sheet_titles.receiver_details')}
+              {selectedType === 'shipping' && tCommon('sheet_titles.shipping_details')}
             </SheetTitle>
           </SheetHeader>
           {selectedItem && (
@@ -500,12 +501,12 @@ export default function PartiesPage() {
                         } else if (selectedType === 'shipping') {
                           await deleteShippingCompany(selectedItem.id);
                         }
-                        toast.success(t("errors.success_delete"));
+                        toast.success(tErrors("success_delete"));
                         await refreshData(selectedType === 'shipping' ? 'shippingCompanies' : `${selectedType}s`);
                         setSheetOpen(false);
                       } catch (error) {
                         console.error("Error deleting:", error);
-                        toast.error(t("errors.delete_failed"));
+                        toast.error(tErrors("delete_failed"));
                       }
                     }
                   }}
@@ -517,45 +518,45 @@ export default function PartiesPage() {
               <div className="mt-6 space-y-4 p-4 bg-gray-50 rounded-lg">
               {(selectedType === 'supplier' || selectedType === 'customer' || selectedType === 'receiver') && (
                 <>
-                  <div><strong>نام:</strong> {getPartyDisplayName(selectedItem)}</div>
-                  <div><strong>نوع:</strong> {
-                    selectedItem[`${selectedType}_type`] === "Corporate" ? "شرکتی" : "حقیقی"
+                  <div><strong>{tCommon('detail_labels.name')}</strong> {getPartyDisplayName(selectedItem)}</div>
+                  <div><strong>{tCommon('table_headers.type')}</strong> {
+                    selectedItem[`${selectedType}_type`] === "Corporate" ? tCommon('party_types.corporate') : tCommon('party_types.individual')
                   }</div>
                   {selectedItem[`${selectedType}_type`] === "Corporate" ? (
                     <>
-                      <div><strong>نام شرکت:</strong> {selectedItem.company_name || '-'}</div>
-                      <div><strong>شناسه ملی:</strong> {selectedItem.national_id || '-'}</div>
+                      <div><strong>{tCommon('detail_labels.company_name_label')}</strong> {selectedItem.company_name || '-'}</div>
+                      <div><strong>{tCommon('detail_labels.national_id')}</strong> {selectedItem.national_id || '-'}</div>
                     </>
                   ) : (
                     <>
-                      <div><strong>نام کامل:</strong> {selectedItem.full_name || '-'}</div>
-                      <div><strong>کد ملی:</strong> {selectedItem.personal_code || '-'}</div>
+                      <div><strong>{tCommon('detail_labels.full_name')}</strong> {selectedItem.full_name || '-'}</div>
+                      <div><strong>{tCommon('detail_labels.personal_code')}</strong> {selectedItem.personal_code || '-'}</div>
                     </>
                   )}
-                  <div><strong>کد اقتصادی:</strong> {selectedItem.economic_code || '-'}</div>
-                  <div><strong>تلفن:</strong> {selectedItem.phone || '-'}</div>
-                  <div><strong>آدرس:</strong> {selectedItem.address || '-'}</div>
-                  {selectedItem.description && <div><strong>توضیحات:</strong> {selectedItem.description}</div>}
+                  <div><strong>{tCommon('table_headers.economic_code')}</strong> {selectedItem.economic_code || '-'}</div>
+                  <div><strong>{tCommon('table_headers.phone')}</strong> {selectedItem.phone || '-'}</div>
+                  <div><strong>{tCommon('table_headers.address')}</strong> {selectedItem.address || '-'}</div>
+                  {selectedItem.description && <div><strong>{tCommon('detail_labels.description')}</strong> {selectedItem.description}</div>}
                   {selectedType === 'receiver' && (
                     <>
-                      <div><strong>کد سیستمی:</strong> {selectedItem.system_id || '-'}</div>
-                      <div><strong>کد یکتا:</strong> {selectedItem.unique_id || '-'}</div>
-                      {selectedItem.postal_code && <div><strong>کد پستی:</strong> {selectedItem.postal_code}</div>}
+                      <div><strong>{tCommon('detail_labels.system_id_label')}</strong> {selectedItem.system_id || '-'}</div>
+                      <div><strong>{tCommon('detail_labels.unique_id_label')}</strong> {selectedItem.unique_id || '-'}</div>
+                      {selectedItem.postal_code && <div><strong>{tCommon('detail_labels.postal_code')}</strong> {selectedItem.postal_code}</div>}
                     </>
                   )}
                   {selectedType === 'customer' && selectedItem.tags && (
-                    <div><strong>برچسب‌ها:</strong> {selectedItem.tags}</div>
+                    <div><strong>{tCommon('detail_labels.tags')}</strong> {selectedItem.tags}</div>
                   )}
                 </>
               )}
               {selectedType === 'shipping' && (
                 <>
-                  <div><strong>نام شرکت:</strong> {selectedItem.name}</div>
-                  <div><strong>شخص تماس:</strong> {selectedItem.contact_person || '-'}</div>
-                  <div><strong>تلفن:</strong> {selectedItem.phone || '-'}</div>
-                  <div><strong>ایمیل:</strong> {selectedItem.email || '-'}</div>
-                  <div><strong>آدرس:</strong> {selectedItem.address || '-'}</div>
-                  {selectedItem.description && <div><strong>توضیحات:</strong> {selectedItem.description}</div>}
+                  <div><strong>{tCommon('table_headers.company_name')}</strong> {selectedItem.name}</div>
+                  <div><strong>{tCommon('detail_labels.contact_person_label')}</strong> {selectedItem.contact_person || '-'}</div>
+                  <div><strong>{tCommon('table_headers.phone')}</strong> {selectedItem.phone || '-'}</div>
+                  <div><strong>{tCommon('table_headers.email')}</strong> {selectedItem.email || '-'}</div>
+                  <div><strong>{tCommon('table_headers.address')}</strong> {selectedItem.address || '-'}</div>
+                  {selectedItem.description && <div><strong>{tCommon('detail_labels.description')}</strong> {selectedItem.description}</div>}
                 </>
               )}
             </div>
@@ -571,17 +572,17 @@ export default function PartiesPage() {
             try {
               if (editingSupplier) {
                 await updateSupplier(editingSupplier.id, data);
-                toast.success(t("errors.success_update"));
+                toast.success(tErrors("success_update"));
               } else {
                 await createSupplier(data);
-                toast.success(t("errors.success_create"));
+                toast.success(tErrors("success_create"));
               }
               await refreshData("suppliers");
               setShowSupplierModal(false);
               setEditingSupplier(null);
             } catch (error) {
               console.error("Error saving supplier:", error);
-              toast.error(editingSupplier ? t("errors.update_failed") : t("errors.create_failed"));
+              toast.error(editingSupplier ? tErrors("update_failed") : tErrors("create_failed"));
             }
           }}
           onClose={() => {
@@ -598,17 +599,17 @@ export default function PartiesPage() {
             try {
               if (editingCustomer) {
                 await updateCustomer(editingCustomer.id, data);
-                toast.success(t("errors.success_update"));
+                toast.success(tErrors("success_update"));
               } else {
                 await createCustomer(data);
-                toast.success(t("errors.success_create"));
+                toast.success(tErrors("success_create"));
               }
               await refreshData("customers");
               setShowCustomerModal(false);
               setEditingCustomer(null);
             } catch (error) {
               console.error("Error saving customer:", error);
-              toast.error(editingCustomer ? t("errors.update_failed") : t("errors.create_failed"));
+              toast.error(editingCustomer ? tErrors("update_failed") : tErrors("create_failed"));
             }
           }}
           onClose={() => {
@@ -625,17 +626,17 @@ export default function PartiesPage() {
             try {
               if (editingReceiver) {
                 await updateReceiver(editingReceiver.id, data);
-                toast.success(t("errors.success_update"));
+                toast.success(tErrors("success_update"));
               } else {
                 await createReceiver(data);
-                toast.success(t("errors.success_create"));
+                toast.success(tErrors("success_create"));
               }
               await refreshData("receivers");
               setShowReceiverModal(false);
               setEditingReceiver(null);
             } catch (error) {
               console.error("Error saving receiver:", error);
-              toast.error(editingReceiver ? t("errors.update_failed") : t("errors.create_failed"));
+              toast.error(editingReceiver ? tErrors("update_failed") : tErrors("create_failed"));
             }
           }}
           onClose={() => {
@@ -652,17 +653,17 @@ export default function PartiesPage() {
             try {
               if (editingShipping) {
                 await updateShippingCompany(editingShipping.id, data);
-                toast.success(t("errors.success_update"));
+                toast.success(tErrors("success_update"));
               } else {
                 await createShippingCompany(data);
-                toast.success(t("errors.success_create"));
+                toast.success(tErrors("success_create"));
               }
               await refreshData("shippingCompanies");
               setShowShippingModal(false);
               setEditingShipping(null);
             } catch (error) {
               console.error("Error saving shipping company:", error);
-              toast.error(editingShipping ? t("errors.update_failed") : t("errors.create_failed"));
+              toast.error(editingShipping ? tErrors("update_failed") : tErrors("create_failed"));
             }
           }}
           onClose={() => {

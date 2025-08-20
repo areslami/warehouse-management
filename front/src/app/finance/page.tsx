@@ -9,8 +9,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { SalesProformaModal } from "@/components/modals/salesproforma-modal";
-import { PurchaseProformaModal } from "@/components/modals/purchaseproforma-modal";
+import { SalesProformaModal } from "@/components/modals/finance/salesproforma-modal";
+import { PurchaseProformaModal } from "@/components/modals/finance/purchaseproforma-modal";
 import { useCoreData } from "@/lib/core-data-context";
 import { useModal } from "@/lib/modal-context";
 import {
@@ -21,7 +21,9 @@ import { SalesProforma, PurchaseProforma } from "@/lib/interfaces/finance";
 import { getPartyDisplayName } from "@/lib/utils/party-utils";
 
 export default function FinancePage() {
-  const t = useTranslations("finance_page");
+  const t = useTranslations("pages.finance");
+  const tErrors = useTranslations("errors");
+  const tCommon = useTranslations("common");
   const { customers, suppliers, products } = useCoreData();
   const { openModal } = useModal();
 
@@ -44,9 +46,9 @@ export default function FinancePage() {
       setPurchaseProformas(purchaseData || []);
     } catch (error) {
       console.error("Error loading data:", error);
-      toast.error(t("errors.fetch_failed"));
+      toast.error(tErrors("fetch_failed"));
     }
-  }, [t]);
+  }, [tErrors]);
 
   useEffect(() => {
     loadData();
@@ -62,11 +64,11 @@ export default function FinancePage() {
     if (confirm(t("sales.confirm_delete"))) {
       try {
         await deleteSalesProforma(id);
-        toast.success(t("errors.success_delete"));
+        toast.success(tErrors("success_delete"));
         loadData();
       } catch (error) {
         console.error("Error deleting sales proforma:", error);
-        toast.error(t("errors.delete_failed"));
+        toast.error(tErrors("delete_failed"));
       }
     }
   };
@@ -75,11 +77,11 @@ export default function FinancePage() {
     if (confirm(t("purchase.confirm_delete"))) {
       try {
         await deletePurchaseProforma(id);
-        toast.success(t("errors.success_delete"));
+        toast.success(tErrors("success_delete"));
         loadData();
       } catch (error) {
         console.error("Error deleting purchase proforma:", error);
-        toast.error(t("errors.delete_failed"));
+        toast.error(tErrors("delete_failed"));
       }
     }
   };
@@ -173,11 +175,11 @@ export default function FinancePage() {
                         payment_description: data.payment_description || null
                       };
                       await createSalesProforma(apiData);
-                      toast.success(t("errors.success_create"));
+                      toast.success(tErrors("success_create"));
                       await loadData();
                     } catch (error) {
                       console.error("Error saving sales proforma:", error);
-                      toast.error(t("errors.create_failed"));
+                      toast.error(tErrors("create_failed"));
                     }
                   }
                 });
@@ -216,11 +218,11 @@ export default function FinancePage() {
                                   payment_description: data.payment_description || null
                                 };
                                 await updateSalesProforma(proforma.id, apiData);
-                                toast.success(t("errors.success_update"));
+                                toast.success(tErrors("success_update"));
                                 await loadData();
                               } catch (error) {
                                 console.error("Error saving sales proforma:", error);
-                                toast.error(t("errors.update_failed"));
+                                toast.error(tErrors("update_failed"));
                               }
                             }
                           });
@@ -238,11 +240,11 @@ export default function FinancePage() {
                     <TableCell>{proforma.serial_number}</TableCell>
                     <TableCell>{getPartyDisplayName(customers.find(c => c.id === proforma.customer))}</TableCell>
                     <TableCell>{new Date(proforma.date).toLocaleDateString('fa-IR')}</TableCell>
-                    <TableCell>{calculateTotal(proforma.lines).toLocaleString()} ریال</TableCell>
+                    <TableCell>{calculateTotal(proforma.lines).toLocaleString()} {tCommon('units.rial')}</TableCell>
                     <TableCell>
-                      {proforma.payment_type === 'cash' && 'نقدی'}
-                      {proforma.payment_type === 'credit' && 'اعتباری'}
-                      {proforma.payment_type === 'other' && 'سایر'}
+                      {proforma.payment_type === 'cash' && tCommon('payment_types.cash')}
+                      {proforma.payment_type === 'credit' && tCommon('payment_types.credit')}
+                      {proforma.payment_type === 'other' && tCommon('payment_types.other')}
                     </TableCell>
                   </TableRow>
                 ))}
@@ -260,11 +262,11 @@ export default function FinancePage() {
                   onSubmit: async (data) => {
                     try {
                       await createPurchaseProforma(data);
-                      toast.success(t("errors.success_create"));
+                      toast.success(tErrors("success_create"));
                       await loadData();
                     } catch (error) {
                       console.error("Error saving purchase proforma:", error);
-                      toast.error(t("errors.create_failed"));
+                      toast.error(tErrors("create_failed"));
                     }
                   }
                 });
@@ -295,11 +297,11 @@ export default function FinancePage() {
                             onSubmit: async (data) => {
                               try {
                                 await updatePurchaseProforma(proforma.id, data);
-                                toast.success(t("errors.success_update"));
+                                toast.success(tErrors("success_update"));
                                 await loadData();
                               } catch (error) {
                                 console.error("Error saving purchase proforma:", error);
-                                toast.error(t("errors.update_failed"));
+                                toast.error(tErrors("update_failed"));
                               }
                             }
                           });
@@ -317,7 +319,7 @@ export default function FinancePage() {
                     <TableCell>{proforma.serial_number}</TableCell>
                     <TableCell>{getPartyDisplayName(suppliers.find(s => s.id === proforma.supplier))}</TableCell>
                     <TableCell>{new Date(proforma.date).toLocaleDateString('fa-IR')}</TableCell>
-                    <TableCell>{calculateTotal(proforma.lines).toLocaleString()} ریال</TableCell>
+                    <TableCell>{calculateTotal(proforma.lines).toLocaleString()} {tCommon('units.rial')}</TableCell>
                   </TableRow>
                 ))}
               </TableBody>
@@ -398,12 +400,12 @@ export default function FinancePage() {
                         } else {
                           await deletePurchaseProforma(selectedItem.id);
                         }
-                        toast.success(t("errors.success_delete"));
+                        toast.success(tErrors("success_delete"));
                         await loadData();
                         setSheetOpen(false);
                       } catch (error) {
                         console.error("Error deleting:", error);
-                        toast.error(t("errors.delete_failed"));
+                        toast.error(tErrors("delete_failed"));
                       }
                     }
                   }}
@@ -413,37 +415,37 @@ export default function FinancePage() {
                 </Button>
               </div>
               <div className="mt-6 space-y-4 p-4 bg-gray-50 rounded-lg">
-              <div><strong>شماره سریال:</strong> {selectedItem.serial_number}</div>
-              <div><strong>تاریخ:</strong> {new Date(selectedItem.date).toLocaleDateString('fa-IR')}</div>
-              {selectedType === 'sales' && 'customer' in selectedItem && (
-                <>
-                  <div><strong>مشتری:</strong> {getPartyDisplayName(customers.find(c => c.id === selectedItem.customer))}</div>
-                  <div><strong>نوع پرداخت:</strong> {
-                    selectedItem.payment_type === 'cash' ? 'نقدی' :
-                      selectedItem.payment_type === 'credit' ? 'اعتباری' : 'سایر'
-                  }</div>
-                  {selectedItem.payment_description && <div><strong>توضیحات پرداخت:</strong> {selectedItem.payment_description}</div>}
-                </>
-              )}
-              {selectedType === 'purchase' && 'supplier' in selectedItem && (
-                <div><strong>تامین کننده:</strong> {getPartyDisplayName(suppliers.find(s => s.id === selectedItem.supplier))}</div>
-              )}
-              <div><strong>مبلغ کل:</strong> {calculateTotal(selectedItem.lines).toLocaleString()} ریال</div>
-              {selectedItem.lines && selectedItem.lines.length > 0 && (
-                <div>
-                  <strong>ردیف‌ها:</strong>
-                  <ul className="mt-2 space-y-2">
-                    {selectedItem.lines.map((line, idx: number) => (
-                      <li key={idx} className="bg-white p-3 rounded border">
-                        <div>محصول: {products.find(p => p.id === line.product)?.name}</div>
-                        <div>وزن: {line.weight} کیلوگرم</div>
-                        <div>قیمت واحد: {line.unit_price.toLocaleString()} ریال</div>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-            </div>
+                <div><strong>{tCommon('detail_labels.serial_number')}</strong> {selectedItem.serial_number}</div>
+                <div><strong>{tCommon('detail_labels.date')}</strong> {new Date(selectedItem.date).toLocaleDateString('fa-IR')}</div>
+                {selectedType === 'sales' && 'customer' in selectedItem && (
+                  <>
+                    <div><strong>{tCommon('detail_labels.customer')}</strong> {getPartyDisplayName(customers.find(c => c.id === selectedItem.customer))}</div>
+                    <div><strong>{tCommon('detail_labels.payment_type')}</strong> {
+                      selectedItem.payment_type === 'cash' ? tCommon('payment_types.cash') :
+                        selectedItem.payment_type === 'credit' ? tCommon('payment_types.credit') : tCommon('payment_types.other')
+                    }</div>
+                    {selectedItem.payment_description && <div><strong>{tCommon('detail_labels.payment_description')}</strong> {selectedItem.payment_description}</div>}
+                  </>
+                )}
+                {selectedType === 'purchase' && 'supplier' in selectedItem && (
+                  <div><strong>{tCommon('detail_labels.supplier')}</strong> {getPartyDisplayName(suppliers.find(s => s.id === selectedItem.supplier))}</div>
+                )}
+                <div><strong>{tCommon('detail_labels.total_amount')}</strong> {calculateTotal(selectedItem.lines).toLocaleString()} {tCommon('units.rial')}</div>
+                {selectedItem.lines && selectedItem.lines.length > 0 && (
+                  <div>
+                    <strong>{tCommon('detail_labels.lines')}</strong>
+                    <ul className="mt-2 space-y-2">
+                      {selectedItem.lines.map((line, idx: number) => (
+                        <li key={idx} className="bg-white p-3 rounded border">
+                          <div>{tCommon('detail_labels.product')} {products.find(p => p.id === line.product)?.name}</div>
+                          <div>{tCommon('detail_labels.weight')} {line.weight} {tCommon('units.kg')}</div>
+                          <div>{tCommon('detail_labels.unit_price')} {line.unit_price.toLocaleString()} {tCommon('units.rial')}</div>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+              </div>
             </>
           )}
         </SheetContent>

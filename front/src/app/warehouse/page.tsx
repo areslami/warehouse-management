@@ -10,42 +10,43 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { WarehouseReceiptModal } from "@/components/modals/warehouse-receipt-modal";
-import { DispatchIssueModal } from "@/components/modals/dispatch-issue-modal";
-import { DeliveryFulfillmentModal } from "@/components/modals/delivery-fulfillment-modal";
-import { WarehouseModal } from "@/components/modals/warehouse-modal";
+import { WarehouseReceiptModal } from "@/components/modals/warehouse/warehouse-receipt-modal";
+import { DispatchIssueModal } from "@/components/modals/warehouse/dispatch-issue-modal";
+import { DeliveryFulfillmentModal } from "@/components/modals/warehouse/delivery-fulfillment-modal";
+import { WarehouseModal } from "@/components/modals/warehouse/warehouse-modal";
 import { useCoreData } from "@/lib/core-data-context";
-import { 
+import {
   fetchWarehouseReceipts, fetchWarehouseReceiptById, createWarehouseReceipt, updateWarehouseReceipt, deleteWarehouseReceipt,
   fetchDispatchIssues, fetchDispatchIssueById, createDispatchIssue, updateDispatchIssue, deleteDispatchIssue,
   fetchDeliveryFulfillments, fetchDeliveryFulfillmentById, createDeliveryFulfillment, updateDeliveryFulfillment, deleteDeliveryFulfillment,
   createWarehouse, updateWarehouse, deleteWarehouse
 } from "@/lib/api/warehouse";
 import { Warehouse, WarehouseReceipt, DispatchIssue, DeliveryFulfillment } from "@/lib/interfaces/warehouse";
-import { translateReceiptType } from "@/lib/utils/translations";
 
 export default function WarehousePage() {
-  const t = useTranslations("warehouse_page");
+  const t = useTranslations("pages.warehouse");
+  const tErrors = useTranslations("errors");
+  const tCommon = useTranslations("common");
   const { warehouses, refreshData: refreshCoreData } = useCoreData();
-  
+
   const [receipts, setReceipts] = useState<WarehouseReceipt[]>([]);
   const [dispatches, setDispatches] = useState<DispatchIssue[]>([]);
   const [deliveries, setDeliveries] = useState<DeliveryFulfillment[]>([]);
-  
+
   const [showReceiptModal, setShowReceiptModal] = useState(false);
   const [showDispatchModal, setShowDispatchModal] = useState(false);
   const [showDeliveryModal, setShowDeliveryModal] = useState(false);
   const [showWarehouseModal, setShowWarehouseModal] = useState(false);
-  
+
   const [editingReceipt, setEditingReceipt] = useState<WarehouseReceipt | null>(null);
   const [editingDispatch, setEditingDispatch] = useState<DispatchIssue | null>(null);
   const [editingDelivery, setEditingDelivery] = useState<DeliveryFulfillment | null>(null);
   const [editingWarehouse, setEditingWarehouse] = useState<Warehouse | null>(null);
-  
+
   const [sheetOpen, setSheetOpen] = useState(false);
   const [selectedItem, setSelectedItem] = useState<WarehouseReceipt | DispatchIssue | DeliveryFulfillment | null>(null);
   const [selectedType, setSelectedType] = useState<'receipt' | 'dispatch' | 'delivery'>('receipt');
-  
+
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedWarehouse, setSelectedWarehouse] = useState<string>("all");
 
@@ -61,9 +62,9 @@ export default function WarehousePage() {
       setDeliveries(deliveriesData || []);
     } catch (error) {
       console.error("Error loading data:", error);
-      toast.error(t("errors.fetch_failed"));
+      toast.error(tErrors("fetch_failed"));
     }
-  }, [t]);
+  }, [tErrors]);
 
   useEffect(() => {
     loadData();
@@ -79,11 +80,11 @@ export default function WarehousePage() {
     if (confirm(t("receipts.confirm_delete"))) {
       try {
         await deleteWarehouseReceipt(id);
-        toast.success(t("errors.success_delete"));
+        toast.success(tErrors("success_delete"));
         loadData();
       } catch (error) {
         console.error("Error deleting receipt:", error);
-        toast.error(t("errors.delete_failed"));
+        toast.error(tErrors("delete_failed"));
       }
     }
   };
@@ -92,11 +93,11 @@ export default function WarehousePage() {
     if (confirm(t("issues.confirm_delete"))) {
       try {
         await deleteDispatchIssue(id);
-        toast.success(t("errors.success_delete"));
+        toast.success(tErrors("success_delete"));
         loadData();
       } catch (error) {
         console.error("Error deleting dispatch:", error);
-        toast.error(t("errors.delete_failed"));
+        toast.error(tErrors("delete_failed"));
       }
     }
   };
@@ -105,11 +106,11 @@ export default function WarehousePage() {
     if (confirm(t("deliveries.confirm_delete"))) {
       try {
         await deleteDeliveryFulfillment(id);
-        toast.success(t("errors.success_delete"));
+        toast.success(tErrors("success_delete"));
         loadData();
       } catch (error) {
         console.error("Error deleting delivery:", error);
-        toast.error(t("errors.delete_failed"));
+        toast.error(tErrors("delete_failed"));
       }
     }
   };
@@ -118,15 +119,15 @@ export default function WarehousePage() {
     if (confirm(t("confirm_delete_warehouse"))) {
       try {
         await deleteWarehouse(id);
-        toast.success(t("errors.success_delete"));
+        toast.success(tErrors("success_delete"));
         refreshCoreData('warehouses');
       } catch (error) {
         console.error("Error deleting warehouse:", error);
-        toast.error(t("errors.delete_failed"));
+        toast.error(tErrors("delete_failed"));
       }
     }
   };
-  
+
   const filteredReceipts = useMemo(() => {
     return receipts.filter(receipt => {
       const matchesSearch = (receipt.receipt_id || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -135,7 +136,7 @@ export default function WarehousePage() {
       return matchesSearch && matchesWarehouse;
     });
   }, [receipts, searchTerm, selectedWarehouse]);
-  
+
   const filteredDispatches = useMemo(() => {
     return dispatches.filter(dispatch => {
       const matchesSearch = (dispatch.dispatch_id || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -144,7 +145,7 @@ export default function WarehousePage() {
       return matchesSearch && matchesWarehouse;
     });
   }, [dispatches, searchTerm, selectedWarehouse]);
-  
+
   const filteredDeliveries = useMemo(() => {
     return deliveries.filter(delivery => {
       const matchesSearch = (delivery.delivery_id || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -157,7 +158,7 @@ export default function WarehousePage() {
   return (
     <div className="flex-1 p-6 min-h-screen bg-gray-50" dir="rtl">
       <h1 className="text-3xl font-bold mb-8 text-gray-800">{t("title")}</h1>
-      
+
       <div className="mb-6 space-y-4">
         <div className="bg-white rounded-lg shadow">
           <div className="p-4 border-b border-gray-200">
@@ -189,7 +190,7 @@ export default function WarehousePage() {
                 {t("add_warehouse")}
               </Button>
             </div>
-            
+
             {selectedWarehouse !== "all" && (
               <div className="bg-gray-50 p-4 rounded-lg">
                 {warehouses.filter(w => w.id.toString() === selectedWarehouse).map(warehouse => (
@@ -233,7 +234,7 @@ export default function WarehousePage() {
             )}
           </div>
         </div>
-        
+
         <div className="relative">
           <Search className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
           <Input
@@ -244,7 +245,7 @@ export default function WarehousePage() {
           />
         </div>
       </div>
-      
+
       <Tabs defaultValue="receipts" className="w-full">
         <TabsList className="grid w-full grid-cols-3 mb-6">
           <TabsTrigger value="receipts" className="data-[state=active]:bg-[#f6d265] data-[state=active]:text-black">
@@ -296,7 +297,7 @@ export default function WarehousePage() {
                             setShowReceiptModal(true);
                           } catch (error) {
                             console.error("Error fetching receipt details:", error);
-                            toast.error(t("errors.fetch_failed"));
+                            toast.error(tErrors("fetch_failed"));
                           }
                         }}>
                           <Edit2 className="w-4 h-4" />
@@ -312,7 +313,7 @@ export default function WarehousePage() {
                     <TableCell>{receipt.receipt_id}</TableCell>
                     <TableCell>{new Date(receipt.date).toLocaleDateString('fa-IR')}</TableCell>
                     <TableCell>{warehouses.find(w => w.id === receipt.warehouse)?.name}</TableCell>
-                    <TableCell>{receipt.total_weight} کیلوگرم</TableCell>
+                    <TableCell>{receipt.total_weight} {tCommon('units.kg')}</TableCell>
                   </TableRow>
                 ))}
               </TableBody>
@@ -355,7 +356,7 @@ export default function WarehousePage() {
                             setShowDispatchModal(true);
                           } catch (error) {
                             console.error("Error fetching dispatch details:", error);
-                            toast.error(t("errors.fetch_failed"));
+                            toast.error(tErrors("fetch_failed"));
                           }
                         }}>
                           <Edit2 className="w-4 h-4" />
@@ -371,7 +372,7 @@ export default function WarehousePage() {
                     <TableCell>{dispatch.dispatch_id}</TableCell>
                     <TableCell>{new Date(dispatch.issue_date).toLocaleDateString('fa-IR')}</TableCell>
                     <TableCell>{warehouses.find(w => w.id === dispatch.warehouse)?.name}</TableCell>
-                    <TableCell>{dispatch.total_weight} کیلوگرم</TableCell>
+                    <TableCell>{dispatch.total_weight} {tCommon('units.kg')}</TableCell>
                   </TableRow>
                 ))}
               </TableBody>
@@ -414,7 +415,7 @@ export default function WarehousePage() {
                             setShowDeliveryModal(true);
                           } catch (error) {
                             console.error("Error fetching delivery details:", error);
-                            toast.error(t("errors.fetch_failed"));
+                            toast.error(tErrors("fetch_failed"));
                           }
                         }}>
                           <Edit2 className="w-4 h-4" />
@@ -430,7 +431,7 @@ export default function WarehousePage() {
                     <TableCell>{delivery.delivery_id}</TableCell>
                     <TableCell>{new Date(delivery.issue_date).toLocaleDateString('fa-IR')}</TableCell>
                     <TableCell>{warehouses.find(w => w.id === delivery.warehouse)?.name}</TableCell>
-                    <TableCell>{delivery.total_weight} کیلوگرم</TableCell>
+                    <TableCell>{delivery.total_weight} {tCommon('units.kg')}</TableCell>
                   </TableRow>
                 ))}
               </TableBody>
@@ -472,7 +473,7 @@ export default function WarehousePage() {
                       setSheetOpen(false);
                     } catch (error) {
                       console.error("Error fetching details:", error);
-                      toast.error(t("errors.fetch_failed"));
+                      toast.error(tErrors("fetch_failed"));
                     }
                   }}
                 >
@@ -485,8 +486,8 @@ export default function WarehousePage() {
                   className="text-red-600 hover:bg-red-50"
                   onClick={async () => {
                     const confirmMessage = selectedType === 'receipt' ? t("receipts.confirm_delete") :
-                                         selectedType === 'dispatch' ? t("issues.confirm_delete") :
-                                         t("deliveries.confirm_delete");
+                      selectedType === 'dispatch' ? t("issues.confirm_delete") :
+                        t("deliveries.confirm_delete");
                     if (confirm(confirmMessage)) {
                       try {
                         if (selectedType === 'receipt' && 'receipt_id' in selectedItem) {
@@ -496,12 +497,12 @@ export default function WarehousePage() {
                         } else if (selectedType === 'delivery' && 'delivery_id' in selectedItem) {
                           await deleteDeliveryFulfillment(selectedItem.id);
                         }
-                        toast.success(t("errors.success_delete"));
+                        toast.success(tErrors("success_delete"));
                         await loadData();
                         setSheetOpen(false);
                       } catch (error) {
                         console.error("Error deleting:", error);
-                        toast.error(t("errors.delete_failed"));
+                        toast.error(tErrors("delete_failed"));
                       }
                     }
                   }}
@@ -511,53 +512,53 @@ export default function WarehousePage() {
                 </Button>
               </div>
               <div className="mt-6 space-y-4 p-4 bg-gray-50 rounded-lg">
-              {selectedType === 'receipt' && (
-                <>
-                  <div><strong>شناسه رسید:</strong> {(selectedItem as WarehouseReceipt).receipt_id}</div>
-                  <div><strong>تاریخ:</strong> {new Date((selectedItem as WarehouseReceipt).date).toLocaleDateString('fa-IR')}</div>
-                  <div><strong>انبار:</strong> {warehouses.find(w => w.id === selectedItem.warehouse)?.name}</div>
-                  <div><strong>وزن کل:</strong> {selectedItem.total_weight} کیلوگرم</div>
-                  <div><strong>نوع رسید:</strong> {translateReceiptType((selectedItem as WarehouseReceipt).receipt_type)}</div>
-                  {selectedItem.description && <div><strong>توضیحات:</strong> {selectedItem.description}</div>}
-                  {(selectedItem as WarehouseReceipt).items?.length > 0 && (
-                    <div>
-                      <strong>اقلام:</strong>
-                      <ul className="mt-2 space-y-2">
-                        {(selectedItem as WarehouseReceipt).items.map((item, idx: number) => (
-                          <li key={idx} className="bg-white p-3 rounded border">
-                            <div>محصول {item.product}</div>
-                            <div className="text-sm text-gray-600">وزن: {item.weight} کیلوگرم</div>
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  )}
-                </>
-              )}
-              {selectedType === 'dispatch' && (
-                <>
-                  <div><strong>شناسه حواله:</strong> {(selectedItem as DispatchIssue).dispatch_id}</div>
-                  <div><strong>تاریخ صدور:</strong> {new Date((selectedItem as DispatchIssue).issue_date).toLocaleDateString('fa-IR')}</div>
-                  <div><strong>تاریخ اعتبار:</strong> {new Date((selectedItem as DispatchIssue).validity_date).toLocaleDateString('fa-IR')}</div>
-                  <div><strong>انبار:</strong> {warehouses.find(w => w.id === selectedItem.warehouse)?.name}</div>
-                  <div><strong>وزن کل:</strong> {selectedItem.total_weight} کیلوگرم</div>
-                  {selectedItem.description && <div><strong>توضیحات:</strong> {selectedItem.description}</div>}
-                </>
-              )}
-              {selectedType === 'delivery' && (
-                <>
-                  <div><strong>شناسه تحویل:</strong> {(selectedItem as DeliveryFulfillment).delivery_id}</div>
-                  <div><strong>تاریخ صدور:</strong> {new Date((selectedItem as DeliveryFulfillment).issue_date).toLocaleDateString('fa-IR')}</div>
-                  <div><strong>تاریخ اعتبار:</strong> {new Date((selectedItem as DeliveryFulfillment).validity_date).toLocaleDateString('fa-IR')}</div>
-                  <div><strong>انبار:</strong> {warehouses.find(w => w.id === selectedItem.warehouse)?.name}</div>
-                  <div><strong>شرکت حمل:</strong> {(selectedItem as DeliveryFulfillment).shipping_company_name || (selectedItem as DeliveryFulfillment).shipping_company}</div>
-                  <div><strong>پیش‌فاکتور فروش:</strong> {(selectedItem as DeliveryFulfillment).sales_proforma_serial || (selectedItem as DeliveryFulfillment).sales_proforma}</div>
-                  <div><strong>وزن کل:</strong> {selectedItem.total_weight} کیلوگرم</div>
-                  <div><strong>تعداد اقلام:</strong> {(selectedItem as DeliveryFulfillment).items?.length || 0}</div>
-                  {selectedItem.description && <div><strong>توضیحات:</strong> {selectedItem.description}</div>}
-                </>
-              )}
-            </div>
+                {selectedType === 'receipt' && (
+                  <>
+                    <div><strong>{tCommon('detail_labels.receipt_id')}</strong> {(selectedItem as WarehouseReceipt).receipt_id}</div>
+                    <div><strong>{tCommon('detail_labels.date')}</strong> {new Date((selectedItem as WarehouseReceipt).date).toLocaleDateString('fa-IR')}</div>
+                    <div><strong>{tCommon('detail_labels.warehouse')}</strong> {warehouses.find(w => w.id === selectedItem.warehouse)?.name}</div>
+                    <div><strong>{tCommon('detail_labels.total_weight')}</strong> {selectedItem.total_weight} {tCommon('units.kg')}</div>
+                    <div><strong>{tCommon('detail_labels.receipt_type')}</strong> {(selectedItem as WarehouseReceipt).receipt_type}</div>
+                    {selectedItem.description && <div><strong>{tCommon('detail_labels.description')}</strong> {selectedItem.description}</div>}
+                    {(selectedItem as WarehouseReceipt).items?.length > 0 && (
+                      <div>
+                        <strong>{tCommon('detail_labels.items')}</strong>
+                        <ul className="mt-2 space-y-2">
+                          {(selectedItem as WarehouseReceipt).items.map((item, idx: number) => (
+                            <li key={idx} className="bg-white p-3 rounded border">
+                              <div>{tCommon('product_labels.product_prefix')} {item.product}</div>
+                              <div className="text-sm text-gray-600">{tCommon('detail_labels.weight')} {item.weight} {tCommon('units.kg')}</div>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                  </>
+                )}
+                {selectedType === 'dispatch' && (
+                  <>
+                    <div><strong>{tCommon('detail_labels.dispatch_id')}</strong> {(selectedItem as DispatchIssue).dispatch_id}</div>
+                    <div><strong>{tCommon('detail_labels.issue_date')}</strong> {new Date((selectedItem as DispatchIssue).issue_date).toLocaleDateString('fa-IR')}</div>
+                    <div><strong>{tCommon('detail_labels.validity_date')}</strong> {new Date((selectedItem as DispatchIssue).validity_date).toLocaleDateString('fa-IR')}</div>
+                    <div><strong>{tCommon('detail_labels.warehouse')}</strong> {warehouses.find(w => w.id === selectedItem.warehouse)?.name}</div>
+                    <div><strong>{tCommon('detail_labels.total_weight')}</strong> {selectedItem.total_weight} {tCommon('units.kg')}</div>
+                    {selectedItem.description && <div><strong>{tCommon('detail_labels.description')}</strong> {selectedItem.description}</div>}
+                  </>
+                )}
+                {selectedType === 'delivery' && (
+                  <>
+                    <div><strong>{tCommon('detail_labels.delivery_id')}</strong> {(selectedItem as DeliveryFulfillment).delivery_id}</div>
+                    <div><strong>{tCommon('detail_labels.issue_date')}</strong> {new Date((selectedItem as DeliveryFulfillment).issue_date).toLocaleDateString('fa-IR')}</div>
+                    <div><strong>{tCommon('detail_labels.validity_date')}</strong> {new Date((selectedItem as DeliveryFulfillment).validity_date).toLocaleDateString('fa-IR')}</div>
+                    <div><strong>{tCommon('detail_labels.warehouse')}</strong> {warehouses.find(w => w.id === selectedItem.warehouse)?.name}</div>
+                    <div><strong>{tCommon('detail_labels.shipping_company')}</strong> {(selectedItem as DeliveryFulfillment).shipping_company_name || (selectedItem as DeliveryFulfillment).shipping_company}</div>
+                    <div><strong>{tCommon('detail_labels.sales_proforma')}</strong> {(selectedItem as DeliveryFulfillment).sales_proforma_serial || (selectedItem as DeliveryFulfillment).sales_proforma}</div>
+                    <div><strong>{tCommon('detail_labels.total_weight')}</strong> {selectedItem.total_weight} {tCommon('units.kg')}</div>
+                    <div><strong>{tCommon('detail_labels.item_count')}</strong> {(selectedItem as DeliveryFulfillment).items?.length || 0}</div>
+                    {selectedItem.description && <div><strong>{tCommon('detail_labels.description')}</strong> {selectedItem.description}</div>}
+                  </>
+                )}
+              </div>
             </>
           )}
         </SheetContent>
@@ -584,17 +585,17 @@ export default function WarehousePage() {
 
               if (editingReceipt) {
                 await updateWarehouseReceipt(editingReceipt.id, cleanData);
-                toast.success(t("errors.success_update"));
+                toast.success(tErrors("success_update"));
               } else {
                 await createWarehouseReceipt(cleanData);
-                toast.success(t("errors.success_create"));
+                toast.success(tErrors("success_create"));
               }
               await loadData();
               setShowReceiptModal(false);
               setEditingReceipt(null);
             } catch (error) {
               console.error("Error saving receipt:", error);
-              toast.error(editingReceipt ? t("errors.update_failed") : t("errors.create_failed"));
+              toast.error(editingReceipt ? tErrors("update_failed") : tErrors("create_failed"));
             }
           }}
           onClose={() => {
@@ -611,25 +612,25 @@ export default function WarehousePage() {
             try {
               // Calculate total weight from items
               const totalWeight = data.items.reduce((sum, item) => sum + item.weight, 0);
-              const submitData = { 
-                ...data, 
+              const submitData = {
+                ...data,
                 total_weight: totalWeight,
                 description: data.description || ""
               };
-              
+
               if (editingDispatch) {
                 await updateDispatchIssue(editingDispatch.id, submitData);
-                toast.success(t("errors.success_update"));
+                toast.success(tErrors("success_update"));
               } else {
                 await createDispatchIssue(submitData);
-                toast.success(t("errors.success_create"));
+                toast.success(tErrors("success_create"));
               }
               await loadData();
               setShowDispatchModal(false);
               setEditingDispatch(null);
             } catch (error) {
               console.error("Error saving dispatch:", error);
-              toast.error(editingDispatch ? t("errors.update_failed") : t("errors.create_failed"));
+              toast.error(editingDispatch ? tErrors("update_failed") : tErrors("create_failed"));
             }
           }}
           onClose={() => {
@@ -646,25 +647,25 @@ export default function WarehousePage() {
             try {
               // Calculate total weight from items
               const totalWeight = data.items.reduce((sum, item) => sum + item.weight, 0);
-              const submitData = { 
-                ...data, 
+              const submitData = {
+                ...data,
                 total_weight: totalWeight,
                 description: data.description || ""
               };
-              
+
               if (editingDelivery) {
                 await updateDeliveryFulfillment(editingDelivery.id, submitData);
-                toast.success(t("errors.success_update"));
+                toast.success(tErrors("success_update"));
               } else {
                 await createDeliveryFulfillment(submitData);
-                toast.success(t("errors.success_create"));
+                toast.success(tErrors("success_create"));
               }
               await loadData();
               setShowDeliveryModal(false);
               setEditingDelivery(null);
             } catch (error) {
               console.error("Error saving delivery:", error);
-              toast.error(editingDelivery ? t("errors.update_failed") : t("errors.create_failed"));
+              toast.error(editingDelivery ? tErrors("update_failed") : tErrors("create_failed"));
             }
           }}
           onClose={() => {
@@ -681,21 +682,21 @@ export default function WarehousePage() {
             try {
               if (editingWarehouse) {
                 await updateWarehouse(editingWarehouse.id, data);
-                toast.success(t("errors.success_update"));
+                toast.success(tErrors("success_update"));
               } else {
                 const warehouseData = {
                   ...data,
                   description: data.description || ""
                 };
                 await createWarehouse(warehouseData);
-                toast.success(t("errors.success_create"));
+                toast.success(tErrors("success_create"));
               }
               await refreshCoreData('warehouses');
               setShowWarehouseModal(false);
               setEditingWarehouse(null);
             } catch (error) {
               console.error("Error saving warehouse:", error);
-              toast.error(editingWarehouse ? t("errors.update_failed") : t("errors.create_failed"));
+              toast.error(editingWarehouse ? tErrors("update_failed") : tErrors("create_failed"));
             }
           }}
           onClose={() => {

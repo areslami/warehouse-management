@@ -3,58 +3,13 @@ import type {
   WarehouseReceipt,
   DispatchIssue,
   DeliveryFulfillment,
+  WarehouseReceiptCreate,
+  DispatchIssueCreate,
+  DeliveryFulfillmentCreate,
 } from "./../interfaces/warehouse";
 
-// Create interfaces for API calls that use IDs instead of full objects
-export interface WarehouseReceiptCreate {
-  receipt_id?: string;
-  receipt_type: "import_cottage" | "distribution_cottage" | "purchase";
-  date: string;
-  warehouse: number;
-  description?: string;
-  cottage_serial_number?: string;
-  proforma?: number;
-  items: { product: number; weight: number }[];
-}
-
-export interface DispatchIssueCreate {
-  dispatch_id: string;
-  warehouse: number;
-  sales_proforma: number;
-  issue_date: string;
-  validity_date: string;
-  description: string;
-  shipping_company: number;
-  total_weight: number;
-  items: {
-    product: number;
-    weight: number;
-    vehicle_type: "truck" | "pickup" | "van" | "container" | "other";
-    receiver: number;
-  }[];
-}
-
-export interface DeliveryFulfillmentCreate {
-  delivery_id: string;
-  issue_date: string;
-  validity_date: string;
-  warehouse: number;
-  sales_proforma: number;
-  description: string;
-  shipping_company: number;
-  total_weight: number;
-  items: {
-    shipment_id: string;
-    shipment_price: number;
-    product: number;
-    weight: number;
-    vehicle_type: "truck" | "pickup" | "van" | "container" | "other";
-    receiver: number;
-  }[];
-}
 import { getCoreContext } from "../core-data-context";
 import { apiFetch } from "./api-client";
-import { toast } from "../toast-helper";
 
 const API_BASE_URL = "http://localhost:8000/warehouse/";
 
@@ -71,12 +26,12 @@ export const createWarehouse = async (
     method: "POST",
     body: data,
   });
-  
+
   if (result) {
     const context = getCoreContext();
-    context?.addItem('warehouses', result);
+    context?.addItem("warehouses", result);
   }
-  
+
   return result;
 };
 
@@ -85,23 +40,25 @@ export const updateWarehouse = async (id: number, data: Partial<Warehouse>) => {
     method: "PATCH",
     body: data,
   });
-  
+
   if (result) {
     const context = getCoreContext();
-    context?.updateItem('warehouses', id, result);
+    context?.updateItem("warehouses", id, result);
   }
-  
+
   return result;
 };
 
 export const deleteWarehouse = async (id: number) => {
-  const result = await apiFetch(`${API_BASE_URL}warehouses/${id}/`, { method: "DELETE" });
-  
+  const result = await apiFetch(`${API_BASE_URL}warehouses/${id}/`, {
+    method: "DELETE",
+  });
+
   if (result !== null) {
     const context = getCoreContext();
-    context?.deleteItem('warehouses', id);
+    context?.deleteItem("warehouses", id);
   }
-  
+
   return result;
 };
 

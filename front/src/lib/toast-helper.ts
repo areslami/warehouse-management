@@ -1,28 +1,33 @@
-let toastInstance: any = null;
+type ToastType = "success" | "error" | "info" | "warning";
 
-export const setToastInstance = (instance: any) => {
+interface ToastInterface {
+  showToast: (message: string, type: ToastType) => void;
+}
+let toastInstance: ToastInterface | null = null;
+
+export const setToastInstance = (instance: ToastInterface) => {
   toastInstance = instance;
 };
 
 export const toast = {
   success: (message: string) => {
     if (toastInstance) {
-      toastInstance.showToast(message, 'success');
+      toastInstance.showToast(message, "success");
     }
   },
   error: (message: string) => {
     if (toastInstance) {
-      toastInstance.showToast(message, 'error');
+      toastInstance.showToast(message, "error");
     }
   },
   info: (message: string) => {
     if (toastInstance) {
-      toastInstance.showToast(message, 'info');
+      toastInstance.showToast(message, "info");
     }
   },
   warning: (message: string) => {
     if (toastInstance) {
-      toastInstance.showToast(message, 'warning');
+      toastInstance.showToast(message, "warning");
     }
-  }
+  },
 };

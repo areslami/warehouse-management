@@ -10,7 +10,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Input } from "../ui/input";
 import { useTranslations } from "next-intl";
 
-type ShippingCompanyFormData = {
+export type ShippingCompanyFormData = {
   name: string;
   contact_person: string;
   phone: string;
@@ -27,8 +27,8 @@ interface ShippingCompanyModalProps {
 }
 
 export function ShippingCompanyModal({ trigger, onSubmit, onClose, initialData }: ShippingCompanyModalProps) {
-  const tval = useTranslations("shippingCompany.validation");
-  const t = useTranslations("shippingCompany");
+  const tval = useTranslations("modals.shippingCompany.validation");
+  const t = useTranslations("modals.shippingCompany");
 
   const shippingCompanySchema = z.object({
     name: z.string().min(1, tval("name")),

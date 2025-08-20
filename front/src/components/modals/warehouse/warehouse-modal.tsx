@@ -4,18 +4,18 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "../ui/dialog";
-import { Button } from "../ui/button";
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "../ui/form";
-import { Input } from "../ui/input";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "../../ui/dialog";
+import { Button } from "../../ui/button";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "../../ui/form";
+import { Input } from "../../ui/input";
 import { useTranslations } from "next-intl";
 
-type WarehouseFormData = {
+export type WarehouseFormData = {
   name: string;
   address: string;
   manager: string;
   phone: string;
-  description?: string;
+  description: string;
 };
 
 interface WarehouseModalProps {
@@ -26,15 +26,15 @@ interface WarehouseModalProps {
 }
 
 export function WarehouseModal({ trigger, onSubmit, onClose, initialData }: WarehouseModalProps) {
-  const tval = useTranslations("warehouse.validation");
-  const t = useTranslations("warehouse");
+  const tval = useTranslations("modals.warehouse.validation");
+  const t = useTranslations("modals.warehouse");
 
   const warehouseSchema = z.object({
     name: z.string().min(1, tval("name")),
     address: z.string().min(1, tval("address")),
     manager: z.string().min(1, tval("manager")),
     phone: z.string().min(1, tval("phone")),
-    description: z.string().optional(),
+    description: z.string()
   });
 
   const [open, setOpen] = useState(trigger ? false : true);

@@ -9,9 +9,9 @@ import { toast } from "sonner";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { B2BOfferModal } from "@/components/modals/b2b-offer-modal";
-import { B2BDistributionModal } from "@/components/modals/b2b-distribution-modal";
-import { B2BSaleModal } from "@/components/modals/b2b-sale-modal";
+import { B2BOfferModal } from "@/components/modals/b2b/b2b-offer-modal";
+import { B2BDistributionModal } from "@/components/modals/b2b/b2b-distribution-modal";
+import { B2BSaleModal } from "@/components/modals/b2b/b2b-sale-modal";
 import { B2BOffer, B2BSale, B2BDistribution } from "@/lib/interfaces/b2b";
 import {
   fetchB2BOffers, fetchB2BOfferById, createB2BOffer, updateB2BOffer, deleteB2BOffer,
@@ -20,28 +20,30 @@ import {
 } from "@/lib/api/b2b";
 
 export default function B2BPage() {
-  const t = useTranslations("b2b_page");
+  const t = useTranslations("pages.b2b");
+  const tErrors = useTranslations("errors");
+  const tCommon = useTranslations("common");
   const [offers, setOffers] = useState<B2BOffer[]>([]);
   const [sales, setSales] = useState<B2BSale[]>([]);
   const [distributions, setDistributions] = useState<B2BDistribution[]>([]);
-  
+
   const [showOfferModal, setShowOfferModal] = useState(false);
   const [showSaleModal, setShowSaleModal] = useState(false);
   const [showDistributionModal, setShowDistributionModal] = useState(false);
-  
+
   const [editingOffer, setEditingOffer] = useState<B2BOffer | null>(null);
   const [editingSale, setEditingSale] = useState<B2BSale | null>(null);
   const [editingDistribution, setEditingDistribution] = useState<B2BDistribution | null>(null);
-  
+
   const [sheetOpen, setSheetOpen] = useState(false);
   const [selectedItem, setSelectedItem] = useState<B2BOffer | B2BSale | B2BDistribution | null>(null);
   const [selectedType, setSelectedType] = useState<'offer' | 'distribution' | 'sale'>('offer');
-  
+
   const [searchTerm, setSearchTerm] = useState("");
 
   useEffect(() => {
     loadData();
-  }, []);
+  });
 
   const loadData = async () => {
     try {
@@ -55,7 +57,7 @@ export default function B2BPage() {
       setDistributions(distributionsData);
     } catch (error) {
       console.error("Error loading B2B data:", error);
-      toast.error(t("errors.fetch_failed"));
+      toast.error(tErrors("fetch_failed"));
     }
   };
 
@@ -69,11 +71,11 @@ export default function B2BPage() {
     if (confirm(t("confirm_delete_offer"))) {
       try {
         await deleteB2BOffer(id);
-        toast.success(t("errors.success_delete"));
+        toast.success(tErrors("success_delete"));
         loadData();
       } catch (error) {
         console.error("Error deleting offer:", error);
-        toast.error(t("errors.delete_failed"));
+        toast.error(tErrors("delete_failed"));
       }
     }
   };
@@ -82,11 +84,11 @@ export default function B2BPage() {
     if (confirm(t("confirm_delete_sale"))) {
       try {
         await deleteB2BSale(id);
-        toast.success(t("errors.success_delete"));
+        toast.success(tErrors("success_delete"));
         loadData();
       } catch (error) {
         console.error("Error deleting sale:", error);
-        toast.error(t("errors.delete_failed"));
+        toast.error(tErrors("delete_failed"));
       }
     }
   };
@@ -95,32 +97,32 @@ export default function B2BPage() {
     if (confirm(t("confirm_delete_distribution"))) {
       try {
         await deleteB2BDistribution(id);
-        toast.success(t("errors.success_delete"));
+        toast.success(tErrors("success_delete"));
         loadData();
       } catch (error) {
         console.error("Error deleting distribution:", error);
-        toast.error(t("errors.delete_failed"));
+        toast.error(tErrors("delete_failed"));
       }
     }
   };
-  
+
   const filteredOffers = useMemo(() => {
-    return offers.filter(offer => 
+    return offers.filter(offer =>
       offer.offer_id.toLowerCase().includes(searchTerm.toLowerCase()) ||
       (offer.product_name || '').toLowerCase().includes(searchTerm.toLowerCase())
     );
   }, [offers, searchTerm]);
-  
+
   const filteredDistributions = useMemo(() => {
-    return distributions.filter(dist => 
+    return distributions.filter(dist =>
       (dist.cottage_number || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
       (dist.customer_name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
       (dist.product_name || '').toLowerCase().includes(searchTerm.toLowerCase())
     );
   }, [distributions, searchTerm]);
-  
+
   const filteredSales = useMemo(() => {
-    return sales.filter(sale => 
+    return sales.filter(sale =>
       (sale.cottage_number || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
       (sale.product_title || '').toLowerCase().includes(searchTerm.toLowerCase())
     );
@@ -144,7 +146,7 @@ export default function B2BPage() {
   return (
     <div className="flex-1 p-6 min-h-screen bg-gray-50" dir="rtl">
       <h1 className="text-3xl font-bold mb-8 text-gray-800">{t("title")}</h1>
-      
+
       <div className="relative mb-6">
         <Search className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
         <Input
@@ -154,7 +156,7 @@ export default function B2BPage() {
           className="pr-10"
         />
       </div>
-      
+
       <Tabs defaultValue="offers" className="w-full">
         <TabsList className="grid w-full grid-cols-3 mb-6">
           <TabsTrigger value="offers" className="data-[state=active]:bg-[#f6d265] data-[state=active]:text-black">
@@ -221,7 +223,7 @@ export default function B2BPage() {
                                   setShowOfferModal(true);
                                 } catch (error) {
                                   console.error("Error fetching offer details:", error);
-                                  toast.error(t("errors.fetch_failed"));
+                                  toast.error(tErrors("fetch_failed"));
                                 }
                               }}
                             >
@@ -240,16 +242,16 @@ export default function B2BPage() {
                           </div>
                         </TableCell>
                         <TableCell className="font-medium">{offer.offer_id}</TableCell>
-                        <TableCell>{offer.product_name || `محصول ${offer.product}`}</TableCell>
-                        <TableCell>{offer.offer_weight} کیلوگرم</TableCell>
-                        <TableCell>{offer.unit_price.toLocaleString()} ریال</TableCell>
-                        <TableCell>{offer.total_price ? offer.total_price.toLocaleString() : '0'} ریال</TableCell>
+                        <TableCell>{offer.product_name || `${tCommon('product_labels.product_prefix')} ${offer.product}`}</TableCell>
+                        <TableCell>{offer.offer_weight} {tCommon('units.kg')}</TableCell>
+                        <TableCell>{offer.unit_price.toLocaleString()} {tCommon('units.rial')}</TableCell>
+                        <TableCell>{offer.total_price ? offer.total_price.toLocaleString() : '0'} {tCommon('units.rial')}</TableCell>
                         <TableCell>
                           <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusBadgeClass(offer.status)}`}>
-                            {offer.status === 'Active' && 'فعال'}
-                            {offer.status === 'Pending' && 'در انتظار'}
-                            {offer.status === 'Sold' && 'فروخته شده'}
-                            {offer.status === 'Expired' && 'منقضی'}
+                            {offer.status === 'Active' && tCommon('status.active')}
+                            {offer.status === 'Pending' && tCommon('status.pending')}
+                            {offer.status === 'Sold' && tCommon('status.sold')}
+                            {offer.status === 'Expired' && tCommon('status.expired')}
                           </span>
                         </TableCell>
                         <TableCell>{new Date(offer.offer_date).toLocaleDateString('fa-IR')}</TableCell>
@@ -311,7 +313,7 @@ export default function B2BPage() {
                                   setShowDistributionModal(true);
                                 } catch (error) {
                                   console.error("Error fetching distribution details:", error);
-                                  toast.error(t("errors.fetch_failed"));
+                                  toast.error(tErrors("fetch_failed"));
                                 }
                               }}
                             >
@@ -330,10 +332,10 @@ export default function B2BPage() {
                           </div>
                         </TableCell>
                         <TableCell className="font-medium">{distribution.cottage_number || '-'}</TableCell>
-                        <TableCell>{distribution.warehouse_name || `انبار ${distribution.warehouse}`}</TableCell>
-                        <TableCell>{distribution.product_name || `محصول ${distribution.product}`}</TableCell>
-                        <TableCell>{distribution.customer_name || `مشتری ${distribution.customer}`}</TableCell>
-                        <TableCell>{distribution.agency_weight} کیلوگرم</TableCell>
+                        <TableCell>{distribution.warehouse_name || `${tCommon('product_labels.warehouse_prefix')} ${distribution.warehouse}`}</TableCell>
+                        <TableCell>{distribution.product_name || `${tCommon('product_labels.product_prefix')} ${distribution.product}`}</TableCell>
+                        <TableCell>{distribution.customer_name || `${tCommon('product_labels.customer_prefix')} ${distribution.customer}`}</TableCell>
+                        <TableCell>{distribution.agency_weight} {tCommon('units.kg')}</TableCell>
                         <TableCell>{new Date(distribution.agency_date).toLocaleDateString('fa-IR')}</TableCell>
                       </TableRow>
                     ))}
@@ -392,7 +394,7 @@ export default function B2BPage() {
                                   setShowSaleModal(true);
                                 } catch (error) {
                                   console.error("Error fetching sale details:", error);
-                                  toast.error(t("errors.fetch_failed"));
+                                  toast.error(tErrors("fetch_failed"));
                                 }
                               }}
                             >
@@ -411,11 +413,11 @@ export default function B2BPage() {
                           </div>
                         </TableCell>
                         <TableCell className="font-medium">{sale.cottage_number || '-'}</TableCell>
-                        <TableCell>{sale.product_title || `عرضه ${sale.product_offer}`}</TableCell>
-                        <TableCell>{sale.total_offer_weight || 0} کیلوگرم</TableCell>
-                        <TableCell>{sale.sold_weight_before_transport || 0} کیلوگرم</TableCell>
-                        <TableCell>{sale.remaining_weight_before_transport || 0} کیلوگرم</TableCell>
-                        <TableCell>{sale.offer_status || 'نامشخص'}</TableCell>
+                        <TableCell>{sale.product_title || `${tCommon('product_labels.offer_prefix')} ${sale.product_offer}`}</TableCell>
+                        <TableCell>{sale.total_offer_weight || 0} {tCommon('units.kg')}</TableCell>
+                        <TableCell>{sale.sold_weight_before_transport || 0} {tCommon('units.kg')}</TableCell>
+                        <TableCell>{sale.remaining_weight_before_transport || 0} {tCommon('units.kg')}</TableCell>
+                        <TableCell>{sale.offer_status || tCommon('status.unknown')}</TableCell>
                       </TableRow>
                     ))}
                   </TableBody>
@@ -433,17 +435,17 @@ export default function B2BPage() {
             try {
               if (editingOffer) {
                 await updateB2BOffer(editingOffer.id, data);
-                toast.success(t("errors.success_update"));
+                toast.success(tErrors("success_update"));
               } else {
                 await createB2BOffer(data);
-                toast.success(t("errors.success_create"));
+                toast.success(tErrors("success_create"));
               }
               await loadData();
               setShowOfferModal(false);
               setEditingOffer(null);
             } catch (error) {
               console.error("Error saving offer:", error);
-              toast.error(editingOffer ? t("errors.update_failed") : t("errors.create_failed"));
+              toast.error(editingOffer ? tErrors("update_failed") : tErrors("create_failed"));
             }
           }}
           onClose={() => {
@@ -460,17 +462,17 @@ export default function B2BPage() {
             try {
               if (editingDistribution) {
                 await updateB2BDistribution(editingDistribution.id, data);
-                toast.success(t("errors.success_update"));
+                toast.success(tErrors("success_update"));
               } else {
                 await createB2BDistribution(data);
-                toast.success(t("errors.success_create"));
+                toast.success(tErrors("success_create"));
               }
               await loadData();
               setShowDistributionModal(false);
               setEditingDistribution(null);
             } catch (error) {
               console.error("Error saving distribution:", error);
-              toast.error(editingDistribution ? t("errors.update_failed") : t("errors.create_failed"));
+              toast.error(editingDistribution ? tErrors("update_failed") : tErrors("create_failed"));
             }
           }}
           onClose={() => {
@@ -483,7 +485,7 @@ export default function B2BPage() {
       {showSaleModal && (
         <B2BSaleModal
           initialData={editingSale || undefined}
-          offers={offers.map(o => ({ id: o.id, offer_id: o.offer_id, product_name: o.product_name || `محصول ${o.product}` }))}
+          offers={offers.map(o => ({ id: o.id, offer_id: o.offer_id, product_name: o.product_name || `${tCommon('product_labels.product_prefix')} ${o.product}` }))}
           onOfferCreated={async () => {
             await loadData(); // Refresh offers list when a new offer is created
           }}
@@ -491,17 +493,17 @@ export default function B2BPage() {
             try {
               if (editingSale) {
                 await updateB2BSale(editingSale.id, data);
-                toast.success(t("errors.success_update"));
+                toast.success(tErrors("success_update"));
               } else {
                 await createB2BSale(data);
-                toast.success(t("errors.success_create"));
+                toast.success(tErrors("success_create"));
               }
               await loadData();
               setShowSaleModal(false);
               setEditingSale(null);
             } catch (error) {
               console.error("Error saving sale:", error);
-              toast.error(editingSale ? t("errors.update_failed") : t("errors.create_failed"));
+              toast.error(editingSale ? tErrors("update_failed") : tErrors("create_failed"));
             }
           }}
           onClose={() => {
@@ -544,7 +546,7 @@ export default function B2BPage() {
                       setSheetOpen(false);
                     } catch (error) {
                       console.error("Error fetching details:", error);
-                      toast.error(t("errors.fetch_failed"));
+                      toast.error(tErrors("fetch_failed"));
                     }
                   }}
                 >
@@ -557,8 +559,8 @@ export default function B2BPage() {
                   className="text-red-600 hover:bg-red-50"
                   onClick={async () => {
                     const confirmMessage = selectedType === 'offer' ? t("confirm_delete_offer") :
-                                         selectedType === 'distribution' ? t("confirm_delete_distribution") :
-                                         t("confirm_delete_sale");
+                      selectedType === 'distribution' ? t("confirm_delete_distribution") :
+                        t("confirm_delete_sale");
                     if (confirm(confirmMessage)) {
                       try {
                         if (selectedType === 'offer' && 'offer_id' in selectedItem) {
@@ -568,12 +570,12 @@ export default function B2BPage() {
                         } else if (selectedType === 'sale' && 'product_offer' in selectedItem) {
                           await deleteB2BSale(selectedItem.id);
                         }
-                        toast.success(t("errors.success_delete"));
+                        toast.success(tErrors("success_delete"));
                         await loadData();
                         setSheetOpen(false);
                       } catch (error) {
                         console.error("Error deleting:", error);
-                        toast.error(t("errors.delete_failed"));
+                        toast.error(tErrors("delete_failed"));
                       }
                     }
                   }}
@@ -583,54 +585,54 @@ export default function B2BPage() {
                 </Button>
               </div>
               <div className="mt-6 space-y-4 p-4 bg-gray-50 rounded-lg">
-              {selectedType === 'offer' && (
-                <>
-                  <div><strong>شناسه عرضه:</strong> {selectedItem.offer_id}</div>
-                  <div><strong>محصول:</strong> {selectedItem.product_name || `محصول ${selectedItem.product}`}</div>
-                  <div><strong>رسید انبار:</strong> {selectedItem.warehouse_receipt_id || selectedItem.warehouse_receipt}</div>
-                  <div><strong>وزن عرضه:</strong> {selectedItem.offer_weight} کیلوگرم</div>
-                  <div><strong>قیمت واحد:</strong> {selectedItem.unit_price.toLocaleString()} ریال</div>
-                  <div><strong>قیمت کل:</strong> {(selectedItem.total_price || selectedItem.offer_weight * selectedItem.unit_price).toLocaleString()} ریال</div>
-                  <div><strong>وضعیت:</strong> {
-                    selectedItem.status === 'Active' ? 'فعال' :
-                    selectedItem.status === 'Pending' ? 'در انتظار' :
-                    selectedItem.status === 'Sold' ? 'فروخته شده' : 'منقضی'
-                  }</div>
-                  <div><strong>تاریخ عرضه:</strong> {new Date(selectedItem.offer_date).toLocaleDateString('fa-IR')}</div>
-                  <div><strong>تاریخ انقضا:</strong> {new Date(selectedItem.offer_exp_date).toLocaleDateString('fa-IR')}</div>
-                  {selectedItem.description && <div><strong>توضیحات:</strong> {selectedItem.description}</div>}
-                </>
-              )}
-              {selectedType === 'distribution' && (
-                <>
-                  <div><strong>شماره کوتاژ:</strong> {selectedItem.cottage_number || '-'}</div>
-                  <div><strong>انبار:</strong> {selectedItem.warehouse_name || `انبار ${selectedItem.warehouse}`}</div>
-                  <div><strong>محصول:</strong> {selectedItem.product_name || `محصول ${selectedItem.product}`}</div>
-                  <div><strong>مشتری:</strong> {selectedItem.customer_name || `مشتری ${selectedItem.customer}`}</div>
-                  <div><strong>وزن عاملیت:</strong> {selectedItem.agency_weight} کیلوگرم</div>
-                  <div><strong>تاریخ عاملیت:</strong> {new Date(selectedItem.agency_date).toLocaleDateString('fa-IR')}</div>
-                  {selectedItem.description && <div><strong>توضیحات:</strong> {selectedItem.description}</div>}
-                </>
-              )}
-              {selectedType === 'sale' && (
-                <>
-                  <div><strong>شماره کوتاژ:</strong> {selectedItem.cottage_number || '-'}</div>
-                  <div><strong>عنوان محصول:</strong> {selectedItem.product_title || `عرضه ${selectedItem.product_offer}`}</div>
-                  <div><strong>وزن کل عرضه:</strong> {selectedItem.total_offer_weight || 0} کیلوگرم</div>
-                  <div><strong>وزن فروخته شده قبل از حمل:</strong> {selectedItem.sold_weight_before_transport || 0} کیلوگرم</div>
-                  <div><strong>وزن باقیمانده قبل از حمل:</strong> {selectedItem.remaining_weight_before_transport || 0} کیلوگرم</div>
-                  {selectedItem.sold_weight_after_transport && (
-                    <div><strong>وزن فروخته شده بعد از حمل:</strong> {selectedItem.sold_weight_after_transport} کیلوگرم</div>
-                  )}
-                  {selectedItem.remaining_weight_after_transport && (
-                    <div><strong>وزن باقیمانده بعد از حمل:</strong> {selectedItem.remaining_weight_after_transport} کیلوگرم</div>
-                  )}
-                  <div><strong>وضعیت عرضه:</strong> {selectedItem.offer_status || 'نامشخص'}</div>
-                  {selectedItem.entry_customs && <div><strong>گمرک ورودی:</strong> {selectedItem.entry_customs}</div>}
-                  {selectedItem.description && <div><strong>توضیحات:</strong> {selectedItem.description}</div>}
-                </>
-              )}
-            </div>
+                {selectedType === 'offer' && (
+                  <>
+                    <div><strong>{tCommon('detail_labels.offer_id')}</strong> {selectedItem.offer_id}</div>
+                    <div><strong>{tCommon('detail_labels.product')}</strong> {selectedItem.product_name || `${tCommon('product_labels.product_prefix')} ${selectedItem.product}`}</div>
+                    <div><strong>{tCommon('detail_labels.warehouse_receipt')}</strong> {selectedItem.warehouse_receipt_id || selectedItem.warehouse_receipt}</div>
+                    <div><strong>{tCommon('detail_labels.offer_weight')}</strong> {selectedItem.offer_weight} {tCommon('units.kg')}</div>
+                    <div><strong>{tCommon('detail_labels.unit_price')}</strong> {selectedItem.unit_price.toLocaleString()} {tCommon('units.rial')}</div>
+                    <div><strong>{tCommon('detail_labels.total_price')}</strong> {(selectedItem.total_price || selectedItem.offer_weight * selectedItem.unit_price).toLocaleString()} {tCommon('units.rial')}</div>
+                    <div><strong>{tCommon('detail_labels.status')}</strong> {
+                      selectedItem.status === 'Active' ? tCommon('status.active') :
+                        selectedItem.status === 'Pending' ? tCommon('status.pending') :
+                          selectedItem.status === 'Sold' ? tCommon('status.sold') : tCommon('status.expired')
+                    }</div>
+                    <div><strong>{tCommon('detail_labels.offer_date')}</strong> {new Date(selectedItem.offer_date).toLocaleDateString('fa-IR')}</div>
+                    <div><strong>{tCommon('detail_labels.expiry_date')}</strong> {new Date(selectedItem.offer_exp_date).toLocaleDateString('fa-IR')}</div>
+                    {selectedItem.description && <div><strong>{tCommon('detail_labels.description')}</strong> {selectedItem.description}</div>}
+                  </>
+                )}
+                {selectedType === 'distribution' && (
+                  <>
+                    <div><strong>{tCommon('detail_labels.cottage_number')}</strong> {selectedItem.cottage_number || '-'}</div>
+                    <div><strong>{tCommon('detail_labels.warehouse')}</strong> {selectedItem.warehouse_name || `${tCommon('product_labels.warehouse_prefix')} ${selectedItem.warehouse}`}</div>
+                    <div><strong>{tCommon('detail_labels.product')}</strong> {selectedItem.product_name || `${tCommon('product_labels.product_prefix')} ${selectedItem.product}`}</div>
+                    <div><strong>{tCommon('detail_labels.customer')}</strong> {selectedItem.customer_name || `${tCommon('product_labels.customer_prefix')} ${selectedItem.customer}`}</div>
+                    <div><strong>{tCommon('detail_labels.agency_weight')}</strong> {selectedItem.agency_weight} {tCommon('units.kg')}</div>
+                    <div><strong>{tCommon('detail_labels.agency_date')}</strong> {new Date(selectedItem.agency_date).toLocaleDateString('fa-IR')}</div>
+                    {selectedItem.description && <div><strong>{tCommon('detail_labels.description')}</strong> {selectedItem.description}</div>}
+                  </>
+                )}
+                {selectedType === 'sale' && (
+                  <>
+                    <div><strong>{tCommon('detail_labels.cottage_number')}</strong> {selectedItem.cottage_number || '-'}</div>
+                    <div><strong>{tCommon('detail_labels.product_title')}</strong> {selectedItem.product_title || `${tCommon('product_labels.offer_prefix')} ${selectedItem.product_offer}`}</div>
+                    <div><strong>{tCommon('detail_labels.total_offer_weight')}</strong> {selectedItem.total_offer_weight || 0} {tCommon('units.kg')}</div>
+                    <div><strong>{tCommon('detail_labels.sold_weight_before_transport')}</strong> {selectedItem.sold_weight_before_transport || 0} {tCommon('units.kg')}</div>
+                    <div><strong>{tCommon('detail_labels.remaining_weight_before_transport')}</strong> {selectedItem.remaining_weight_before_transport || 0} {tCommon('units.kg')}</div>
+                    {selectedItem.sold_weight_after_transport && (
+                      <div><strong>{tCommon('detail_labels.sold_weight_after_transport')}</strong> {selectedItem.sold_weight_after_transport} {tCommon('units.kg')}</div>
+                    )}
+                    {selectedItem.remaining_weight_after_transport && (
+                      <div><strong>{tCommon('detail_labels.remaining_weight_after_transport')}</strong> {selectedItem.remaining_weight_after_transport} {tCommon('units.kg')}</div>
+                    )}
+                    <div><strong>{tCommon('detail_labels.offer_status')}</strong> {selectedItem.offer_status || tCommon('status.unknown')}</div>
+                    {selectedItem.entry_customs && <div><strong>{tCommon('detail_labels.entry_customs')}</strong> {selectedItem.entry_customs}</div>}
+                    {selectedItem.description && <div><strong>{tCommon('detail_labels.description')}</strong> {selectedItem.description}</div>}
+                  </>
+                )}
+              </div>
             </>
           )}
         </SheetContent>

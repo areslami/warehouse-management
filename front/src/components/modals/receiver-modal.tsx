@@ -10,7 +10,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Input } from "../ui/input";
 import { useTranslations } from "next-intl";
 
-type ReceiverFormData = {
+export type ReceiverFormData = {
   receiver_type: "Individual" | "Corporate";
   system_id: string;
   unique_id: string;
@@ -33,8 +33,8 @@ interface ReceiverModalProps {
 }
 
 export function ReceiverModal({ trigger, onSubmit, onClose, initialData }: ReceiverModalProps) {
-  const tval = useTranslations("receiver.validation");
-  const t = useTranslations("receiver");
+  const tval = useTranslations("modals.receiver.validation");
+  const t = useTranslations("modals.receiver");
 
   const receiverSchema = z.object({
     receiver_type: z.enum(["Individual", "Corporate"]),

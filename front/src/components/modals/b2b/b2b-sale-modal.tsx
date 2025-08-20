@@ -1,21 +1,21 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useForm, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "../ui/dialog";
-import { Button } from "../ui/button";
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "../ui/form";
-import { Input } from "../ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select";
-import { PersianDatePicker } from "../ui/persian-date-picker";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "../../ui/dialog";
+import { Button } from "../../ui/button";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "../../ui/form";
+import { Input } from "../../ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../../ui/select";
+import { PersianDatePicker } from "../../ui/persian-date-picker";
 import { Plus, Trash2 } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { B2BOfferModal } from "./b2b-offer-modal";
 import { createB2BOffer } from "@/lib/api/b2b";
 
-type B2BSaleFormData = {
+export type B2BSaleFormData = {
   product_offer: number;
   description?: string;
   purchases: {
@@ -37,9 +37,9 @@ interface B2BSaleModalProps {
 }
 
 export function B2BSaleModal({ trigger, onSubmit, onClose, initialData, offers = [], onOfferCreated }: B2BSaleModalProps) {
-  const tval = useTranslations("b2bSale.validation");
-  const t = useTranslations("b2bSale");
-  
+  const tval = useTranslations("modals.b2bSale.validation");
+  const t = useTranslations("modals.b2bSale");
+
   const b2bSaleSchema = z.object({
     product_offer: z.number().min(1, tval("product-offer")),
     description: z.string().optional(),
@@ -132,8 +132,8 @@ export function B2BSaleModal({ trigger, onSubmit, onClose, initialData, offers =
                         <SelectValue placeholder={t("select-offer")} />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem 
-                          value="new" 
+                        <SelectItem
+                          value="new"
                           className="font-semibold text-[#f6d265]"
                           onPointerDown={(e) => e.preventDefault()}
                         >
@@ -243,9 +243,9 @@ export function B2BSaleModal({ trigger, onSubmit, onClose, initialData, offers =
                         <FormItem>
                           <FormLabel>{t("purchase-weight")}</FormLabel>
                           <FormControl>
-                            <Input 
-                              type="number" 
-                              {...field} 
+                            <Input
+                              type="number"
+                              {...field}
                               onChange={(e) => field.onChange(Number(e.target.value))}
                             />
                           </FormControl>
@@ -261,9 +261,9 @@ export function B2BSaleModal({ trigger, onSubmit, onClose, initialData, offers =
                         <FormItem>
                           <FormLabel>{t("paid-amount")}</FormLabel>
                           <FormControl>
-                            <Input 
-                              type="number" 
-                              {...field} 
+                            <Input
+                              type="number"
+                              {...field}
                               onChange={(e) => field.onChange(Number(e.target.value))}
                             />
                           </FormControl>
@@ -299,7 +299,7 @@ export function B2BSaleModal({ trigger, onSubmit, onClose, initialData, offers =
               name="description"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>{t("description")} <span className="text-gray-400 text-sm">(اختیاری)</span></FormLabel>
+                  <FormLabel>{t("description")} <span className="text-gray-400 text-sm">{t("optional")}</span></FormLabel>
                   <FormControl>
                     <Input {...field} />
                   </FormControl>
@@ -317,7 +317,7 @@ export function B2BSaleModal({ trigger, onSubmit, onClose, initialData, offers =
           </form>
         </Form>
       </DialogContent>
-      
+
       {showOfferModal && (
         <B2BOfferModal
           onSubmit={async (data) => {

@@ -1,10 +1,10 @@
 'use client';
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 import { Table, TableBody, TableHead, TableHeader, TableRow, TableCell, TableRow as TableRowComponent } from "@/components/ui/table";
 import { PersianDateTableCell } from "@/components/ui/persian-date-table-cell";
-import { DeliveryFulfillment } from "@/lib/interfaces/warehouse";
+import { DeliveryFulfillment, DeliveryFulfillmentCreate } from "@/lib/interfaces/warehouse";
 import {
   fetchDeliveryFulfillments,
   fetchDeliveryFulfillmentById,
@@ -13,28 +13,27 @@ import {
   deleteDeliveryFulfillment
 } from "@/lib/api/warehouse";
 import { useModal } from "@/lib/modal-context";
-import { DeliveryFulfillmentModal } from "@/components/modals/delivery-fulfillment-modal";
-import { TableHeader as TableHeaderSection } from "./TableHeader";
-import { TableActions } from "./TableActions";
+import { DeliveryFulfillmentModal } from "@/components/modals/warehouse/delivery-fulfillment-modal";
 import {
-  prepareDeliveryData,
   filterByWarehouse,
   searchFilter
 } from "@/lib/utils/warehouse-utils";
+import { Edit, Plus, Search, Trash2 } from "lucide-react";
+import { Input } from "../ui/input";
+import { Button } from "../ui/button";
 
 interface DeliveryFulfillmentTabProps {
   selectedWarehouseId?: number;
 }
 
 export function DeliveryFulfillmentTab({ selectedWarehouseId }: DeliveryFulfillmentTabProps) {
-  const t = useTranslations("warehouse_page.deliveries");
+  const t = useTranslations("pages.warehouse.deliveries");
   const { openModal } = useModal();
   const [deliveries, setDeliveries] = useState<DeliveryFulfillment[]>([]);
   const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
 
-  // Load deliveries
-  const loadDeliveries = async () => {
+  const loadDeliveries = useCallback(async () => {
     setLoading(true);
     try {
       const fetchedDeliveries = await fetchDeliveryFulfillments();
@@ -47,34 +46,37 @@ export function DeliveryFulfillmentTab({ selectedWarehouseId }: DeliveryFulfillm
     } finally {
       setLoading(false);
     }
-  };
+  }, [selectedWarehouseId]);
 
   useEffect(() => {
     loadDeliveries();
-  }, [selectedWarehouseId]);
+  }, [selectedWarehouseId, loadDeliveries]);
 
-  // Filter deliveries based on search
   const filteredDeliveries = searchFilter(
     deliveries,
     searchTerm,
     ['delivery_id', 'warehouse_name', 'description']
   );
 
-  // Handle create delivery
   const handleCreate = () => {
     openModal(DeliveryFulfillmentModal, {
       onSubmit: async (data) => {
-        const deliveryData = prepareDeliveryData(data);
-        await createDeliveryFulfillment(deliveryData);
+        const data2: DeliveryFulfillmentCreate = {
+          ...data,
+          total_weight: data.items.reduce(
+            (sum: number, item: { weight?: number }) => sum + (item.weight || 0),
+            0
+          ),
+          description: data.description || "",
+        }
+        await createDeliveryFulfillment(data2);
         await loadDeliveries();
       }
     });
   };
 
-  // Handle edit delivery
   const handleEdit = async (delivery: DeliveryFulfillment) => {
     try {
-      // Fetch detailed delivery data including items
       const detailedDelivery = await fetchDeliveryFulfillmentById(delivery.id);
       if (detailedDelivery) {
         openModal(DeliveryFulfillmentModal, {
@@ -83,21 +85,28 @@ export function DeliveryFulfillmentTab({ selectedWarehouseId }: DeliveryFulfillm
             issue_date: detailedDelivery.issue_date,
             validity_date: detailedDelivery.validity_date,
             warehouse: detailedDelivery.warehouse || 0,
-            sales_proforma: (typeof detailedDelivery.sales_proforma === 'number') ? detailedDelivery.sales_proforma : detailedDelivery.sales_proforma?.id || 0,
+            sales_proforma: detailedDelivery.sales_proforma,
             description: detailedDelivery.description || "",
             shipping_company: detailedDelivery.shipping_company || 0,
             items: detailedDelivery.items?.map(item => ({
               shipment_id: item.shipment_id || "",
               shipment_price: item.shipment_price || 0,
-              product: (typeof item.product === 'number') ? item.product : item.product?.id || 0,
+              product: item.product,
               weight: item.weight || 0,
               vehicle_type: item.vehicle_type || "truck",
-              receiver: (typeof item.receiver === 'number') ? item.receiver : item.receiver?.id || 0
+              receiver: item.receiver,
             })) || []
           },
           onSubmit: async (data) => {
-            const deliveryData = prepareDeliveryData(data);
-            await updateDeliveryFulfillment(delivery.id, deliveryData);
+            const data2: DeliveryFulfillmentCreate = {
+              ...data,
+              total_weight: data.items.reduce(
+                (sum: number, item: { weight?: number }) => sum + (item.weight || 0),
+                0
+              ),
+              description: data.description || "",
+            };
+            await updateDeliveryFulfillment(delivery.id, data2);
             await loadDeliveries();
           }
         });
@@ -107,7 +116,6 @@ export function DeliveryFulfillmentTab({ selectedWarehouseId }: DeliveryFulfillm
     }
   };
 
-  // Handle delete delivery
   const handleDelete = async (delivery: DeliveryFulfillment) => {
     if (confirm(t("confirm_delete"))) {
       await deleteDeliveryFulfillment(delivery.id);
@@ -117,14 +125,28 @@ export function DeliveryFulfillmentTab({ selectedWarehouseId }: DeliveryFulfillm
 
   return (
     <div className="p-4 h-full" dir="rtl">
-      <TableHeaderSection
-        title={t("title")}
-        searchPlaceholder={t("search_placeholder")}
-        searchValue={searchTerm}
-        onSearchChange={setSearchTerm}
-        onCreateClick={handleCreate}
-        createButtonLabel={t("new_delivery")}
-      />
+
+      <div className="flex justify-between items-center mb-4">
+        <h3 className="text-lg font-semibold">{t("title")}</h3>
+        <div className="flex gap-2 items-center">
+          <div className="relative">
+            <Search className="absolute right-3 top-2.5 h-4 w-4 text-gray-400" />
+            <Input
+              placeholder={t("search_placeholder")}
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pr-10 w-64"
+            />
+          </div>
+          <Button
+            className="bg-[#f6d265] hover:bg-[#f5c842] text-white"
+            onClick={handleCreate}
+          >
+            <Plus className="ml-2 h-4 w-4" />
+            {t("new_issue")}
+          </Button>
+        </div>
+      </div>
 
       {loading ? (
         <div>{t("loading")}</div>
@@ -152,10 +174,23 @@ export function DeliveryFulfillmentTab({ selectedWarehouseId }: DeliveryFulfillm
                   <TableCell><PersianDateTableCell date={delivery.validity_date} /></TableCell>
                   <TableCell>{delivery.total_weight}</TableCell>
                   <TableCell>
-                    <TableActions
-                      onEdit={() => handleEdit(delivery)}
-                      onDelete={() => handleDelete(delivery)}
-                    />
+                    <div className="flex gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleEdit(delivery)}
+                      >
+                        <Edit className="h-3 w-3" />
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="text-red-600 hover:bg-red-50"
+                        onClick={() => handleDelete(delivery)}
+                      >
+                        <Trash2 className="h-3 w-3" />
+                      </Button>
+                    </div>
                   </TableCell>
                 </TableRowComponent>
               ))}

@@ -1,40 +1,39 @@
 'use client';
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 import { Table, TableBody, TableHead, TableHeader, TableRow, TableCell, TableRow as TableRowComponent } from "@/components/ui/table";
 import { PersianDateTableCell } from "@/components/ui/persian-date-table-cell";
-import { DispatchIssue } from "@/lib/interfaces/warehouse";
-import { 
+import { DispatchIssue, DispatchIssueCreate } from "@/lib/interfaces/warehouse";
+import {
   fetchDispatchIssues,
   fetchDispatchIssueById,
-  createDispatchIssue, 
-  updateDispatchIssue, 
-  deleteDispatchIssue 
+  createDispatchIssue,
+  updateDispatchIssue,
+  deleteDispatchIssue
 } from "@/lib/api/warehouse";
 import { useModal } from "@/lib/modal-context";
-import { DispatchIssueModal } from "@/components/modals/dispatch-issue-modal";
-import { TableHeader as TableHeaderSection } from "./TableHeader";
-import { TableActions } from "./TableActions";
-import { 
-  prepareDispatchData, 
-  filterByWarehouse, 
-  searchFilter 
+import { DispatchIssueModal } from "@/components/modals/warehouse/dispatch-issue-modal";
+import {
+  filterByWarehouse,
+  searchFilter
 } from "@/lib/utils/warehouse-utils";
+import { Button } from "../ui/button";
+import { Edit, Plus, Search, Trash2 } from "lucide-react";
+import { Input } from "../ui/input";
 
 interface DispatchIssueTabProps {
   selectedWarehouseId?: number;
 }
 
 export function DispatchIssueTab({ selectedWarehouseId }: DispatchIssueTabProps) {
-  const t = useTranslations("warehouse_page.issues");
+  const t = useTranslations("pages.warehouse.issues");
   const { openModal } = useModal();
   const [dispatches, setDispatches] = useState<DispatchIssue[]>([]);
   const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
 
-  // Load dispatches
-  const loadDispatches = async () => {
+  const loadDispatches = useCallback(async () => {
     setLoading(true);
     try {
       const fetchedDispatches = await fetchDispatchIssues();
@@ -47,11 +46,11 @@ export function DispatchIssueTab({ selectedWarehouseId }: DispatchIssueTabProps)
     } finally {
       setLoading(false);
     }
-  };
+  }, [selectedWarehouseId]);
 
   useEffect(() => {
     loadDispatches();
-  }, [selectedWarehouseId]);
+  }, [selectedWarehouseId, loadDispatches]);
 
   // Filter dispatches based on search
   const filteredDispatches = searchFilter(
@@ -60,42 +59,42 @@ export function DispatchIssueTab({ selectedWarehouseId }: DispatchIssueTabProps)
     ['dispatch_id', 'warehouse_name', 'description']
   );
 
-  // Handle create dispatch
   const handleCreate = () => {
     openModal(DispatchIssueModal, {
       onSubmit: async (data) => {
-        const dispatchData = prepareDispatchData(data);
-        await createDispatchIssue(dispatchData);
+        const data2: DispatchIssueCreate = {
+          ...data,
+          total_weight: data.items.reduce((sum, item) => sum + (item.weight || 0), 0),
+          description: data.description || "",
+        }
+        await createDispatchIssue(data2);
         await loadDispatches();
       }
     });
   };
 
-  // Handle edit dispatch
   const handleEdit = async (dispatch: DispatchIssue) => {
     try {
-      // Fetch detailed dispatch data including items
       const detailedDispatch = await fetchDispatchIssueById(dispatch.id);
       if (detailedDispatch) {
         openModal(DispatchIssueModal, {
           initialData: {
             dispatch_id: detailedDispatch.dispatch_id || "",
             warehouse: detailedDispatch.warehouse || 0,
-            sales_proforma: (typeof detailedDispatch.sales_proforma === 'number') ? detailedDispatch.sales_proforma : detailedDispatch.sales_proforma?.id || 0,
+            sales_proforma: detailedDispatch.sales_proforma,
             issue_date: detailedDispatch.issue_date,
             validity_date: detailedDispatch.validity_date,
             description: detailedDispatch.description || "",
             shipping_company: detailedDispatch.shipping_company || 0,
             items: detailedDispatch.items?.map(item => ({
-              product: (typeof item.product === 'number') ? item.product : item.product?.id || 0,
+              product: item.product,
               weight: item.weight || 0,
               vehicle_type: item.vehicle_type || "truck",
-              receiver: (typeof item.receiver === 'number') ? item.receiver : item.receiver?.id || 0
+              receiver: item.receiver,
             })) || []
           },
           onSubmit: async (data) => {
-            const dispatchData = prepareDispatchData(data);
-            await updateDispatchIssue(dispatch.id, dispatchData);
+            await updateDispatchIssue(dispatch.id, data);
             await loadDispatches();
           }
         });
@@ -105,7 +104,6 @@ export function DispatchIssueTab({ selectedWarehouseId }: DispatchIssueTabProps)
     }
   };
 
-  // Handle delete dispatch
   const handleDelete = async (dispatch: DispatchIssue) => {
     if (confirm(t("confirm_delete"))) {
       await deleteDispatchIssue(dispatch.id);
@@ -115,14 +113,28 @@ export function DispatchIssueTab({ selectedWarehouseId }: DispatchIssueTabProps)
 
   return (
     <div className="p-4 h-full" dir="rtl">
-      <TableHeaderSection
-        title={t("title")}
-        searchPlaceholder={t("search_placeholder")}
-        searchValue={searchTerm}
-        onSearchChange={setSearchTerm}
-        onCreateClick={handleCreate}
-        createButtonLabel={t("new_issue")}
-      />
+
+      <div className="flex justify-between items-center mb-4">
+        <h3 className="text-lg font-semibold">{t("title")}</h3>
+        <div className="flex gap-2 items-center">
+          <div className="relative">
+            <Search className="absolute right-3 top-2.5 h-4 w-4 text-gray-400" />
+            <Input
+              placeholder={t("search_placeholder")}
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pr-10 w-64"
+            />
+          </div>
+          <Button
+            className="bg-[#f6d265] hover:bg-[#f5c842] text-white"
+            onClick={handleCreate}
+          >
+            <Plus className="ml-2 h-4 w-4" />
+            {t("new_issue")}
+          </Button>
+        </div>
+      </div>
 
       {loading ? (
         <div>{t("loading")}</div>
@@ -150,10 +162,23 @@ export function DispatchIssueTab({ selectedWarehouseId }: DispatchIssueTabProps)
                   <TableCell><PersianDateTableCell date={dispatch.validity_date} /></TableCell>
                   <TableCell>{dispatch.total_weight}</TableCell>
                   <TableCell>
-                    <TableActions
-                      onEdit={() => handleEdit(dispatch)}
-                      onDelete={() => handleDelete(dispatch)}
-                    />
+                    <div className="flex gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleEdit(dispatch)}
+                      >
+                        <Edit className="h-3 w-3" />
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="text-red-600 hover:bg-red-50"
+                        onClick={() => handleDelete(dispatch)}
+                      >
+                        <Trash2 className="h-3 w-3" />
+                      </Button>
+                    </div>
                   </TableCell>
                 </TableRowComponent>
               ))}

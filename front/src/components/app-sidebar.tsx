@@ -5,21 +5,22 @@ import { Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent, SidebarHead
 import { useTranslations } from "next-intl";
 import { useModal } from "@/lib/modal-context";
 import { toast } from "sonner";
-import { SalesProformaModal } from "./modals/salesproforma-modal";
-import { PurchaseProformaModal } from "./modals/purchaseproforma-modal";
-import { WarehouseReceiptModal } from "./modals/warehouse-receipt-modal";
-import { DispatchIssueModal } from "./modals/dispatch-issue-modal";
-import { DeliveryFulfillmentModal } from "./modals/delivery-fulfillment-modal";
-import { B2BOfferModal } from "./modals/b2b-offer-modal";
-import { B2BDistributionModal } from "./modals/b2b-distribution-modal";
-import { B2BSaleModal } from "./modals/b2b-sale-modal";
+import { SalesProformaModal } from "./modals/finance/salesproforma-modal";
+import { PurchaseProformaModal } from "./modals/finance/purchaseproforma-modal";
+import { WarehouseReceiptModal } from "./modals/warehouse/warehouse-receipt-modal";
+import { DispatchIssueModal } from "./modals/warehouse/dispatch-issue-modal";
+import { DeliveryFulfillmentModal } from "./modals/warehouse/delivery-fulfillment-modal";
+import { B2BOfferModal } from "./modals/b2b/b2b-offer-modal";
+import { B2BDistributionModal } from "./modals/b2b/b2b-distribution-modal";
+import { B2BSaleModal } from "./modals/b2b/b2b-sale-modal";
 
-import { Warehouse, Cable, Truck, User, DollarSign, ChevronLeft, BadgeCent, Package, Users } from "lucide-react";
+import { Warehouse, DollarSign, ChevronLeft, BadgeCent, Package, Users } from "lucide-react";
 import { createWarehouseReceipt, createDispatchIssue, createDeliveryFulfillment } from "@/lib/api/warehouse";
 import { createB2BOffer, createB2BDistribution, createB2BSale } from "@/lib/api/b2b";
-import { createSalesProforma, createPurchaseProforma } from "@/lib/api/finance";
+import Link from "next/link";
 export function AppSidebar() {
     const t = useTranslations('sidebar')
+    const tCommon = useTranslations('common');
     const { openModal } = useModal();
 
     const coreItems = [
@@ -38,9 +39,9 @@ export function AppSidebar() {
         <Sidebar dir="rtl" side="right" className="m-0 p-0 w-[20%] list-none">
             <SidebarHeader className="m-0 p-0">
                 <SidebarMenuItem className="px-2.5 py-3.5" style={{ backgroundColor: "#f6d265" }}>
-                    <a href="/" className="block w-full">
+                    <Link href="/" className="block w-full">
                         <h1 className="font-bold text-white hover:text-gray-200 transition-colors cursor-pointer">{t("title")}</h1>
-                    </a>
+                    </Link>
                 </SidebarMenuItem>
             </SidebarHeader>
             <SidebarContent className="px-4 py-2.5" style={{ backgroundColor: "#2f323a" }}>
@@ -99,10 +100,10 @@ export function AppSidebar() {
                                                         proforma: data.proforma && data.proforma > 0 ? data.proforma : undefined,
                                                     };
                                                     await createWarehouseReceipt(cleanData);
-                                                    toast.success(t("warehouse-receipt") + ' - ' + 'با موفقیت ایجاد شد');
+                                                    toast.success(t("warehouse-receipt") + ' - ' + tCommon('toast_messages.create_success_suffix'));
                                                 } catch (error) {
                                                     console.error('Error creating warehouse receipt:', error);
-                                                    toast.error('خطا در ایجاد رسید انبار');
+                                                    toast.error(tCommon('toast_messages.warehouse_receipt_error'));
                                                     throw error; // Re-throw to prevent modal from closing
                                                 }
                                             }
@@ -117,11 +118,16 @@ export function AppSidebar() {
                                         openModal(DispatchIssueModal, {
                                             onSubmit: async (data) => {
                                                 try {
-                                                    await createDispatchIssue(data);
-                                                    toast.success(t("dispatch-issue") + ' - ' + 'با موفقیت ایجاد شد');
+                                                    const data2: DispatchIssueF = {
+                                                        ...data,
+                                                        total_weight: data.items.reduce((sum, item) => sum + (item.weight || 0), 0),
+                                                        description: data.description || "",
+                                                    }
+                                                    await createDispatchIssue(data2);
+                                                    toast.success(t("dispatch-issue") + ' - ' + tCommon('toast_messages.create_success_suffix'));
                                                 } catch (error) {
                                                     console.error('Error creating dispatch issue:', error);
-                                                    toast.error('خطا در ایجاد حواله خروج');
+                                                    toast.error(tCommon('toast_messages.dispatch_issue_error'));
                                                     throw error; // Re-throw to prevent modal from closing
                                                 }
                                             }
@@ -136,11 +142,16 @@ export function AppSidebar() {
                                         openModal(DeliveryFulfillmentModal, {
                                             onSubmit: async (data) => {
                                                 try {
-                                                    await createDeliveryFulfillment(data);
-                                                    toast.success(t("delivery-fulfillment") + ' - ' + 'با موفقیت ایجاد شد');
+                                                    const data2: DeliveryFulfillmentCreate = {
+                                                        ...data,
+                                                        total_weight: data.items.reduce((sum, item) => sum + (item.weight || 0), 0),
+                                                        description: data.description || "",
+                                                    }
+                                                    await createDeliveryFulfillment(data2);
+                                                    toast.success(t("delivery-fulfillment") + ' - ' + tCommon('toast_messages.create_success_suffix'));
                                                 } catch (error) {
                                                     console.error('Error creating delivery fulfillment:', error);
-                                                    toast.error('خطا در ایجاد تحویل کالا');
+                                                    toast.error(tCommon('toast_messages.delivery_fulfillment_error'));
                                                     throw error; // Re-throw to prevent modal from closing
                                                 }
                                             }
@@ -171,17 +182,19 @@ export function AppSidebar() {
                                 </CollapsibleTrigger>
                             </div>
                             <CollapsibleContent className="mx-3.5 mt-0.5">
-                                <SidebarMenuSub 
+                                <SidebarMenuSub
                                     className="border-l-0 border-r-1 border-gray-50/50 hover:border-gray-100 px-2.5 my-0 py-1.5 cursor-pointer"
                                     onClick={() => {
                                         openModal(B2BOfferModal, {
                                             onSubmit: async (data) => {
                                                 try {
+
                                                     await createB2BOffer(data);
-                                                    toast.success(t("b2b-offer") + ' - ' + 'با موفقیت ایجاد شد');
+
+                                                    toast.success(t("b2b-offer") + ' - ' + tCommon('toast_messages.create_success_suffix'));
                                                 } catch (error) {
                                                     console.error('Error creating B2B offer:', error);
-                                                    toast.error('خطا در ایجاد پیشنهاد B2B');
+                                                    toast.error(tCommon('toast_messages.b2b_offer_error'));
                                                     throw error;
                                                 }
                                             }
@@ -190,17 +203,17 @@ export function AppSidebar() {
                                 >
                                     <SidebarMenuSubItem className="text-sm text-white/50 px-1 hover:text-white">{t("b2b-offer")}</ SidebarMenuSubItem>
                                 </SidebarMenuSub>
-                                <SidebarMenuSub 
+                                <SidebarMenuSub
                                     className="border-l-0 border-r-1 border-gray-50/50 hover:border-gray-100 px-2.5 my-0 py-1.5 cursor-pointer"
                                     onClick={() => {
                                         openModal(B2BDistributionModal, {
                                             onSubmit: async (data) => {
                                                 try {
                                                     await createB2BDistribution(data);
-                                                    toast.success(t("b2b-distribution") + ' - ' + 'با موفقیت ایجاد شد');
+                                                    toast.success(t("b2b-distribution") + ' - ' + tCommon('toast_messages.create_success_suffix'));
                                                 } catch (error) {
                                                     console.error('Error creating B2B distribution:', error);
-                                                    toast.error('خطا در ایجاد توزیع B2B');
+                                                    toast.error(tCommon('toast_messages.b2b_distribution_error'));
                                                     throw error;
                                                 }
                                             }
@@ -209,17 +222,17 @@ export function AppSidebar() {
                                 >
                                     <SidebarMenuSubItem className="text-sm text-white/50 px-1 hover:text-white">{t("b2b-distribution")}</ SidebarMenuSubItem>
                                 </SidebarMenuSub>
-                                <SidebarMenuSub 
+                                <SidebarMenuSub
                                     className="border-l-0 border-r-1 border-gray-50/50 hover:border-gray-100 px-2.5 my-0 py-1.5 cursor-pointer"
                                     onClick={() => {
                                         openModal(B2BSaleModal, {
                                             onSubmit: async (data) => {
                                                 try {
                                                     await createB2BSale(data);
-                                                    toast.success(t("b2b-sale") + ' - ' + 'با موفقیت ایجاد شد');
+                                                    toast.success(t("b2b-sale") + ' - ' + tCommon('toast_messages.create_success_suffix'));
                                                 } catch (error) {
                                                     console.error('Error creating B2B sale:', error);
-                                                    toast.error('خطا در ایجاد فروش B2B');
+                                                    toast.error(tCommon('toast_messages.b2b_sale_error'));
                                                     throw error;
                                                 }
                                             }

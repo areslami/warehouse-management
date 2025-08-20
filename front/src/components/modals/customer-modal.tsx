@@ -10,7 +10,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Input } from "../ui/input";
 import { useTranslations } from "next-intl";
 
-type CustomerFormData = {
+export type CustomerFormData = {
   customer_type: "Individual" | "Corporate";
   company_name: string;
   national_id: string;
@@ -31,8 +31,8 @@ interface CustomerModalProps {
 }
 
 export function CustomerModal({ trigger, onSubmit, onClose, initialData }: CustomerModalProps) {
-  const tval = useTranslations("customer.validation");
-  const t = useTranslations("customer");
+  const tval = useTranslations("modals.customer.validation");
+  const t = useTranslations("modals.customer");
 
   const customerSchema = z.object({
     customer_type: z.enum(["Individual", "Corporate"]),
