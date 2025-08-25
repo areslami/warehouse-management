@@ -90,11 +90,12 @@ class B2BDistributionSerializer(serializers.ModelSerializer):
     warehouse_name = serializers.CharField(source='warehouse.name', read_only=True)
     product_name = serializers.CharField(source='product.name', read_only=True)
     customer_name = serializers.SerializerMethodField()
+    b2b_offer_id = serializers.CharField(source='b2b_offer.offer_id', read_only=True)
     
     class Meta:
         model = B2BDistribution
         fields = '__all__'
-        read_only_fields = ['warehouse', 'product', 'cottage_number', 'created_at', 'updated_at']
+        read_only_fields = ['warehouse', 'cottage_number', 'created_at', 'updated_at']
     
     def get_customer_name(self, obj):
         if obj.customer.customer_type == 'Corporate':
@@ -108,7 +109,7 @@ class B2BDistributionListSerializer(serializers.ModelSerializer):
     
     class Meta:
         model = B2BDistribution
-        fields = ['id', 'cottage_number', 'product_name', 'customer_name', 
+        fields = ['id', 'purchase_id', 'cottage_number', 'product_name', 'customer_name', 
                   'agency_weight', 'agency_date']
     
     def get_customer_name(self, obj):

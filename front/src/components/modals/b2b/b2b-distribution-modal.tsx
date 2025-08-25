@@ -19,11 +19,19 @@ import { createCustomer, createProduct } from "@/lib/api/core";
 import { createWarehouse } from "@/lib/api/warehouse";
 import { getPartyDisplayName } from "@/lib/utils/party-utils";
 import { PersianDatePicker } from "../../ui/persian-date-picker";
+import { fetchB2BOffers } from "@/lib/api/b2b";
+import { B2BOffer } from "@/lib/interfaces/b2b";
+import { B2BOfferModal } from "./b2b-offer-modal";
+import { createB2BOffer } from "@/lib/api/b2b";
 
 export type B2BDistributionFormData = {
+  purchase_id?: string;
+  b2b_offer?: number;
   warehouse: number;
+  warehouse_receipt?: number;
   product: number;
   customer: number;
+  sales_proforma?: number;
   agency_weight: number;
   agency_date: string;
   description?: string;
@@ -34,15 +42,18 @@ interface B2BDistributionModalProps {
   onSubmit?: (data: B2BDistributionFormData) => Promise<void>;
   onClose?: () => void;
   initialData?: Partial<B2BDistributionFormData>;
+  onOfferCreated?: () => void;
 }
 
-export function B2BDistributionModal({ trigger, onSubmit, onClose, initialData }: B2BDistributionModalProps) {
+export function B2BDistributionModal({ trigger, onSubmit, onClose, initialData, onOfferCreated }: B2BDistributionModalProps) {
   const tval = useTranslations("modals.b2bDistribution.validation");
   const t = useTranslations("modals.b2bDistribution");
   const { products, customers, warehouses, refreshData: refreshCoreData } = useCoreData();
   const [showProductModal, setShowProductModal] = useState(false);
   const [showCustomerModal, setShowCustomerModal] = useState(false);
   const [showWarehouseModal, setShowWarehouseModal] = useState(false);
+  const [showOfferModal, setShowOfferModal] = useState(false);
+  const [offers, setOffers] = useState<B2BOffer[]>([]);
 
   useEffect(() => {
     if (products.length === 0) {
@@ -54,12 +65,26 @@ export function B2BDistributionModal({ trigger, onSubmit, onClose, initialData }
     if (warehouses.length === 0) {
       refreshCoreData('warehouses');
     }
-  }, [customers.length, products.length, warehouses.length, refreshCoreData]);
+    loadOffers();
+  }, [customers, products, warehouses, refreshCoreData]);
+
+  const loadOffers = async () => {
+    try {
+      const offersData = await fetchB2BOffers();
+      setOffers(offersData || []);
+    } catch (error) {
+      console.error('Error loading offers:', error);
+    }
+  };
 
   const b2bDistributionSchema = z.object({
+    purchase_id: z.string().optional(),
+    b2b_offer: z.number().optional(),
     warehouse: z.number().min(1, tval("warehouse")),
+    warehouse_receipt: z.number().optional(),
     product: z.number().min(1, tval("product")),
     customer: z.number().min(1, tval("customer")),
+    sales_proforma: z.number().optional(),
     agency_weight: z.number().positive(tval("agency-weight")),
     agency_date: z.string().min(1, tval("agency-date")),
     description: z.string().optional(),
@@ -70,9 +95,13 @@ export function B2BDistributionModal({ trigger, onSubmit, onClose, initialData }
   const form = useForm<B2BDistributionFormData>({
     resolver: zodResolver(b2bDistributionSchema),
     defaultValues: {
+      purchase_id: initialData?.purchase_id || "",
+      b2b_offer: initialData?.b2b_offer || undefined,
       warehouse: initialData?.warehouse || 0,
+      warehouse_receipt: initialData?.warehouse_receipt || 0,
       product: initialData?.product || 0,
       customer: initialData?.customer || 0,
+      sales_proforma: initialData?.sales_proforma || 0,
       agency_weight: initialData?.agency_weight || 0,
       agency_date: initialData?.agency_date || "",
       description: initialData?.description || "",
@@ -116,6 +145,23 @@ export function B2BDistributionModal({ trigger, onSubmit, onClose, initialData }
 
           <Form {...form}>
             <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6 py-4 px-12">
+              <div className="grid grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="purchase_id"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>{t("purchase-id")}</FormLabel>
+                      <FormControl>
+                        <Input {...field} placeholder={t("enter-purchase-id")} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+              </div>
+
               <div className="grid grid-cols-2 gap-4">
                 <FormField
                   control={form.control}
@@ -253,6 +299,56 @@ export function B2BDistributionModal({ trigger, onSubmit, onClose, initialData }
                 )}
               />
 
+              <FormField
+                control={form.control}
+                name="b2b_offer"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>{t("b2b-offer")} <span className="text-gray-400 text-sm">{t("optional")}</span></FormLabel>
+                    <FormControl>
+                      <Select
+                        value={field.value ? field.value.toString() : ""}
+                        onValueChange={(value) => {
+                          if (value === "new") {
+                            setShowOfferModal(true);
+                          } else if (value === "none") {
+                            field.onChange(undefined);
+                          } else if (value) {
+                            field.onChange(Number(value));
+                          }
+                        }}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder={t("select-b2b-offer")} />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="none">
+                            {t("no-offer")}
+                          </SelectItem>
+                          <SelectItem
+                            value="new"
+                            className="font-semibold text-[#f6d265]"
+                            onPointerDown={(e) => e.preventDefault()}
+                          >
+                            <Plus className="inline-block w-4 h-4 mr-2" />
+                            {t("create-new-b2b-offer")}
+                          </SelectItem>
+                          {offers.length > 0 && (
+                            <div className="border-t my-1" />
+                          )}
+                          {offers.map((offer) => (
+                            <SelectItem key={offer.id} value={offer.id.toString()}>
+                              {offer.offer_id} - {offer.product_name} ({offer.offer_weight} kg)
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
               <div className="grid grid-cols-2 gap-4">
                 <FormField
                   control={form.control}
@@ -355,6 +451,21 @@ export function B2BDistributionModal({ trigger, onSubmit, onClose, initialData }
             }
           }}
           onClose={() => setShowCustomerModal(false)}
+        />
+      )}
+
+      {showOfferModal && (
+        <B2BOfferModal
+          onSubmit={async (newOffer) => {
+            const created = await createB2BOffer(newOffer);
+            if (created) {
+              await loadOffers();
+              onOfferCreated?.();
+              form.setValue('b2b_offer', created.id);
+              setShowOfferModal(false);
+            }
+          }}
+          onClose={() => setShowOfferModal(false)}
         />
       )}
     </>

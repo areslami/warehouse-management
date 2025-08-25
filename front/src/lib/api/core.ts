@@ -211,18 +211,18 @@ export const deleteReceiver = async (id: number) => {
 };
 
 export const fetchShippingCompanies = () =>
-  apiFetch<ShippingCompany[]>(`${API_BASE_URL}warehouse/shipping-companies/`);
+  apiFetch<ShippingCompany[]>(`http://localhost:8000/warehouse/shipping-companies/`);
 
 export const fetchShippingCompanyById = (id: number) =>
   apiFetch<ShippingCompany>(
-    `${API_BASE_URL}warehouse/shipping-companies/${id}/`
+    `http://localhost:8000/warehouse/shipping-companies/${id}/`
   );
 
 export const createShippingCompany = async (
   data: Omit<ShippingCompany, "id" | "created_at" | "updated_at">
 ) => {
   const result = await apiFetch<ShippingCompany>(
-    `${API_BASE_URL}warehouse/shipping-companies/`,
+    `http://localhost:8000/warehouse/shipping-companies/`,
     {
       method: "POST",
       body: data,
@@ -242,7 +242,7 @@ export const updateShippingCompany = async (
   data: Partial<ShippingCompany>
 ) => {
   const result = await apiFetch<ShippingCompany>(
-    `${API_BASE_URL}warehouse/shipping-companies/${id}/`,
+    `http://localhost:8000/warehouse/shipping-companies/${id}/`,
     { method: "PATCH", body: data }
   );
 
@@ -256,7 +256,7 @@ export const updateShippingCompany = async (
 
 export const deleteShippingCompany = async (id: number) => {
   const result = await apiFetch(
-    `${API_BASE_URL}warehouse/shipping-companies/${id}/`,
+    `http://localhost:8000/warehouse/shipping-companies/${id}/`,
     {
       method: "DELETE",
     }

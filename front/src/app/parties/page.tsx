@@ -32,6 +32,7 @@ import {
 
 export default function PartiesPage() {
   const t = useTranslations("pages.parties");
+  const tCommon = useTranslations("common");
   const { suppliers, customers, receivers, shippingCompanies, refreshData } = useCoreData();
   const [showSupplierModal, setShowSupplierModal] = useState(false);
   const [showCustomerModal, setShowCustomerModal] = useState(false);
@@ -41,7 +42,7 @@ export default function PartiesPage() {
   const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null);
   const [editingReceiver, setEditingReceiver] = useState<Receiver | null>(null);
   const [editingShipping, setEditingShipping] = useState<ShippingCompany | null>(null);
-  
+
   const [searchTerm, setSearchTerm] = useState("");
   const [sheetOpen, setSheetOpen] = useState(false);
   const [selectedItem, setSelectedItem] = useState<Supplier | Customer | Receiver | ShippingCompany | null>(null);
@@ -102,41 +103,41 @@ export default function PartiesPage() {
       }
     }
   };
-  
+
   const handleRowClick = (item: Supplier | Customer | Receiver | ShippingCompany, type: 'supplier' | 'customer' | 'receiver' | 'shipping') => {
     setSelectedItem(item);
     setSelectedType(type);
     setSheetOpen(true);
   };
-  
-  const filteredSuppliers = useMemo(() => 
+
+  const filteredSuppliers = useMemo(() =>
     suppliers.filter(s => getPartyDisplayName(s).toLowerCase().includes(searchTerm.toLowerCase()) ||
       s.economic_code?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       s.phone?.toLowerCase().includes(searchTerm.toLowerCase()))
-  , [suppliers, searchTerm]);
-  
-  const filteredCustomers = useMemo(() => 
+    , [suppliers, searchTerm]);
+
+  const filteredCustomers = useMemo(() =>
     customers.filter(c => getPartyDisplayName(c).toLowerCase().includes(searchTerm.toLowerCase()) ||
       c.economic_code?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       c.phone?.toLowerCase().includes(searchTerm.toLowerCase()))
-  , [customers, searchTerm]);
-  
-  const filteredReceivers = useMemo(() => 
+    , [customers, searchTerm]);
+
+  const filteredReceivers = useMemo(() =>
     receivers.filter(r => getPartyDisplayName(r).toLowerCase().includes(searchTerm.toLowerCase()) ||
       r.economic_code?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       r.system_id?.toLowerCase().includes(searchTerm.toLowerCase()))
-  , [receivers, searchTerm]);
-  
-  const filteredShipping = useMemo(() => 
+    , [receivers, searchTerm]);
+
+  const filteredShipping = useMemo(() =>
     shippingCompanies.filter(s => s.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       s.contact_person?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       s.phone?.toLowerCase().includes(searchTerm.toLowerCase()))
-  , [shippingCompanies, searchTerm]);
+    , [shippingCompanies, searchTerm]);
 
   return (
     <div className="flex-1 p-6 min-h-screen bg-gray-50" dir="rtl">
       <h1 className="text-3xl font-bold mb-8 text-gray-800">{t("title")}</h1>
-      
+
       <div className="relative mb-6">
         <Search className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
         <Input
@@ -146,7 +147,7 @@ export default function PartiesPage() {
           className="pr-10"
         />
       </div>
-      
+
       <div className="space-y-8">
         <div className="bg-white rounded-lg shadow">
           <div className="p-4 border-b border-gray-200 flex items-center justify-between">
@@ -491,9 +492,9 @@ export default function PartiesPage() {
                   className="text-red-600 hover:bg-red-50"
                   onClick={async () => {
                     const confirmMessage = selectedType === 'supplier' ? t("confirm_delete_supplier") :
-                                         selectedType === 'customer' ? t("confirm_delete_customer") :
-                                         selectedType === 'receiver' ? t("confirm_delete_receiver") :
-                                         t("confirm_delete_shipping");
+                      selectedType === 'customer' ? t("confirm_delete_customer") :
+                        selectedType === 'receiver' ? t("confirm_delete_receiver") :
+                          t("confirm_delete_shipping");
                     if (confirm(confirmMessage)) {
                       try {
                         if (selectedType === 'supplier') {
@@ -521,50 +522,50 @@ export default function PartiesPage() {
                 </Button>
               </div>
               <div className="mt-6 space-y-4 p-4 bg-gray-50 rounded-lg">
-              {(selectedType === 'supplier' || selectedType === 'customer' || selectedType === 'receiver') && (
-                <>
-                  <div><strong>{tCommon('detail_labels.name')}</strong> {getPartyDisplayName(selectedItem)}</div>
-                  <div><strong>{tCommon('table_headers.type')}</strong> {
-                    selectedItem[`${selectedType}_type`] === "Corporate" ? tCommon('party_types.corporate') : tCommon('party_types.individual')
-                  }</div>
-                  {selectedItem[`${selectedType}_type`] === "Corporate" ? (
-                    <>
-                      <div><strong>{tCommon('detail_labels.company_name_label')}</strong> {selectedItem.company_name || '-'}</div>
-                      <div><strong>{tCommon('detail_labels.national_id')}</strong> {selectedItem.national_id || '-'}</div>
-                    </>
-                  ) : (
-                    <>
-                      <div><strong>{tCommon('detail_labels.full_name')}</strong> {selectedItem.full_name || '-'}</div>
-                      <div><strong>{tCommon('detail_labels.personal_code')}</strong> {selectedItem.personal_code || '-'}</div>
-                    </>
-                  )}
-                  <div><strong>{tCommon('table_headers.economic_code')}</strong> {selectedItem.economic_code || '-'}</div>
-                  <div><strong>{tCommon('table_headers.phone')}</strong> {selectedItem.phone || '-'}</div>
-                  <div><strong>{tCommon('table_headers.address')}</strong> {selectedItem.address || '-'}</div>
-                  {selectedItem.description && <div><strong>{tCommon('detail_labels.description')}</strong> {selectedItem.description}</div>}
-                  {selectedType === 'receiver' && (
-                    <>
-                      <div><strong>{tCommon('detail_labels.system_id_label')}</strong> {selectedItem.system_id || '-'}</div>
-                      <div><strong>{tCommon('detail_labels.unique_id_label')}</strong> {selectedItem.unique_id || '-'}</div>
-                      {selectedItem.postal_code && <div><strong>{tCommon('detail_labels.postal_code')}</strong> {selectedItem.postal_code}</div>}
-                    </>
-                  )}
-                  {selectedType === 'customer' && selectedItem.tags && (
-                    <div><strong>{tCommon('detail_labels.tags')}</strong> {selectedItem.tags}</div>
-                  )}
-                </>
-              )}
-              {selectedType === 'shipping' && (
-                <>
-                  <div><strong>{tCommon('table_headers.company_name')}</strong> {selectedItem.name}</div>
-                  <div><strong>{tCommon('detail_labels.contact_person_label')}</strong> {selectedItem.contact_person || '-'}</div>
-                  <div><strong>{tCommon('table_headers.phone')}</strong> {selectedItem.phone || '-'}</div>
-                  <div><strong>{tCommon('table_headers.email')}</strong> {selectedItem.email || '-'}</div>
-                  <div><strong>{tCommon('table_headers.address')}</strong> {selectedItem.address || '-'}</div>
-                  {selectedItem.description && <div><strong>{tCommon('detail_labels.description')}</strong> {selectedItem.description}</div>}
-                </>
-              )}
-            </div>
+                {(selectedType === 'supplier' || selectedType === 'customer' || selectedType === 'receiver') && (
+                  <>
+                    <div><strong>{tCommon('detail_labels.name')}</strong> {getPartyDisplayName(selectedItem)}</div>
+                    <div><strong>{tCommon('table_headers.type')}</strong> {
+                      selectedItem[`${selectedType}_type`] === "Corporate" ? tCommon('party_types.corporate') : tCommon('party_types.individual')
+                    }</div>
+                    {selectedItem[`${selectedType}_type`] === "Corporate" ? (
+                      <>
+                        <div><strong>{tCommon('detail_labels.company_name_label')}</strong> {selectedItem.company_name || '-'}</div>
+                        <div><strong>{tCommon('detail_labels.national_id')}</strong> {selectedItem.national_id || '-'}</div>
+                      </>
+                    ) : (
+                      <>
+                        <div><strong>{tCommon('detail_labels.full_name')}</strong> {selectedItem.full_name || '-'}</div>
+                        <div><strong>{tCommon('detail_labels.personal_code')}</strong> {selectedItem.personal_code || '-'}</div>
+                      </>
+                    )}
+                    <div><strong>{tCommon('table_headers.economic_code')}</strong> {selectedItem.economic_code || '-'}</div>
+                    <div><strong>{tCommon('table_headers.phone')}</strong> {selectedItem.phone || '-'}</div>
+                    <div><strong>{tCommon('table_headers.address')}</strong> {selectedItem.address || '-'}</div>
+                    {selectedItem.description && <div><strong>{tCommon('detail_labels.description')}</strong> {selectedItem.description}</div>}
+                    {selectedType === 'receiver' && (
+                      <>
+                        <div><strong>{tCommon('detail_labels.system_id_label')}</strong> {selectedItem.system_id || '-'}</div>
+                        <div><strong>{tCommon('detail_labels.unique_id_label')}</strong> {selectedItem.unique_id || '-'}</div>
+                        {selectedItem.postal_code && <div><strong>{tCommon('detail_labels.postal_code')}</strong> {selectedItem.postal_code}</div>}
+                      </>
+                    )}
+                    {selectedType === 'customer' && selectedItem.tags && (
+                      <div><strong>{tCommon('detail_labels.tags')}</strong> {selectedItem.tags}</div>
+                    )}
+                  </>
+                )}
+                {selectedType === 'shipping' && (
+                  <>
+                    <div><strong>{tCommon('table_headers.company_name')}</strong> {selectedItem.name}</div>
+                    <div><strong>{tCommon('detail_labels.contact_person_label')}</strong> {selectedItem.contact_person || '-'}</div>
+                    <div><strong>{tCommon('table_headers.phone')}</strong> {selectedItem.phone || '-'}</div>
+                    <div><strong>{tCommon('table_headers.email')}</strong> {selectedItem.email || '-'}</div>
+                    <div><strong>{tCommon('table_headers.address')}</strong> {selectedItem.address || '-'}</div>
+                    {selectedItem.description && <div><strong>{tCommon('detail_labels.description')}</strong> {selectedItem.description}</div>}
+                  </>
+                )}
+              </div>
             </>
           )}
         </SheetContent>

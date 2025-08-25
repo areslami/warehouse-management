@@ -68,12 +68,17 @@ class CustomerSerializer(serializers.ModelSerializer):
     personal_code = serializers.CharField(required=False, allow_blank=True, max_length=10)
     description = serializers.CharField(required=False, allow_blank=True)
     tags = serializers.CharField(required=False, allow_blank=True, max_length=200)
+    city = serializers.CharField(required=False, allow_blank=True, default='')
+    province = serializers.CharField(required=False, allow_blank=True, default='')
+    postal_code = serializers.CharField(required=False, allow_blank=True, default='')
+    mobile = serializers.CharField(required=False, allow_blank=True, default='')
     
     class Meta:
         model = Customer
         fields = [
             'id', 'customer_type', 'company_name', 'national_id', 'full_name',
-            'personal_code', 'economic_code', 'phone', 'address', 'description',
+            'personal_code', 'economic_code', 'phone', 'address', 'city', 
+            'province', 'postal_code', 'mobile', 'description',
             'tags', 'created_at', 'updated_at'
         ]
         read_only_fields = ['created_at', 'updated_at']
@@ -87,21 +92,20 @@ class CustomerSerializer(serializers.ModelSerializer):
             if not data.get('national_id'):
                 raise serializers.ValidationError("National ID is required for corporate customers")
             data['full_name'] = ''
-            data['personal_code'] = None  # Set to None for unique field
+            data['personal_code'] = None  
             
         elif customer_type == PartyType.INDIVIDUAL:
             if not data.get('full_name'):
                 raise serializers.ValidationError("Full name is required for individual customers")
-            if not data.get('personal_code'):
-                raise serializers.ValidationError("Personal code is required for individual customers")
             data['company_name'] = ''
-            data['national_id'] = None  # Set to None for unique field
+            data['national_id'] = None 
+            if not data.get('personal_code'):
+                data['personal_code'] = None
         
         return data
 
 
 class ReceiverSerializer(serializers.ModelSerializer):
-    # Fields that are blank=True in the model
     company_name = serializers.CharField(required=False, allow_blank=True, max_length=200)
     national_id = serializers.CharField(required=False, allow_blank=True, max_length=11)
     full_name = serializers.CharField(required=False, allow_blank=True, max_length=100)

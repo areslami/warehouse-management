@@ -53,6 +53,10 @@ export interface Customer {
   economic_code: string;
   phone: string;
   address: string;
+  city?: string;
+  province?: string;
+  postal_code?: string;
+  mobile?: string;
   description?: string;
   tags?: string;
   created_at: string;

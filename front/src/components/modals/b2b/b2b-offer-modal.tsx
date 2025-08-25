@@ -26,7 +26,7 @@ export type B2BOfferFormData = {
   warehouse_receipt: number;
   offer_weight: number;
   unit_price: number;
-  status: 'Active' | 'Pending' | 'Sold' | 'Expired';
+  status: 'pending' | 'active' | 'sold' | 'expired';
   offer_type?: 'cash' | 'credit' | 'agreement';
   offer_date: string;
   offer_exp_date: string;
@@ -70,7 +70,7 @@ export function B2BOfferModal({ trigger, onSubmit, onClose, initialData }: B2BOf
     warehouse_receipt: z.number().min(1, tval("warehouse-receipt")),
     offer_weight: z.number().positive(tval("offer-weight")),
     unit_price: z.number().positive(tval("unit-price")),
-    status: z.enum(['Active', 'Pending', 'Sold', 'Expired']),
+    status: z.enum(['pending', 'active', 'sold', 'expired']),
     offer_type: z.enum(['cash', 'credit', 'agreement']).optional(),
     offer_date: z.string().min(1, tval("offer-date")),
     offer_exp_date: z.string().min(1, tval("offer-exp-date")),
@@ -87,7 +87,7 @@ export function B2BOfferModal({ trigger, onSubmit, onClose, initialData }: B2BOf
       warehouse_receipt: initialData?.warehouse_receipt || 0,
       offer_weight: initialData?.offer_weight || 0,
       unit_price: initialData?.unit_price || 0,
-      status: initialData?.status || 'Pending',
+      status: initialData?.status || 'pending',
       offer_type: initialData?.offer_type || 'cash',
       offer_date: initialData?.offer_date || "",
       offer_exp_date: initialData?.offer_exp_date || "",
@@ -158,12 +158,10 @@ export function B2BOfferModal({ trigger, onSubmit, onClose, initialData }: B2BOf
                           <SelectValue placeholder={t("select-status")} />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="draft">{t("status_options.draft")}</SelectItem>
                           <SelectItem value="pending">{t("status_options.pending")}</SelectItem>
                           <SelectItem value="active">{t("status_options.active")}</SelectItem>
                           <SelectItem value="sold">{t("status_options.sold")}</SelectItem>
                           <SelectItem value="expired">{t("status_options.expired")}</SelectItem>
-                          <SelectItem value="cancelled">{t("status_options.cancelled")}</SelectItem>
                         </SelectContent>
                       </Select>
                       <FormMessage />

@@ -7,6 +7,12 @@ from .views import (
     B2BPurchaseDetailViewSet,
     B2BDistributionViewSet
 )
+from .excel_views import (
+    upload_excel,
+    preview_distribution,
+    create_distributions_batch,
+    search_customer
+)
 
 router = DefaultRouter()
 router.register(r'offers', B2BOfferViewSet, basename='b2boffer')
@@ -17,4 +23,8 @@ router.register(r'distributions', B2BDistributionViewSet, basename='b2bdistribut
 
 urlpatterns = [
     path('', include(router.urls)),
+    path('excel/upload/', upload_excel, name='excel-upload'),
+    path('excel/preview/', preview_distribution, name='excel-preview'),
+    path('excel/batch-create/', create_distributions_batch, name='excel-batch-create'),
+    path('customers/search/', search_customer, name='customer-search'),
 ]

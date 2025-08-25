@@ -48,6 +48,10 @@ class Customer(BaseParty):
     economic_code = models.CharField(max_length=20, unique=True)
     phone = models.CharField(max_length=20)
     address = models.TextField(blank=False)
+    city = models.CharField(max_length=100, blank=True, default='')
+    province = models.CharField(max_length=100, blank=True, default='')
+    postal_code = models.CharField(max_length=10, blank=True, default='')
+    mobile = models.CharField(max_length=20, blank=True, default='')
     description = models.TextField(blank=True)
     tags = models.CharField(max_length=200, blank=True)
     

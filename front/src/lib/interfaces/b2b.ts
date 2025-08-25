@@ -8,7 +8,7 @@ export interface B2BOffer {
   offer_weight: number;
   unit_price: number;
   total_price?: number;
-  status: 'Active' | 'Pending' | 'Sold' | 'Expired';
+  status: "active" | "pending" | "sold" | "expired";
   offer_date: string;
   offer_exp_date: string;
   cottage_number?: string;
@@ -43,7 +43,7 @@ export interface B2BPurchase {
   purchase_weight: number;
   paid_amount: number;
   purchase_date: string;
-  purchase_type: 'Cash' | 'Credit' | 'Installment';
+  purchase_type: "Cash" | "Credit" | "Installment";
   description?: string;
 }
 
@@ -56,8 +56,12 @@ export interface B2BPurchaseDetail {
 
 export interface B2BDistribution {
   id: number;
+  purchase_id?: string;
+  b2b_offer?: number;
+  b2b_offer_id?: string;
   warehouse: number;
   warehouse_name?: string;
+  warehouse_receipt: number;
   product: number;
   product_name?: string;
   customer: number;

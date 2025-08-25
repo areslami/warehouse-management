@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
-import { Plus, Edit2, Trash2, ShoppingCart, TrendingUp, Package, Search } from "lucide-react";
+import { Plus, Edit2, Trash2, ShoppingCart, TrendingUp, Package, Search, Upload } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useTranslations } from "next-intl";
@@ -12,6 +12,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { B2BOfferModal } from "@/components/modals/b2b/b2b-offer-modal";
 import { B2BDistributionModal } from "@/components/modals/b2b/b2b-distribution-modal";
 import { B2BSaleModal } from "@/components/modals/b2b/b2b-sale-modal";
+import { ExcelUploadModal } from "@/components/modals/excel-upload-modal";
 import { B2BOffer, B2BSale, B2BDistribution } from "@/lib/interfaces/b2b";
 import {
   fetchB2BOffers, fetchB2BOfferById, createB2BOffer, updateB2BOffer, deleteB2BOffer,
@@ -31,6 +32,7 @@ export default function B2BPage() {
   const [showOfferModal, setShowOfferModal] = useState(false);
   const [showSaleModal, setShowSaleModal] = useState(false);
   const [showDistributionModal, setShowDistributionModal] = useState(false);
+  const [showExcelUploadModal, setShowExcelUploadModal] = useState(false);
 
   const [editingOffer, setEditingOffer] = useState<B2BOffer | null>(null);
   const [editingSale, setEditingSale] = useState<B2BSale | null>(null);
@@ -44,7 +46,7 @@ export default function B2BPage() {
 
   useEffect(() => {
     loadData();
-  });
+  }, []);
 
   const loadData = async () => {
     try {
@@ -135,13 +137,13 @@ export default function B2BPage() {
 
   const getStatusBadgeClass = (status: string) => {
     switch (status) {
-      case 'Active':
+      case 'active':
         return 'bg-green-100 text-green-800';
-      case 'Pending':
+      case 'pending':
         return 'bg-yellow-100 text-yellow-800';
-      case 'Sold':
+      case 'sold':
         return 'bg-blue-100 text-blue-800';
-      case 'Expired':
+      case 'expired':
         return 'bg-red-100 text-red-800';
       default:
         return 'bg-gray-100 text-gray-800';
@@ -254,10 +256,10 @@ export default function B2BPage() {
                         <TableCell>{offer.total_price ? offer.total_price.toLocaleString() : '0'} {tCommon('units.rial')}</TableCell>
                         <TableCell>
                           <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusBadgeClass(offer.status)}`}>
-                            {offer.status === 'Active' && tCommon('status.active')}
-                            {offer.status === 'Pending' && tCommon('status.pending')}
-                            {offer.status === 'Sold' && tCommon('status.sold')}
-                            {offer.status === 'Expired' && tCommon('status.expired')}
+                            {offer.status === 'active' && tCommon('status.active')}
+                            {offer.status === 'pending' && tCommon('status.pending')}
+                            {offer.status === 'sold' && tCommon('status.sold')}
+                            {offer.status === 'expired' && tCommon('status.expired')}
                           </span>
                         </TableCell>
                         <TableCell>{new Date(offer.offer_date).toLocaleDateString('fa-IR')}</TableCell>
@@ -275,17 +277,27 @@ export default function B2BPage() {
           <div className="bg-white rounded-lg shadow">
             <div className="p-4 border-b border-gray-200 flex items-center justify-between">
               <h2 className="text-xl font-semibold text-gray-700">{t("distributions_title")}</h2>
-              <Button
-                size="sm"
-                className="bg-[#f6d265] hover:bg-[#f5c842] text-black"
-                onClick={() => {
-                  setEditingDistribution(null);
-                  setShowDistributionModal(true);
-                }}
-              >
-                <Plus className="w-4 h-4 mr-1" />
-                {t("add_distribution")}
-              </Button>
+              <div className="flex gap-2">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => setShowExcelUploadModal(true)}
+                >
+                  <Upload className="w-4 h-4 mr-1" />
+                  {t("import_excel")}
+                </Button>
+                <Button
+                  size="sm"
+                  className="bg-[#f6d265] hover:bg-[#f5c842] text-black"
+                  onClick={() => {
+                    setEditingDistribution(null);
+                    setShowDistributionModal(true);
+                  }}
+                >
+                  <Plus className="w-4 h-4 mr-1" />
+                  {t("add_distribution")}
+                </Button>
+              </div>
             </div>
             <div className="p-4">
               {distributions.length === 0 ? (
@@ -295,7 +307,9 @@ export default function B2BPage() {
                   <TableHeader>
                     <TableRow>
                       <TableHead className="text-center">{t("actions")}</TableHead>
+                      <TableHead className="text-right">{t("purchase_id")}</TableHead>
                       <TableHead className="text-right">{t("cottage_number")}</TableHead>
+                      <TableHead className="text-right">{t("offer_id")}</TableHead>
                       <TableHead className="text-right">{t("warehouse")}</TableHead>
                       <TableHead className="text-right">{t("product")}</TableHead>
                       <TableHead className="text-right">{t("customer")}</TableHead>
@@ -338,7 +352,9 @@ export default function B2BPage() {
                             </Button>
                           </div>
                         </TableCell>
-                        <TableCell className="font-medium">{distribution.cottage_number || '-'}</TableCell>
+                        <TableCell className="font-medium">{distribution.purchase_id || '-'}</TableCell>
+                        <TableCell>{distribution.cottage_number || '-'}</TableCell>
+                        <TableCell>{distribution.b2b_offer_id || '-'}</TableCell>
                         <TableCell>{distribution.warehouse_name || `${tCommon('product_labels.warehouse_prefix')} ${distribution.warehouse}`}</TableCell>
                         <TableCell>{distribution.product_name || `${tCommon('product_labels.product_prefix')} ${distribution.product}`}</TableCell>
                         <TableCell>{distribution.customer_name || `${tCommon('product_labels.customer_prefix')} ${distribution.customer}`}</TableCell>
@@ -485,6 +501,7 @@ export default function B2BPage() {
               toast.error(errorMessage);
             }
           }}
+          onOfferCreated={loadData}
           onClose={() => {
             setShowDistributionModal(false);
             setEditingDistribution(null);
@@ -607,9 +624,9 @@ export default function B2BPage() {
                     <div><strong>{tCommon('detail_labels.unit_price')}</strong> {selectedItem.unit_price.toLocaleString()} {tCommon('units.rial')}</div>
                     <div><strong>{tCommon('detail_labels.total_price')}</strong> {(selectedItem.total_price || selectedItem.offer_weight * selectedItem.unit_price).toLocaleString()} {tCommon('units.rial')}</div>
                     <div><strong>{tCommon('detail_labels.status')}</strong> {
-                      selectedItem.status === 'Active' ? tCommon('status.active') :
-                        selectedItem.status === 'Pending' ? tCommon('status.pending') :
-                          selectedItem.status === 'Sold' ? tCommon('status.sold') : tCommon('status.expired')
+                      selectedItem.status === 'active' ? tCommon('status.active') :
+                        selectedItem.status === 'pending' ? tCommon('status.pending') :
+                          selectedItem.status === 'sold' ? tCommon('status.sold') : tCommon('status.expired')
                     }</div>
                     <div><strong>{tCommon('detail_labels.offer_date')}</strong> {new Date(selectedItem.offer_date).toLocaleDateString('fa-IR')}</div>
                     <div><strong>{tCommon('detail_labels.expiry_date')}</strong> {new Date(selectedItem.offer_exp_date).toLocaleDateString('fa-IR')}</div>
@@ -618,6 +635,8 @@ export default function B2BPage() {
                 )}
                 {selectedType === 'distribution' && (
                   <>
+                    <div><strong>{tCommon('detail_labels.purchase_id')}</strong> {selectedItem.purchase_id || '-'}</div>
+                    <div><strong>{tCommon('detail_labels.offer_id')}</strong> {selectedItem.b2b_offer_id || '-'}</div>
                     <div><strong>{tCommon('detail_labels.cottage_number')}</strong> {selectedItem.cottage_number || '-'}</div>
                     <div><strong>{tCommon('detail_labels.warehouse')}</strong> {selectedItem.warehouse_name || `${tCommon('product_labels.warehouse_prefix')} ${selectedItem.warehouse}`}</div>
                     <div><strong>{tCommon('detail_labels.product')}</strong> {selectedItem.product_name || `${tCommon('product_labels.product_prefix')} ${selectedItem.product}`}</div>
@@ -650,6 +669,17 @@ export default function B2BPage() {
           )}
         </SheetContent>
       </Sheet>
+
+      {showExcelUploadModal && (
+        <ExcelUploadModal
+          open={showExcelUploadModal}
+          onClose={() => setShowExcelUploadModal(false)}
+          onSuccess={() => {
+            loadData();
+            setShowExcelUploadModal(false);
+          }}
+        />
+      )}
     </div>
   );
 }

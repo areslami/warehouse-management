@@ -45,7 +45,8 @@
       "distribution_details": "جزئیات عاملیت توزیع",
       "sale_details": "جزئیات فروش",
       "edit": "ویرایش",
-      "delete": "حذف"
+      "delete": "حذف",
+      "import_excel": "اپلود اکسل"
     },
     "warehouse": {
       "title": "انبار",
@@ -510,6 +511,10 @@
       "economic-code": "کد اقتصادی",
       "phone": "تلفن",
       "address": "آدرس",
+      "city": "شهر",
+      "province": "استان",
+      "postal_code": "کد پستی",
+      "mobile": "موبایل",
       "description": "توضیحات",
       "tags": "برچسب ها",
       "save": "ذخیره",
@@ -605,8 +610,8 @@
       "create-new-receipt": "ایجاد رسید جدید",
       "save": "ذخیره",
       "cancel": "لغو",
-      "offer_type_label": "نوع پیشنهاد",
-      "select_offer_type": "انتخاب نوع پیشنهاد",
+      "offer_type_label": "نوع عرضه",
+      "select_offer_type": "انتخاب نوع عرضه",
       "optional": "(اختیاری)",
       "status_options": {
         "draft": "پیش نویس",
@@ -633,6 +638,10 @@
     },
     "b2bDistribution": {
       "title": "عاملیت توزیع",
+      "purchase-id": "شناسه خرید",
+      "enter-purchase-id": "شناسه خرید را وارد کنید",
+      "b2b-offer": "عرضه بازارگاه",
+      "select-offer": "انتخاب عرضه",
       "warehouse": "انبار",
       "product": "محصول",
       "customer": "مشتری",
@@ -646,13 +655,18 @@
       "create-new-warehouse": "ایجاد انبار جدید",
       "create-new-product": "ایجاد محصول جدید",
       "create-new-customer": "ایجاد مشتری جدید",
+      "select-b2b-offer": "انتخاب عرضه بازارگاه",
+      "no-offer": "بدون عرضه",
+      "create-new-b2b-offer": "ایجاد عرضه بازارگاه جدید",
       "save": "ذخیره",
       "cancel": "لغو",
       "optional": "(اختیاری)",
       "validation": {
         "warehouse": "انبار الزامی است",
+        "warehouse_receipt": "رسید انبار الزامی است",
         "product": "محصول الزامی است",
         "customer": "مشتری الزامی است",
+        "sales_proforma": "پیش فاکتور فروش الزامی است",
         "agency-weight": "وزن عاملیت باید بزرگتر از صفر باشد",
         "agency-date": "تاریخ عاملیت الزامی است"
       }
@@ -688,6 +702,50 @@
         "paid-amount": "مبلغ پرداختی نمی‌تواند منفی باشد",
         "purchase-date": "تاریخ خرید الزامی است"
       }
+    },
+    "excelUpload": {
+      "title": "ورود اطلاعات از فایل اکسل",
+      "click_to_upload": "برای انتخاب فایل کلیک کنید",
+      "supported_formats": "فرمت های پشتیبانی شده: XLS, XLSX, HTML",
+      "start_import": "شروع ورود اطلاعات",
+      "cancel": "انصراف",
+      "upload_failed": "خطا در آپلود فایل",
+      "preview_failed": "خطا در نمایش پیش‌نمایش",
+      "processing_row": "پردازش ردیف {current} از {total}",
+      "preview_title": "بررسی اطلاعات ردیف",
+      "mapped_fields": "فیلدهای شناسایی شده",
+      "unmapped_fields": "فیلدهای ناشناخته",
+      "purchase_id": "شناسه خرید",
+      "weight": "وزن",
+      "date": "تاریخ",
+      "customer": "مشتری",
+      "description": "توضیحات",
+      "customer_not_found": "مشتری یافت نشد",
+      "create_customer": "ایجاد مشتری جدید",
+      "skip": "رد کردن",
+      "confirm": "تایید",
+      "confirmed_count": "تعداد تایید شده: {count}",
+      "no_rows_to_process": "ردیفی برای پردازش وجود ندارد",
+      "batch_success": "{count} رکورد با موفقیت ایجاد شد",
+      "batch_failed": "خطا در ایجاد رکوردها",
+      "customer_created": "مشتری با موفقیت ایجاد شد",
+      "customer_creation_failed": "خطا در ایجاد مشتری",
+      "warehouse": "انبار",
+      "select_warehouse": "انتخاب انبار",
+      "warehouse_receipt": "رسید انبار",
+      "select_receipt": "انتخاب رسید",
+      "select_warehouse_receipt": "لطفا انبار و رسید انبار را انتخاب کنید",
+      "select_warehouse_receipt_offer": "لطفا انبار، رسید انبار و عرضه بازارگاه را انتخاب کنید",
+      "select_receipt_offer": "لطفا رسید انبار و عرضه بازارگاه را انتخاب کنید",
+      "b2b_offer": "عرضه بازارگاه",
+      "select_offer": "انتخاب عرضه",
+      "create_new_offer": "ایجاد عرضه جدید",
+      "offer_created": "عرضه با موفقیت ایجاد شد",
+      "offer_creation_failed": "خطا در ایجاد عرضه",
+      "product_not_found": "محصول یافت نشد",
+      "product_skip_warning": "این ردیف بدون محصول قابل ثبت نیست و باید رد شود",
+      "import_complete": "ورود اطلاعات تکمیل شد",
+      "records_created": "{count} رکورد ایجاد شد"
     }
   },
   "errors": {
@@ -876,7 +934,7 @@
       "saving_failed": "خطا در ذخیره اطلاعات",
       "form_submission_failed": "خطا در ارسال فرم",
       "create_success": "عملیات ایجاد با موفقیت انجام شد",
-      "update_success": "عملیات بروزرسانی با موفقیت انجام شد", 
+      "update_success": "عملیات بروزرسانی با موفقیت انجام شد",
       "delete_success": "عملیات حذف با موفقیت انجام شد"
     },
     "units": {
@@ -885,7 +943,7 @@
     },
     "status": {
       "active": "فعال",
-      "pending": "در انتظار", 
+      "pending": "در انتظار",
       "sold": "فروخته شده",
       "expired": "منقضی",
       "unknown": "نامشخص"

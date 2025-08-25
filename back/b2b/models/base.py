@@ -1,12 +1,10 @@
 from django.db import models
 
 STATUS_CHOICES = [
-    ('draft', 'draft'),
-    ('pending', 'pending'),
-    ('active', 'active'),
-    ('sold', 'sold'),
-    ('expired', 'expired'),
-    ('cancelled', 'cancelled'),
+    ('pending', 'Pending'),
+    ('active', 'Active'),
+    ('sold', 'Sold'),
+    ('expired', 'Expired'),
 ]
 
 class B2BOffer(models.Model):
@@ -35,7 +33,7 @@ class B2BOffer(models.Model):
     total_price = models.DecimalField(max_digits=16, decimal_places=6, editable=False)
     
     offer_type = models.CharField(max_length=10, choices=OFFER_TYPES, default='cash')
-    status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='draft')
+    status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='pending')
     
     description = models.TextField(blank=True)
     notes = models.TextField(blank=True)
@@ -179,6 +177,9 @@ class B2BPurchaseDetail(models.Model):
 
 class B2BDistribution(models.Model):
     
+    purchase_id = models.CharField(max_length=100, unique=True, null=True, blank=True)
+    b2b_offer = models.ForeignKey(B2BOffer, on_delete=models.SET_NULL, null=True, blank=True, related_name='distributions')
+    
     warehouse = models.ForeignKey('warehouse.Warehouse', on_delete=models.CASCADE)
     warehouse_receipt = models.ForeignKey(
         'warehouse.WarehouseReceipt',
@@ -189,7 +190,6 @@ class B2BDistribution(models.Model):
     product = models.ForeignKey('core.Product', on_delete=models.CASCADE)
     cottage_number = models.CharField(max_length=50, blank=True, editable=False)
     
-    sales_proforma = models.ForeignKey('finance.SalesProforma', on_delete=models.CASCADE)
     customer = models.ForeignKey('core.Customer', on_delete=models.CASCADE)
     
     agency_date = models.DateTimeField()
@@ -207,8 +207,10 @@ class B2BDistribution(models.Model):
             self.warehouse = self.warehouse_receipt.warehouse
             self.cottage_number = self.warehouse_receipt.cottage_serial_number or ''
             
-            first_item = self.warehouse_receipt.items.first()
-            if first_item:
-                self.product = first_item.product
+            # Only auto-set product if not already provided
+            if not self.product_id:
+                first_item = self.warehouse_receipt.items.first()
+                if first_item:
+                    self.product = first_item.product
         
         super().save(*args, **kwargs)
