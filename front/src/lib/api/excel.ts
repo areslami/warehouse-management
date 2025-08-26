@@ -4,7 +4,7 @@ async function fetchWithAuth(url: string, options?: RequestInit) {
   const response = await fetch(url, {
     ...options,
     headers: {
-      'Content-Type': 'application/json',
+      "Content-Type": "application/json",
       ...options?.headers,
     },
   });
@@ -16,12 +16,12 @@ async function fetchWithAuth(url: string, options?: RequestInit) {
   return response.json();
 }
 
-export async function uploadExcel(file: File) {
+export async function uploadDistributionExcel(file: File) {
   const formData = new FormData();
-  formData.append('file', file);
+  formData.append("file", file);
 
-  const response = await fetch(`${API_BASE_URL}excel/upload/`, {
-    method: 'POST',
+  const response = await fetch(`${API_BASE_URL}distribution/upload/`, {
+    method: "POST",
     body: formData,
   });
 
@@ -32,20 +32,46 @@ export async function uploadExcel(file: File) {
   return response.json();
 }
 
-export async function previewDistribution(rowData: any) {
-  return fetchWithAuth(`${API_BASE_URL}excel/preview/`, {
-    method: 'POST',
+export async function previewDistribution(rowData: unknown) {
+  return fetchWithAuth(`${API_BASE_URL}distribution/preview/`, {
+    method: "POST",
     body: JSON.stringify(rowData),
   });
 }
 
-export async function createDistributionsBatch(distributions: any[]) {
-  return fetchWithAuth(`${API_BASE_URL}excel/batch-create/`, {
-    method: 'POST',
+export async function createDistributionsBatch(distributions: object[]) {
+  return fetchWithAuth(`${API_BASE_URL}distribution/create/`, {
+    method: "POST",
     body: JSON.stringify({ distributions }),
   });
 }
 
-export async function searchCustomerByName(name: string) {
-  return fetchWithAuth(`${API_BASE_URL}customers/search/?name=${encodeURIComponent(name)}`);
+export async function uploadSaleExcel(file: File) {
+  const formData = new FormData();
+  formData.append("file", file);
+
+  const response = await fetch(`${API_BASE_URL}sale/upload/`, {
+    method: "POST",
+    body: formData,
+  });
+
+  if (!response.ok) {
+    throw new Error(`HTTP error! status: ${response.status}`);
+  }
+
+  return response.json();
+}
+
+export async function previewSale(rowData: unknown) {
+  return fetchWithAuth(`${API_BASE_URL}sale/preview/`, {
+    method: "POST",
+    body: JSON.stringify(rowData),
+  });
+}
+
+export async function createSaleBatch(sales: object[]) {
+  return fetchWithAuth(`${API_BASE_URL}sale/create/`, {
+    method: "POST",
+    body: JSON.stringify({ sales }),
+  });
 }

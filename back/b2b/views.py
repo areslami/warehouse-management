@@ -49,9 +49,9 @@ class B2BOfferViewSet(viewsets.ModelViewSet):
 class B2BSaleViewSet(viewsets.ModelViewSet):
     queryset = B2BSale.objects.all()
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
-    filterset_fields = ['offer_status', 'product_offer']
-    search_fields = ['product_title', 'cottage_number']
-    ordering_fields = ['created_at']
+    filterset_fields = ['product_offer', 'customer', 'receiver']
+    search_fields = ['purchase_id', 'allocation_id', 'cottage_code', 'tracking_number']
+    ordering_fields = ['purchase_date', 'created_at']
     ordering = ['-created_at']
     
     def get_serializer_class(self):
@@ -61,23 +61,9 @@ class B2BSaleViewSet(viewsets.ModelViewSet):
     
     def get_queryset(self):
         queryset = super().get_queryset()
-        return queryset.select_related('product_offer', 'product_offer__product')
+        return queryset.select_related('product', 'customer', 'receiver', 'product_offer')
     
-    @action(detail=True, methods=['get'])
-    def purchases(self, request, pk=None):
-        sale = self.get_object()
-        purchases = sale.purchases.all()
-        serializer = B2BPurchaseSerializer(purchases, many=True)
-        return Response(serializer.data)
     
-    @action(detail=False, methods=['get'])
-    def summary(self, request):
-        sales = self.get_queryset()
-        summary = sales.aggregate(
-            total_sales=Sum('sold_weight_before_transport'),
-            total_remaining=Sum('remaining_weight_before_transport')
-        )
-        return Response(summary)
 
 
 class B2BPurchaseViewSet(viewsets.ModelViewSet):

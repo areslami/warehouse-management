@@ -14,7 +14,7 @@ class Supplier(models.Model):
     
     # indicidual
     full_name = models.CharField(max_length=100, blank=True)
-    personal_code = models.CharField(max_length=10, blank=True, null=True, unique=True)
+    personal_code = models.CharField(max_length=11, blank=True, null=True, unique=True)
     
     
     economic_code = models.CharField(max_length=20, unique=True)
@@ -29,11 +29,8 @@ class Supplier(models.Model):
         if self.supplier_type == PartyType.CORPORATE:
             return f"{self.company_name} ({self.economic_code})"
         return f"{self.full_name} ({self.economic_code})"
-    
-class BaseParty(models.Model):
-    pass
-    
-class Customer(BaseParty):
+
+class Customer(models.Model):
     customer_type = models.CharField(max_length=10, choices=PartyType.choices,null=False)
     
     # corporate
@@ -42,16 +39,13 @@ class Customer(BaseParty):
     
     # indicidual
     full_name = models.CharField(max_length=100, blank=True)
-    personal_code = models.CharField(max_length=10, blank=True, null=True, unique=True)
+    personal_code = models.CharField(max_length=11, blank=True, null=True, unique=True)
     
     
     economic_code = models.CharField(max_length=20, unique=True)
     phone = models.CharField(max_length=20)
     address = models.TextField(blank=False)
-    city = models.CharField(max_length=100, blank=True, default='')
-    province = models.CharField(max_length=100, blank=True, default='')
-    postal_code = models.CharField(max_length=10, blank=True, default='')
-    mobile = models.CharField(max_length=20, blank=True, default='')
+    postal_code = models.CharField(max_length=10,null=False)
     description = models.TextField(blank=True)
     tags = models.CharField(max_length=200, blank=True)
     
@@ -64,9 +58,16 @@ class Customer(BaseParty):
             return f"{self.company_name} ({self.economic_code})"
         return f"{self.full_name} ({self.economic_code})"
 
-class Receiver(BaseParty):
+
+RECEIVER_VEICHLE_TYPES = [
+    ('single', 'single'),
+    ('double', 'double'),
+    ('trailer', 'trailer'),
+]
+    
+class Receiver(models.Model):
     receiver_type = models.CharField(max_length=10, choices=PartyType.choices,null=False)
-    system_id = models.CharField(max_length=50, unique=True)
+    receiver_veichle_type = models.CharField(max_length =20,choices=RECEIVER_VEICHLE_TYPES,null=False)
     unique_id = models.CharField(max_length=50)
     
     # corporate
@@ -75,7 +76,7 @@ class Receiver(BaseParty):
     
     # indicidual
     full_name = models.CharField(max_length=100, blank=True)
-    personal_code = models.CharField(max_length=10, blank=True, null=True, unique=True)
+    personal_code = models.CharField(max_length=11, blank=True, null=True, unique=True)
     
     
     economic_code = models.CharField(max_length=20, unique=True)
@@ -89,5 +90,5 @@ class Receiver(BaseParty):
     
     def __str__(self):
         if self.receiver_type == PartyType.CORPORATE:
-            return f"{self.company_name} ({self.system_id})"
-        return f"{self.full_name} ({self.system_id})"
+            return f"{self.company_name} ({self.economic_code})"
+        return f"{self.full_name} ({self.economic_code})"

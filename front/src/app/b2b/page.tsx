@@ -12,7 +12,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { B2BOfferModal } from "@/components/modals/b2b/b2b-offer-modal";
 import { B2BDistributionModal } from "@/components/modals/b2b/b2b-distribution-modal";
 import { B2BSaleModal } from "@/components/modals/b2b/b2b-sale-modal";
-import { ExcelUploadModal } from "@/components/modals/excel-upload-modal";
+import { UploadDistributionModal } from "@/components/modals/b2b/upload-distribution-modal";
 import { B2BOffer, B2BSale, B2BDistribution } from "@/lib/interfaces/b2b";
 import {
   fetchB2BOffers, fetchB2BOfferById, createB2BOffer, updateB2BOffer, deleteB2BOffer,
@@ -20,6 +20,7 @@ import {
   fetchB2BDistributions, fetchB2BDistributionById, createB2BDistribution, updateB2BDistribution, deleteB2BDistribution
 } from "@/lib/api/b2b";
 import { handleApiError } from "@/lib/api/error-handler";
+import UploadSaleModal from "@/components/modals/b2b/upload-sale-modal";
 
 export default function B2BPage() {
   const t = useTranslations("pages.b2b");
@@ -32,7 +33,8 @@ export default function B2BPage() {
   const [showOfferModal, setShowOfferModal] = useState(false);
   const [showSaleModal, setShowSaleModal] = useState(false);
   const [showDistributionModal, setShowDistributionModal] = useState(false);
-  const [showExcelUploadModal, setShowExcelUploadModal] = useState(false);
+  const [showDistributionUploadModal, setShowDistributionUploadModal] = useState(false);
+  const [showSaleUploadModal, setShowSaleUploadModal] = useState(false);
 
   const [editingOffer, setEditingOffer] = useState<B2BOffer | null>(null);
   const [editingSale, setEditingSale] = useState<B2BSale | null>(null);
@@ -116,7 +118,8 @@ export default function B2BPage() {
   const filteredOffers = useMemo(() => {
     return offers.filter(offer =>
       offer.offer_id.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (offer.product_name || '').toLowerCase().includes(searchTerm.toLowerCase())
+      (offer.product_name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (offer.cottage_number || '').toLowerCase().includes(searchTerm.toLowerCase())
     );
   }, [offers, searchTerm]);
 
@@ -124,14 +127,18 @@ export default function B2BPage() {
     return distributions.filter(dist =>
       (dist.cottage_number || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
       (dist.customer_name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (dist.product_name || '').toLowerCase().includes(searchTerm.toLowerCase())
+      (dist.product_name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (dist.purchase_id || '').toLowerCase().includes(searchTerm.toLowerCase())
     );
   }, [distributions, searchTerm]);
 
   const filteredSales = useMemo(() => {
     return sales.filter(sale =>
-      (sale.cottage_number || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (sale.product_title || '').toLowerCase().includes(searchTerm.toLowerCase())
+      (sale.purchase_id || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (sale.allocation_id || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (sale.customer_name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (sale.product_name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (sale.tracking_number || '').toLowerCase().includes(searchTerm.toLowerCase())
     );
   }, [sales, searchTerm]);
 
@@ -200,10 +207,10 @@ export default function B2BPage() {
               {offers.length === 0 ? (
                 <p className="text-gray-500 text-center py-8">{t("no_offers")}</p>
               ) : (
-                <Table>
+                <Table dir="rtl">
                   <TableHeader>
                     <TableRow>
-                      <TableHead className="text-center">{t("actions")}</TableHead>
+                      <TableHead className="text-right w-16">{t("id")}</TableHead>
                       <TableHead className="text-right">{t("offer_id")}</TableHead>
                       <TableHead className="text-right">{t("product")}</TableHead>
                       <TableHead className="text-right">{t("weight")}</TableHead>
@@ -212,11 +219,30 @@ export default function B2BPage() {
                       <TableHead className="text-right">{t("status")}</TableHead>
                       <TableHead className="text-right">{t("offer_date")}</TableHead>
                       <TableHead className="text-right">{t("expiry_date")}</TableHead>
+                      <TableHead className="text-center w-24">{t("actions")}</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {filteredOffers.map((offer) => (
                       <TableRow key={offer.id} className="cursor-pointer hover:bg-gray-50" onClick={() => handleRowClick(offer, 'offer')}>
+                        <TableCell className="font-medium text-right">{offer.id}</TableCell>
+                        <TableCell className="truncate max-w-[120px]" title={offer.offer_id}>{offer.offer_id}</TableCell>
+                        <TableCell className="truncate max-w-[150px]" title={offer.product_name || `${tCommon('product_labels.product_prefix')} ${offer.product}`}>
+                          {offer.product_name || `${tCommon('product_labels.product_prefix')} ${offer.product}`}
+                        </TableCell>
+                        <TableCell>{offer.offer_weight} {tCommon('units.kg')}</TableCell>
+                        <TableCell className="truncate max-w-[100px]">{offer.unit_price.toLocaleString()}</TableCell>
+                        <TableCell className="truncate max-w-[120px]">{offer.total_price ? offer.total_price.toLocaleString() : '0'}</TableCell>
+                        <TableCell>
+                          <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusBadgeClass(offer.status)}`}>
+                            {offer.status === 'active' && tCommon('status.active')}
+                            {offer.status === 'pending' && tCommon('status.pending')}
+                            {offer.status === 'sold' && tCommon('status.sold')}
+                            {offer.status === 'expired' && tCommon('status.expired')}
+                          </span>
+                        </TableCell>
+                        <TableCell>{new Date(offer.offer_date).toLocaleDateString('fa-IR')}</TableCell>
+                        <TableCell>{new Date(offer.offer_exp_date).toLocaleDateString('fa-IR')}</TableCell>
                         <TableCell className="text-center">
                           <div className="flex gap-2 justify-center">
                             <Button
@@ -249,21 +275,6 @@ export default function B2BPage() {
                             </Button>
                           </div>
                         </TableCell>
-                        <TableCell className="font-medium">{offer.offer_id}</TableCell>
-                        <TableCell>{offer.product_name || `${tCommon('product_labels.product_prefix')} ${offer.product}`}</TableCell>
-                        <TableCell>{offer.offer_weight} {tCommon('units.kg')}</TableCell>
-                        <TableCell>{offer.unit_price.toLocaleString()} {tCommon('units.rial')}</TableCell>
-                        <TableCell>{offer.total_price ? offer.total_price.toLocaleString() : '0'} {tCommon('units.rial')}</TableCell>
-                        <TableCell>
-                          <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusBadgeClass(offer.status)}`}>
-                            {offer.status === 'active' && tCommon('status.active')}
-                            {offer.status === 'pending' && tCommon('status.pending')}
-                            {offer.status === 'sold' && tCommon('status.sold')}
-                            {offer.status === 'expired' && tCommon('status.expired')}
-                          </span>
-                        </TableCell>
-                        <TableCell>{new Date(offer.offer_date).toLocaleDateString('fa-IR')}</TableCell>
-                        <TableCell>{new Date(offer.offer_exp_date).toLocaleDateString('fa-IR')}</TableCell>
                       </TableRow>
                     ))}
                   </TableBody>
@@ -281,7 +292,7 @@ export default function B2BPage() {
                 <Button
                   size="sm"
                   variant="outline"
-                  onClick={() => setShowExcelUploadModal(true)}
+                  onClick={() => setShowDistributionUploadModal(true)}
                 >
                   <Upload className="w-4 h-4 mr-1" />
                   {t("import_excel")}
@@ -303,10 +314,10 @@ export default function B2BPage() {
               {distributions.length === 0 ? (
                 <p className="text-gray-500 text-center py-8">{t("no_distributions")}</p>
               ) : (
-                <Table>
+                <Table dir="rtl">
                   <TableHeader>
                     <TableRow>
-                      <TableHead className="text-center">{t("actions")}</TableHead>
+                      <TableHead className="text-right w-16">{t("id")}</TableHead>
                       <TableHead className="text-right">{t("purchase_id")}</TableHead>
                       <TableHead className="text-right">{t("cottage_number")}</TableHead>
                       <TableHead className="text-right">{t("offer_id")}</TableHead>
@@ -315,11 +326,27 @@ export default function B2BPage() {
                       <TableHead className="text-right">{t("customer")}</TableHead>
                       <TableHead className="text-right">{t("agency_weight")}</TableHead>
                       <TableHead className="text-right">{t("agency_date")}</TableHead>
+                      <TableHead className="text-center w-24">{t("actions")}</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {filteredDistributions.map((distribution) => (
                       <TableRow key={distribution.id} className="cursor-pointer hover:bg-gray-50" onClick={() => handleRowClick(distribution, 'distribution')}>
+                        <TableCell className="font-medium text-right">{distribution.id}</TableCell>
+                        <TableCell className="truncate max-w-[100px]" title={distribution.purchase_id || '-'}>{distribution.purchase_id || '-'}</TableCell>
+                        <TableCell className="truncate max-w-[80px]" title={distribution.cottage_number || '-'}>{distribution.cottage_number || '-'}</TableCell>
+                        <TableCell className="truncate max-w-[100px]" title={distribution.b2b_offer_id || '-'}>{distribution.b2b_offer_id || '-'}</TableCell>
+                        <TableCell className="truncate max-w-[120px]" title={distribution.warehouse_name || `${tCommon('product_labels.warehouse_prefix')} ${distribution.warehouse}`}>
+                          {distribution.warehouse_name || `${tCommon('product_labels.warehouse_prefix')} ${distribution.warehouse}`}
+                        </TableCell>
+                        <TableCell className="truncate max-w-[150px]" title={distribution.product_name || `${tCommon('product_labels.product_prefix')} ${distribution.product}`}>
+                          {distribution.product_name || `${tCommon('product_labels.product_prefix')} ${distribution.product}`}
+                        </TableCell>
+                        <TableCell className="truncate max-w-[150px]" title={distribution.customer_name || `${tCommon('product_labels.customer_prefix')} ${distribution.customer}`}>
+                          {distribution.customer_name || `${tCommon('product_labels.customer_prefix')} ${distribution.customer}`}
+                        </TableCell>
+                        <TableCell>{distribution.agency_weight} {tCommon('units.kg')}</TableCell>
+                        <TableCell>{new Date(distribution.agency_date).toLocaleDateString('fa-IR')}</TableCell>
                         <TableCell className="text-center">
                           <div className="flex gap-2 justify-center">
                             <Button
@@ -352,14 +379,6 @@ export default function B2BPage() {
                             </Button>
                           </div>
                         </TableCell>
-                        <TableCell className="font-medium">{distribution.purchase_id || '-'}</TableCell>
-                        <TableCell>{distribution.cottage_number || '-'}</TableCell>
-                        <TableCell>{distribution.b2b_offer_id || '-'}</TableCell>
-                        <TableCell>{distribution.warehouse_name || `${tCommon('product_labels.warehouse_prefix')} ${distribution.warehouse}`}</TableCell>
-                        <TableCell>{distribution.product_name || `${tCommon('product_labels.product_prefix')} ${distribution.product}`}</TableCell>
-                        <TableCell>{distribution.customer_name || `${tCommon('product_labels.customer_prefix')} ${distribution.customer}`}</TableCell>
-                        <TableCell>{distribution.agency_weight} {tCommon('units.kg')}</TableCell>
-                        <TableCell>{new Date(distribution.agency_date).toLocaleDateString('fa-IR')}</TableCell>
                       </TableRow>
                     ))}
                   </TableBody>
@@ -373,37 +392,73 @@ export default function B2BPage() {
           <div className="bg-white rounded-lg shadow">
             <div className="p-4 border-b border-gray-200 flex items-center justify-between">
               <h2 className="text-xl font-semibold text-gray-700">{t("sales_title")}</h2>
-              <Button
-                size="sm"
-                className="bg-[#f6d265] hover:bg-[#f5c842] text-black"
-                onClick={() => {
-                  setEditingSale(null);
-                  setShowSaleModal(true);
-                }}
-              >
-                <Plus className="w-4 h-4 mr-1" />
-                {t("add_sale")}
-              </Button>
+              <div className="flex gap-2">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => setShowSaleUploadModal(true)}
+                >
+                  <Upload className="w-4 h-4 mr-1" />
+                  {t("import_excel")}
+                </Button>
+                <Button
+                  size="sm"
+                  className="bg-[#f6d265] hover:bg-[#f5c842] text-black"
+                  onClick={() => {
+                    setEditingSale(null);
+                    setShowSaleModal(true);
+                  }}
+                >
+                  <Plus className="w-4 h-4 mr-1" />
+                  {t("add_sale")}
+                </Button>
+              </div>
             </div>
             <div className="p-4">
               {sales.length === 0 ? (
                 <p className="text-gray-500 text-center py-8">{t("no_sales")}</p>
               ) : (
-                <Table>
+                <Table dir="rtl">
                   <TableHeader>
                     <TableRow>
-                      <TableHead className="text-center">{t("actions")}</TableHead>
-                      <TableHead className="text-right">{t("cottage_number")}</TableHead>
-                      <TableHead className="text-right">{t("product_title")}</TableHead>
-                      <TableHead className="text-right">{t("total_weight")}</TableHead>
-                      <TableHead className="text-right">{t("sold_weight")}</TableHead>
-                      <TableHead className="text-right">{t("remaining_weight")}</TableHead>
-                      <TableHead className="text-right">{t("sale_status")}</TableHead>
+                      <TableHead className="text-right w-16">{t("id")}</TableHead>
+                      <TableHead className="text-right">{t("purchase_id")}</TableHead>
+                      <TableHead className="text-right">{t("allocation_id")}</TableHead>
+                      <TableHead className="text-right">{t("customer")}</TableHead>
+                      <TableHead className="text-right">{t("receiver")}</TableHead>
+                      <TableHead className="text-right">{t("product")}</TableHead>
+                      <TableHead className="text-right">{t("weight")}</TableHead>
+                      <TableHead className="text-right">{t("amount")}</TableHead>
+                      <TableHead className="text-right">{t("date")}</TableHead>
+                      <TableHead className="text-right">{t("tracking")}</TableHead>
+                      <TableHead className="text-center w-24">{t("actions")}</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {filteredSales.map((sale) => (
                       <TableRow key={sale.id} className="cursor-pointer hover:bg-gray-50" onClick={() => handleRowClick(sale, 'sale')}>
+                        <TableCell className="text-right">{sale.id}</TableCell>
+                        <TableCell className="text-right truncate max-w-[100px]" title={sale.purchase_id}>
+                          {sale.purchase_id}
+                        </TableCell>
+                        <TableCell className="text-right truncate max-w-[100px]" title={sale.allocation_id || ''}>
+                          {sale.allocation_id || '-'}
+                        </TableCell>
+                        <TableCell className="text-right truncate max-w-[120px]" title={sale.customer_name || ''}>
+                          {sale.customer_name || '-'}
+                        </TableCell>
+                        <TableCell className="text-right truncate max-w-[120px]" title={sale.receiver_name || ''}>
+                          {sale.receiver_name || '-'}
+                        </TableCell>
+                        <TableCell className="text-right truncate max-w-[150px]" title={sale.product_name || ''}>
+                          {sale.product_name || '-'}
+                        </TableCell>
+                        <TableCell className="text-right">{sale.total_weight_purchased}</TableCell>
+                        <TableCell className="text-right">{Number(sale.payment_amount).toLocaleString()}</TableCell>
+                        <TableCell className="text-right">{new Date(sale.purchase_date).toLocaleDateString('fa-IR')}</TableCell>
+                        <TableCell className="text-right truncate max-w-[100px]" title={sale.tracking_number || ''}>
+                          {sale.tracking_number || '-'}
+                        </TableCell>
                         <TableCell className="text-center">
                           <div className="flex gap-2 justify-center">
                             <Button
@@ -436,12 +491,6 @@ export default function B2BPage() {
                             </Button>
                           </div>
                         </TableCell>
-                        <TableCell className="font-medium">{sale.cottage_number || '-'}</TableCell>
-                        <TableCell>{sale.product_title || `${tCommon('product_labels.offer_prefix')} ${sale.product_offer}`}</TableCell>
-                        <TableCell>{sale.total_offer_weight || 0} {tCommon('units.kg')}</TableCell>
-                        <TableCell>{sale.sold_weight_before_transport || 0} {tCommon('units.kg')}</TableCell>
-                        <TableCell>{sale.remaining_weight_before_transport || 0} {tCommon('units.kg')}</TableCell>
-                        <TableCell>{sale.offer_status || tCommon('status.unknown')}</TableCell>
                       </TableRow>
                     ))}
                   </TableBody>
@@ -596,7 +645,7 @@ export default function B2BPage() {
                           await deleteB2BOffer(selectedItem.id);
                         } else if (selectedType === 'distribution' && 'agency_weight' in selectedItem) {
                           await deleteB2BDistribution(selectedItem.id);
-                        } else if (selectedType === 'sale' && 'product_offer' in selectedItem) {
+                        } else if (selectedType === 'sale' && 'purchase_id' in selectedItem) {
                           await deleteB2BSale(selectedItem.id);
                         }
                         toast.success(tErrors("success_delete"));
@@ -615,68 +664,83 @@ export default function B2BPage() {
                 </Button>
               </div>
               <div className="mt-6 space-y-4 p-4 bg-gray-50 rounded-lg">
-                {selectedType === 'offer' && (
-                  <>
-                    <div><strong>{tCommon('detail_labels.offer_id')}</strong> {selectedItem.offer_id}</div>
-                    <div><strong>{tCommon('detail_labels.product')}</strong> {selectedItem.product_name || `${tCommon('product_labels.product_prefix')} ${selectedItem.product}`}</div>
-                    <div><strong>{tCommon('detail_labels.warehouse_receipt')}</strong> {selectedItem.warehouse_receipt_id || selectedItem.warehouse_receipt}</div>
-                    <div><strong>{tCommon('detail_labels.offer_weight')}</strong> {selectedItem.offer_weight} {tCommon('units.kg')}</div>
-                    <div><strong>{tCommon('detail_labels.unit_price')}</strong> {selectedItem.unit_price.toLocaleString()} {tCommon('units.rial')}</div>
-                    <div><strong>{tCommon('detail_labels.total_price')}</strong> {(selectedItem.total_price || selectedItem.offer_weight * selectedItem.unit_price).toLocaleString()} {tCommon('units.rial')}</div>
+                {selectedType === 'offer' && (() => {
+                  const item = selectedItem as B2BOffer;
+                  return (<>
+                    <div><strong>{tCommon('detail_labels.offer_id')}</strong> {item.offer_id}</div>
+                    <div><strong>{tCommon('detail_labels.product')}</strong> {item.product_name || `${tCommon('product_labels.product_prefix')} ${item.product}`}</div>
+                    <div><strong>{tCommon('detail_labels.warehouse_receipt')}</strong> {item.warehouse_receipt_id || item.warehouse_receipt}</div>
+                    <div><strong>{tCommon('detail_labels.offer_weight')}</strong> {item.offer_weight} {tCommon('units.kg')}</div>
+                    <div><strong>{tCommon('detail_labels.unit_price')}</strong> {item.unit_price.toLocaleString()} {tCommon('units.rial')}</div>
+                    <div><strong>{tCommon('detail_labels.total_price')}</strong> {(item.total_price || item.offer_weight * item.unit_price).toLocaleString()} {tCommon('units.rial')}</div>
                     <div><strong>{tCommon('detail_labels.status')}</strong> {
-                      selectedItem.status === 'active' ? tCommon('status.active') :
-                        selectedItem.status === 'pending' ? tCommon('status.pending') :
-                          selectedItem.status === 'sold' ? tCommon('status.sold') : tCommon('status.expired')
+                      item.status === 'active' ? tCommon('status.active') :
+                        item.status === 'pending' ? tCommon('status.pending') :
+                          item.status === 'sold' ? tCommon('status.sold') : tCommon('status.expired')
                     }</div>
-                    <div><strong>{tCommon('detail_labels.offer_date')}</strong> {new Date(selectedItem.offer_date).toLocaleDateString('fa-IR')}</div>
-                    <div><strong>{tCommon('detail_labels.expiry_date')}</strong> {new Date(selectedItem.offer_exp_date).toLocaleDateString('fa-IR')}</div>
-                    {selectedItem.description && <div><strong>{tCommon('detail_labels.description')}</strong> {selectedItem.description}</div>}
-                  </>
-                )}
-                {selectedType === 'distribution' && (
-                  <>
-                    <div><strong>{tCommon('detail_labels.purchase_id')}</strong> {selectedItem.purchase_id || '-'}</div>
-                    <div><strong>{tCommon('detail_labels.offer_id')}</strong> {selectedItem.b2b_offer_id || '-'}</div>
-                    <div><strong>{tCommon('detail_labels.cottage_number')}</strong> {selectedItem.cottage_number || '-'}</div>
-                    <div><strong>{tCommon('detail_labels.warehouse')}</strong> {selectedItem.warehouse_name || `${tCommon('product_labels.warehouse_prefix')} ${selectedItem.warehouse}`}</div>
-                    <div><strong>{tCommon('detail_labels.product')}</strong> {selectedItem.product_name || `${tCommon('product_labels.product_prefix')} ${selectedItem.product}`}</div>
-                    <div><strong>{tCommon('detail_labels.customer')}</strong> {selectedItem.customer_name || `${tCommon('product_labels.customer_prefix')} ${selectedItem.customer}`}</div>
-                    <div><strong>{tCommon('detail_labels.agency_weight')}</strong> {selectedItem.agency_weight} {tCommon('units.kg')}</div>
-                    <div><strong>{tCommon('detail_labels.agency_date')}</strong> {new Date(selectedItem.agency_date).toLocaleDateString('fa-IR')}</div>
-                    {selectedItem.description && <div><strong>{tCommon('detail_labels.description')}</strong> {selectedItem.description}</div>}
-                  </>
-                )}
-                {selectedType === 'sale' && (
-                  <>
-                    <div><strong>{tCommon('detail_labels.cottage_number')}</strong> {selectedItem.cottage_number || '-'}</div>
-                    <div><strong>{tCommon('detail_labels.product_title')}</strong> {selectedItem.product_title || `${tCommon('product_labels.offer_prefix')} ${selectedItem.product_offer}`}</div>
-                    <div><strong>{tCommon('detail_labels.total_offer_weight')}</strong> {selectedItem.total_offer_weight || 0} {tCommon('units.kg')}</div>
-                    <div><strong>{tCommon('detail_labels.sold_weight_before_transport')}</strong> {selectedItem.sold_weight_before_transport || 0} {tCommon('units.kg')}</div>
-                    <div><strong>{tCommon('detail_labels.remaining_weight_before_transport')}</strong> {selectedItem.remaining_weight_before_transport || 0} {tCommon('units.kg')}</div>
-                    {selectedItem.sold_weight_after_transport && (
-                      <div><strong>{tCommon('detail_labels.sold_weight_after_transport')}</strong> {selectedItem.sold_weight_after_transport} {tCommon('units.kg')}</div>
-                    )}
-                    {selectedItem.remaining_weight_after_transport && (
-                      <div><strong>{tCommon('detail_labels.remaining_weight_after_transport')}</strong> {selectedItem.remaining_weight_after_transport} {tCommon('units.kg')}</div>
-                    )}
-                    <div><strong>{tCommon('detail_labels.offer_status')}</strong> {selectedItem.offer_status || tCommon('status.unknown')}</div>
-                    {selectedItem.entry_customs && <div><strong>{tCommon('detail_labels.entry_customs')}</strong> {selectedItem.entry_customs}</div>}
-                    {selectedItem.description && <div><strong>{tCommon('detail_labels.description')}</strong> {selectedItem.description}</div>}
-                  </>
-                )}
+                    <div><strong>{tCommon('detail_labels.offer_date')}</strong> {new Date(item.offer_date).toLocaleDateString('fa-IR')}</div>
+                    <div><strong>{tCommon('detail_labels.expiry_date')}</strong> {new Date(item.offer_exp_date).toLocaleDateString('fa-IR')}</div>
+                    {item.description && <div><strong>{tCommon('detail_labels.description')}</strong> {item.description}</div>}
+                  </>);
+                })()}
+                {selectedType === 'distribution' && (() => {
+                  const item = selectedItem as B2BDistribution;
+                  return (
+                    <>
+                      <div><strong>{tCommon('detail_labels.purchase_id')}</strong> {item.purchase_id || '-'}</div>
+                      <div><strong>{tCommon('detail_labels.offer_id')}</strong> {item.b2b_offer_id || '-'}</div>
+                      <div><strong>{tCommon('detail_labels.cottage_number')}</strong> {item.cottage_number || '-'}</div>
+                      <div><strong>{tCommon('detail_labels.warehouse')}</strong> {item.warehouse_name || `${tCommon('product_labels.warehouse_prefix')} ${item.warehouse}`}</div>
+                      <div><strong>{tCommon('detail_labels.product')}</strong> {item.product_name || `${tCommon('product_labels.product_prefix')} ${item.product}`}</div>
+                      <div><strong>{tCommon('detail_labels.customer')}</strong> {item.customer_name || `${tCommon('product_labels.customer_prefix')} ${item.customer}`}</div>
+                      <div><strong>{tCommon('detail_labels.agency_weight')}</strong> {item.agency_weight} {tCommon('units.kg')}</div>
+                      <div><strong>{tCommon('detail_labels.agency_date')}</strong> {new Date(item.agency_date).toLocaleDateString('fa-IR')}</div>
+                      {item.description && <div><strong>{tCommon('detail_labels.description')}</strong> {item.description}</div>}
+                    </>);
+                })()}
+                {selectedType === 'sale' && (() => {
+                  const item = selectedItem as B2BSale;
+                  return (
+                    <>
+                      <div><strong>{tCommon('detail_labels.purchase_id')}</strong> {item.purchase_id}</div>
+                      <div><strong>{tCommon('detail_labels.allocation_id')}</strong> {item.allocation_id || '-'}</div>
+                      <div><strong>{tCommon('detail_labels.customer')}</strong> {item.customer_name || '-'}</div>
+                      <div><strong>{tCommon('detail_labels.receiver')}</strong> {item.receiver_name || '-'}</div>
+                      <div><strong>{tCommon('detail_labels.product')}</strong> {item.product_name || '-'}</div>
+                      <div><strong>{tCommon('detail_labels.weight')}</strong> {item.total_weight_purchased} {tCommon('units.kg')}</div>
+                      <div><strong>{tCommon('detail_labels.unit_price')}</strong> {item.unit_price ? Number(item.unit_price).toLocaleString() : '0'} {tCommon('units.rial')}</div>
+                      <div><strong>{tCommon('detail_labels.payment_amount')}</strong> {item.payment_amount ? Number(item.payment_amount).toLocaleString() : '0'} {tCommon('units.rial')}</div>
+                      <div><strong>{tCommon('detail_labels.payment_method')}</strong> {item.payment_method || '-'}</div>
+                      <div><strong>{tCommon('detail_labels.purchase_date')}</strong> {new Date(item.purchase_date).toLocaleDateString('fa-IR')}</div>
+                      <div><strong>{tCommon('detail_labels.province')}</strong> {item.province || '-'}</div>
+                      <div><strong>{tCommon('detail_labels.city')}</strong> {item.city || '-'}</div>
+                      <div><strong>{tCommon('detail_labels.tracking_number')}</strong> {item.tracking_number || '-'}</div>
+                      {item.credit_description && <div><strong>{tCommon('detail_labels.description')}</strong> {item.credit_description}</div>}
+                    </>);
+                })()}
               </div>
             </>
           )}
         </SheetContent>
       </Sheet>
 
-      {showExcelUploadModal && (
-        <ExcelUploadModal
-          open={showExcelUploadModal}
-          onClose={() => setShowExcelUploadModal(false)}
+      {showDistributionUploadModal && (
+        <UploadDistributionModal
+          open={showDistributionUploadModal}
+          onClose={() => setShowDistributionUploadModal(false)}
           onSuccess={() => {
             loadData();
-            setShowExcelUploadModal(false);
+            setShowDistributionUploadModal(false);
+          }}
+        />
+      )}
+      {showSaleUploadModal && (
+        <UploadSaleModal
+          isOpen={showSaleUploadModal}
+          onClose={() => setShowSaleUploadModal(false)}
+          onSuccess={() => {
+            loadData();
+            setShowSaleUploadModal(false);
           }}
         />
       )}

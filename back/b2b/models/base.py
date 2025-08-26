@@ -19,7 +19,9 @@ class B2BOffer(models.Model):
     warehouse_receipt = models.ForeignKey(
         'warehouse.WarehouseReceipt',
         on_delete=models.CASCADE,
-        limit_choices_to={'receipt_type__in': ['import_cottage', 'distribution_agency']}
+        limit_choices_to={'receipt_type__in': ['import_cottage', 'distribution_agency']},
+        null=True,
+        blank=True
     )
     
     product = models.ForeignKey('core.Product', on_delete=models.CASCADE)
@@ -56,63 +58,38 @@ class B2BOffer(models.Model):
 
 class B2BSale(models.Model):
     
-    product_offer = models.OneToOneField(
+    purchase_id = models.CharField(max_length=100, unique=True, default='')
+    allocation_id = models.CharField(max_length=100, blank=True, default='')
+    cottage_code = models.CharField(max_length=50, blank=True)
+    
+    product_offer = models.ForeignKey(
         B2BOffer,
-        on_delete=models.CASCADE,
-        related_name='sale'
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='sales'
     )
+    product = models.ForeignKey('core.Product', on_delete=models.CASCADE, null=True)
+    customer = models.ForeignKey('core.Customer', on_delete=models.CASCADE, null=True)
+    receiver = models.ForeignKey('core.Receiver', on_delete=models.SET_NULL, null=True, blank=True)
     
-    cottage_number = models.CharField(max_length=50, editable=False, blank=True)
-    product_title = models.CharField(max_length=300, editable=False, default='')
-    offer_unit_price = models.DecimalField(max_digits=16, decimal_places=6, editable=False)
-    total_offer_weight = models.DecimalField(max_digits=10, decimal_places=2, editable=False)
+    total_weight_purchased = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    purchase_date = models.DateField(null=True)
+    unit_price = models.DecimalField(max_digits=16, decimal_places=6, default=0)
+    payment_amount = models.DecimalField(max_digits=15, decimal_places=0, default=0)
+    payment_method = models.CharField(max_length=50, blank=True)
     
-    sold_weight_before_transport = models.DecimalField(max_digits=10, decimal_places=2, default=0, editable=False)
-    remaining_weight_before_transport = models.DecimalField(max_digits=10, decimal_places=2, default=0, editable=False)
-    sold_weight_after_transport = models.DecimalField(max_digits=10, decimal_places=2, default=0, editable=False)
-    remaining_weight_after_transport = models.DecimalField(max_digits=10, decimal_places=2, default=0, editable=False)
+    province = models.CharField(max_length=100, blank=True)
+    city = models.CharField(max_length=100, blank=True)
+    tracking_number = models.CharField(max_length=100, blank=True)
     
-    offer_status = models.CharField(max_length=10, choices=STATUS_CHOICES, editable=False)
-    entry_customs = models.CharField(max_length=200, blank=True, editable=False)
+    credit_description = models.TextField(blank=True)
     
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     
     def __str__(self):
-        return f"Sale {self.product_offer.offer_id} ({self.offer_status})"
-    
-    def save(self, *args, **kwargs):
-        if self.product_offer:
-            self.cottage_number = self.product_offer.cottage_number or ''
-            self.product_title = self.product_offer.product.name
-            self.offer_unit_price = self.product_offer.unit_price
-            self.total_offer_weight = self.product_offer.offer_weight
-            self.offer_status = self.product_offer.status
-            
-            if self.product_offer.warehouse_receipt:
-                self.entry_customs = getattr(self.product_offer.warehouse_receipt, 'entry_customs', '')
-        
-        super().save(*args, **kwargs)
-        self.calculate_weights()
-    
-    def calculate_weights(self):
-        purchases = self.purchases.all()
-        
-        self.sold_weight_before_transport = purchases.aggregate(
-            total=models.Sum('purchase_weight')
-        )['total'] or 0
-        
-        self.remaining_weight_before_transport = self.total_offer_weight - self.sold_weight_before_transport
-        
-        self.sold_weight_after_transport = 0
-        self.remaining_weight_after_transport = self.total_offer_weight
-        
-        B2BSale.objects.filter(id=self.id).update(
-            sold_weight_before_transport=self.sold_weight_before_transport,
-            remaining_weight_before_transport=self.remaining_weight_before_transport,
-            sold_weight_after_transport=self.sold_weight_after_transport,
-            remaining_weight_after_transport=self.remaining_weight_after_transport
-        )
+        return f"Sale {self.purchase_id} - {self.customer}"
 
 
 class B2BPurchase(models.Model):
@@ -178,18 +155,10 @@ class B2BPurchaseDetail(models.Model):
 class B2BDistribution(models.Model):
     
     purchase_id = models.CharField(max_length=100, unique=True, null=True, blank=True)
-    b2b_offer = models.ForeignKey(B2BOffer, on_delete=models.SET_NULL, null=True, blank=True, related_name='distributions')
+    b2b_offer = models.ForeignKey(B2BOffer, on_delete=models.CASCADE, related_name='distributions', null=True)
     
     warehouse = models.ForeignKey('warehouse.Warehouse', on_delete=models.CASCADE)
-    warehouse_receipt = models.ForeignKey(
-        'warehouse.WarehouseReceipt',
-        on_delete=models.CASCADE,
-        limit_choices_to={'receipt_type': 'import_cottage'},
-    )
-    
     product = models.ForeignKey('core.Product', on_delete=models.CASCADE)
-    cottage_number = models.CharField(max_length=50, blank=True, editable=False)
-    
     customer = models.ForeignKey('core.Customer', on_delete=models.CASCADE)
     
     agency_date = models.DateTimeField()
@@ -198,6 +167,18 @@ class B2BDistribution(models.Model):
     
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+    
+    @property
+    def warehouse_receipt(self):
+        if self.b2b_offer:
+            return self.b2b_offer.warehouse_receipt
+        return None
+    
+    @property
+    def cottage_number(self):
+        if self.b2b_offer:
+            return self.b2b_offer.cottage_number
+        return ''
     
     def __str__(self):
         return f"Distribution {self.product.name} - {self.customer} ({self.agency_weight} kg)"

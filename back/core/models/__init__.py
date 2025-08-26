@@ -1,2 +1,2 @@
-from .parties import Supplier, Customer, Receiver, BaseParty, PartyType
+from .parties import Supplier, Customer, Receiver, PartyType
 from .product import Product

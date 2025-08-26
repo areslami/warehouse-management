@@ -61,24 +61,19 @@ class SupplierSerializer(serializers.ModelSerializer):
 
 
 class CustomerSerializer(serializers.ModelSerializer):
-    # Fields that are blank=True in the model
     company_name = serializers.CharField(required=False, allow_blank=True, max_length=200)
     national_id = serializers.CharField(required=False, allow_blank=True, max_length=11)
     full_name = serializers.CharField(required=False, allow_blank=True, max_length=100)
     personal_code = serializers.CharField(required=False, allow_blank=True, max_length=10)
     description = serializers.CharField(required=False, allow_blank=True)
     tags = serializers.CharField(required=False, allow_blank=True, max_length=200)
-    city = serializers.CharField(required=False, allow_blank=True, default='')
-    province = serializers.CharField(required=False, allow_blank=True, default='')
-    postal_code = serializers.CharField(required=False, allow_blank=True, default='')
-    mobile = serializers.CharField(required=False, allow_blank=True, default='')
+    phone = serializers.CharField(required=False, allow_blank=True, default='')
     
     class Meta:
         model = Customer
         fields = [
             'id', 'customer_type', 'company_name', 'national_id', 'full_name',
-            'personal_code', 'economic_code', 'phone', 'address', 'city', 
-            'province', 'postal_code', 'mobile', 'description',
+            'personal_code', 'economic_code', 'phone', 'address',  'postal_code', 'description',
             'tags', 'created_at', 'updated_at'
         ]
         read_only_fields = ['created_at', 'updated_at']
@@ -115,9 +110,9 @@ class ReceiverSerializer(serializers.ModelSerializer):
     class Meta:
         model = Receiver
         fields = [
-            'id', 'receiver_type', 'system_id', 'unique_id', 'company_name',
+            'id', 'receiver_type', 'unique_id', 'company_name',
             'national_id', 'full_name', 'personal_code', 'economic_code',
-            'phone', 'address', 'description', 'postal_code', 'created_at', 'updated_at'
+            'phone', 'address', 'description', 'postal_code', 'created_at', 'updated_at','receiver_veichle_type'
         ]
         read_only_fields = ['created_at', 'updated_at']
 

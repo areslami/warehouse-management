@@ -28,7 +28,7 @@ export interface Supplier {
 export interface Receiver {
   id: number;
   receiver_type: "Individual" | "Corporate";
-  system_id: string;
+  receiver_veichle_type: "single" | "double" | "trailer";
   unique_id: string;
   company_name: string;
   national_id: string;
@@ -53,10 +53,7 @@ export interface Customer {
   economic_code: string;
   phone: string;
   address: string;
-  city?: string;
-  province?: string;
   postal_code?: string;
-  mobile?: string;
   description?: string;
   tags?: string;
   created_at: string;

@@ -1,12 +1,14 @@
 from bs4 import BeautifulSoup
+from django.db import transaction
 import jdatetime
 from decimal import Decimal
 from datetime import datetime
 import re
 from django.db.models import Q
+from core.models.parties import PartyType, Receiver
 from core.models import Product, Customer
 from .models import B2BOffer
-from .excel_config import EXCEL_FIELD_MAPPING
+from .excel_config import EXCEL_FIELD_MAPPING_DISTRIBUTION, EXCEL_FIELD_MAPPING_SALE
 
 
 def parse_html_table(content):
@@ -28,6 +30,7 @@ def parse_html_table(content):
 
 def persian_to_gregorian(date_str):
     try:
+        date_str = str(date_str)
         y, m, d = map(int, date_str.split('/'))
         gregorian_date = jdatetime.date(y, m, d).togregorian()
         return gregorian_date.strftime('%Y-%m-%d')
@@ -37,16 +40,256 @@ def persian_to_gregorian(date_str):
 
 
 def clean_number(value):
-    cleaned = re.sub(r'[^\d.]', '', value)
+    cleaned = re.sub(r'[^\d.]', '', str(value))
     return Decimal(cleaned) if cleaned else Decimal('0')
 
 
 def extract_product_parts(product_str):
+    product_str = str(product_str)
     match = re.match(r'(.+?)\s*/\s*(\d+)', product_str)
     if match:
         return match.group(1).strip(), match.group(2).strip()
     return product_str.strip(), None
 
+
+def convert_to_persian_numbers(text):
+    """Convert English/Arabic numbers to Persian numbers"""
+    if not text:
+        return text
+    
+    persian_digits = '۰۱۲۳۴۵۶۷۸۹'
+    english_digits = '0123456789'
+    arabic_digits = '٠١٢٣٤٥٦٧٨٩'
+    
+    # Convert English digits
+    for i, digit in enumerate(english_digits):
+        text = str(text).replace(digit, persian_digits[i])
+    
+    # Convert Arabic digits  
+    for i, digit in enumerate(arabic_digits):
+        text = str(text).replace(digit, persian_digits[i])
+    
+    return text
+
+
+
+def build_description(row, product_name, mapping, op_type='dist'):
+    parts = []
+    
+    weight_key = 'weight' if op_type == 'dist' else 'total_weight_purchased'
+    weight = row.get(mapping.get(weight_key, ''), '0')
+    op_text = 'توزیع' if op_type == 'dist' else 'فروش'
+    parts.append(f"{op_text} {convert_to_persian_numbers(weight)} کیلوگرم {product_name}" if weight != '0' else f"{op_text} {product_name}")
+    
+    credits = []
+    for i in range(1, 4):
+        prefix = 'credit' if op_type == 'dist' else 'agreement'
+        period = row.get(mapping.get(f'{prefix}_period_{i}', ''), '0')
+        amount = row.get(mapping.get(f'{prefix}_amount_{i}', ''), '0')
+        if period != '0' and amount != '0':
+            credits.append(f"{convert_to_persian_numbers(period)}روز/{convert_to_persian_numbers(amount)}تومان")
+    
+    if credits:
+        parts.append(f"توافقی: {' | '.join(credits)}")
+    
+    payment = row.get(mapping.get('payment_method', ''), '')
+    if payment:
+        parts.append(f"روش: {payment}")
+    
+    if op_type == 'sale':
+        desc = row.get(mapping.get('description', ''), '')
+        if desc:
+            parts.append(desc)
+    
+    return " • ".join(parts)
+
+
+def process_distribution_row(row):
+    product_str = row.get(EXCEL_FIELD_MAPPING_DISTRIBUTION['product_title'], '')
+    product_name, product_code = extract_product_parts(product_str)
+    
+    date_str = row.get(EXCEL_FIELD_MAPPING_DISTRIBUTION['date'], '')
+    if not date_str:
+        date_str = datetime.now().strftime('%Y/%m/%d')
+    
+    processed = {
+        'purchase_id': row.get(EXCEL_FIELD_MAPPING_DISTRIBUTION['purchase_id']),
+        'cottage_code': row.get(EXCEL_FIELD_MAPPING_DISTRIBUTION['cottage_code']),
+        'distribution_weight': clean_number(row.get(EXCEL_FIELD_MAPPING_DISTRIBUTION['weight'], '0')),
+        'distribution_date': persian_to_gregorian(date_str),
+        'total_amount': clean_number(row.get(EXCEL_FIELD_MAPPING_DISTRIBUTION['total_amount'], '0')),
+        'unit_price': clean_number(row.get(EXCEL_FIELD_MAPPING_DISTRIBUTION['unit_price'], '0')),
+        'product_name': product_name,
+        'product_code': product_code,
+        'customer_name': row.get(EXCEL_FIELD_MAPPING_DISTRIBUTION['customer_name']),
+        'payment_method': row.get(EXCEL_FIELD_MAPPING_DISTRIBUTION['payment_method']),
+        'credit_description': build_description(row, product_name, EXCEL_FIELD_MAPPING_DISTRIBUTION, 'dist'),
+        'unmapped': {},
+    }
+    
+    product = find_product(product_name, product_code)
+    customer = find_customer(row.get(EXCEL_FIELD_MAPPING_DISTRIBUTION['customer_name']))
+    offer = find_offer(row.get(EXCEL_FIELD_MAPPING_DISTRIBUTION['cottage_code']))
+    
+    if product:
+        processed['product'] = {'id': product.id, 'name': product.name}
+    else:
+        processed['product'] = None
+        
+    if customer:
+        processed['customer'] = {'id': customer.id, 'name': getattr(customer, 'company_name', None) or customer.full_name}
+    else:
+        processed['customer'] = None
+        
+    if offer:
+        processed['offer'] = {'id': offer.id, 'offer_id': offer.offer_id}
+    else:
+        processed['offer'] = None
+    
+    known = set(EXCEL_FIELD_MAPPING_DISTRIBUTION.values())
+    for key, value in row.items():
+        if key not in known and value and value != '0':
+            processed['unmapped'][key] = value
+    
+    return processed
+
+
+
+def process_sale_row(row):
+    product_title = str(row.get(EXCEL_FIELD_MAPPING_SALE['product_title'], ''))
+    product_name, product_code = extract_product_parts(product_title)
+    
+    date_str = str(row.get(EXCEL_FIELD_MAPPING_SALE['purchase_date'], ''))
+    if not date_str:
+        date_str = datetime.now().strftime('%Y/%m/%d')
+    
+    processed = {
+        'purchase_id': row.get(EXCEL_FIELD_MAPPING_SALE['purchase_id']),
+        'allocation_id': row.get(EXCEL_FIELD_MAPPING_SALE['allocation_id']),
+        'cottage_code': row.get(EXCEL_FIELD_MAPPING_SALE['cottage_code']),
+        'total_weight_purchased': clean_number(row.get(EXCEL_FIELD_MAPPING_SALE['total_weight_purchased'], '0')),
+        'purchase_date': persian_to_gregorian(date_str),
+        'unit_price': clean_number(row.get(EXCEL_FIELD_MAPPING_SALE['unit_price'], '0')),
+        'payment_amount': clean_number(row.get(EXCEL_FIELD_MAPPING_SALE['payment_amount'], '0')),
+        'product_name': product_name,
+        'product_code': product_code,
+        'customer_name': row.get(EXCEL_FIELD_MAPPING_SALE['customer_name']),
+        'payment_method': row.get(EXCEL_FIELD_MAPPING_SALE['payment_method']),
+        'credit_description': build_description(row, product_name, EXCEL_FIELD_MAPPING_SALE, 'sale'),
+        'province': row.get(EXCEL_FIELD_MAPPING_SALE['province']),
+        'city': row.get(EXCEL_FIELD_MAPPING_SALE['city']),
+        'tracking_number': row.get(EXCEL_FIELD_MAPPING_SALE['tracking_number']),
+    }
+    
+    customer, customerCreated = createOrUpdateCustomer(row)
+    receiver, receiverCreated = createOrUpdateReceiver(row)
+    
+    offer_id = row.get(EXCEL_FIELD_MAPPING_SALE['offer_id'])
+    cottage_code = row.get(EXCEL_FIELD_MAPPING_SALE['cottage_code'])
+    offer = find_offer(offer_id) if offer_id else find_offer(cottage_code)
+    product = find_product(product_name, product_code)
+    
+    if offer:
+        processed['offer'] = {'id': offer.id, 'offer_id': offer.offer_id}
+    else:
+        processed['offer'] = None
+        
+    if product:
+        processed['product'] = {'id': product.id, 'name': product.name}
+    else:
+        processed['product'] = None
+        
+    if customer:
+        processed['customer'] = {'id': customer.id, 'name': getattr(customer, 'company_name', None) or customer.full_name}
+    else:
+        processed['customer'] = None
+        
+    if receiver:
+        processed['receiver'] = {'id': receiver.id, 'name': getattr(receiver, 'company_name', None) or receiver.full_name}
+    else:
+        processed['receiver'] = None
+    
+    return processed,customerCreated,receiverCreated
+
+def createOrUpdateReceiver(row):
+    receiver_name = str(row.get(EXCEL_FIELD_MAPPING_SALE['receiver_name'], ''))
+    receiver_economic_code = str(row.get(EXCEL_FIELD_MAPPING_SALE['receiver_economic_code'], ''))
+    single = str(row.get(EXCEL_FIELD_MAPPING_SALE['single'], ''))
+    double = str(row.get(EXCEL_FIELD_MAPPING_SALE['double'], ''))
+    trailer = str(row.get(EXCEL_FIELD_MAPPING_SALE['trailer'], ''))
+    receiver_address = str(row.get(EXCEL_FIELD_MAPPING_SALE['receiver_address'], ''))
+    receiver_postal_code = str(row.get(EXCEL_FIELD_MAPPING_SALE['receiver_postal_code'], ''))
+    receiver_phone = str(row.get(EXCEL_FIELD_MAPPING_SALE['receiver_phone'], ''))
+    receiver_national_id = str(row.get(EXCEL_FIELD_MAPPING_SALE['receiver_national_id'], ''))
+    
+    if 'شرکت' in receiver_name or 'خدمات' in receiver_name:
+        receiver_type = PartyType.CORPORATE
+        full_name = ''
+        company_name = receiver_name
+        national_id = receiver_national_id
+        personal_code = None
+    else:
+        receiver_type = PartyType.INDIVIDUAL
+        full_name = receiver_name
+        company_name = ''
+        national_id = None
+        personal_code = receiver_national_id
+    with transaction.atomic():
+        receiver, created = Receiver.objects.update_or_create(
+            economic_code=receiver_economic_code,
+            defaults={
+                'receiver_type': receiver_type,
+                'company_name': company_name,
+                'national_id': national_id,
+                'full_name': full_name,
+                'personal_code': personal_code,
+                'phone': receiver_phone,
+                'address': receiver_address,
+                'receiver_veichle_type': 'single' if single else 'double' if double else 'trailer' if trailer else 'single',
+                'postal_code': receiver_postal_code or '',
+                'description': f'ایجاد شده از طریق بارگذاری فایل فروش بازارگاه ',
+            }
+        )
+    return receiver,created
+def createOrUpdateCustomer(row):
+    
+    customer_name = str(row.get(EXCEL_FIELD_MAPPING_SALE['customer_name'], ''))
+    customer_national_code = str(row.get(EXCEL_FIELD_MAPPING_SALE['customer_national_code'], ''))
+    customer_postal_code = str(row.get(EXCEL_FIELD_MAPPING_SALE['customer_postal_code'], ''))
+    customer_address = str(row.get(EXCEL_FIELD_MAPPING_SALE['customer_address'], ''))
+    customer_phone = str(row.get(EXCEL_FIELD_MAPPING_SALE['customer_phone'], ''))
+    customer_economic_code = str(row.get(EXCEL_FIELD_MAPPING_SALE['customer_economic_code'], ''))
+    customer_type = str(row.get(EXCEL_FIELD_MAPPING_SALE['customer_type'], ''))
+    
+    if str(customer_type).startswith('خریداران'):
+        cust_type = PartyType.INDIVIDUAL
+        full_name = customer_name
+        company_name = ''
+        national_id = None
+        personal_code = customer_national_code
+    else:
+        cust_type = PartyType.CORPORATE
+        full_name = ''
+        company_name = customer_name
+        national_id = customer_national_code
+        personal_code = None
+    with transaction.atomic():
+        customer, created = Customer.objects.update_or_create(
+            economic_code=customer_economic_code,
+            defaults={
+                'customer_type': cust_type,
+                'company_name': company_name,
+                'national_id': national_id,
+                'full_name': full_name,
+                'personal_code': personal_code,
+                'phone': customer_phone,
+                'address': customer_address,
+                'postal_code': customer_postal_code or '',
+                'description': f'ایجاد شده از طریق بارگذاری فایل فروش بازارگاه ',
+            }
+        )
+    return customer,created
+# ------------------ FINDs ------------------
 
 def find_product(name, code=None):
     if code:
@@ -73,133 +316,3 @@ def find_offer(cottage_code):
         Q(cottage_number=cottage_code)
     ).first()
 
-
-def build_credit_info(row):
-    parts = []
-    for i in range(1, 4):
-        period = row.get(EXCEL_FIELD_MAPPING.get(f'credit_period_{i}'), '0')
-        amount = row.get(EXCEL_FIELD_MAPPING.get(f'credit_amount_{i}'), '0')
-        
-        if period != '0' and amount != '0':
-            parts.append(f"بازه {convert_to_persian_numbers(str(i))}: {convert_to_persian_numbers(period)} روز، مبلغ: {convert_to_persian_numbers(amount)} تومان")
-    
-    if parts:
-        return f"شرایط پرداخت اعتباری: {' • '.join(parts)}"
-    
-    payment_method = row.get(EXCEL_FIELD_MAPPING.get('payment_method', ''), '')
-    return f"نوع پرداخت: {payment_method}" if payment_method else "پرداخت نقدی"
-
-
-def convert_to_persian_numbers(text):
-    """Convert English/Arabic numbers to Persian numbers"""
-    if not text:
-        return text
-    
-    persian_digits = '۰۱۲۳۴۵۶۷۸۹'
-    english_digits = '0123456789'
-    arabic_digits = '٠١٢٣٤٥٦٧٨٩'
-    
-    # Convert English digits
-    for i, digit in enumerate(english_digits):
-        text = str(text).replace(digit, persian_digits[i])
-    
-    # Convert Arabic digits  
-    for i, digit in enumerate(arabic_digits):
-        text = str(text).replace(digit, persian_digits[i])
-    
-    return text
-
-
-def build_beautiful_description(row, product_name):
-    parts = []
-    
-    weight = row.get(EXCEL_FIELD_MAPPING.get('weight', ''), '0')
-    if weight and weight != '0':
-        parts.append(f"توزیع {convert_to_persian_numbers(weight)} کیلوگرم {product_name}")
-    else:
-        parts.append(f"توزیع محصول {product_name}")
-    
-    customer_name = row.get(EXCEL_FIELD_MAPPING.get('customer_name', ''), '')
-    if customer_name:
-        parts.append(f"به مشتری: {customer_name}")
-    
-    total_amount = row.get(EXCEL_FIELD_MAPPING.get('total_amount', ''), '0')
-    if total_amount and total_amount != '0':
-        parts.append(f"مبلغ کل: {convert_to_persian_numbers(total_amount)} تومان")
-    
-    unit_price = row.get(EXCEL_FIELD_MAPPING.get('unit_price', ''), '0')
-    if unit_price and unit_price != '0':
-        parts.append(f"قیمت واحد: {convert_to_persian_numbers(unit_price)} تومان")
-    
-    credit_info = build_credit_info(row)
-    if credit_info:
-        parts.append(credit_info)
-    
-    purchase_id = row.get(EXCEL_FIELD_MAPPING.get('purchase_id', ''), '')
-    if purchase_id:
-        parts.append(f"شناسه خرید: {convert_to_persian_numbers(purchase_id)}")
-    
-    date_str = row.get(EXCEL_FIELD_MAPPING.get('date', ''), '')
-    if date_str:
-        parts.append(f"تاریخ: {date_str}")
-
-    known = set(EXCEL_FIELD_MAPPING.values())
-    unmapped_parts = []
-    for key, value in row.items():
-        if key not in known and value and value != '0':
-            unmapped_parts.append(f"{key}: {convert_to_persian_numbers(str(value))}")
-    
-    if unmapped_parts:
-        parts.append(f"اطلاعات اضافی - {' • '.join(unmapped_parts)}")
-    
-    return " • ".join(parts)
-
-
-def process_row(row):
-    product_str = row.get(EXCEL_FIELD_MAPPING['product_title'], '')
-    product_name, product_code = extract_product_parts(product_str)
-    
-    date_str = row.get(EXCEL_FIELD_MAPPING['date'], '')
-    if not date_str:
-        date_str = datetime.now().strftime('%Y/%m/%d')
-    
-    processed = {
-        'purchase_id': row.get(EXCEL_FIELD_MAPPING['purchase_id']),
-        'cottage_code': row.get(EXCEL_FIELD_MAPPING['cottage_code']),
-        'distribution_weight': clean_number(row.get(EXCEL_FIELD_MAPPING['weight'], '0')),
-        'distribution_date': persian_to_gregorian(date_str),
-        'total_amount': clean_number(row.get(EXCEL_FIELD_MAPPING['total_amount'], '0')),
-        'unit_price': clean_number(row.get(EXCEL_FIELD_MAPPING['unit_price'], '0')),
-        'product_name': product_name,
-        'product_code': product_code,
-        'customer_name': row.get(EXCEL_FIELD_MAPPING['customer_name']),
-        'payment_method': row.get(EXCEL_FIELD_MAPPING['payment_method']),
-        'credit_description': build_beautiful_description(row, product_name),
-        'unmapped': {},
-    }
-    
-    product = find_product(product_name, product_code)
-    customer = find_customer(row.get(EXCEL_FIELD_MAPPING['customer_name']))
-    offer = find_offer(row.get(EXCEL_FIELD_MAPPING['cottage_code']))
-    
-    if product:
-        processed['product'] = {'id': product.id, 'name': product.name}
-    else:
-        processed['product'] = None
-        
-    if customer:
-        processed['customer'] = {'id': customer.id, 'name': getattr(customer, 'company_name', None) or customer.full_name}
-    else:
-        processed['customer'] = None
-        
-    if offer:
-        processed['offer'] = {'id': offer.id, 'offer_id': offer.offer_id}
-    else:
-        processed['offer'] = None
-    
-    known = set(EXCEL_FIELD_MAPPING.values())
-    for key, value in row.items():
-        if key not in known and value and value != '0':
-            processed['unmapped'][key] = value
-    
-    return processed

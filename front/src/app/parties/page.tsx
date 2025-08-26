@@ -43,6 +43,7 @@ export default function PartiesPage() {
   const [editingReceiver, setEditingReceiver] = useState<Receiver | null>(null);
   const [editingShipping, setEditingShipping] = useState<ShippingCompany | null>(null);
 
+
   const [searchTerm, setSearchTerm] = useState("");
   const [sheetOpen, setSheetOpen] = useState(false);
   const [selectedItem, setSelectedItem] = useState<Supplier | Customer | Receiver | ShippingCompany | null>(null);
@@ -124,8 +125,7 @@ export default function PartiesPage() {
 
   const filteredReceivers = useMemo(() =>
     receivers.filter(r => getPartyDisplayName(r).toLowerCase().includes(searchTerm.toLowerCase()) ||
-      r.economic_code?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      r.system_id?.toLowerCase().includes(searchTerm.toLowerCase()))
+      r.economic_code?.toLowerCase().includes(searchTerm.toLowerCase()))
     , [receivers, searchTerm]);
 
   const filteredShipping = useMemo(() =>
@@ -327,7 +327,6 @@ export default function PartiesPage() {
                     <TableHead className="text-right">{tCommon('table_headers.phone')}</TableHead>
                     <TableHead className="text-right">{tCommon('table_headers.economic_code')}</TableHead>
                     <TableHead className="text-right">{tCommon('table_headers.unique_id')}</TableHead>
-                    <TableHead className="text-right">{tCommon('table_headers.system_id')}</TableHead>
                     <TableHead className="text-right">{tCommon('table_headers.type')}</TableHead>
                     <TableHead className="text-right">{tCommon('table_headers.name_company')}</TableHead>
                   </TableRow>
@@ -364,7 +363,6 @@ export default function PartiesPage() {
                       <TableCell>{receiver.phone}</TableCell>
                       <TableCell>{receiver.economic_code}</TableCell>
                       <TableCell>{receiver.unique_id}</TableCell>
-                      <TableCell>{receiver.system_id}</TableCell>
                       <TableCell>{receiver.receiver_type === "Corporate" ? tCommon('party_types.corporate') : tCommon('party_types.individual')}</TableCell>
                       <TableCell className="font-medium">{getPartyDisplayName(receiver)}</TableCell>
                     </TableRow>
@@ -545,7 +543,6 @@ export default function PartiesPage() {
                     {selectedItem.description && <div><strong>{tCommon('detail_labels.description')}</strong> {selectedItem.description}</div>}
                     {selectedType === 'receiver' && (
                       <>
-                        <div><strong>{tCommon('detail_labels.system_id_label')}</strong> {selectedItem.system_id || '-'}</div>
                         <div><strong>{tCommon('detail_labels.unique_id_label')}</strong> {selectedItem.unique_id || '-'}</div>
                         {selectedItem.postal_code && <div><strong>{tCommon('detail_labels.postal_code')}</strong> {selectedItem.postal_code}</div>}
                       </>

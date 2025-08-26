@@ -23,7 +23,7 @@ import { createWarehouse } from "@/lib/api/warehouse";
 import { createProduct } from "@/lib/api/core";
 import { createPurchaseProforma } from "@/lib/api/finance";
 
-type WarehouseReceiptFormData = {
+export type WarehouseReceiptFormData = {
   receipt_id?: string;
   receipt_type: "import_cottage" | "distribution_cottage" | "purchase";
   date: string;

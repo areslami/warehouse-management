@@ -26,12 +26,10 @@ import { createB2BOffer } from "@/lib/api/b2b";
 
 export type B2BDistributionFormData = {
   purchase_id?: string;
-  b2b_offer?: number;
+  b2b_offer: number;
   warehouse: number;
-  warehouse_receipt?: number;
   product: number;
   customer: number;
-  sales_proforma?: number;
   agency_weight: number;
   agency_date: string;
   description?: string;
@@ -79,12 +77,10 @@ export function B2BDistributionModal({ trigger, onSubmit, onClose, initialData, 
 
   const b2bDistributionSchema = z.object({
     purchase_id: z.string().optional(),
-    b2b_offer: z.number().optional(),
+    b2b_offer: z.number().min(1, tval("b2b-offer")),
     warehouse: z.number().min(1, tval("warehouse")),
-    warehouse_receipt: z.number().optional(),
     product: z.number().min(1, tval("product")),
     customer: z.number().min(1, tval("customer")),
-    sales_proforma: z.number().optional(),
     agency_weight: z.number().positive(tval("agency-weight")),
     agency_date: z.string().min(1, tval("agency-date")),
     description: z.string().optional(),
@@ -96,12 +92,10 @@ export function B2BDistributionModal({ trigger, onSubmit, onClose, initialData, 
     resolver: zodResolver(b2bDistributionSchema),
     defaultValues: {
       purchase_id: initialData?.purchase_id || "",
-      b2b_offer: initialData?.b2b_offer || undefined,
+      b2b_offer: initialData?.b2b_offer || 0,
       warehouse: initialData?.warehouse || 0,
-      warehouse_receipt: initialData?.warehouse_receipt || 0,
       product: initialData?.product || 0,
       customer: initialData?.customer || 0,
-      sales_proforma: initialData?.sales_proforma || 0,
       agency_weight: initialData?.agency_weight || 0,
       agency_date: initialData?.agency_date || "",
       description: initialData?.description || "",
@@ -304,15 +298,13 @@ export function B2BDistributionModal({ trigger, onSubmit, onClose, initialData, 
                 name="b2b_offer"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>{t("b2b-offer")} <span className="text-gray-400 text-sm">{t("optional")}</span></FormLabel>
+                    <FormLabel>{t("b2b-offer")}</FormLabel>
                     <FormControl>
                       <Select
-                        value={field.value ? field.value.toString() : ""}
+                        value={field.value > 0 ? field.value.toString() : ""}
                         onValueChange={(value) => {
                           if (value === "new") {
                             setShowOfferModal(true);
-                          } else if (value === "none") {
-                            field.onChange(undefined);
                           } else if (value) {
                             field.onChange(Number(value));
                           }
@@ -322,9 +314,6 @@ export function B2BDistributionModal({ trigger, onSubmit, onClose, initialData, 
                           <SelectValue placeholder={t("select-b2b-offer")} />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="none">
-                            {t("no-offer")}
-                          </SelectItem>
                           <SelectItem
                             value="new"
                             className="font-semibold text-[#f6d265]"

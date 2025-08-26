@@ -30,30 +30,55 @@ class B2BOfferListSerializer(serializers.ModelSerializer):
 
 
 class B2BSaleSerializer(serializers.ModelSerializer):
-    purchases = serializers.SerializerMethodField()
+    product_name = serializers.SerializerMethodField()
+    customer_name = serializers.SerializerMethodField()
+    receiver_name = serializers.SerializerMethodField()
     
     class Meta:
         model = B2BSale
         fields = '__all__'
-        read_only_fields = ['cottage_number', 'product_title', 'offer_unit_price', 
-                           'total_offer_weight', 'sold_weight_before_transport',
-                           'remaining_weight_before_transport', 'sold_weight_after_transport',
-                           'remaining_weight_after_transport', 'offer_status', 'entry_customs',
-                           'created_at', 'updated_at']
+        read_only_fields = ['created_at', 'updated_at']
     
-    def get_purchases(self, obj):
-        return B2BPurchaseListSerializer(obj.purchases.all(), many=True).data
+    def get_product_name(self, obj):
+        if obj.product:
+            return obj.product.name
+        return None
+    
+    def get_customer_name(self, obj):
+        if obj.customer:
+            return obj.customer.company_name or obj.customer.full_name
+        return None
+    
+    def get_receiver_name(self, obj):
+        if obj.receiver:
+            return obj.receiver.company_name or obj.receiver.full_name
+        return None
 
 
 class B2BSaleListSerializer(serializers.ModelSerializer):
-    offer_id = serializers.CharField(source='product_offer.offer_id', read_only=True)
-    product_title = serializers.CharField(read_only=True)
+    product_name = serializers.SerializerMethodField()
+    customer_name = serializers.SerializerMethodField()
+    receiver_name = serializers.SerializerMethodField()
     
     class Meta:
         model = B2BSale
-        fields = ['id', 'offer_id', 'product_title', 'total_offer_weight',
-                  'sold_weight_before_transport', 'remaining_weight_before_transport',
-                  'offer_status', 'created_at']
+        fields = ['id', 'purchase_id', 'allocation_id', 'product_name', 'customer_name',
+                  'receiver_name', 'total_weight_purchased', 'payment_amount', 'purchase_date', 'tracking_number']
+    
+    def get_product_name(self, obj):
+        if obj.product:
+            return obj.product.name
+        return None
+    
+    def get_customer_name(self, obj):
+        if obj.customer:
+            return obj.customer.company_name or obj.customer.full_name
+        return None
+    
+    def get_receiver_name(self, obj):
+        if obj.receiver:
+            return obj.receiver.company_name or obj.receiver.full_name
+        return None
 
 
 class B2BPurchaseSerializer(serializers.ModelSerializer):
@@ -91,28 +116,42 @@ class B2BDistributionSerializer(serializers.ModelSerializer):
     product_name = serializers.CharField(source='product.name', read_only=True)
     customer_name = serializers.SerializerMethodField()
     b2b_offer_id = serializers.CharField(source='b2b_offer.offer_id', read_only=True)
+    cottage_number = serializers.SerializerMethodField()
+    warehouse_receipt = serializers.SerializerMethodField()
     
     class Meta:
         model = B2BDistribution
         fields = '__all__'
-        read_only_fields = ['warehouse', 'cottage_number', 'created_at', 'updated_at']
+        read_only_fields = ['created_at', 'updated_at']
     
     def get_customer_name(self, obj):
         if obj.customer.customer_type == 'Corporate':
             return obj.customer.company_name
         return obj.customer.full_name
+    
+    def get_cottage_number(self, obj):
+        return obj.cottage_number
+    
+    def get_warehouse_receipt(self, obj):
+        return obj.warehouse_receipt.id if obj.warehouse_receipt else None
 
 
 class B2BDistributionListSerializer(serializers.ModelSerializer):
     product_name = serializers.CharField(source='product.name', read_only=True)
     customer_name = serializers.SerializerMethodField()
+    warehouse_name = serializers.CharField(source='warehouse.name', read_only=True)
+    b2b_offer_id = serializers.CharField(source='b2b_offer.offer_id', read_only=True)
+    cottage_number = serializers.SerializerMethodField()
     
     class Meta:
         model = B2BDistribution
-        fields = ['id', 'purchase_id', 'cottage_number', 'product_name', 'customer_name', 
-                  'agency_weight', 'agency_date']
+        fields = ['id', 'purchase_id', 'cottage_number', 'b2b_offer_id', 'warehouse_name', 
+                  'product_name', 'customer_name', 'agency_weight', 'agency_date']
     
     def get_customer_name(self, obj):
         if obj.customer.customer_type == 'Corporate':
             return obj.customer.company_name
         return obj.customer.full_name
+    
+    def get_cottage_number(self, obj):
+        return obj.cottage_number

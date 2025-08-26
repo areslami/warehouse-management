@@ -3,7 +3,7 @@ export interface B2BOffer {
   offer_id: string;
   product: number;
   product_name?: string;
-  warehouse_receipt: number;
+  warehouse_receipt?: number;
   warehouse_receipt_id?: string;
   offer_weight: number;
   unit_price: number;
@@ -19,18 +19,25 @@ export interface B2BOffer {
 
 export interface B2BSale {
   id: number;
-  product_offer: number;
-  cottage_number?: string;
-  product_title?: string;
-  offer_unit_price?: number;
-  total_offer_weight?: number;
-  sold_weight_before_transport?: number;
-  remaining_weight_before_transport?: number;
-  sold_weight_after_transport?: number;
-  remaining_weight_after_transport?: number;
-  offer_status?: string;
-  entry_customs?: string;
-  description?: string;
+  purchase_id: string;
+  allocation_id: string;
+  cottage_code: string;
+  product_offer?: number;
+  product: number;
+  customer: number;
+  receiver?: number;
+  total_weight_purchased: string;
+  purchase_date: string;
+  unit_price: string;
+  payment_amount: string;
+  payment_method: string;
+  province: string;
+  city: string;
+  tracking_number: string;
+  credit_description: string;
+  product_name?: string;
+  customer_name?: string;
+  receiver_name?: string;
   created_at?: string;
   updated_at?: string;
 }
@@ -57,11 +64,11 @@ export interface B2BPurchaseDetail {
 export interface B2BDistribution {
   id: number;
   purchase_id?: string;
-  b2b_offer?: number;
+  b2b_offer: number;
   b2b_offer_id?: string;
   warehouse: number;
   warehouse_name?: string;
-  warehouse_receipt: number;
+  warehouse_receipt?: number;
   product: number;
   product_name?: string;
   customer: number;

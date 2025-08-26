@@ -19,10 +19,7 @@ export type CustomerFormData = {
   economic_code: string;
   phone: string;
   address: string;
-  city?: string;
-  province?: string;
   postal_code?: string;
-  mobile?: string;
   description?: string;
   tags?: string;
 };
@@ -47,10 +44,7 @@ export function CustomerModal({ trigger, onSubmit, onClose, initialData }: Custo
     economic_code: z.string().min(1, tval("economic-code")),
     phone: z.string().min(1, tval("phone")),
     address: z.string().min(1, tval("address")),
-    city: z.string().optional(),
-    province: z.string().optional(),
     postal_code: z.string().optional(),
-    mobile: z.string().optional(),
     description: z.string().optional(),
     tags: z.string().optional(),
   }).refine((data) => {
@@ -76,10 +70,7 @@ export function CustomerModal({ trigger, onSubmit, onClose, initialData }: Custo
       economic_code: initialData?.economic_code || "",
       phone: initialData?.phone || "",
       address: initialData?.address || "",
-      city: initialData?.city || "",
-      province: initialData?.province || "",
       postal_code: initialData?.postal_code || "",
-      mobile: initialData?.mobile || "",
       description: initialData?.description || "",
       tags: initialData?.tags || "",
     },
@@ -245,65 +236,6 @@ export function CustomerModal({ trigger, onSubmit, onClose, initialData }: Custo
               )}
             />
 
-            <div className="grid grid-cols-2 gap-4">
-              <FormField
-                control={form.control}
-                name="city"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>{t("city")}</FormLabel>
-                    <FormControl>
-                      <Input {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="province"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>{t("province")}</FormLabel>
-                    <FormControl>
-                      <Input {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <FormField
-                control={form.control}
-                name="postal_code"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>{t("postal_code")}</FormLabel>
-                    <FormControl>
-                      <Input {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="mobile"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>{t("mobile")}</FormLabel>
-                    <FormControl>
-                      <Input {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
 
             <div className="grid grid-cols-2 gap-4">
               <FormField
