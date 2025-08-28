@@ -20,6 +20,7 @@ import {
   filterByWarehouse,
   searchFilter
 } from "@/lib/utils/warehouse-utils";
+import { formatNumber } from "@/lib/utils/number-format";
 import { Edit, Plus, Search, Trash2 } from "lucide-react";
 import { Input } from "../ui/input";
 import { Button } from "../ui/button";
@@ -199,7 +200,7 @@ export function DeliveryFulfillmentTab({ selectedWarehouseId }: DeliveryFulfillm
                   <TableCell>{delivery.warehouse_name || '-'}</TableCell>
                   <TableCell><PersianDateTableCell date={delivery.issue_date} /></TableCell>
                   <TableCell><PersianDateTableCell date={delivery.validity_date} /></TableCell>
-                  <TableCell>{delivery.total_weight}</TableCell>
+                  <TableCell>{formatNumber(delivery.total_weight)}</TableCell>
                   <TableCell>
                     <div className="flex gap-2">
                       <Button

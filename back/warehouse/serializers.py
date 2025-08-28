@@ -6,8 +6,6 @@ from .models import (
 
 
 class WarehouseSerializer(serializers.ModelSerializer):
-    description = serializers.CharField(required=False, allow_blank=True)
-    
     class Meta:
         model = Warehouse
         fields = [
@@ -18,13 +16,10 @@ class WarehouseSerializer(serializers.ModelSerializer):
 
 
 class ShippingCompanySerializer(serializers.ModelSerializer):
-    email = serializers.EmailField(required=False, allow_blank=True)
-    description = serializers.CharField(required=False, allow_blank=True)
-    
     class Meta:
         model = ShippingCompany
         fields = [
-            'id', 'name', 'contact_person', 'phone', 'email', 'address',
+            'id', 'name', 'contact_person', 'phone', 'address',
             'description', 'created_at', 'updated_at'
         ]
         read_only_fields = ['created_at', 'updated_at']
@@ -43,9 +38,6 @@ class WarehouseReceiptSerializer(serializers.ModelSerializer):
     items = WarehouseReceiptItemSerializer(many=True, required=False)
     warehouse_name = serializers.CharField(source='warehouse.name', read_only=True)
     proforma_serial = serializers.CharField(source='proforma.serial_number', read_only=True)
-    receipt_id = serializers.CharField(required=False, allow_blank=True, allow_null=True, max_length=50)
-    description = serializers.CharField(required=False, allow_blank=True)
-    cottage_serial_number = serializers.CharField(required=False, allow_blank=True, allow_null=True, max_length=100)
     
     class Meta:
         model = WarehouseReceipt
@@ -99,8 +91,7 @@ class DispatchIssueItemSerializer(serializers.ModelSerializer):
         ]
     
     def get_receiver_name(self, obj):
-        from core.models import PartyType
-        if obj.receiver.receiver_type == PartyType.CORPORATE:
+        if obj.receiver.receiver_type == 'corporate':
             return obj.receiver.company_name
         return obj.receiver.full_name
 
@@ -110,8 +101,6 @@ class DispatchIssueSerializer(serializers.ModelSerializer):
     warehouse_name = serializers.CharField(source='warehouse.name', read_only=True)
     shipping_company_name = serializers.CharField(source='shipping_company.name', read_only=True)
     sales_proforma_serial = serializers.CharField(source='sales_proforma.serial_number', read_only=True)
-    dispatch_id = serializers.CharField(required=False, allow_blank=True, allow_null=True)
-    description = serializers.CharField(required=False, allow_blank=True)
     
     class Meta:
         model = DispatchIssue
@@ -149,8 +138,8 @@ class DeliveryFulfillmentItemSerializer(serializers.ModelSerializer):
         ]
     
     def get_receiver_name(self, obj):
-        from core.models import PartyType
-        if obj.receiver.receiver_type == PartyType.CORPORATE:
+         
+        if obj.receiver.receiver_type == 'corporate':
             return obj.receiver.company_name
         return obj.receiver.full_name
 
@@ -187,14 +176,10 @@ class DeliveryFulfillmentSerializer(serializers.ModelSerializer):
 
 class WarehouseReceiptListSerializer(serializers.ModelSerializer):
     warehouse_name = serializers.CharField(source='warehouse.name', read_only=True)
-    items_count = serializers.SerializerMethodField()
     
     class Meta:
         model = WarehouseReceipt
         fields = [
             'id', 'receipt_id', 'receipt_type', 'date', 'warehouse', 'warehouse_name',
-            'total_weight', 'items_count', 'created_at'
+            'total_weight', 'created_at'
         ]
-    
-    def get_items_count(self, obj):
-        return obj.items.count()

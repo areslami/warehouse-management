@@ -11,15 +11,15 @@ import { Input } from "../ui/input";
 import { useTranslations } from "next-intl";
 
 export type CustomerFormData = {
-  customer_type: "Individual" | "Corporate";
-  company_name: string;
-  national_id: string;
-  full_name: string;
-  personal_code: string;
+  customer_type: "individual" | "corporate";
+  company_name?: string;
+  national_id?: string;
+  full_name?: string;
+  personal_code?: string;
   economic_code: string;
   phone: string;
   address: string;
-  postal_code?: string;
+  postal_code: string;
   description?: string;
   tags?: string;
 };
@@ -36,22 +36,22 @@ export function CustomerModal({ trigger, onSubmit, onClose, initialData }: Custo
   const t = useTranslations("modals.customer");
 
   const customerSchema = z.object({
-    customer_type: z.enum(["Individual", "Corporate"]),
-    company_name: z.string(),
-    national_id: z.string(),
-    full_name: z.string(),
-    personal_code: z.string(),
+    customer_type: z.enum(["individual", "corporate"]),
+    company_name: z.string().optional(),
+    national_id: z.string().optional(),
+    full_name: z.string().optional(),
+    personal_code: z.string().optional(),
     economic_code: z.string().min(1, tval("economic-code")),
     phone: z.string().min(1, tval("phone")),
     address: z.string().min(1, tval("address")),
-    postal_code: z.string().optional(),
+    postal_code: z.string().min(1, tval("postal-code")),
     description: z.string().optional(),
     tags: z.string().optional(),
   }).refine((data) => {
-    if (data.customer_type === "Corporate") {
-      return data.company_name.length > 0 && data.national_id.length > 0;
+    if (data.customer_type === "corporate") {
+      return data.company_name && data.company_name.length > 0 && data.national_id && data.national_id.length > 0;
     }
-    return data.full_name.length > 0 && data.personal_code.length > 0;
+    return data.full_name && data.full_name.length > 0 && data.personal_code && data.personal_code.length > 0;
   }, {
     message: tval("party-fields"),
     path: ["customer_type"]
@@ -62,7 +62,7 @@ export function CustomerModal({ trigger, onSubmit, onClose, initialData }: Custo
   const form = useForm<CustomerFormData>({
     resolver: zodResolver(customerSchema),
     defaultValues: {
-      customer_type: initialData?.customer_type || "Individual",
+      customer_type: initialData?.customer_type || "individual",
       company_name: initialData?.company_name || "",
       national_id: initialData?.national_id || "",
       full_name: initialData?.full_name || "",
@@ -121,8 +121,8 @@ export function CustomerModal({ trigger, onSubmit, onClose, initialData }: Custo
                   <FormLabel>{t("customer-type")}</FormLabel>
                   <FormControl>
                     <select {...field} className="w-full px-3 py-2 border rounded-md">
-                      <option value="Individual">{t("type-individual")}</option>
-                      <option value="Corporate">{t("type-corporate")}</option>
+                      <option value="individual">{t("type-individual")}</option>
+                      <option value="corporate">{t("type-corporate")}</option>
                     </select>
                   </FormControl>
                   <FormMessage />
@@ -130,7 +130,7 @@ export function CustomerModal({ trigger, onSubmit, onClose, initialData }: Custo
               )}
             />
 
-            {customerType === "Corporate" ? (
+            {customerType === "corporate" ? (
               <div className="grid grid-cols-2 gap-4">
                 <FormField
                   control={form.control}
@@ -222,20 +222,35 @@ export function CustomerModal({ trigger, onSubmit, onClose, initialData }: Custo
               />
             </div>
 
-            <FormField
-              control={form.control}
-              name="address"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>{t("address")}</FormLabel>
-                  <FormControl>
-                    <Input {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+            <div className="grid grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="address"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>{t("address")}</FormLabel>
+                    <FormControl>
+                      <Input {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
 
+              <FormField
+                control={form.control}
+                name="postal_code"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>{t("postal-code")}</FormLabel>
+                    <FormControl>
+                      <Input {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
 
             <div className="grid grid-cols-2 gap-4">
               <FormField
@@ -243,7 +258,7 @@ export function CustomerModal({ trigger, onSubmit, onClose, initialData }: Custo
                 name="description"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>{t("description")}</FormLabel>
+                    <FormLabel>{t("description")} (اختیاری)</FormLabel>
                     <FormControl>
                       <Input {...field} />
                     </FormControl>
@@ -257,7 +272,7 @@ export function CustomerModal({ trigger, onSubmit, onClose, initialData }: Custo
                 name="tags"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>{t("tags")}</FormLabel>
+                    <FormLabel>{t("tags")} (اختیاری)</FormLabel>
                     <FormControl>
                       <Input {...field} />
                     </FormControl>

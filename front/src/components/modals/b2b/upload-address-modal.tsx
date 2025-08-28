@@ -4,30 +4,30 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Progress } from "@/components/ui/progress";
-import { createSaleBatch, previewSale, uploadSaleExcel } from "@/lib/api/excel";
+import { createAddressBatch, previewAddress, uploadAddressExcel } from "@/lib/api/excel";
 import { ProductFormData, ProductModal } from "../product-modal";
 import { createProduct } from "@/lib/api/core";
 import { Check, FileSpreadsheet, Upload, X } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useState } from "react";
 import { toast } from "sonner";
+import { formatNumber } from "@/lib/utils/number-format";
 
 
 
-interface UploadSaleModalProps {
+interface UploadAddressModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSuccess: () => void;
 }
 
 
-export default function UploadSaleModal({ isOpen, onClose, onSuccess }: UploadSaleModalProps) {
-  const t = useTranslations("modals.uploadSale")
+export default function UploadAddressModal({ isOpen, onClose, onSuccess }: UploadAddressModalProps) {
+  const t = useTranslations("modals.uploadAddress")
   const [file, setFile] = useState<File | null>(null);
   const [rows, setRows] = useState<object[]>([]);
   const [currentRowIndex, setCurrentRowIndex] = useState(0);
   const [processedRows, setProcessedRows] = useState<object[]>([]);
-
 
   const [loading, setLoading] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
@@ -54,7 +54,7 @@ export default function UploadSaleModal({ isOpen, onClose, onSuccess }: UploadSa
       const newProduct = await createProduct(productData);
       if (previewData && newProduct) {
         // Store the created product for future rows
-        const productName = previewData.product_name || previewData.sale_data?.product_name;
+        const productName = previewData.product_name || previewData.address_data?.product_name;
         if (productName) {
           setCreatedProducts(prev => ({
             ...prev,
@@ -63,13 +63,13 @@ export default function UploadSaleModal({ isOpen, onClose, onSuccess }: UploadSa
         }
 
         const updatedData = {
-          ...previewData.sale_data,
+          ...previewData.address_data,
           product: newProduct.id,
         };
         setPreviewData({
           ...previewData,
           needs_product_creation: false,
-          sale_data: updatedData,
+          address_data: updatedData,
         });
       }
       toast.success(t("product_created"));
@@ -92,7 +92,19 @@ export default function UploadSaleModal({ isOpen, onClose, onSuccess }: UploadSa
     setLoading(true);
     setUploadStep("processing");
     try {
-      const result = await uploadSaleExcel(file)
+      const formData = new FormData();
+      formData.append("file", file);
+      
+      const response = await fetch(`http://localhost:8000/b2b/addresses/upload/`, {
+        method: "POST",
+        body: formData,
+      });
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
+      const result = await response.json();
       toast.success(
         `${t("customer_created", { count: result.number_of_customer_created || 0 })}, 
    ${t("receiver_created", { count: result.number_of_receiver_created || 0 })}`
@@ -109,15 +121,15 @@ export default function UploadSaleModal({ isOpen, onClose, onSuccess }: UploadSa
       setLoading(false);
     }
   }
-  const submitBatch = async (sales: object[]) => {
-    if (sales.length === 0) {
+  const submitBatch = async (addresses: object[]) => {
+    if (addresses.length === 0) {
       toast.info(t("no_rows_to_process"));
       resetState();
       return;
     }
     setLoading(true);
     try {
-      const result = await createSaleBatch(sales);
+      const result = await createAddressBatch(addresses);
       toast.success(t("batch_success", { count: result.count }));
       setUploadStep("complete");
       setTimeout(() => {
@@ -149,7 +161,7 @@ export default function UploadSaleModal({ isOpen, onClose, onSuccess }: UploadSa
     }
 
     try {
-      const preview = await previewSale(row);
+      const preview = await previewAddress(row);
       setPreviewData(preview);
       setShowPreview(true);
     } catch (error) {
@@ -160,8 +172,8 @@ export default function UploadSaleModal({ isOpen, onClose, onSuccess }: UploadSa
   }
 
   const handlePreviewConfirm = () => {
-    if (previewData?.sale_data) {
-      const updatedRows = [...processedRows, previewData.sale_data];
+    if (previewData?.address_data) {
+      const updatedRows = [...processedRows, previewData.address_data];
       setProcessedRows(updatedRows);
       setShowPreview(false);
       processNextRow(rows, currentRowIndex + 1, updatedRows);
@@ -326,25 +338,25 @@ export default function UploadSaleModal({ isOpen, onClose, onSuccess }: UploadSa
                 <div>
                   <label className="text-sm font-medium">{t("allocation_id")}</label>
                   <div className="mt-1 p-2 bg-gray-50 rounded">
-                    {previewData.sale_data?.allocation_id || "-"}
+                    {previewData.address_data?.allocation_id || "-"}
                   </div>
                 </div>
                 <div>
                   <label className="text-sm font-medium">{t("purchase_id")}</label>
                   <div className="mt-1 p-2 bg-gray-50 rounded">
-                    {previewData.sale_data?.purchase_id || "-"}
+                    {previewData.address_data?.purchase_id || "-"}
                   </div>
                 </div>
                 <div>
                   <label className="text-sm font-medium">{t("weight")}</label>
                   <div className="mt-1 p-2 bg-gray-50 rounded">
-                    {previewData.sale_data?.total_weight_purchased || 0} kg
+                    {formatNumber(previewData.address_data?.total_weight_purchased || 0)} kg
                   </div>
                 </div>
                 <div>
                   <label className="text-sm font-medium">{t("amount")}</label>
                   <div className="mt-1 p-2 bg-gray-50 rounded">
-                    {previewData.sale_data?.payment_amount || 0}
+                    {formatNumber(previewData.address_data?.payment_amount || 0)}
                   </div>
                 </div>
               </div>
@@ -373,7 +385,7 @@ export default function UploadSaleModal({ isOpen, onClose, onSuccess }: UploadSa
                         {t("product_not_found")}
                       </p>
                       <p className="text-sm text-red-700 mt-1">
-                        {previewData.product_name || previewData.sale_data?.product_name}
+                        {previewData.product_name || previewData.address_data?.product_name}
                       </p>
                     </div>
                     <Button
@@ -388,26 +400,58 @@ export default function UploadSaleModal({ isOpen, onClose, onSuccess }: UploadSa
                 </Card>
               )}
 
-              {previewData.sale_data?.description && (
+              {previewData.address_data?.description && (
                 <div>
                   <label className="text-sm font-medium">{t("description")}</label>
                   <div className="mt-1 p-3 bg-gray-50 rounded">
-                    {previewData.sale_data.description}
+                    {previewData.address_data.description}
                   </div>
                 </div>
               )}
 
-              <div className="flex justify-end gap-2 pt-4">
-                <Button variant="outline" onClick={handlePreviewSkip}>
-                  {t("skip")}
-                </Button>
-                <Button
-                  onClick={handlePreviewConfirm}
-                  disabled={previewData?.needs_product_creation}
-                  className="bg-[#f6d265] hover:bg-[#f5c842] text-black disabled:opacity-50"
+              <div className="flex justify-between pt-4">
+                <Button 
+                  variant="secondary"
+                  onClick={() => {
+                    // Accept current previewed row and all remaining rows
+                    if (previewData?.address_data) {
+                      const remainingRows = rows.slice(currentRowIndex + 1);
+                      // Process remaining rows to extract address_data
+                      const remainingAddresses = remainingRows.map((row: any) => ({
+                        allocation_id: row.allocation_id,
+                        purchase_id: row.purchase_id,
+                        product: row.product?.id || row.product,
+                        customer: row.customer?.id || row.customer,
+                        receiver: row.receiver?.id || row.receiver,
+                        total_weight_purchased: row.total_weight_purchased,
+                        purchase_date: row.purchase_date,
+                        unit_price: row.unit_price,
+                        payment_amount: row.payment_amount,
+                        payment_method: row.payment_method,
+                        province: row.province,
+                        city: row.city,
+                        tracking_number: row.tracking_number,
+                        description: row.credit_description || '',
+                      }));
+                      submitBatch([...processedRows, previewData.address_data, ...remainingAddresses]);
+                    }
+                  }}
                 >
-                  {t("confirm")}
+                  <Check className="w-4 h-4 mr-1" />
+                  {t("accept_all")}
                 </Button>
+                <div className="flex gap-2">
+                  <Button variant="outline" onClick={handlePreviewSkip}>
+                    {t("skip")}
+                  </Button>
+                  <Button
+                    onClick={handlePreviewConfirm}
+                    disabled={previewData?.needs_product_creation}
+                    className="bg-[#f6d265] hover:bg-[#f5c842] text-black disabled:opacity-50"
+                  >
+                    {t("confirm")}
+                  </Button>
+                </div>
               </div>
             </div>
           )}
@@ -416,7 +460,7 @@ export default function UploadSaleModal({ isOpen, onClose, onSuccess }: UploadSa
 
       {showProductModal && previewData && (
         <ProductModal
-          initialData={{ name: previewData?.product_name || previewData?.sale_data?.product_name }}
+          initialData={{ name: previewData?.product_name || previewData?.address_data?.product_name }}
           onSubmit={handleCreateProduct}
           onClose={() => setShowProductModal(false)}
         />

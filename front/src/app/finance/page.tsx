@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useMemo, useCallback } from "react";
+import { useSearchParams, useRouter } from "next/navigation";
 import { Plus, Edit2, Trash2, DollarSign, Receipt, Search, FileText, Clock } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
@@ -20,6 +21,7 @@ import {
 } from "@/lib/api/finance";
 import { SalesProforma, PurchaseProforma } from "@/lib/interfaces/finance";
 import { getPartyDisplayName } from "@/lib/utils/party-utils";
+import { formatNumber } from "@/lib/utils/number-format";
 
 export default function FinancePage() {
   const t = useTranslations("pages.finance");
@@ -29,12 +31,23 @@ export default function FinancePage() {
 
   const [salesProformas, setSalesProformas] = useState<SalesProforma[]>([]);
   const [purchaseProformas, setPurchaseProformas] = useState<PurchaseProforma[]>([]);
+  const [selectedSales, setSelectedSales] = useState<number[]>([]);
+  const [selectedPurchases, setSelectedPurchases] = useState<number[]>([]);
 
   const [sheetOpen, setSheetOpen] = useState(false);
   const [selectedItem, setSelectedItem] = useState<SalesProforma | PurchaseProforma | null>(null);
   const [selectedType, setSelectedType] = useState<'sales' | 'purchase'>('sales');
 
   const [searchTerm, setSearchTerm] = useState("");
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const tabFromUrl = searchParams.get('tab') || 'sales_proforma';
+  const [activeTab, setActiveTab] = useState(tabFromUrl);
+
+  useEffect(() => {
+    const newTab = searchParams.get('tab') || 'sales_proforma';
+    setActiveTab(newTab);
+  }, [searchParams]);
 
   const loadData = useCallback(async () => {
     try {
@@ -75,6 +88,20 @@ export default function FinancePage() {
     }
   };
 
+  const handleBulkDeleteSales = async () => {
+    if (selectedSales.length === 0) return;
+    if (confirm(`Delete ${selectedSales.length} selected sales proformas?`)) {
+      try {
+        await Promise.all(selectedSales.map(id => deleteSalesProforma(id)));
+        toast.success(`Deleted ${selectedSales.length} sales proformas`);
+        setSelectedSales([]);
+        loadData();
+      } catch (error) {
+        toast.error("Failed to delete some sales proformas");
+      }
+    }
+  };
+
   const handleDeletePurchase = async (id: number) => {
     if (confirm(t("purchase.confirm_delete"))) {
       try {
@@ -85,6 +112,20 @@ export default function FinancePage() {
         console.error("Failed to delete purchase proforma:", error);
         const errorMessage = handleApiError(error, "Deleting purchase proforma");
         toast.error(errorMessage);
+      }
+    }
+  };
+
+  const handleBulkDeletePurchases = async () => {
+    if (selectedPurchases.length === 0) return;
+    if (confirm(`Delete ${selectedPurchases.length} selected purchase proformas?`)) {
+      try {
+        await Promise.all(selectedPurchases.map(id => deletePurchaseProforma(id)));
+        toast.success(`Deleted ${selectedPurchases.length} purchase proformas`);
+        setSelectedPurchases([]);
+        loadData();
+      } catch (error) {
+        toast.error("Failed to delete some purchase proformas");
       }
     }
   };
@@ -127,7 +168,10 @@ export default function FinancePage() {
         </div>
       </div>
 
-      <Tabs defaultValue="sales_proforma" className="w-full">
+      <Tabs value={activeTab} onValueChange={(value) => {
+        setActiveTab(value);
+        router.push(`/finance?tab=${value}`);
+      }} className="w-full">
         <TabsList className="grid w-full grid-cols-4 mb-6">
           <TabsTrigger value="purchase_invoice" className="data-[state=active]:bg-[#f6d265] data-[state=active]:text-black">
             <FileText className="w-4 h-4 mr-2" />
@@ -169,7 +213,14 @@ export default function FinancePage() {
           <div className="bg-white rounded-lg shadow">
             <div className="p-4 border-b flex justify-between items-center">
               <h2 className="text-xl font-semibold">{t("sales.title")}</h2>
-              <Button className="bg-[#f6d265] hover:bg-[#f5c842] text-black" onClick={() => {
+              <div className="flex gap-2">
+                {selectedSales.length > 0 && (
+                  <Button variant="destructive" onClick={handleBulkDeleteSales}>
+                    <Trash2 className="w-4 h-4 mr-1" />
+                    {t("delete")} ({selectedSales.length})
+                  </Button>
+                )}
+                <Button className="bg-[#f6d265] hover:bg-[#f5c842] text-black" onClick={() => {
                 openModal(SalesProformaModal, {
                   onSubmit: async (data) => {
                     try {
@@ -187,14 +238,28 @@ export default function FinancePage() {
                     }
                   }
                 });
-              }}>
-                <Plus className="w-4 h-4 mr-1" />
-                {t("sales.add_proforma")}
-              </Button>
+                }}>
+                  <Plus className="w-4 h-4 mr-1" />
+                  {t("sales.add_proforma")}
+                </Button>
+              </div>
             </div>
             <Table>
               <TableHeader>
                 <TableRow>
+                  <TableHead className="w-12">
+                    <input
+                      type="checkbox"
+                      checked={filteredSalesProformas.length > 0 && selectedSales.length === filteredSalesProformas.length}
+                      onChange={(e) => {
+                        if (e.target.checked) {
+                          setSelectedSales(filteredSalesProformas.map(p => p.id));
+                        } else {
+                          setSelectedSales([]);
+                        }
+                      }}
+                    />
+                  </TableHead>
                   <TableHead className="text-center">{t("sales.operations")}</TableHead>
                   <TableHead>{t("sales.serial_number")}</TableHead>
                   <TableHead>{t("sales.customer")}</TableHead>
@@ -206,6 +271,19 @@ export default function FinancePage() {
               <TableBody>
                 {filteredSalesProformas.map((proforma) => (
                   <TableRow key={proforma.id} className="cursor-pointer hover:bg-gray-50" onClick={() => handleRowClick(proforma, 'sales')}>
+                    <TableCell onClick={(e) => e.stopPropagation()}>
+                      <input
+                        type="checkbox"
+                        checked={selectedSales.includes(proforma.id)}
+                        onChange={(e) => {
+                          if (e.target.checked) {
+                            setSelectedSales([...selectedSales, proforma.id]);
+                          } else {
+                            setSelectedSales(selectedSales.filter(id => id !== proforma.id));
+                          }
+                        }}
+                      />
+                    </TableCell>
                     <TableCell>
                       <div className="flex gap-2 justify-center">
                         <Button size="sm" variant="ghost" onClick={(e) => {
@@ -245,7 +323,7 @@ export default function FinancePage() {
                     <TableCell>{proforma.serial_number}</TableCell>
                     <TableCell>{getPartyDisplayName(customers.find(c => c.id === proforma.customer))}</TableCell>
                     <TableCell>{new Date(proforma.date).toLocaleDateString('fa-IR')}</TableCell>
-                    <TableCell>{calculateTotal(proforma.lines).toLocaleString()} {tCommon('units.rial')}</TableCell>
+                    <TableCell>{formatNumber(calculateTotal(proforma.lines))} {tCommon('units.rial')}</TableCell>
                     <TableCell>
                       {proforma.payment_type === 'cash' && tCommon('payment_types.cash')}
                       {proforma.payment_type === 'credit' && tCommon('payment_types.credit')}
@@ -262,7 +340,14 @@ export default function FinancePage() {
           <div className="bg-white rounded-lg shadow">
             <div className="p-4 border-b flex justify-between items-center">
               <h2 className="text-xl font-semibold">{t("purchase.title")}</h2>
-              <Button className="bg-[#f6d265] hover:bg-[#f5c842] text-black" onClick={() => {
+              <div className="flex gap-2">
+                {selectedPurchases.length > 0 && (
+                  <Button variant="destructive" onClick={handleBulkDeletePurchases}>
+                    <Trash2 className="w-4 h-4 mr-1" />
+                    {t("delete")} ({selectedPurchases.length})
+                  </Button>
+                )}
+                <Button className="bg-[#f6d265] hover:bg-[#f5c842] text-black" onClick={() => {
                 openModal(PurchaseProformaModal, {
                   onSubmit: async (data) => {
                     try {
@@ -276,14 +361,28 @@ export default function FinancePage() {
                     }
                   }
                 });
-              }}>
-                <Plus className="w-4 h-4 mr-1" />
-                {t("purchase.add_proforma")}
-              </Button>
+                }}>
+                  <Plus className="w-4 h-4 mr-1" />
+                  {t("purchase.add_proforma")}
+                </Button>
+              </div>
             </div>
             <Table>
               <TableHeader>
                 <TableRow>
+                  <TableHead className="w-12">
+                    <input
+                      type="checkbox"
+                      checked={filteredPurchaseProformas.length > 0 && selectedPurchases.length === filteredPurchaseProformas.length}
+                      onChange={(e) => {
+                        if (e.target.checked) {
+                          setSelectedPurchases(filteredPurchaseProformas.map(p => p.id));
+                        } else {
+                          setSelectedPurchases([]);
+                        }
+                      }}
+                    />
+                  </TableHead>
                   <TableHead className="text-center">{t("purchase.operations")}</TableHead>
                   <TableHead>{t("purchase.serial_number")}</TableHead>
                   <TableHead>{t("purchase.supplier")}</TableHead>
@@ -294,6 +393,19 @@ export default function FinancePage() {
               <TableBody>
                 {filteredPurchaseProformas.map((proforma) => (
                   <TableRow key={proforma.id} className="cursor-pointer hover:bg-gray-50" onClick={() => handleRowClick(proforma, 'purchase')}>
+                    <TableCell onClick={(e) => e.stopPropagation()}>
+                      <input
+                        type="checkbox"
+                        checked={selectedPurchases.includes(proforma.id)}
+                        onChange={(e) => {
+                          if (e.target.checked) {
+                            setSelectedPurchases([...selectedPurchases, proforma.id]);
+                          } else {
+                            setSelectedPurchases(selectedPurchases.filter(id => id !== proforma.id));
+                          }
+                        }}
+                      />
+                    </TableCell>
                     <TableCell>
                       <div className="flex gap-2 justify-center">
                         <Button size="sm" variant="ghost" onClick={(e) => {
@@ -326,7 +438,7 @@ export default function FinancePage() {
                     <TableCell>{proforma.serial_number}</TableCell>
                     <TableCell>{getPartyDisplayName(suppliers.find(s => s.id === proforma.supplier))}</TableCell>
                     <TableCell>{new Date(proforma.date).toLocaleDateString('fa-IR')}</TableCell>
-                    <TableCell>{calculateTotal(proforma.lines).toLocaleString()} {tCommon('units.rial')}</TableCell>
+                    <TableCell>{formatNumber(calculateTotal(proforma.lines))} {tCommon('units.rial')}</TableCell>
                   </TableRow>
                 ))}
               </TableBody>
@@ -440,7 +552,7 @@ export default function FinancePage() {
                 {selectedType === 'purchase' && 'supplier' in selectedItem && (
                   <div><strong>{tCommon('detail_labels.supplier')}</strong> {getPartyDisplayName(suppliers.find(s => s.id === selectedItem.supplier))}</div>
                 )}
-                <div><strong>{tCommon('detail_labels.total_amount')}</strong> {calculateTotal(selectedItem.lines).toLocaleString()} {tCommon('units.rial')}</div>
+                <div><strong>{tCommon('detail_labels.total_amount')}</strong> {formatNumber(calculateTotal(selectedItem.lines))} {tCommon('units.rial')}</div>
                 {selectedItem.lines && selectedItem.lines.length > 0 && (
                   <div>
                     <strong>{tCommon('detail_labels.lines')}</strong>
@@ -449,7 +561,7 @@ export default function FinancePage() {
                         <li key={idx} className="bg-white p-3 rounded border">
                           <div>{tCommon('detail_labels.product')} {products.find(p => p.id === line.product)?.name}</div>
                           <div>{tCommon('detail_labels.weight')} {line.weight} {tCommon('units.kg')}</div>
-                          <div>{tCommon('detail_labels.unit_price')} {line.unit_price.toLocaleString()} {tCommon('units.rial')}</div>
+                          <div>{tCommon('detail_labels.unit_price')} {formatNumber(line.unit_price)} {tCommon('units.rial')}</div>
                         </li>
                       ))}
                     </ul>

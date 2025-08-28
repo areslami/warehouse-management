@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useMemo, useCallback } from "react";
+import { useSearchParams, useRouter } from "next/navigation";
 import { Plus, Edit2, Trash2, Package, FileText, Truck, Search } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
@@ -23,6 +24,7 @@ import {
   createWarehouse, updateWarehouse, deleteWarehouse
 } from "@/lib/api/warehouse";
 import { Warehouse, WarehouseReceipt, DispatchIssue, DeliveryFulfillment } from "@/lib/interfaces/warehouse";
+import { formatNumber } from "@/lib/utils/number-format";
 
 export default function WarehousePage() {
   const t = useTranslations("pages.warehouse");
@@ -33,6 +35,9 @@ export default function WarehousePage() {
   const [receipts, setReceipts] = useState<WarehouseReceipt[]>([]);
   const [dispatches, setDispatches] = useState<DispatchIssue[]>([]);
   const [deliveries, setDeliveries] = useState<DeliveryFulfillment[]>([]);
+  const [selectedReceipts, setSelectedReceipts] = useState<number[]>([]);
+  const [selectedDispatches, setSelectedDispatches] = useState<number[]>([]);
+  const [selectedDeliveries, setSelectedDeliveries] = useState<number[]>([]);
 
   const [showReceiptModal, setShowReceiptModal] = useState(false);
   const [showDispatchModal, setShowDispatchModal] = useState(false);
@@ -50,6 +55,15 @@ export default function WarehousePage() {
 
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedWarehouse, setSelectedWarehouse] = useState<string>("all");
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const tabFromUrl = searchParams.get('tab') || 'receipts';
+  const [activeTab, setActiveTab] = useState(tabFromUrl);
+
+  useEffect(() => {
+    const newTab = searchParams.get('tab') || 'receipts';
+    setActiveTab(newTab);
+  }, [searchParams]);
 
   const loadData = useCallback(async () => {
     try {
@@ -92,6 +106,20 @@ export default function WarehousePage() {
     }
   };
 
+  const handleBulkDeleteReceipts = async () => {
+    if (selectedReceipts.length === 0) return;
+    if (confirm(`Delete ${selectedReceipts.length} selected receipts?`)) {
+      try {
+        await Promise.all(selectedReceipts.map(id => deleteWarehouseReceipt(id)));
+        toast.success(`Deleted ${selectedReceipts.length} receipts`);
+        setSelectedReceipts([]);
+        loadData();
+      } catch (error) {
+        toast.error("Failed to delete some receipts");
+      }
+    }
+  };
+
   const handleDeleteDispatch = async (id: number) => {
     if (confirm(t("issues.confirm_delete"))) {
       try {
@@ -106,6 +134,20 @@ export default function WarehousePage() {
     }
   };
 
+  const handleBulkDeleteDispatches = async () => {
+    if (selectedDispatches.length === 0) return;
+    if (confirm(`Delete ${selectedDispatches.length} selected dispatches?`)) {
+      try {
+        await Promise.all(selectedDispatches.map(id => deleteDispatchIssue(id)));
+        toast.success(`Deleted ${selectedDispatches.length} dispatches`);
+        setSelectedDispatches([]);
+        loadData();
+      } catch (error) {
+        toast.error("Failed to delete some dispatches");
+      }
+    }
+  };
+
   const handleDeleteDelivery = async (id: number) => {
     if (confirm(t("deliveries.confirm_delete"))) {
       try {
@@ -116,6 +158,20 @@ export default function WarehousePage() {
         console.error("Failed to delete delivery fulfillment:", error);
         const errorMessage = handleApiError(error, "Deleting delivery fulfillment");
         toast.error(errorMessage);
+      }
+    }
+  };
+
+  const handleBulkDeleteDeliveries = async () => {
+    if (selectedDeliveries.length === 0) return;
+    if (confirm(`Delete ${selectedDeliveries.length} selected deliveries?`)) {
+      try {
+        await Promise.all(selectedDeliveries.map(id => deleteDeliveryFulfillment(id)));
+        toast.success(`Deleted ${selectedDeliveries.length} deliveries`);
+        setSelectedDeliveries([]);
+        loadData();
+      } catch (error) {
+        toast.error("Failed to delete some deliveries");
       }
     }
   };
@@ -252,7 +308,10 @@ export default function WarehousePage() {
         </div>
       </div>
 
-      <Tabs defaultValue="receipts" className="w-full">
+      <Tabs value={activeTab} onValueChange={(value) => {
+        setActiveTab(value);
+        router.push(`/warehouse?tab=${value}`);
+      }} className="w-full">
         <TabsList className="grid w-full grid-cols-3 mb-6">
           <TabsTrigger value="receipts" className="data-[state=active]:bg-[#f6d265] data-[state=active]:text-black">
             <Package className="w-4 h-4 mr-2" />
@@ -272,17 +331,38 @@ export default function WarehousePage() {
           <div className="bg-white rounded-lg shadow">
             <div className="p-4 border-b flex justify-between items-center">
               <h2 className="text-xl font-semibold">{t("receipts.title")}</h2>
-              <Button className="bg-[#f6d265] hover:bg-[#f5c842] text-black" onClick={() => {
-                setEditingReceipt(null);
-                setShowReceiptModal(true);
-              }}>
-                <Plus className="w-4 h-4 mr-1" />
-                {t("receipts.new_receipt")}
-              </Button>
+              <div className="flex gap-2">
+                {selectedReceipts.length > 0 && (
+                  <Button variant="destructive" onClick={handleBulkDeleteReceipts}>
+                    <Trash2 className="w-4 h-4 mr-1" />
+                    {t("receipts.delete")} ({selectedReceipts.length})
+                  </Button>
+                )}
+                <Button className="bg-[#f6d265] hover:bg-[#f5c842] text-black" onClick={() => {
+                  setEditingReceipt(null);
+                  setShowReceiptModal(true);
+                }}>
+                  <Plus className="w-4 h-4 mr-1" />
+                  {t("receipts.new_receipt")}
+                </Button>
+              </div>
             </div>
             <Table>
               <TableHeader>
                 <TableRow>
+                  <TableHead className="w-12">
+                    <input
+                      type="checkbox"
+                      checked={filteredReceipts.length > 0 && selectedReceipts.length === filteredReceipts.length}
+                      onChange={(e) => {
+                        if (e.target.checked) {
+                          setSelectedReceipts(filteredReceipts.map(r => r.id));
+                        } else {
+                          setSelectedReceipts([]);
+                        }
+                      }}
+                    />
+                  </TableHead>
                   <TableHead className="text-center">{t("receipts.table.operations")}</TableHead>
                   <TableHead>{t("receipts.table.receipt_id")}</TableHead>
                   <TableHead>{t("receipts.table.date")}</TableHead>
@@ -293,6 +373,19 @@ export default function WarehousePage() {
               <TableBody>
                 {filteredReceipts.map((receipt) => (
                   <TableRow key={receipt.id} className="cursor-pointer hover:bg-gray-50" onClick={() => handleRowClick(receipt, 'receipt')}>
+                    <TableCell onClick={(e) => e.stopPropagation()}>
+                      <input
+                        type="checkbox"
+                        checked={selectedReceipts.includes(receipt.id)}
+                        onChange={(e) => {
+                          if (e.target.checked) {
+                            setSelectedReceipts([...selectedReceipts, receipt.id]);
+                          } else {
+                            setSelectedReceipts(selectedReceipts.filter(id => id !== receipt.id));
+                          }
+                        }}
+                      />
+                    </TableCell>
                     <TableCell>
                       <div className="flex gap-2 justify-center">
                         <Button size="sm" variant="ghost" onClick={async (e) => {
@@ -332,17 +425,38 @@ export default function WarehousePage() {
           <div className="bg-white rounded-lg shadow">
             <div className="p-4 border-b flex justify-between items-center">
               <h2 className="text-xl font-semibold">{t("issues.title")}</h2>
-              <Button className="bg-[#f6d265] hover:bg-[#f5c842] text-black" onClick={() => {
-                setEditingDispatch(null);
-                setShowDispatchModal(true);
-              }}>
-                <Plus className="w-4 h-4 mr-1" />
-                {t("issues.new_issue")}
-              </Button>
+              <div className="flex gap-2">
+                {selectedDispatches.length > 0 && (
+                  <Button variant="destructive" onClick={handleBulkDeleteDispatches}>
+                    <Trash2 className="w-4 h-4 mr-1" />
+                    {t("issues.delete")} ({selectedDispatches.length})
+                  </Button>
+                )}
+                <Button className="bg-[#f6d265] hover:bg-[#f5c842] text-black" onClick={() => {
+                  setEditingDispatch(null);
+                  setShowDispatchModal(true);
+                }}>
+                  <Plus className="w-4 h-4 mr-1" />
+                  {t("issues.new_issue")}
+                </Button>
+              </div>
             </div>
             <Table>
               <TableHeader>
                 <TableRow>
+                  <TableHead className="w-12">
+                    <input
+                      type="checkbox"
+                      checked={filteredDispatches.length > 0 && selectedDispatches.length === filteredDispatches.length}
+                      onChange={(e) => {
+                        if (e.target.checked) {
+                          setSelectedDispatches(filteredDispatches.map(d => d.id));
+                        } else {
+                          setSelectedDispatches([]);
+                        }
+                      }}
+                    />
+                  </TableHead>
                   <TableHead className="text-center">{t("issues.table.operations")}</TableHead>
                   <TableHead>{t("issues.table.dispatch_id")}</TableHead>
                   <TableHead>{t("issues.table.issue_date")}</TableHead>
@@ -353,6 +467,19 @@ export default function WarehousePage() {
               <TableBody>
                 {filteredDispatches.map((dispatch) => (
                   <TableRow key={dispatch.id} className="cursor-pointer hover:bg-gray-50" onClick={() => handleRowClick(dispatch, 'dispatch')}>
+                    <TableCell onClick={(e) => e.stopPropagation()}>
+                      <input
+                        type="checkbox"
+                        checked={selectedDispatches.includes(dispatch.id)}
+                        onChange={(e) => {
+                          if (e.target.checked) {
+                            setSelectedDispatches([...selectedDispatches, dispatch.id]);
+                          } else {
+                            setSelectedDispatches(selectedDispatches.filter(id => id !== dispatch.id));
+                          }
+                        }}
+                      />
+                    </TableCell>
                     <TableCell>
                       <div className="flex gap-2 justify-center">
                         <Button size="sm" variant="ghost" onClick={async (e) => {
@@ -380,7 +507,7 @@ export default function WarehousePage() {
                     <TableCell>{dispatch.dispatch_id}</TableCell>
                     <TableCell>{new Date(dispatch.issue_date).toLocaleDateString('fa-IR')}</TableCell>
                     <TableCell>{warehouses.find(w => w.id === dispatch.warehouse)?.name}</TableCell>
-                    <TableCell>{dispatch.total_weight} {tCommon('units.kg')}</TableCell>
+                    <TableCell>{formatNumber(dispatch.total_weight)} {tCommon('units.kg')}</TableCell>
                   </TableRow>
                 ))}
               </TableBody>
@@ -392,17 +519,38 @@ export default function WarehousePage() {
           <div className="bg-white rounded-lg shadow">
             <div className="p-4 border-b flex justify-between items-center">
               <h2 className="text-xl font-semibold">{t("deliveries.title")}</h2>
-              <Button className="bg-[#f6d265] hover:bg-[#f5c842] text-black" onClick={() => {
-                setEditingDelivery(null);
-                setShowDeliveryModal(true);
-              }}>
-                <Plus className="w-4 h-4 mr-1" />
-                {t("deliveries.new_delivery")}
-              </Button>
+              <div className="flex gap-2">
+                {selectedDeliveries.length > 0 && (
+                  <Button variant="destructive" onClick={handleBulkDeleteDeliveries}>
+                    <Trash2 className="w-4 h-4 mr-1" />
+                    {t("deliveries.delete")} ({selectedDeliveries.length})
+                  </Button>
+                )}
+                <Button className="bg-[#f6d265] hover:bg-[#f5c842] text-black" onClick={() => {
+                  setEditingDelivery(null);
+                  setShowDeliveryModal(true);
+                }}>
+                  <Plus className="w-4 h-4 mr-1" />
+                  {t("deliveries.new_delivery")}
+                </Button>
+              </div>
             </div>
             <Table>
               <TableHeader>
                 <TableRow>
+                  <TableHead className="w-12">
+                    <input
+                      type="checkbox"
+                      checked={filteredDeliveries.length > 0 && selectedDeliveries.length === filteredDeliveries.length}
+                      onChange={(e) => {
+                        if (e.target.checked) {
+                          setSelectedDeliveries(filteredDeliveries.map(d => d.id));
+                        } else {
+                          setSelectedDeliveries([]);
+                        }
+                      }}
+                    />
+                  </TableHead>
                   <TableHead className="text-center">{t("deliveries.table.operations")}</TableHead>
                   <TableHead>{t("deliveries.table.delivery_id")}</TableHead>
                   <TableHead>{t("deliveries.table.issue_date")}</TableHead>
@@ -413,6 +561,19 @@ export default function WarehousePage() {
               <TableBody>
                 {filteredDeliveries.map((delivery) => (
                   <TableRow key={delivery.id} className="cursor-pointer hover:bg-gray-50" onClick={() => handleRowClick(delivery, 'delivery')}>
+                    <TableCell onClick={(e) => e.stopPropagation()}>
+                      <input
+                        type="checkbox"
+                        checked={selectedDeliveries.includes(delivery.id)}
+                        onChange={(e) => {
+                          if (e.target.checked) {
+                            setSelectedDeliveries([...selectedDeliveries, delivery.id]);
+                          } else {
+                            setSelectedDeliveries(selectedDeliveries.filter(id => id !== delivery.id));
+                          }
+                        }}
+                      />
+                    </TableCell>
                     <TableCell>
                       <div className="flex gap-2 justify-center">
                         <Button size="sm" variant="ghost" onClick={async (e) => {

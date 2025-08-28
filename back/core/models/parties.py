@@ -1,12 +1,10 @@
 from django.db import models
 
-class PartyType(models.TextChoices):
-    INDIVIDUAL = 'Individual', 'Individual'
-    CORPORATE = 'Corporate', 'Corporate'
+from core.models.base import PARTY_TYPES, VEICHLE_TYPES
 
     
 class Supplier(models.Model):
-    supplier_type = models.CharField(max_length=10, choices=PartyType.choices,null=False)
+    supplier_type = models.CharField(max_length=10, choices=PARTY_TYPES,null=False)
     
     # corporate
     company_name = models.CharField(max_length=200, blank=True)
@@ -14,10 +12,10 @@ class Supplier(models.Model):
     
     # indicidual
     full_name = models.CharField(max_length=100, blank=True)
-    personal_code = models.CharField(max_length=11, blank=True, null=True, unique=True)
+    personal_code = models.CharField(max_length=10, blank=True, null=True, unique=True)
     
     
-    economic_code = models.CharField(max_length=20, unique=True)
+    economic_code = models.CharField(max_length=20, unique=True,null=False)
     phone = models.CharField(max_length=20)
     address = models.TextField(blank=False)
     description = models.TextField(blank=True)
@@ -26,12 +24,12 @@ class Supplier(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
     
     def __str__(self):
-        if self.supplier_type == PartyType.CORPORATE:
+        if self.supplier_type == 'corporate':
             return f"{self.company_name} ({self.economic_code})"
         return f"{self.full_name} ({self.economic_code})"
 
 class Customer(models.Model):
-    customer_type = models.CharField(max_length=10, choices=PartyType.choices,null=False)
+    customer_type = models.CharField(max_length=10, choices=PARTY_TYPES,null=False)
     
     # corporate
     company_name = models.CharField(max_length=200, blank=True)
@@ -39,10 +37,10 @@ class Customer(models.Model):
     
     # indicidual
     full_name = models.CharField(max_length=100, blank=True)
-    personal_code = models.CharField(max_length=11, blank=True, null=True, unique=True)
+    personal_code = models.CharField(max_length=10, blank=True, null=True, unique=True)
     
     
-    economic_code = models.CharField(max_length=20, unique=True)
+    economic_code = models.CharField(max_length=20, unique=True,null=False)
     phone = models.CharField(max_length=20)
     address = models.TextField(blank=False)
     postal_code = models.CharField(max_length=10,null=False)
@@ -54,20 +52,16 @@ class Customer(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
     
     def __str__(self):
-        if self.customer_type == PartyType.CORPORATE:
+        if self.customer_type == 'corporate':
             return f"{self.company_name} ({self.economic_code})"
         return f"{self.full_name} ({self.economic_code})"
 
 
-RECEIVER_VEICHLE_TYPES = [
-    ('single', 'single'),
-    ('double', 'double'),
-    ('trailer', 'trailer'),
-]
+
     
 class Receiver(models.Model):
-    receiver_type = models.CharField(max_length=10, choices=PartyType.choices,null=False)
-    receiver_veichle_type = models.CharField(max_length =20,choices=RECEIVER_VEICHLE_TYPES,null=False)
+    receiver_type = models.CharField(max_length=10, choices=PARTY_TYPES,null=False)
+    receiver_veichle_type = models.CharField(max_length =20,choices=VEICHLE_TYPES,null=False)
     unique_id = models.CharField(max_length=50)
     
     # corporate
@@ -76,10 +70,10 @@ class Receiver(models.Model):
     
     # indicidual
     full_name = models.CharField(max_length=100, blank=True)
-    personal_code = models.CharField(max_length=11, blank=True, null=True, unique=True)
+    personal_code = models.CharField(max_length=10, blank=True, null=True, unique=True)
     
     
-    economic_code = models.CharField(max_length=20, unique=True)
+    economic_code = models.CharField(max_length=20, unique=True,null=False)
     phone = models.CharField(max_length=20)
     address = models.TextField(blank=False)
     description = models.TextField(blank=True)
@@ -89,6 +83,6 @@ class Receiver(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
     
     def __str__(self):
-        if self.receiver_type == PartyType.CORPORATE:
+        if self.receiver_type == 'corporate':
             return f"{self.company_name} ({self.economic_code})"
         return f"{self.full_name} ({self.economic_code})"

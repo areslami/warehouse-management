@@ -26,7 +26,7 @@ import { createB2BOffer } from "@/lib/api/b2b";
 
 export type B2BDistributionFormData = {
   purchase_id?: string;
-  b2b_offer: number;
+  b2b_offer?: number;
   warehouse: number;
   product: number;
   customer: number;

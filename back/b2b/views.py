@@ -2,21 +2,22 @@ from rest_framework import viewsets, filters, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from django_filters.rest_framework import DjangoFilterBackend
-from django.db.models import Q, Sum
-from .models import B2BOffer, B2BSale, B2BPurchase, B2BPurchaseDetail, B2BDistribution
+from django.db.models import Sum
+
+from b2b.models.base import B2BSale
+from .models import B2BOffer, B2BAddress, B2BDistribution
 from .serializers import (
     B2BOfferSerializer, B2BOfferListSerializer,
-    B2BSaleSerializer, B2BSaleListSerializer,
-    B2BPurchaseSerializer, B2BPurchaseListSerializer,
-    B2BPurchaseDetailSerializer,
-    B2BDistributionSerializer, B2BDistributionListSerializer
+    B2BAddressSerializer, B2BAddressListSerializer,
+    
+    B2BDistributionSerializer, B2BDistributionListSerializer, B2BSaleSerializer
 )
 
 
 class B2BOfferViewSet(viewsets.ModelViewSet):
     queryset = B2BOffer.objects.all()
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
-    filterset_fields = ['status', 'offer_type', 'product', 'warehouse_receipt']
+    filterset_fields = ['status', 'offer_type', 'product']
     search_fields = ['offer_id', 'product__name', 'cottage_number']
     ordering_fields = ['offer_date', 'offer_exp_date', 'created_at']
     ordering = ['-offer_date']
@@ -28,7 +29,7 @@ class B2BOfferViewSet(viewsets.ModelViewSet):
     
     def get_queryset(self):
         queryset = super().get_queryset()
-        return queryset.select_related('product', 'warehouse_receipt')
+        return queryset.select_related('product')
     
     @action(detail=False, methods=['get'])
     def active(self, request):
@@ -46,8 +47,8 @@ class B2BOfferViewSet(viewsets.ModelViewSet):
         return Response({'error': 'Status parameter required'}, status=status.HTTP_400_BAD_REQUEST)
 
 
-class B2BSaleViewSet(viewsets.ModelViewSet):
-    queryset = B2BSale.objects.all()
+class B2BAddressViewSet(viewsets.ModelViewSet):
+    queryset = B2BAddress.objects.all()
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_fields = ['product_offer', 'customer', 'receiver']
     search_fields = ['purchase_id', 'allocation_id', 'cottage_code', 'tracking_number']
@@ -56,66 +57,33 @@ class B2BSaleViewSet(viewsets.ModelViewSet):
     
     def get_serializer_class(self):
         if self.action == 'list':
-            return B2BSaleListSerializer
-        return B2BSaleSerializer
+            return B2BAddressListSerializer
+        return B2BAddressSerializer
     
     def get_queryset(self):
         queryset = super().get_queryset()
         return queryset.select_related('product', 'customer', 'receiver', 'product_offer')
     
     
-
-
-class B2BPurchaseViewSet(viewsets.ModelViewSet):
-    queryset = B2BPurchase.objects.all()
+class B2BSaleViewSet(viewsets.ModelViewSet):   
+    queryset = B2BSale.objects.all()
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
-    filterset_fields = ['b2b_sale', 'purchase_type', 'province']
-    search_fields = ['purchase_id', 'buyer_name', 'buyer_national_id', 'tracking_number']
-    ordering_fields = ['purchase_date', 'paid_amount', 'created_at']
-    ordering = ['-purchase_date']
+    filterset_fields = ['offer', 'product', 'customer']
+    search_fields = ['offer__offer_id', 'product__name', 'customer__company_name', 'purchase_id']
+    ordering_fields = ['sale_date', 'sold_weight_before_transport', 'created_at']
+    ordering = ['-sale_date']
     
     def get_serializer_class(self):
-        if self.action == 'list':
-            return B2BPurchaseListSerializer
-        return B2BPurchaseSerializer
+        return B2BSaleSerializer
     
     def get_queryset(self):
         queryset = super().get_queryset()
-        return queryset.select_related('b2b_sale', 'b2b_sale__product_offer')
+        return queryset.select_related('offer', 'product', 'customer')
     
     @action(detail=False, methods=['get'])
-    def by_buyer(self, request):
-        buyer_id = request.query_params.get('buyer_national_id', None)
-        if buyer_id:
-            purchases = self.get_queryset().filter(buyer_national_id=buyer_id)
-            serializer = B2BPurchaseSerializer(purchases, many=True)
-            return Response(serializer.data)
-        return Response({'error': 'Buyer national ID required'}, status=status.HTTP_400_BAD_REQUEST)
-    
-    @action(detail=False, methods=['get'])
-    def by_date_range(self, request):
-        start_date = request.query_params.get('start_date', None)
-        end_date = request.query_params.get('end_date', None)
-        
-        if start_date and end_date:
-            purchases = self.get_queryset().filter(
-                purchase_date__gte=start_date,
-                purchase_date__lte=end_date
-            )
-            serializer = B2BPurchaseSerializer(purchases, many=True)
-            return Response(serializer.data)
-        return Response({'error': 'Start date and end date required'}, status=status.HTTP_400_BAD_REQUEST)
-
-
-class B2BPurchaseDetailViewSet(viewsets.ModelViewSet):
-    queryset = B2BPurchaseDetail.objects.all()
-    serializer_class = B2BPurchaseDetailSerializer
-    filter_backends = [DjangoFilterBackend]
-    filterset_fields = ['purchase']
-    
-    def get_queryset(self):
-        queryset = super().get_queryset()
-        return queryset.select_related('purchase')
+    def total_sales(self, request):
+        total_sales = self.get_queryset().aggregate(total_amount=Sum('total_price'))
+        return Response(total_sales)
 
 
 class B2BDistributionViewSet(viewsets.ModelViewSet):
@@ -133,7 +101,7 @@ class B2BDistributionViewSet(viewsets.ModelViewSet):
     
     def get_queryset(self):
         queryset = super().get_queryset()
-        return queryset.select_related('warehouse', 'product', 'customer', 'warehouse_receipt', 'b2b_offer')
+        return queryset.select_related('warehouse', 'product', 'customer', 'b2b_offer')
     
     @action(detail=False, methods=['get'])
     def by_customer(self, request):

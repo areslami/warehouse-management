@@ -1,5 +1,7 @@
 from rest_framework import serializers
-from .models import B2BOffer, B2BSale, B2BPurchase, B2BPurchaseDetail, B2BDistribution
+
+from b2b.models.base import B2BSale
+from .models import B2BOffer, B2BAddress, B2BDistribution
 from core.serializers import ProductSerializer, CustomerSerializer
 from warehouse.serializers import WarehouseSerializer
 
@@ -29,13 +31,13 @@ class B2BOfferListSerializer(serializers.ModelSerializer):
         return obj.offer_weight
 
 
-class B2BSaleSerializer(serializers.ModelSerializer):
+class B2BAddressSerializer(serializers.ModelSerializer):
     product_name = serializers.SerializerMethodField()
     customer_name = serializers.SerializerMethodField()
     receiver_name = serializers.SerializerMethodField()
     
     class Meta:
-        model = B2BSale
+        model = B2BAddress
         fields = '__all__'
         read_only_fields = ['created_at', 'updated_at']
     
@@ -55,13 +57,13 @@ class B2BSaleSerializer(serializers.ModelSerializer):
         return None
 
 
-class B2BSaleListSerializer(serializers.ModelSerializer):
+class B2BAddressListSerializer(serializers.ModelSerializer):
     product_name = serializers.SerializerMethodField()
     customer_name = serializers.SerializerMethodField()
     receiver_name = serializers.SerializerMethodField()
     
     class Meta:
-        model = B2BSale
+        model = B2BAddress
         fields = ['id', 'purchase_id', 'allocation_id', 'product_name', 'customer_name',
                   'receiver_name', 'total_weight_purchased', 'payment_amount', 'purchase_date', 'tracking_number']
     
@@ -80,35 +82,22 @@ class B2BSaleListSerializer(serializers.ModelSerializer):
             return obj.receiver.company_name or obj.receiver.full_name
         return None
 
-
-class B2BPurchaseSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = B2BPurchase
-        fields = '__all__'
-        
-    def validate(self, data):
-        if data.get('purchase_weight', 0) <= 0:
-            raise serializers.ValidationError('Purchase weight must be greater than zero')
-        
-        if data.get('paid_amount', 0) < 0:
-            raise serializers.ValidationError('Paid amount cannot be negative')
-        
-        return data
-
-
-class B2BPurchaseListSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = B2BPurchase
-        fields = ['id', 'purchase_id', 'buyer_name', 'purchase_weight', 
-                  'paid_amount', 'purchase_date', 'purchase_type']
-
-
-class B2BPurchaseDetailSerializer(serializers.ModelSerializer):
-    purchase_info = B2BPurchaseListSerializer(source='purchase', read_only=True)
+class B2BSaleSerializer(serializers.ModelSerializer):
+    offer_id = serializers.CharField(source='offer.offer_id', read_only=True)
+    product_name = serializers.CharField(source='product.name', read_only=True)
+    customer_name = serializers.SerializerMethodField()
     
     class Meta:
-        model = B2BPurchaseDetail
+        model = B2BSale
         fields = '__all__'
+        read_only_fields = ['total_price']
+    
+    def get_customer_name(self, obj):
+        if obj.customer:
+            if obj.customer.customer_type == 'Corporate':
+                return obj.customer.company_name
+            return obj.customer.full_name
+        return None
 
 
 class B2BDistributionSerializer(serializers.ModelSerializer):

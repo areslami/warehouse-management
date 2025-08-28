@@ -5,10 +5,10 @@ from decimal import Decimal
 from datetime import datetime
 import re
 from django.db.models import Q
-from core.models.parties import PartyType, Receiver
+from core.models.parties import  Receiver
 from core.models import Product, Customer
 from .models import B2BOffer
-from .excel_config import EXCEL_FIELD_MAPPING_DISTRIBUTION, EXCEL_FIELD_MAPPING_SALE
+from .excel_config import EXCEL_FIELD_MAPPING_DISTRIBUTION, EXCEL_FIELD_MAPPING_SALE, EXCEL_FIELD_MAPPING_YOUR_SALE
 
 
 def parse_html_table(content):
@@ -78,30 +78,81 @@ def build_description(row, product_name, mapping, op_type='dist'):
     
     weight_key = 'weight' if op_type == 'dist' else 'total_weight_purchased'
     weight = row.get(mapping.get(weight_key, ''), '0')
-    op_text = 'توزیع' if op_type == 'dist' else 'فروش'
-    parts.append(f"{op_text} {convert_to_persian_numbers(weight)} کیلوگرم {product_name}" if weight != '0' else f"{op_text} {product_name}")
+    op_text = 'توزیع' if op_type == 'dist' else 'بازارگاه'
+    
+    if weight != '0':
+        parts.append(f"{op_text}: {convert_to_persian_numbers(weight)} کیلوگرم {product_name}")
+    else:
+        parts.append(f"{op_text}: {product_name}")
+    
+    payment = row.get(mapping.get('payment_method', ''), '')
+    if payment:
+        parts.append(f"روش پرداخت: {payment}")
     
     credits = []
     for i in range(1, 4):
         prefix = 'credit' if op_type == 'dist' else 'agreement'
-        period = row.get(mapping.get(f'{prefix}_period_{i}', ''), '0')
-        amount = row.get(mapping.get(f'{prefix}_amount_{i}', ''), '0')
-        if period != '0' and amount != '0':
-            credits.append(f"{convert_to_persian_numbers(period)}روز/{convert_to_persian_numbers(amount)}تومان")
+        period = str(row.get(mapping.get(f'{prefix}_period_{i}', ''), '0')).strip()
+        amount = str(row.get(mapping.get(f'{prefix}_amount_{i}', ''), '0')).strip()
+        
+        # Clean and validate the values
+        if period and period != '0' and period != '' and amount and amount != '0' and amount != '':
+            try:
+                amount_float = float(amount)
+                amount_formatted = f"{int(amount_float):,}".replace(',', '،')
+                credits.append(f"دوره {i}: {convert_to_persian_numbers(period)} روز × {convert_to_persian_numbers(amount_formatted)} ریال")
+            except (ValueError, TypeError):
+                # Skip if conversion fails
+                pass
     
     if credits:
-        parts.append(f"توافقی: {' | '.join(credits)}")
-    
-    payment = row.get(mapping.get('payment_method', ''), '')
-    if payment:
-        parts.append(f"روش: {payment}")
+        parts.append("توافقی:")
+        parts.extend(credits)
     
     if op_type == 'sale':
         desc = row.get(mapping.get('description', ''), '')
-        if desc:
-            parts.append(desc)
+        if desc and desc.strip():
+            parts.append(f"توضیحات: {desc}")
     
-    return " • ".join(parts)
+    return "\n".join(parts)
+
+def build_description_your_sale(row, product_name):
+    parts = []
+    
+    weight = row.get(EXCEL_FIELD_MAPPING_YOUR_SALE.get('total_weight_purchased', ''), '0')
+    if weight != '0':
+        parts.append(f"بازارگاه: {convert_to_persian_numbers(weight)} کیلوگرم {product_name}")
+    else:
+        parts.append(f"بازارگاه: {product_name}")
+    
+    payment = row.get(EXCEL_FIELD_MAPPING_YOUR_SALE.get('payment_method', ''), '')
+    if payment:
+        parts.append(f"روش پرداخت: {payment}")
+    
+    credits = []
+    for i in range(1, 4):
+        period = str(row.get(EXCEL_FIELD_MAPPING_YOUR_SALE.get(f'agreement_period_{i}', ''), '0')).strip()
+        amount = str(row.get(EXCEL_FIELD_MAPPING_YOUR_SALE.get(f'agreement_amount_{i}', ''), '0')).strip()
+        
+        # Clean and validate the values
+        if period and period != '0' and period != '' and amount and amount != '0' and amount != '':
+            try:
+                amount_float = float(amount)
+                amount_formatted = f"{int(amount_float):,}".replace(',', '،')
+                credits.append(f"دوره {i}: {convert_to_persian_numbers(period)} روز × {convert_to_persian_numbers(amount_formatted)} ریال")
+            except (ValueError, TypeError):
+                # Skip if conversion fails
+                pass
+    
+    if credits:
+        parts.append("توافقی:")
+        parts.extend(credits)
+    
+    desc = row.get(EXCEL_FIELD_MAPPING_YOUR_SALE.get('description', ''), '')
+    if desc and desc.strip():
+        parts.append(f"توضیحات: {desc}")
+    
+    return "\n".join(parts)
 
 
 def process_distribution_row(row):
@@ -211,6 +262,58 @@ def process_sale_row(row):
     
     return processed,customerCreated,receiverCreated
 
+def process_your_sale_row(row):
+    product_title = str(row.get(EXCEL_FIELD_MAPPING_YOUR_SALE['product_title'], ''))
+    product_name, product_code = extract_product_parts(product_title)
+    
+    date_str = str(row.get(EXCEL_FIELD_MAPPING_YOUR_SALE['purchase_date'], ''))
+    if not date_str:
+        date_str = datetime.now().strftime('%Y/%m/%d')
+    
+    processed = {
+        'purchase_id': row.get(EXCEL_FIELD_MAPPING_YOUR_SALE['purchase_id']),
+        'cottage_number': row.get(EXCEL_FIELD_MAPPING_YOUR_SALE['cottage_number']),
+        'total_weight_purchased': clean_number(row.get(EXCEL_FIELD_MAPPING_YOUR_SALE['total_weight_purchased'], '0')),
+        'purchase_date': persian_to_gregorian(date_str),
+        'unit_price': clean_number(row.get(EXCEL_FIELD_MAPPING_YOUR_SALE['unit_price'], '0')),
+        'payment_amount': clean_number(row.get(EXCEL_FIELD_MAPPING_YOUR_SALE['payment_amount'], '0')),
+        'product_name': product_name,
+        'product_code': product_code,
+        'customer_name': row.get(EXCEL_FIELD_MAPPING_YOUR_SALE['customer_name']),
+        'customer_phone': row.get(EXCEL_FIELD_MAPPING_YOUR_SALE['customer_phone']),
+        'customer_national_code': row.get(EXCEL_FIELD_MAPPING_YOUR_SALE['customer_national_code']),
+        'payment_method': row.get(EXCEL_FIELD_MAPPING_YOUR_SALE['payment_method']),
+        'credit_description': build_description_your_sale(row, product_name),
+        'province': row.get(EXCEL_FIELD_MAPPING_YOUR_SALE['province']),
+        'tracking_number': row.get(EXCEL_FIELD_MAPPING_YOUR_SALE['tracking_number']),
+        'offer_id': row.get(EXCEL_FIELD_MAPPING_YOUR_SALE['offer_id']),
+    }
+    
+    customer = find_customer(row.get(EXCEL_FIELD_MAPPING_YOUR_SALE['customer_name']))
+    offer_id = row.get(EXCEL_FIELD_MAPPING_YOUR_SALE['offer_id'])
+    cottage_number = row.get(EXCEL_FIELD_MAPPING_YOUR_SALE['cottage_number'])
+    offer = find_offer(offer_id) if offer_id else find_offer(cottage_number)
+    product = find_product(product_name, product_code)
+    
+    if offer:
+        processed['offer'] = {'id': offer.id, 'offer_id': offer.offer_id}
+    else:
+        processed['offer'] = None
+        
+    if product:
+        processed['product'] = {'id': product.id, 'name': product.name}
+    else:
+        processed['product'] = None
+        
+    if customer:
+        processed['customer'] = {'id': customer.id, 'name': getattr(customer, 'company_name', None) or customer.full_name}
+    else:
+        processed['customer'] = None
+    
+    processed['receiver'] = None
+    
+    return processed
+
 def createOrUpdateReceiver(row):
     receiver_name = str(row.get(EXCEL_FIELD_MAPPING_SALE['receiver_name'], ''))
     receiver_economic_code = str(row.get(EXCEL_FIELD_MAPPING_SALE['receiver_economic_code'], ''))
@@ -220,20 +323,22 @@ def createOrUpdateReceiver(row):
     receiver_address = str(row.get(EXCEL_FIELD_MAPPING_SALE['receiver_address'], ''))
     receiver_postal_code = str(row.get(EXCEL_FIELD_MAPPING_SALE['receiver_postal_code'], ''))
     receiver_phone = str(row.get(EXCEL_FIELD_MAPPING_SALE['receiver_phone'], ''))
-    receiver_national_id = str(row.get(EXCEL_FIELD_MAPPING_SALE['receiver_national_id'], ''))
+    receiver_national_id = str(row.get(EXCEL_FIELD_MAPPING_SALE['receiver_national_id'], '')).strip()
     
-    if 'شرکت' in receiver_name or 'خدمات' in receiver_name:
-        receiver_type = PartyType.CORPORATE
+    # Determine type based on national_id length or name content
+    # 10 digits (or starts with 0) = individual, 11 digits = corporate
+    if len(receiver_national_id) == 11 or 'شرکت' in receiver_name or 'خدمات' in receiver_name:
+        receiver_type = 'corporate'
         full_name = ''
         company_name = receiver_name
-        national_id = receiver_national_id
+        national_id = receiver_national_id[:11]  # Truncate to max 11 chars for safety
         personal_code = None
     else:
-        receiver_type = PartyType.INDIVIDUAL
+        receiver_type = 'individual'
         full_name = receiver_name
         company_name = ''
         national_id = None
-        personal_code = receiver_national_id
+        personal_code = receiver_national_id[:10]  # Truncate to max 10 chars for safety
     with transaction.atomic():
         receiver, created = Receiver.objects.update_or_create(
             economic_code=receiver_economic_code,
@@ -254,25 +359,27 @@ def createOrUpdateReceiver(row):
 def createOrUpdateCustomer(row):
     
     customer_name = str(row.get(EXCEL_FIELD_MAPPING_SALE['customer_name'], ''))
-    customer_national_code = str(row.get(EXCEL_FIELD_MAPPING_SALE['customer_national_code'], ''))
+    customer_national_code = str(row.get(EXCEL_FIELD_MAPPING_SALE['customer_national_code'], '')).strip()
     customer_postal_code = str(row.get(EXCEL_FIELD_MAPPING_SALE['customer_postal_code'], ''))
     customer_address = str(row.get(EXCEL_FIELD_MAPPING_SALE['customer_address'], ''))
     customer_phone = str(row.get(EXCEL_FIELD_MAPPING_SALE['customer_phone'], ''))
     customer_economic_code = str(row.get(EXCEL_FIELD_MAPPING_SALE['customer_economic_code'], ''))
     customer_type = str(row.get(EXCEL_FIELD_MAPPING_SALE['customer_type'], ''))
     
-    if str(customer_type).startswith('خریداران'):
-        cust_type = PartyType.INDIVIDUAL
+    # Determine type based on national_code length, customer_type, or defaults
+    # 10 digits (or starts with 0) = individual, 11 digits = corporate
+    if len(customer_national_code) == 11 or (customer_type and not customer_type.startswith('خریداران')):
+        cust_type = 'corporate'
+        full_name = ''
+        company_name = customer_name
+        national_id = customer_national_code[:11]  # Truncate to max 11 chars for safety
+        personal_code = None
+    else:
+        cust_type = 'individual'
         full_name = customer_name
         company_name = ''
         national_id = None
-        personal_code = customer_national_code
-    else:
-        cust_type = PartyType.CORPORATE
-        full_name = ''
-        company_name = customer_name
-        national_id = customer_national_code
-        personal_code = None
+        personal_code = customer_national_code[:10]  # Truncate to max 10 chars for safety
     with transaction.atomic():
         customer, created = Customer.objects.update_or_create(
             economic_code=customer_economic_code,

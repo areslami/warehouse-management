@@ -12,11 +12,11 @@ export interface Product {
 
 export interface Supplier {
   id: number;
-  supplier_type: "Individual" | "Corporate";
-  company_name: string;
-  national_id: string;
-  full_name: string;
-  personal_code: string;
+  supplier_type: "individual" | "corporate";
+  company_name?: string;
+  national_id?: string;
+  full_name?: string;
+  personal_code?: string;
   economic_code: string;
   phone: string;
   address: string;
@@ -27,13 +27,13 @@ export interface Supplier {
 
 export interface Receiver {
   id: number;
-  receiver_type: "Individual" | "Corporate";
+  receiver_type: "individual" | "corporate";
   receiver_veichle_type: "single" | "double" | "trailer";
   unique_id: string;
-  company_name: string;
-  national_id: string;
-  full_name: string;
-  personal_code: string;
+  company_name?: string;
+  national_id?: string;
+  full_name?: string;
+  personal_code?: string;
   economic_code: string;
   phone: string;
   address: string;
@@ -45,15 +45,15 @@ export interface Receiver {
 
 export interface Customer {
   id: number;
-  customer_type: "Individual" | "Corporate";
-  company_name: string;
-  national_id: string;
-  full_name: string;
-  personal_code: string;
+  customer_type: "individual" | "corporate";
+  company_name?: string;
+  national_id?: string;
+  full_name?: string;
+  personal_code?: string;
   economic_code: string;
   phone: string;
   address: string;
-  postal_code?: string;
+  postal_code: string;
   description?: string;
   tags?: string;
   created_at: string;

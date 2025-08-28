@@ -22,7 +22,7 @@ export type B2BOfferFormData = {
   offer_weight: number;
   unit_price: number;
   status: 'pending' | 'active' | 'sold' | 'expired';
-  offer_type?: 'cash' | 'credit' | 'agreement';
+  offer_type?: 'cash' | 'credit' | 'agreement' | 'other';
   offer_date: string;
   offer_exp_date: string;
   description?: string;

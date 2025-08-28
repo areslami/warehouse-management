@@ -1,592 +1,268 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "../../ui/dialog";
-import { Button } from "../../ui/button";
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "../../ui/form";
-import { Input } from "../../ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../../ui/select";
-import { PersianDatePicker } from "../../ui/persian-date-picker";
-import { Plus } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { useTranslations } from "next-intl";
-import { useCoreData } from "@/lib/core-data-context";
-import { CustomerModal } from "../customer-modal";
-import { ReceiverModal } from "../receiver-modal";
-import { ProductModal } from "../product-modal";
-import { createCustomer, createProduct, createReceiver } from "@/lib/api/core";
-import { getPartyDisplayName } from "@/lib/utils/party-utils";
+import { fetchProducts } from "@/lib/api/core";
+import { fetchCustomers } from "@/lib/api/core";
 import { fetchB2BOffers } from "@/lib/api/b2b";
+import { Product } from "@/lib/interfaces/core";
+import { Customer } from "@/lib/interfaces/core";
 import { B2BOffer } from "@/lib/interfaces/b2b";
 
-export type B2BSaleFormData = {
-  purchase_id: string;
-  allocation_id?: string;
-  cottage_code?: string;
-  product_offer?: number;
-  product: number;
-  customer: number;
-  receiver?: number;
-  total_weight_purchased: number;
-  purchase_date: string;
-  unit_price: number;
-  payment_amount: number;
-  payment_method: string;
-  province?: string;
-  city?: string;
-  tracking_number?: string;
-  credit_description?: string;
-};
-
-interface B2BSaleModalProps {
-  trigger?: React.ReactNode;
-  onSubmit?: (data: B2BSaleFormData) => Promise<void>;
-  onClose?: () => void;
-  initialData?: Partial<B2BSaleFormData>;
+export interface B2BSaleFormData {
+    purchase_id: string;
+    offer: number | null;
+    cottage_code?: string;
+    weight: number;
+    unit_price: number;
+    total_price?: number;
+    sale_date: string;
+    product: number;
+    customer: number;
+    purchase_type: 'cash' | 'credit' | 'agreement' | 'other';
+    description?: string;
 }
 
-export function B2BSaleModal({ trigger, onSubmit, onClose, initialData }: B2BSaleModalProps) {
-  const tval = useTranslations("modals.b2bSale.validation");
-  const t = useTranslations("modals.b2bSale");
-  const { products, customers, receivers, refreshData: refreshCoreData } = useCoreData();
-  const [offers, setOffers] = useState<B2BOffer[]>([]);
-  const [showProductModal, setShowProductModal] = useState(false);
-  const [showCustomerModal, setShowCustomerModal] = useState(false);
-  const [showReceiverModal, setShowReceiverModal] = useState(false);
+interface B2BSaleModalProps {
+    onSubmit: (data: B2BSaleFormData) => Promise<void>;
+    onClose: () => void;
+    initialData?: Partial<B2BSaleFormData>;
+}
 
-  useEffect(() => {
-    if (products.length === 0) refreshCoreData('products');
-    if (customers.length === 0) refreshCoreData('customers');
-    if (receivers.length === 0) refreshCoreData('receivers');
-    loadOffers();
-  }, []);
+export function B2BSaleModal({ onSubmit, onClose, initialData }: B2BSaleModalProps) {
+    const t = useTranslations("modals.b2bSale");
+    const [formData, setFormData] = useState<B2BSaleFormData>({
+        purchase_id: initialData?.purchase_id || "",
+        offer: initialData?.offer || null,
+        cottage_code: initialData?.cottage_code || "",
+        weight: initialData?.weight || 0,
+        unit_price: initialData?.unit_price || 0,
+        sale_date: initialData?.sale_date || new Date().toISOString().split('T')[0],
+        product: initialData?.product || 0,
+        customer: initialData?.customer || 0,
+        purchase_type: initialData?.purchase_type || 'cash',
+        description: initialData?.description || ""
+    });
 
-  const loadOffers = async () => {
-    try {
-      const data = await fetchB2BOffers();
-      setOffers(data ?? []);
-    } catch (error) {
-      console.error('Error loading offers:', error);
-    }
-  };
+    const [offers, setOffers] = useState<B2BOffer[]>([]);
+    const [products, setProducts] = useState<Product[]>([]);
+    const [customers, setCustomers] = useState<Customer[]>([]);
+    const [loading, setLoading] = useState(false);
 
-  const b2bSaleSchema = z.object({
-    purchase_id: z.string().min(1, tval("purchase-id")),
-    allocation_id: z.string().optional(),
-    cottage_code: z.string().optional(),
-    product_offer: z.number().optional(),
-    product: z.number().min(1, tval("product")),
-    customer: z.number().min(1, tval("customer")),
-    receiver: z.number().optional(),
-    total_weight_purchased: z.number().positive(tval("weight")),
-    purchase_date: z.string().min(1, tval("date")),
-    unit_price: z.number().positive(tval("unit-price")),
-    payment_amount: z.number().min(0, tval("amount")),
-    payment_method: z.string().min(1, tval("payment-method")),
-    province: z.string().optional(),
-    city: z.string().optional(),
-    tracking_number: z.string().optional(),
-    credit_description: z.string().optional(),
-  });
+    useEffect(() => {
+        loadData();
+    }, []);
 
-  const [open, setOpen] = useState(trigger ? false : true);
+    // Auto-calculate total price
+    useEffect(() => {
+        const total = formData.weight * formData.unit_price;
+        setFormData(prev => ({ ...prev, total_price: total }));
+    }, [formData.weight, formData.unit_price]);
 
-  const form = useForm<B2BSaleFormData>({
-    resolver: zodResolver(b2bSaleSchema),
-    defaultValues: {
-      purchase_id: initialData?.purchase_id || "",
-      allocation_id: initialData?.allocation_id || "",
-      cottage_code: initialData?.cottage_code || "",
-      product_offer: initialData?.product_offer || undefined,
-      product: initialData?.product || 0,
-      customer: initialData?.customer || 0,
-      receiver: initialData?.receiver || undefined,
-      total_weight_purchased: initialData?.total_weight_purchased || 0,
-      purchase_date: initialData?.purchase_date || "",
-      unit_price: initialData?.unit_price || 0,
-      payment_amount: initialData?.payment_amount || 0,
-      payment_method: initialData?.payment_method || "cash",
-      province: initialData?.province || "",
-      city: initialData?.city || "",
-      tracking_number: initialData?.tracking_number || "",
-      credit_description: initialData?.credit_description || "",
-    },
-  });
+    // When offer is selected, auto-fill product and unit_price
+    useEffect(() => {
+        if (formData.offer) {
+            const selectedOffer = offers.find(o => o.id === formData.offer);
+            if (selectedOffer) {
+                setFormData(prev => ({
+                    ...prev,
+                    product: selectedOffer.product,
+                    unit_price: selectedOffer.unit_price,
+                    cottage_code: selectedOffer.cottage_number || ""
+                }));
+            }
+        }
+    }, [formData.offer, offers]);
 
-  const handleSubmit = async (data: B2BSaleFormData) => {
-    try {
-      await onSubmit?.(data);
-      if (trigger) {
-        setOpen(false);
-      } else {
-        onClose?.();
-      }
-      form.reset();
-    } catch (error) {
-      console.error("Error submitting sale:", error);
-    }
-  };
+    const loadData = async () => {
+        try {
+            const [offersData, productsData, customersData] = await Promise.all([
+                fetchB2BOffers(),
+                fetchProducts(),
+                fetchCustomers()
+            ]);
 
-  const handleClose = () => {
-    if (trigger) {
-      setOpen(false);
-    } else {
-      onClose?.();
-    }
-  };
+            // Only show active offers
+            setOffers(offersData.filter((o: B2BOffer) => o.status === 'active'));
+            setProducts(productsData);
+            setCustomers(customersData);
+        } catch (error) {
+            console.error("Failed to load data:", error);
+        }
+    };
 
-  return (
-    <>
-      <Dialog open={open} onOpenChange={trigger ? setOpen : handleClose}>
-        {trigger && (
-          <DialogTrigger asChild>
-            {trigger}
-          </DialogTrigger>
-        )}
-        <DialogContent dir="rtl" className="min-w-[75%] max-h-[90vh] overflow-y-auto scrollbar-hide p-0 my-0 mx-auto [&>button]:hidden">
-          <DialogHeader className="px-3.5 py-4.5 justify-start" style={{ backgroundColor: "#f6d265" }}>
-            <DialogTitle className="font-bold text-white text-right">{t("title")}</DialogTitle>
-          </DialogHeader>
+    const handleSubmit = async () => {
+        setLoading(true);
+        try {
+            await onSubmit(formData);
+            onClose();
+        } catch (error) {
+            console.error("Failed to submit:", error);
+        } finally {
+            setLoading(false);
+        }
+    };
 
-          <Form {...form}>
-            <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6 py-4 px-12">
-              {/* Row 1: IDs */}
-              <div className="grid grid-cols-3 gap-4">
-                <FormField
-                  control={form.control}
-                  name="purchase_id"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>{t("purchase-id")}</FormLabel>
-                      <FormControl>
-                        <Input {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+    const isValid = formData.purchase_id && formData.product && formData.customer &&
+        formData.weight > 0 && formData.unit_price > 0 && formData.sale_date;
 
-                <FormField
-                  control={form.control}
-                  name="allocation_id"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>{t("allocation-id")}</FormLabel>
-                      <FormControl>
-                        <Input {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+    return (
+        <Dialog open onOpenChange={() => onClose()}>
+            <DialogContent className="max-w-2xl" dir="rtl">
+                <DialogHeader>
+                    <DialogTitle>{t("title")}</DialogTitle>
+                </DialogHeader>
 
-                <FormField
-                  control={form.control}
-                  name="cottage_code"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>{t("cottage-code")}</FormLabel>
-                      <FormControl>
-                        <Input {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
+                <div className="grid grid-cols-2 gap-4 mt-4">
+                    <div>
+                        <label className="text-sm font-medium">{t("purchase_id")}*</label>
+                        <Input
+                            value={formData.purchase_id}
+                            onChange={(e) => setFormData({ ...formData, purchase_id: e.target.value })}
+                            placeholder={t("enter_purchase_id")}
+                        />
+                    </div>
 
-              {/* Row 2: Product and Customer */}
-              <div className="grid grid-cols-2 gap-4">
-                <FormField
-                  control={form.control}
-                  name="product"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>{t("product")}</FormLabel>
-                      <FormControl>
-                        <Select
-                          value={field.value > 0 ? field.value.toString() : ""}
-                          onValueChange={(value) => {
-                            if (value === "new") {
-                              setShowProductModal(true);
-                            } else if (value) {
-                              field.onChange(Number(value));
-                            }
-                          }}
+                    <div>
+                        <label className="text-sm font-medium">{t("offer")}</label>
+                        <select
+                            className="w-full px-3 py-2 border rounded-md"
+                            value={formData.offer || ""}
+                            onChange={(e) => setFormData({ ...formData, offer: e.target.value ? Number(e.target.value) : null })}
                         >
-                          <SelectTrigger>
-                            <SelectValue placeholder={t("select-product")} />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem
-                              value="new"
-                              className="font-semibold text-[#f6d265]"
-                              onPointerDown={(e) => e.preventDefault()}
-                            >
-                              <Plus className="inline-block w-4 h-4 mr-2" />
-                              {t("create-new-product")}
-                            </SelectItem>
-                            {products.length > 0 && (
-                              <div className="border-t my-1" />
-                            )}
-                            {products.map((product) => (
-                              <SelectItem key={product.id} value={product.id.toString()}>
-                                {product.name}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="customer"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>{t("customer")}</FormLabel>
-                      <FormControl>
-                        <Select
-                          value={field.value > 0 ? field.value.toString() : ""}
-                          onValueChange={(value) => {
-                            if (value === "new") {
-                              setShowCustomerModal(true);
-                            } else if (value) {
-                              field.onChange(Number(value));
-                            }
-                          }}
-                        >
-                          <SelectTrigger>
-                            <SelectValue placeholder={t("select-customer")} />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem
-                              value="new"
-                              className="font-semibold text-[#f6d265]"
-                              onPointerDown={(e) => e.preventDefault()}
-                            >
-                              <Plus className="inline-block w-4 h-4 mr-2" />
-                              {t("create-new-customer")}
-                            </SelectItem>
-                            {customers.length > 0 && (
-                              <div className="border-t my-1" />
-                            )}
-                            {customers.map((customer) => (
-                              <SelectItem key={customer.id} value={customer.id.toString()}>
-                                {getPartyDisplayName(customer)}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
-
-              {/* Row 3: Receiver and Offer */}
-              <div className="grid grid-cols-2 gap-4">
-                <FormField
-                  control={form.control}
-                  name="receiver"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>{t("receiver")} <span className="text-gray-400 text-sm">{t("optional")}</span></FormLabel>
-                      <FormControl>
-                        <Select
-                          value={field.value ? field.value.toString() : ""}
-                          onValueChange={(value) => {
-                            if (value === "new") {
-                              setShowReceiverModal(true);
-                            } else if (value) {
-                              field.onChange(Number(value));
-                            } else {
-                              field.onChange(undefined);
-                            }
-                          }}
-                        >
-                          <SelectTrigger>
-                            <SelectValue placeholder={t("select-receiver")} />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="">
-                              {t("no-receiver")}
-                            </SelectItem>
-                            <SelectItem
-                              value="new"
-                              className="font-semibold text-[#f6d265]"
-                              onPointerDown={(e) => e.preventDefault()}
-                            >
-                              <Plus className="inline-block w-4 h-4 mr-2" />
-                              {t("create-new-receiver")}
-                            </SelectItem>
-                            {receivers.length > 0 && (
-                              <div className="border-t my-1" />
-                            )}
-                            {receivers.map((receiver) => (
-                              <SelectItem key={receiver.id} value={receiver.id.toString()}>
-                                {getPartyDisplayName(receiver)}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="product_offer"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>{t("product-offer")} <span className="text-gray-400 text-sm">{t("optional")}</span></FormLabel>
-                      <FormControl>
-                        <Select
-                          value={field.value ? field.value.toString() : ""}
-                          onValueChange={(value) => {
-                            field.onChange(value ? Number(value) : undefined);
-                          }}
-                        >
-                          <SelectTrigger>
-                            <SelectValue placeholder={t("select-offer")} />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="">
-                              {t("no-offer")}
-                            </SelectItem>
+                            <option value="">{t("select_offer")}</option>
                             {offers.map((offer) => (
-                              <SelectItem key={offer.id} value={offer.id.toString()}>
-                                {offer.offer_id} - {offer.product_name}
-                              </SelectItem>
+                                <option key={offer.id} value={offer.id}>
+                                    {offer.offer_id} - {offer.product_name} ({offer.offer_weight} kg)
+                                </option>
                             ))}
-                          </SelectContent>
-                        </Select>
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
+                        </select>
+                    </div>
 
-              {/* Row 4: Weight, Amount, Date */}
-              <div className="grid grid-cols-3 gap-4">
-                <FormField
-                  control={form.control}
-                  name="total_weight_purchased"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>{t("weight")}</FormLabel>
-                      <FormControl>
+                    <div>
+                        <label className="text-sm font-medium">{t("product")}*</label>
+                        <select
+                            className="w-full px-3 py-2 border rounded-md"
+                            value={formData.product}
+                            onChange={(e) => setFormData({ ...formData, product: Number(e.target.value) })}
+                            disabled={!!formData.offer}
+                        >
+                            <option value={0}>{t("select_product")}</option>
+                            {products.map((product) => (
+                                <option key={product.id} value={product.id}>
+                                    {product.name}
+                                </option>
+                            ))}
+                        </select>
+                    </div>
+
+                    <div>
+                        <label className="text-sm font-medium">{t("customer")}*</label>
+                        <select
+                            className="w-full px-3 py-2 border rounded-md"
+                            value={formData.customer}
+                            onChange={(e) => setFormData({ ...formData, customer: Number(e.target.value) })}
+                        >
+                            <option value={0}>{t("select_customer")}</option>
+                            {customers.map((customer) => (
+                                <option key={customer.id} value={customer.id}>
+                                    {customer.company_name || customer.full_name}
+                                </option>
+                            ))}
+                        </select>
+                    </div>
+
+                    <div>
+                        <label className="text-sm font-medium">{t("weight")}*</label>
                         <Input
-                          type="number"
-                          {...field}
-                          onChange={(e) => field.onChange(Number(e.target.value))}
+                            type="number"
+                            value={formData.weight}
+                            onChange={(e) => setFormData({ ...formData, weight: Number(e.target.value) })}
+                            placeholder="0"
+                            step="0.01"
                         />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+                    </div>
 
-                <FormField
-                  control={form.control}
-                  name="unit_price"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>{t("unit-price")}</FormLabel>
-                      <FormControl>
+                    <div>
+                        <label className="text-sm font-medium">{t("unit_price")}*</label>
                         <Input
-                          type="number"
-                          {...field}
-                          onChange={(e) => field.onChange(Number(e.target.value))}
+                            type="number"
+                            value={formData.unit_price}
+                            onChange={(e) => setFormData({ ...formData, unit_price: Number(e.target.value) })}
+                            placeholder="0"
+                            disabled={!!formData.offer}
                         />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+                    </div>
 
-                <FormField
-                  control={form.control}
-                  name="payment_amount"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>{t("payment-amount")}</FormLabel>
-                      <FormControl>
+                    <div>
+                        <label className="text-sm font-medium">{t("total_price")}</label>
                         <Input
-                          type="number"
-                          {...field}
-                          onChange={(e) => field.onChange(Number(e.target.value))}
+                            type="number"
+                            value={formData.total_price || 0}
+                            disabled
+                            className="bg-gray-50"
                         />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
+                    </div>
 
-              {/* Row 5: Payment Method and Date */}
-              <div className="grid grid-cols-2 gap-4">
-                <FormField
-                  control={form.control}
-                  name="payment_method"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>{t("payment-method")}</FormLabel>
-                      <Select value={field.value} onValueChange={field.onChange}>
-                        <SelectTrigger>
-                          <SelectValue placeholder={t("select-payment-method")} />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="cash">{t("cash")}</SelectItem>
-                          <SelectItem value="credit">{t("credit")}</SelectItem>
-                          <SelectItem value="installment">{t("installment")}</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="purchase_date"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>{t("purchase-date")}</FormLabel>
-                      <FormControl>
-                        <PersianDatePicker
-                          value={field.value}
-                          onChange={field.onChange}
-                          placeholder={t("select-date")}
+                    <div>
+                        <label className="text-sm font-medium">{t("sale_date")}*</label>
+                        <Input
+                            type="date"
+                            value={formData.sale_date}
+                            onChange={(e) => setFormData({ ...formData, sale_date: e.target.value })}
                         />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
+                    </div>
 
-              {/* Row 6: Province, City, Tracking */}
-              <div className="grid grid-cols-3 gap-4">
-                <FormField
-                  control={form.control}
-                  name="province"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>{t("province")}</FormLabel>
-                      <FormControl>
-                        <Input {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+                    <div>
+                        <label className="text-sm font-medium">{t("purchase_type")}</label>
+                        <select
+                            className="w-full px-3 py-2 border rounded-md"
+                            value={formData.purchase_type}
+                            onChange={(e) => setFormData({ ...formData, purchase_type: e.target.value as any })}
+                        >
+                            <option value="cash">{t("cash")}</option>
+                            <option value="credit">{t("credit")}</option>
+                            <option value="agreement">{t("agreement")}</option>
+                            <option value="other">{t("other")}</option>
+                        </select>
+                    </div>
 
-                <FormField
-                  control={form.control}
-                  name="city"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>{t("city")}</FormLabel>
-                      <FormControl>
-                        <Input {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+                    <div>
+                        <label className="text-sm font-medium">{t("cottage_code")}</label>
+                        <Input
+                            value={formData.cottage_code}
+                            onChange={(e) => setFormData({ ...formData, cottage_code: e.target.value })}
+                            disabled={!!formData.offer}
+                        />
+                    </div>
 
-                <FormField
-                  control={form.control}
-                  name="tracking_number"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>{t("tracking-number")}</FormLabel>
-                      <FormControl>
-                        <Input {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
+                    <div className="col-span-2">
+                        <label className="text-sm font-medium">{t("description")}</label>
+                        <Textarea
+                            value={formData.description}
+                            onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                            rows={3}
+                        />
+                    </div>
+                </div>
 
-              {/* Description */}
-              <FormField
-                control={form.control}
-                name="credit_description"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>{t("description")} <span className="text-gray-400 text-sm">{t("optional")}</span></FormLabel>
-                    <FormControl>
-                      <Input {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <div className="flex justify-end space-x-2">
-                <Button type="button" variant="outline" onClick={handleClose}>
-                  {t("cancel")}
-                </Button>
-                <Button type="submit" className="hover:bg-[#f6d265]">{t("save")}</Button>
-              </div>
-            </form>
-          </Form>
-        </DialogContent>
-      </Dialog>
-
-      {showProductModal && (
-        <ProductModal
-          onSubmit={async (data) => {
-            const created = await createProduct(data);
-            if (created) {
-              await refreshCoreData('products');
-              form.setValue('product', created.id);
-              setShowProductModal(false);
-            }
-          }}
-          onClose={() => setShowProductModal(false)}
-        />
-      )}
-
-      {showCustomerModal && (
-        <CustomerModal
-          onSubmit={async (data) => {
-            const created = await createCustomer(data);
-            if (created) {
-              await refreshCoreData('customers');
-              form.setValue('customer', created.id);
-              setShowCustomerModal(false);
-            }
-          }}
-          onClose={() => setShowCustomerModal(false)}
-        />
-      )}
-
-      {showReceiverModal && (
-        <ReceiverModal
-          onSubmit={async (data) => {
-            const created = await createReceiver(data);
-            if (created) {
-              await refreshCoreData('receivers');
-              form.setValue('receiver', created.id);
-              setShowReceiverModal(false);
-            }
-          }}
-          onClose={() => setShowReceiverModal(false)}
-        />
-      )}
-    </>
-  );
+                <div className="flex justify-end gap-2 mt-6">
+                    <Button variant="outline" onClick={onClose}>
+                        {t("cancel")}
+                    </Button>
+                    <Button
+                        onClick={handleSubmit}
+                        disabled={!isValid || loading}
+                        className="bg-[#f6d265] hover:bg-[#f5c842] text-black"
+                    >
+                        {t("save")}
+                    </Button>
+                </div>
+            </DialogContent>
+        </Dialog>
+    );
 }

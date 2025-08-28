@@ -20,6 +20,7 @@ import {
   filterByWarehouse,
   searchFilter
 } from "@/lib/utils/warehouse-utils";
+import { formatNumber } from "@/lib/utils/number-format";
 import { Button } from "../ui/button";
 import { Edit, Plus, Search, Trash2 } from "lucide-react";
 import { Input } from "../ui/input";
@@ -185,7 +186,7 @@ export function WarehouseReceiptTab({ selectedWarehouseId }: WarehouseReceiptTab
                   <TableCell>{getReceiptTypeLabel(receipt.receipt_type)}</TableCell>
                   <TableCell>{receipt.warehouse_name || '-'}</TableCell>
                   <TableCell><PersianDateTableCell date={receipt.date} /></TableCell>
-                  <TableCell>{receipt.total_weight}</TableCell>
+                  <TableCell>{formatNumber(receipt.total_weight)}</TableCell>
                   <TableCell>
                     <div className="flex gap-2">
                       <Button

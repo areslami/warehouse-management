@@ -64,27 +64,16 @@ export function UploadDistributionModal({ open, onClose, onSuccess }: UploadDist
 
   const [selectedReceipt, setSelectedReceipt] = useState<number | null>(null);
   const [selectedOffer, setSelectedOffer] = useState<number | null>(null);
+  const [saleType, setSaleType] = useState<"your_sale" | "distributor_sale">("your_sale");
 
   const [receipts, setReceipts] = useState<object[]>([]);
   const [offers, setOffers] = useState<object[]>([]);
 
   useEffect(() => {
     if (open) {
-      loadReceipts();
       loadOffers();
     }
   }, [open]);
-
-
-  const loadReceipts = async () => {
-    try {
-      const data = await fetchWarehouseReceipts();
-      const cottageReceipts = data?.filter((r: WarehouseReceipt) => r.receipt_type === 'import_cottage') || [];
-      setReceipts(cottageReceipts);
-    } catch (error) {
-      console.error("Failed to load receipts:", error);
-    }
-  };
 
   const loadOffers = async () => {
     try {
@@ -105,7 +94,9 @@ export function UploadDistributionModal({ open, onClose, onSuccess }: UploadDist
 
   const handleUpload = async () => {
     if (!file) return;
-    if (!selectedOffer) {
+    
+    // Only check for offer if it's "your_sale" type
+    if (saleType === "your_sale" && !selectedOffer) {
       toast.error(t("select_offer"));
       return;
     }
@@ -113,7 +104,7 @@ export function UploadDistributionModal({ open, onClose, onSuccess }: UploadDist
     setLoading(true);
     setUploadStep("processing");
     try {
-      const result = await uploadDistributionExcel(file);
+      const result = await uploadDistributionExcel(file, saleType);
       setRows(result.rows);
       if (result.rows.length > 0) {
         processNextRow(result.rows, 0, []);
@@ -144,7 +135,7 @@ export function UploadDistributionModal({ open, onClose, onSuccess }: UploadDist
         product: { id: createdProducts[productName.toLowerCase()] }
       };
     }
-    
+
     const customerName = row.customer_name;
     if (customerName && createdCustomers[customerName.toLowerCase()]) {
       row = {
@@ -154,10 +145,13 @@ export function UploadDistributionModal({ open, onClose, onSuccess }: UploadDist
     }
 
     try {
-      const preview = await previewDistribution({
-        ...row,
-        offer: { id: selectedOffer },
-      });
+      const previewData: any = { ...row };
+      // Only add offer for "your_sale" type and if it's selected
+      if (saleType === "your_sale" && selectedOffer) {
+        previewData.offer = { id: selectedOffer };
+      }
+      
+      const preview = await previewDistribution(previewData);
       setPreviewData(preview);
       setShowPreview(true);
     } catch (error) {
@@ -234,7 +228,7 @@ export function UploadDistributionModal({ open, onClose, onSuccess }: UploadDist
             [productName.toLowerCase()]: newProduct.id
           }));
         }
-        
+
         const updatedData = {
           ...previewData.distribution_data,
           product: newProduct.id,
@@ -266,7 +260,7 @@ export function UploadDistributionModal({ open, onClose, onSuccess }: UploadDist
             [customerName.toLowerCase()]: newCustomer.id
           }));
         }
-        
+
         const updatedData = {
           ...previewData.distribution_data,
           customer: newCustomer.id,
@@ -347,29 +341,56 @@ export function UploadDistributionModal({ open, onClose, onSuccess }: UploadDist
               )}
 
               <div className="space-y-3">
-
                 <div>
-                  <label className="block text-sm font-medium mb-1">{t("b2b_offer")}</label>
-                  <select
-                    className="w-full px-3 py-2 border rounded-md"
-                    value={selectedOffer || ""}
-                    onChange={(e) => {
-                      if (e.target.value === "new") {
-                        setShowOfferModal(true);
-                      } else {
-                        setSelectedOffer(e.target.value ? Number(e.target.value) : null);
-                      }
-                    }}
-                  >
-                    <option value="">{t("select_offer")}</option>
-                    <option value="new" style={{ color: '#f6d265', fontWeight: 'bold' }}>+ {t("create_new_offer")}</option>
-                    {(offers as B2BOffer[]).map((o) => (
-                      <option key={o.id} value={o.id}>
-                        {o.offer_id} - {o.product_name} ({o.offer_weight} kg)
-                      </option>
-                    ))}
-                  </select>
+                  <label className="block text-sm font-medium mb-1">{t("sale_type")}</label>
+                  <div className="flex gap-4">
+                    <label className="flex items-center">
+                      <input
+                        type="radio"
+                        value="your_sale"
+                        checked={saleType === "your_sale"}
+                        onChange={(e) => setSaleType(e.target.value as "your_sale" | "distributor_sale")}
+                        className="mr-2"
+                      />
+                      {t("your_sale")}
+                    </label>
+                    <label className="flex items-center">
+                      <input
+                        type="radio"
+                        value="distributor_sale"
+                        checked={saleType === "distributor_sale"}
+                        onChange={(e) => setSaleType(e.target.value as "your_sale" | "distributor_sale")}
+                        className="mr-2"
+                      />
+                      {t("distributor_sale")}
+                    </label>
+                  </div>
                 </div>
+
+                {saleType === "your_sale" && (
+                  <div>
+                    <label className="block text-sm font-medium mb-1">{t("b2b_offer")}</label>
+                    <select
+                      className="w-full px-3 py-2 border rounded-md"
+                      value={selectedOffer || ""}
+                      onChange={(e) => {
+                        if (e.target.value === "new") {
+                          setShowOfferModal(true);
+                        } else {
+                          setSelectedOffer(e.target.value ? Number(e.target.value) : null);
+                        }
+                      }}
+                    >
+                      <option value="">{t("select_offer")}</option>
+                      <option value="new" style={{ color: '#f6d265', fontWeight: 'bold' }}>+ {t("create_new_offer")}</option>
+                      {(offers as B2BOffer[]).map((o) => (
+                        <option key={o.id} value={o.id}>
+                          {o.offer_id} - {o.product_name} ({o.offer_weight} kg)
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
 
 
               </div>
@@ -380,7 +401,7 @@ export function UploadDistributionModal({ open, onClose, onSuccess }: UploadDist
                 </Button>
                 <Button
                   onClick={handleUpload}
-                  disabled={!file || !selectedOffer || loading}
+                  disabled={!file || (saleType === "your_sale" && !selectedOffer) || loading}
                   className="bg-[#f6d265] hover:bg-[#f5c842] text-black"
                 >
                   <Upload className="w-4 h-4 mr-2" />
@@ -525,18 +546,36 @@ export function UploadDistributionModal({ open, onClose, onSuccess }: UploadDist
                 )}
 
                 <div className="flex justify-between pt-4 border-t">
-                  <Button variant="outline" onClick={handleSkipRow}>
-                    <X className="w-4 h-4 mr-1" />
-                    {t("skip")}
-                  </Button>
-                  <Button
-                    onClick={() => handleConfirmRow()}
-                    disabled={previewData.needs_customer_creation || previewData.needs_product_creation}
-                    className="bg-[#f6d265] hover:bg-[#f5c842] text-black"
+                  <Button 
+                    variant="secondary"
+                    onClick={() => {
+                      // Accept all remaining rows without preview
+                      const remainingRows = rows.slice(currentRowIndex);
+                      const acceptedRows = remainingRows.map(row => ({
+                        ...row,
+                        b2b_offer: selectedOffer,
+                        warehouse: selectedReceipt,
+                      }));
+                      submitBatch([...processedRows, ...acceptedRows]);
+                    }}
                   >
                     <Check className="w-4 h-4 mr-1" />
-                    {t("confirm")}
+                    {t("accept_all")}
                   </Button>
+                  <div className="flex gap-2">
+                    <Button variant="outline" onClick={handleSkipRow}>
+                      <X className="w-4 h-4 mr-1" />
+                      {t("skip")}
+                    </Button>
+                    <Button
+                      onClick={() => handleConfirmRow()}
+                      disabled={previewData.needs_customer_creation || previewData.needs_product_creation}
+                      className="bg-[#f6d265] hover:bg-[#f5c842] text-black"
+                    >
+                      <Check className="w-4 h-4 mr-1" />
+                      {t("confirm")}
+                    </Button>
+                  </div>
                 </div>
               </div>);
           })()}

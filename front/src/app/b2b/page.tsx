@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
+import { useSearchParams, useRouter } from "next/navigation";
 import { Plus, Edit2, Trash2, ShoppingCart, TrendingUp, Package, Search, Upload } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,40 +12,59 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sh
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { B2BOfferModal } from "@/components/modals/b2b/b2b-offer-modal";
 import { B2BDistributionModal } from "@/components/modals/b2b/b2b-distribution-modal";
+import { B2BAddressModal } from "@/components/modals/b2b/b2b-address-modal";
 import { B2BSaleModal } from "@/components/modals/b2b/b2b-sale-modal";
 import { UploadDistributionModal } from "@/components/modals/b2b/upload-distribution-modal";
-import { B2BOffer, B2BSale, B2BDistribution } from "@/lib/interfaces/b2b";
+import { B2BOffer, B2BAddress, B2BDistribution, B2BSale } from "@/lib/interfaces/b2b";
 import {
   fetchB2BOffers, fetchB2BOfferById, createB2BOffer, updateB2BOffer, deleteB2BOffer,
-  fetchB2BSales, fetchB2BSaleById, createB2BSale, updateB2BSale, deleteB2BSale,
-  fetchB2BDistributions, fetchB2BDistributionById, createB2BDistribution, updateB2BDistribution, deleteB2BDistribution
+  fetchB2BAddresss, fetchB2BAddressById, createB2BAddress, updateB2BAddress, deleteB2BAddress,
+  fetchB2BDistributions, fetchB2BDistributionById, createB2BDistribution, updateB2BDistribution, deleteB2BDistribution,
+  fetchB2BSales, fetchB2BSaleById, createB2BSale, updateB2BSale, deleteB2BSale
 } from "@/lib/api/b2b";
 import { handleApiError } from "@/lib/api/error-handler";
-import UploadSaleModal from "@/components/modals/b2b/upload-sale-modal";
+import { formatNumber } from "@/lib/utils/number-format";
+import UploadAddressModal from "@/components/modals/b2b/upload-address-modal";
 
 export default function B2BPage() {
   const t = useTranslations("pages.b2b");
   const tErrors = useTranslations("errors");
   const tCommon = useTranslations("common");
   const [offers, setOffers] = useState<B2BOffer[]>([]);
-  const [sales, setSales] = useState<B2BSale[]>([]);
+  const [addresses, setAddresses] = useState<B2BAddress[]>([]);
   const [distributions, setDistributions] = useState<B2BDistribution[]>([]);
+  const [sales, setSales] = useState<B2BSale[]>([]);
+  const [selectedOffers, setSelectedOffers] = useState<number[]>([]);
+  const [selectedAddresses, setSelectedAddresses] = useState<number[]>([]);
+  const [selectedDistributions, setSelectedDistributions] = useState<number[]>([]);
+  const [selectedSales, setSelectedSales] = useState<number[]>([]);
 
   const [showOfferModal, setShowOfferModal] = useState(false);
-  const [showSaleModal, setShowSaleModal] = useState(false);
+  const [showAddressModal, setShowAddressModal] = useState(false);
   const [showDistributionModal, setShowDistributionModal] = useState(false);
+  const [showSaleModal, setShowSaleModal] = useState(false);
   const [showDistributionUploadModal, setShowDistributionUploadModal] = useState(false);
-  const [showSaleUploadModal, setShowSaleUploadModal] = useState(false);
+  const [showAddressUploadModal, setShowAddressUploadModal] = useState(false);
 
   const [editingOffer, setEditingOffer] = useState<B2BOffer | null>(null);
-  const [editingSale, setEditingSale] = useState<B2BSale | null>(null);
+  const [editingAddress, setEditingAddress] = useState<B2BAddress | null>(null);
   const [editingDistribution, setEditingDistribution] = useState<B2BDistribution | null>(null);
+  const [editingSale, setEditingSale] = useState<B2BSale | null>(null);
 
   const [sheetOpen, setSheetOpen] = useState(false);
-  const [selectedItem, setSelectedItem] = useState<B2BOffer | B2BSale | B2BDistribution | null>(null);
-  const [selectedType, setSelectedType] = useState<'offer' | 'distribution' | 'sale'>('offer');
+  const [selectedItem, setSelectedItem] = useState<B2BOffer | B2BAddress | B2BDistribution | B2BSale | null>(null);
+  const [selectedType, setSelectedType] = useState<'offer' | 'distribution' | 'address' | 'sale'>('offer');
 
   const [searchTerm, setSearchTerm] = useState("");
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const tabFromUrl = searchParams.get('tab') || 'offers';
+  const [activeTab, setActiveTab] = useState(tabFromUrl);
+
+  useEffect(() => {
+    const newTab = searchParams.get('tab') || 'offers';
+    setActiveTab(newTab);
+  }, [searchParams]);
 
   useEffect(() => {
     loadData();
@@ -52,14 +72,16 @@ export default function B2BPage() {
 
   const loadData = async () => {
     try {
-      const [offersData, salesData, distributionsData] = await Promise.all([
+      const [offersData, addressesData, distributionsData, salesData] = await Promise.all([
         fetchB2BOffers(),
-        fetchB2BSales(),
-        fetchB2BDistributions()
+        fetchB2BAddresss(),
+        fetchB2BDistributions(),
+        fetchB2BSales()
       ]);
       setOffers(offersData);
-      setSales(salesData);
+      setAddresses(addressesData);
       setDistributions(distributionsData);
+      setSales(salesData);
     } catch (error) {
       console.error("Failed to load B2B data:", error);
       const errorMessage = handleApiError(error, "Load B2B data");
@@ -67,7 +89,7 @@ export default function B2BPage() {
     }
   };
 
-  const handleRowClick = (item: B2BOffer | B2BSale | B2BDistribution, type: 'offer' | 'distribution' | 'sale') => {
+  const handleRowClick = (item: B2BOffer | B2BAddress | B2BDistribution | B2BSale, type: 'offer' | 'distribution' | 'address' | 'sale') => {
     setSelectedItem(item);
     setSelectedType(type);
     setSheetOpen(true);
@@ -77,8 +99,12 @@ export default function B2BPage() {
     if (confirm(t("confirm_delete_offer"))) {
       try {
         await deleteB2BOffer(id);
+        setOffers(offers.filter(o => o.id !== id));
         toast.success(tErrors("success_delete"));
-        loadData();
+        // Clear selection if this item was selected
+        if (selectedOffers.includes(id)) {
+          setSelectedOffers(selectedOffers.filter(selectedId => selectedId !== id));
+        }
       } catch (error) {
         console.error("Failed to delete offer:", error);
         const errorMessage = handleApiError(error, "Delete offer");
@@ -87,16 +113,81 @@ export default function B2BPage() {
     }
   };
 
-  const handleDeleteSale = async (id: number) => {
-    if (confirm(t("confirm_delete_sale"))) {
+  const handleBulkDeleteOffers = async () => {
+    if (selectedOffers.length === 0) return;
+    const confirmMessage = t("confirm_delete_multiple", { count: selectedOffers.length });
+    if (confirm(confirmMessage)) {
       try {
-        await deleteB2BSale(id);
-        toast.success(tErrors("success_delete"));
-        loadData();
+        const deletePromises = selectedOffers.map(id => deleteB2BOffer(id));
+        const results = await Promise.allSettled(deletePromises);
+        
+        const successCount = results.filter(r => r.status === 'fulfilled').length;
+        const failedCount = results.filter(r => r.status === 'rejected').length;
+        
+        if (successCount > 0) {
+          // Remove successfully deleted items from state
+          const successfulIds = selectedOffers.filter((id, index) => results[index].status === 'fulfilled');
+          setOffers(offers.filter(o => !successfulIds.includes(o.id)));
+          
+          // Show success message
+          toast.success(t("bulk_delete_success", { count: successCount }));
+        }
+        
+        if (failedCount > 0) {
+          toast.error(t("bulk_delete_failed"));
+        }
+        
+        setSelectedOffers([]);
       } catch (error) {
-        console.error("Failed to delete sale:", error);
-        const errorMessage = handleApiError(error, "Delete sale");
+        console.error("Bulk delete error:", error);
+        toast.error(t("bulk_delete_failed"));
+      }
+    }
+  };
+
+  const handleDeleteAddress = async (id: number) => {
+    if (confirm(t("confirm_delete_address"))) {
+      try {
+        await deleteB2BAddress(id);
+        setAddresses(addresses.filter(a => a.id !== id));
+        toast.success(tErrors("success_delete"));
+        if (selectedAddresses.includes(id)) {
+          setSelectedAddresses(selectedAddresses.filter(selectedId => selectedId !== id));
+        }
+      } catch (error) {
+        console.error("Failed to delete address:", error);
+        const errorMessage = handleApiError(error, "Delete address");
         toast.error(errorMessage);
+      }
+    }
+  };
+
+  const handleBulkDeleteAddresses = async () => {
+    if (selectedAddresses.length === 0) return;
+    const confirmMessage = t("confirm_delete_multiple", { count: selectedAddresses.length });
+    if (confirm(confirmMessage)) {
+      try {
+        const deletePromises = selectedAddresses.map(id => deleteB2BAddress(id));
+        const results = await Promise.allSettled(deletePromises);
+        
+        const successCount = results.filter(r => r.status === 'fulfilled').length;
+        const failedCount = results.filter(r => r.status === 'rejected').length;
+        
+        if (successCount > 0) {
+          const successfulIds = selectedAddresses.filter((id, index) => results[index].status === 'fulfilled');
+          setAddresses(addresses.filter(a => !successfulIds.includes(a.id)));
+          
+          toast.success(t("bulk_delete_success", { count: successCount }));
+        }
+        
+        if (failedCount > 0) {
+          toast.error(t("bulk_delete_failed"));
+        }
+        
+        setSelectedAddresses([]);
+      } catch (error) {
+        console.error("Bulk delete error:", error);
+        toast.error(t("bulk_delete_failed"));
       }
     }
   };
@@ -105,12 +196,92 @@ export default function B2BPage() {
     if (confirm(t("confirm_delete_distribution"))) {
       try {
         await deleteB2BDistribution(id);
+        setDistributions(distributions.filter(d => d.id !== id));
         toast.success(tErrors("success_delete"));
-        loadData();
+        if (selectedDistributions.includes(id)) {
+          setSelectedDistributions(selectedDistributions.filter(selectedId => selectedId !== id));
+        }
       } catch (error) {
         console.error("Failed to delete distribution:", error);
         const errorMessage = handleApiError(error, "Delete distribution");
         toast.error(errorMessage);
+      }
+    }
+  };
+
+  const handleBulkDeleteDistributions = async () => {
+    if (selectedDistributions.length === 0) return;
+    const confirmMessage = t("confirm_delete_multiple", { count: selectedDistributions.length });
+    if (confirm(confirmMessage)) {
+      try {
+        const deletePromises = selectedDistributions.map(id => deleteB2BDistribution(id));
+        const results = await Promise.allSettled(deletePromises);
+        
+        const successCount = results.filter(r => r.status === 'fulfilled').length;
+        const failedCount = results.filter(r => r.status === 'rejected').length;
+        
+        if (successCount > 0) {
+          const successfulIds = selectedDistributions.filter((id, index) => results[index].status === 'fulfilled');
+          setDistributions(distributions.filter(d => !successfulIds.includes(d.id)));
+          
+          toast.success(t("bulk_delete_success", { count: successCount }));
+        }
+        
+        if (failedCount > 0) {
+          toast.error(t("bulk_delete_failed"));
+        }
+        
+        setSelectedDistributions([]);
+      } catch (error) {
+        console.error("Bulk delete error:", error);
+        toast.error(t("bulk_delete_failed"));
+      }
+    }
+  };
+
+  const handleDeleteSale = async (id: number) => {
+    if (confirm(t("confirm_delete_sale"))) {
+      try {
+        await deleteB2BSale(id);
+        setSales(sales.filter(s => s.id !== id));
+        toast.success(tErrors("success_delete"));
+        if (selectedSales.includes(id)) {
+          setSelectedSales(selectedSales.filter(selectedId => selectedId !== id));
+        }
+      } catch (error) {
+        console.error("Failed to delete sale:", error);
+        const errorMessage = handleApiError(error, "Delete sale");
+        toast.error(errorMessage);
+      }
+    }
+  };
+
+  const handleBulkDeleteSales = async () => {
+    if (selectedSales.length === 0) return;
+    const confirmMessage = t("confirm_delete_multiple", { count: selectedSales.length });
+    if (confirm(confirmMessage)) {
+      try {
+        const deletePromises = selectedSales.map(id => deleteB2BSale(id));
+        const results = await Promise.allSettled(deletePromises);
+        
+        const successCount = results.filter(r => r.status === 'fulfilled').length;
+        const failedCount = results.filter(r => r.status === 'rejected').length;
+        
+        if (successCount > 0) {
+          const successfulIds = selectedSales.filter((id, index) => results[index].status === 'fulfilled');
+          setSales(sales.filter(s => !successfulIds.includes(s.id)));
+          
+          toast.success(t("bulk_delete_success", { count: successCount }));
+        }
+        
+        if (failedCount > 0) {
+          toast.error(t("bulk_delete_failed"));
+        }
+        
+        setSelectedSales([]);
+      } catch (error) {
+        console.error("Bulk delete error:", error);
+        toast.error(t("bulk_delete_failed"));
       }
     }
   };
@@ -132,13 +303,23 @@ export default function B2BPage() {
     );
   }, [distributions, searchTerm]);
 
+  const filteredAddresses = useMemo(() => {
+    return addresses.filter(address =>
+      (address.purchase_id || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (address.allocation_id || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (address.customer_name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (address.product_name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (address.tracking_number || '').toLowerCase().includes(searchTerm.toLowerCase())
+    );
+  }, [addresses, searchTerm]);
+
   const filteredSales = useMemo(() => {
     return sales.filter(sale =>
       (sale.purchase_id || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (sale.allocation_id || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (sale.offer_id || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
       (sale.customer_name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
       (sale.product_name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (sale.tracking_number || '').toLowerCase().includes(searchTerm.toLowerCase())
+      (sale.cottage_code || '').toLowerCase().includes(searchTerm.toLowerCase())
     );
   }, [sales, searchTerm]);
 
@@ -171,8 +352,11 @@ export default function B2BPage() {
         />
       </div>
 
-      <Tabs defaultValue="offers" className="w-full">
-        <TabsList className="grid w-full grid-cols-3 mb-6">
+      <Tabs value={activeTab} onValueChange={(value) => {
+        setActiveTab(value);
+        router.push(`/b2b?tab=${value}`);
+      }} className="w-full">
+        <TabsList className="grid w-full grid-cols-4 mb-6">
           <TabsTrigger value="offers" className="data-[state=active]:bg-[#f6d265] data-[state=active]:text-black">
             <ShoppingCart className="w-4 h-4 mr-2" />
             {t("offers_tab")}
@@ -181,8 +365,12 @@ export default function B2BPage() {
             <Package className="w-4 h-4 mr-2" />
             {t("distributions_tab")}
           </TabsTrigger>
-          <TabsTrigger value="sales" className="data-[state=active]:bg-[#f6d265] data-[state=active]:text-black">
+          <TabsTrigger value="addresses" className="data-[state=active]:bg-[#f6d265] data-[state=active]:text-black">
             <TrendingUp className="w-4 h-4 mr-2" />
+            {t("addresses_tab")}
+          </TabsTrigger>
+          <TabsTrigger value="sales" className="data-[state=active]:bg-[#f6d265] data-[state=active]:text-black">
+            <ShoppingCart className="w-4 h-4 mr-2" />
             {t("sales_tab")}
           </TabsTrigger>
         </TabsList>
@@ -191,17 +379,25 @@ export default function B2BPage() {
           <div className="bg-white rounded-lg shadow">
             <div className="p-4 border-b border-gray-200 flex items-center justify-between">
               <h2 className="text-xl font-semibold text-gray-700">{t("offers_title")}</h2>
-              <Button
-                size="sm"
-                className="bg-[#f6d265] hover:bg-[#f5c842] text-black"
-                onClick={() => {
-                  setEditingOffer(null);
-                  setShowOfferModal(true);
-                }}
-              >
-                <Plus className="w-4 h-4 mr-1" />
-                {t("add_offer")}
-              </Button>
+              <div className="flex gap-2">
+                {selectedOffers.length > 0 && (
+                  <Button variant="destructive" size="sm" onClick={handleBulkDeleteOffers}>
+                    <Trash2 className="w-4 h-4 mr-1" />
+                    {t("delete")} ({selectedOffers.length})
+                  </Button>
+                )}
+                <Button
+                  size="sm"
+                  className="bg-[#f6d265] hover:bg-[#f5c842] text-black"
+                  onClick={() => {
+                    setEditingOffer(null);
+                    setShowOfferModal(true);
+                  }}
+                >
+                  <Plus className="w-4 h-4 mr-1" />
+                  {t("add_offer")}
+                </Button>
+              </div>
             </div>
             <div className="p-4">
               {offers.length === 0 ? (
@@ -210,6 +406,19 @@ export default function B2BPage() {
                 <Table dir="rtl">
                   <TableHeader>
                     <TableRow>
+                      <TableHead className="w-12">
+                        <input
+                          type="checkbox"
+                          checked={filteredOffers.length > 0 && selectedOffers.length === filteredOffers.length}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              setSelectedOffers(filteredOffers.map(o => o.id));
+                            } else {
+                              setSelectedOffers([]);
+                            }
+                          }}
+                        />
+                      </TableHead>
                       <TableHead className="text-right w-16">{t("id")}</TableHead>
                       <TableHead className="text-right">{t("offer_id")}</TableHead>
                       <TableHead className="text-right">{t("product")}</TableHead>
@@ -225,14 +434,27 @@ export default function B2BPage() {
                   <TableBody>
                     {filteredOffers.map((offer) => (
                       <TableRow key={offer.id} className="cursor-pointer hover:bg-gray-50" onClick={() => handleRowClick(offer, 'offer')}>
+                        <TableCell onClick={(e) => e.stopPropagation()}>
+                          <input
+                            type="checkbox"
+                            checked={selectedOffers.includes(offer.id)}
+                            onChange={(e) => {
+                              if (e.target.checked) {
+                                setSelectedOffers([...selectedOffers, offer.id]);
+                              } else {
+                                setSelectedOffers(selectedOffers.filter(id => id !== offer.id));
+                              }
+                            }}
+                          />
+                        </TableCell>
                         <TableCell className="font-medium text-right">{offer.id}</TableCell>
                         <TableCell className="truncate max-w-[120px]" title={offer.offer_id}>{offer.offer_id}</TableCell>
                         <TableCell className="truncate max-w-[150px]" title={offer.product_name || `${tCommon('product_labels.product_prefix')} ${offer.product}`}>
                           {offer.product_name || `${tCommon('product_labels.product_prefix')} ${offer.product}`}
                         </TableCell>
-                        <TableCell>{offer.offer_weight} {tCommon('units.kg')}</TableCell>
-                        <TableCell className="truncate max-w-[100px]">{offer.unit_price.toLocaleString()}</TableCell>
-                        <TableCell className="truncate max-w-[120px]">{offer.total_price ? offer.total_price.toLocaleString() : '0'}</TableCell>
+                        <TableCell>{formatNumber(offer.offer_weight)} {tCommon('units.kg')}</TableCell>
+                        <TableCell className="truncate max-w-[100px]">{formatNumber(offer.unit_price)}</TableCell>
+                        <TableCell className="truncate max-w-[120px]">{formatNumber(offer.total_price || 0)}</TableCell>
                         <TableCell>
                           <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusBadgeClass(offer.status)}`}>
                             {offer.status === 'active' && tCommon('status.active')}
@@ -289,14 +511,12 @@ export default function B2BPage() {
             <div className="p-4 border-b border-gray-200 flex items-center justify-between">
               <h2 className="text-xl font-semibold text-gray-700">{t("distributions_title")}</h2>
               <div className="flex gap-2">
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => setShowDistributionUploadModal(true)}
-                >
-                  <Upload className="w-4 h-4 mr-1" />
-                  {t("import_excel")}
-                </Button>
+                {selectedDistributions.length > 0 && (
+                  <Button variant="destructive" size="sm" onClick={handleBulkDeleteDistributions}>
+                    <Trash2 className="w-4 h-4 mr-1" />
+                    {t("delete")} ({selectedDistributions.length})
+                  </Button>
+                )}
                 <Button
                   size="sm"
                   className="bg-[#f6d265] hover:bg-[#f5c842] text-black"
@@ -317,6 +537,19 @@ export default function B2BPage() {
                 <Table dir="rtl">
                   <TableHeader>
                     <TableRow>
+                      <TableHead className="w-12">
+                        <input
+                          type="checkbox"
+                          checked={filteredDistributions.length > 0 && selectedDistributions.length === filteredDistributions.length}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              setSelectedDistributions(filteredDistributions.map(d => d.id));
+                            } else {
+                              setSelectedDistributions([]);
+                            }
+                          }}
+                        />
+                      </TableHead>
                       <TableHead className="text-right w-16">{t("id")}</TableHead>
                       <TableHead className="text-right">{t("purchase_id")}</TableHead>
                       <TableHead className="text-right">{t("cottage_number")}</TableHead>
@@ -332,6 +565,19 @@ export default function B2BPage() {
                   <TableBody>
                     {filteredDistributions.map((distribution) => (
                       <TableRow key={distribution.id} className="cursor-pointer hover:bg-gray-50" onClick={() => handleRowClick(distribution, 'distribution')}>
+                        <TableCell onClick={(e) => e.stopPropagation()}>
+                          <input
+                            type="checkbox"
+                            checked={selectedDistributions.includes(distribution.id)}
+                            onChange={(e) => {
+                              if (e.target.checked) {
+                                setSelectedDistributions([...selectedDistributions, distribution.id]);
+                              } else {
+                                setSelectedDistributions(selectedDistributions.filter(id => id !== distribution.id));
+                              }
+                            }}
+                          />
+                        </TableCell>
                         <TableCell className="font-medium text-right">{distribution.id}</TableCell>
                         <TableCell className="truncate max-w-[100px]" title={distribution.purchase_id || '-'}>{distribution.purchase_id || '-'}</TableCell>
                         <TableCell className="truncate max-w-[80px]" title={distribution.cottage_number || '-'}>{distribution.cottage_number || '-'}</TableCell>
@@ -345,7 +591,7 @@ export default function B2BPage() {
                         <TableCell className="truncate max-w-[150px]" title={distribution.customer_name || `${tCommon('product_labels.customer_prefix')} ${distribution.customer}`}>
                           {distribution.customer_name || `${tCommon('product_labels.customer_prefix')} ${distribution.customer}`}
                         </TableCell>
-                        <TableCell>{distribution.agency_weight} {tCommon('units.kg')}</TableCell>
+                        <TableCell>{formatNumber(distribution.agency_weight)} {tCommon('units.kg')}</TableCell>
                         <TableCell>{new Date(distribution.agency_date).toLocaleDateString('fa-IR')}</TableCell>
                         <TableCell className="text-center">
                           <div className="flex gap-2 justify-center">
@@ -388,15 +634,165 @@ export default function B2BPage() {
           </div>
         </TabsContent>
 
+        <TabsContent value="addresses">
+          <div className="bg-white rounded-lg shadow">
+            <div className="p-4 border-b border-gray-200 flex items-center justify-between">
+              <h2 className="text-xl font-semibold text-gray-700">{t("addresses_title")}</h2>
+              <div className="flex gap-2">
+                {selectedAddresses.length > 0 && (
+                  <Button variant="destructive" size="sm" onClick={handleBulkDeleteAddresses}>
+                    <Trash2 className="w-4 h-4 mr-1" />
+                    {t("delete")} ({selectedAddresses.length})
+                  </Button>
+                )}
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => setShowAddressUploadModal(true)}
+                >
+                  <Upload className="w-4 h-4 mr-1" />
+                  {t("import_excel")}
+                </Button>
+                <Button
+                  size="sm"
+                  className="bg-[#f6d265] hover:bg-[#f5c842] text-black"
+                  onClick={() => {
+                    setEditingAddress(null);
+                    setShowAddressModal(true);
+                  }}
+                >
+                  <Plus className="w-4 h-4 mr-1" />
+                  {t("add_address")}
+                </Button>
+              </div>
+            </div>
+            <div className="p-4">
+              {addresses.length === 0 ? (
+                <p className="text-gray-500 text-center py-8">{t("no_addresses")}</p>
+              ) : (
+                <Table dir="rtl">
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="w-12">
+                        <input
+                          type="checkbox"
+                          checked={filteredAddresses.length > 0 && selectedAddresses.length === filteredAddresses.length}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              setSelectedAddresses(filteredAddresses.map(a => a.id));
+                            } else {
+                              setSelectedAddresses([]);
+                            }
+                          }}
+                        />
+                      </TableHead>
+                      <TableHead className="text-right w-16">{t("id")}</TableHead>
+                      <TableHead className="text-right">{t("purchase_id")}</TableHead>
+                      <TableHead className="text-right">{t("allocation_id")}</TableHead>
+                      <TableHead className="text-right">{t("customer")}</TableHead>
+                      <TableHead className="text-right">{t("receiver")}</TableHead>
+                      <TableHead className="text-right">{t("product")}</TableHead>
+                      <TableHead className="text-right">{t("weight")}</TableHead>
+                      <TableHead className="text-right">{t("amount")}</TableHead>
+                      <TableHead className="text-right">{t("date")}</TableHead>
+                      <TableHead className="text-right">{t("tracking")}</TableHead>
+                      <TableHead className="text-center w-24">{t("actions")}</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredAddresses.map((address) => (
+                      <TableRow key={address.id} className="cursor-pointer hover:bg-gray-50" onClick={() => handleRowClick(address, 'address')}>
+                        <TableCell onClick={(e) => e.stopPropagation()}>
+                          <input
+                            type="checkbox"
+                            checked={selectedAddresses.includes(address.id)}
+                            onChange={(e) => {
+                              if (e.target.checked) {
+                                setSelectedAddresses([...selectedAddresses, address.id]);
+                              } else {
+                                setSelectedAddresses(selectedAddresses.filter(id => id !== address.id));
+                              }
+                            }}
+                          />
+                        </TableCell>
+                        <TableCell className="text-right">{address.id}</TableCell>
+                        <TableCell className="text-right truncate max-w-[100px]" title={address.purchase_id}>
+                          {address.purchase_id}
+                        </TableCell>
+                        <TableCell className="text-right truncate max-w-[100px]" title={address.allocation_id || ''}>
+                          {address.allocation_id || '-'}
+                        </TableCell>
+                        <TableCell className="text-right truncate max-w-[120px]" title={address.customer_name || ''}>
+                          {address.customer_name || '-'}
+                        </TableCell>
+                        <TableCell className="text-right truncate max-w-[120px]" title={address.receiver_name || ''}>
+                          {address.receiver_name || '-'}
+                        </TableCell>
+                        <TableCell className="text-right truncate max-w-[150px]" title={address.product_name || ''}>
+                          {address.product_name || '-'}
+                        </TableCell>
+                        <TableCell className="text-right">{formatNumber(address.total_weight_purchased)}</TableCell>
+                        <TableCell className="text-right">{formatNumber(address.payment_amount)}</TableCell>
+                        <TableCell className="text-right">{address.purchase_date ? new Date(address.purchase_date).toLocaleDateString('fa-IR') : '-'}</TableCell>
+                        <TableCell className="text-right truncate max-w-[100px]" title={address.tracking_number || ''}>
+                          {address.tracking_number || '-'}
+                        </TableCell>
+                        <TableCell className="text-center">
+                          <div className="flex gap-2 justify-center">
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={async (e) => {
+                                e.stopPropagation();
+                                try {
+                                  const fullAddress = await fetchB2BAddressById(address.id);
+                                  setEditingAddress(fullAddress);
+                                  setShowAddressModal(true);
+                                } catch (error) {
+                                  console.error("Failed to fetch address details:", error);
+                                  const errorMessage = handleApiError(error, "Fetch address details");
+                                  toast.error(errorMessage);
+                                }
+                              }}
+                            >
+                              <Edit2 className="w-4 h-4 text-gray-600" />
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleDeleteAddress(address.id);
+                              }}
+                            >
+                              <Trash2 className="w-4 h-4 text-red-500" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              )}
+            </div>
+          </div>
+        </TabsContent>
+
         <TabsContent value="sales">
           <div className="bg-white rounded-lg shadow">
             <div className="p-4 border-b border-gray-200 flex items-center justify-between">
               <h2 className="text-xl font-semibold text-gray-700">{t("sales_title")}</h2>
               <div className="flex gap-2">
+                {selectedSales.length > 0 && (
+                  <Button variant="destructive" size="sm" onClick={handleBulkDeleteSales}>
+                    <Trash2 className="w-4 h-4 mr-1" />
+                    {t("delete")} ({selectedSales.length})
+                  </Button>
+                )}
                 <Button
                   size="sm"
                   variant="outline"
-                  onClick={() => setShowSaleUploadModal(true)}
+                  onClick={() => setShowDistributionUploadModal(true)}
                 >
                   <Upload className="w-4 h-4 mr-1" />
                   {t("import_excel")}
@@ -421,43 +817,68 @@ export default function B2BPage() {
                 <Table dir="rtl">
                   <TableHeader>
                     <TableRow>
+                      <TableHead className="w-12">
+                        <input
+                          type="checkbox"
+                          checked={filteredSales.length > 0 && selectedSales.length === filteredSales.length}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              setSelectedSales(filteredSales.map(s => s.id));
+                            } else {
+                              setSelectedSales([]);
+                            }
+                          }}
+                        />
+                      </TableHead>
                       <TableHead className="text-right w-16">{t("id")}</TableHead>
                       <TableHead className="text-right">{t("purchase_id")}</TableHead>
-                      <TableHead className="text-right">{t("allocation_id")}</TableHead>
                       <TableHead className="text-right">{t("customer")}</TableHead>
-                      <TableHead className="text-right">{t("receiver")}</TableHead>
                       <TableHead className="text-right">{t("product")}</TableHead>
                       <TableHead className="text-right">{t("weight")}</TableHead>
-                      <TableHead className="text-right">{t("amount")}</TableHead>
-                      <TableHead className="text-right">{t("date")}</TableHead>
-                      <TableHead className="text-right">{t("tracking")}</TableHead>
+                      <TableHead className="text-right">{t("unit_price")}</TableHead>
+                      <TableHead className="text-right">{t("total_price")}</TableHead>
+                      <TableHead className="text-right">{t("sale_date")}</TableHead>
+                      <TableHead className="text-right">{t("purchase_type")}</TableHead>
                       <TableHead className="text-center w-24">{t("actions")}</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {filteredSales.map((sale) => (
                       <TableRow key={sale.id} className="cursor-pointer hover:bg-gray-50" onClick={() => handleRowClick(sale, 'sale')}>
+                        <TableCell onClick={(e) => e.stopPropagation()}>
+                          <input
+                            type="checkbox"
+                            checked={selectedSales.includes(sale.id)}
+                            onChange={(e) => {
+                              if (e.target.checked) {
+                                setSelectedSales([...selectedSales, sale.id]);
+                              } else {
+                                setSelectedSales(selectedSales.filter(id => id !== sale.id));
+                              }
+                            }}
+                          />
+                        </TableCell>
                         <TableCell className="text-right">{sale.id}</TableCell>
                         <TableCell className="text-right truncate max-w-[100px]" title={sale.purchase_id}>
                           {sale.purchase_id}
                         </TableCell>
-                        <TableCell className="text-right truncate max-w-[100px]" title={sale.allocation_id || ''}>
-                          {sale.allocation_id || '-'}
+                        <TableCell className="text-right truncate max-w-[150px]" title={sale.customer_name || `${tCommon('customer_labels.customer_prefix')} ${sale.customer}`}>
+                          {sale.customer_name || `${tCommon('customer_labels.customer_prefix')} ${sale.customer}`}
                         </TableCell>
-                        <TableCell className="text-right truncate max-w-[120px]" title={sale.customer_name || ''}>
-                          {sale.customer_name || '-'}
+                        <TableCell className="text-right truncate max-w-[150px]" title={sale.product_name || `${tCommon('product_labels.product_prefix')} ${sale.product}`}>
+                          {sale.product_name || `${tCommon('product_labels.product_prefix')} ${sale.product}`}
                         </TableCell>
-                        <TableCell className="text-right truncate max-w-[120px]" title={sale.receiver_name || ''}>
-                          {sale.receiver_name || '-'}
-                        </TableCell>
-                        <TableCell className="text-right truncate max-w-[150px]" title={sale.product_name || ''}>
-                          {sale.product_name || '-'}
-                        </TableCell>
-                        <TableCell className="text-right">{sale.total_weight_purchased}</TableCell>
-                        <TableCell className="text-right">{Number(sale.payment_amount).toLocaleString()}</TableCell>
-                        <TableCell className="text-right">{new Date(sale.purchase_date).toLocaleDateString('fa-IR')}</TableCell>
-                        <TableCell className="text-right truncate max-w-[100px]" title={sale.tracking_number || ''}>
-                          {sale.tracking_number || '-'}
+                        <TableCell className="text-right">{formatNumber(sale.weight)} {tCommon('units.kg')}</TableCell>
+                        <TableCell className="text-right">{formatNumber(sale.unit_price)}</TableCell>
+                        <TableCell className="text-right">{formatNumber(sale.total_price)}</TableCell>
+                        <TableCell className="text-right">{new Date(sale.sale_date).toLocaleDateString('fa-IR')}</TableCell>
+                        <TableCell className="text-right">
+                          <span className="px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                            {sale.purchase_type === 'cash' && t("cash")}
+                            {sale.purchase_type === 'credit' && t("credit")}
+                            {sale.purchase_type === 'agreement' && t("agreement")}
+                            {sale.purchase_type === 'other' && t("other")}
+                          </span>
                         </TableCell>
                         <TableCell className="text-center">
                           <div className="flex gap-2 justify-center">
@@ -531,7 +952,10 @@ export default function B2BPage() {
 
       {showDistributionModal && (
         <B2BDistributionModal
-          initialData={editingDistribution || undefined}
+          initialData={editingDistribution ? {
+            ...editingDistribution,
+            b2b_offer: editingDistribution.b2b_offer ?? undefined
+          } : undefined}
           onSubmit={async (data) => {
             try {
               if (editingDistribution) {
@@ -558,34 +982,35 @@ export default function B2BPage() {
         />
       )}
 
-      {showSaleModal && (
-        <B2BSaleModal
-          initialData={editingSale || undefined}
-          offers={offers.map(o => ({ id: o.id, offer_id: o.offer_id, product_name: o.product_name || `${tCommon('product_labels.product_prefix')} ${o.product}` }))}
-          onOfferCreated={async () => {
-            await loadData(); // Refresh offers list when a new offer is created
-          }}
+      {showAddressModal && (
+        <B2BAddressModal
+          initialData={editingAddress ? {
+            ...editingAddress,
+            product: editingAddress.product ?? undefined,
+            customer: editingAddress.customer ?? undefined,
+            purchase_date: editingAddress.purchase_date || ''
+          } : undefined}
           onSubmit={async (data) => {
             try {
-              if (editingSale) {
-                await updateB2BSale(editingSale.id, data);
+              if (editingAddress) {
+                await updateB2BAddress(editingAddress.id, data);
                 toast.success(tErrors("success_update"));
               } else {
-                await createB2BSale(data);
+                await createB2BAddress(data);
                 toast.success(tErrors("success_create"));
               }
               await loadData();
-              setShowSaleModal(false);
-              setEditingSale(null);
+              setShowAddressModal(false);
+              setEditingAddress(null);
             } catch (error) {
-              console.error(`Failed to ${editingSale ? 'update' : 'create'} sale:`, error);
-              const errorMessage = handleApiError(error, `${editingSale ? 'Update' : 'Create'} sale`);
+              console.error(`Failed to ${editingAddress ? 'update' : 'create'} address:`, error);
+              const errorMessage = handleApiError(error, `${editingAddress ? 'Update' : 'Create'} address`);
               toast.error(errorMessage);
             }
           }}
           onClose={() => {
-            setShowSaleModal(false);
-            setEditingSale(null);
+            setShowAddressModal(false);
+            setEditingAddress(null);
           }}
         />
       )}
@@ -596,6 +1021,7 @@ export default function B2BPage() {
             <SheetTitle className="text-2xl font-bold text-[#f6d265]">
               {selectedType === 'offer' && t("offer_details")}
               {selectedType === 'distribution' && t("distribution_details")}
+              {selectedType === 'address' && t("address_details")}
               {selectedType === 'sale' && t("sale_details")}
             </SheetTitle>
           </SheetHeader>
@@ -615,6 +1041,10 @@ export default function B2BPage() {
                         const fullDistribution = await fetchB2BDistributionById(selectedItem.id);
                         setEditingDistribution(fullDistribution);
                         setShowDistributionModal(true);
+                      } else if (selectedType === 'address') {
+                        const fullAddress = await fetchB2BAddressById(selectedItem.id);
+                        setEditingAddress(fullAddress);
+                        setShowAddressModal(true);
                       } else if (selectedType === 'sale') {
                         const fullSale = await fetchB2BSaleById(selectedItem.id);
                         setEditingSale(fullSale);
@@ -638,14 +1068,16 @@ export default function B2BPage() {
                   onClick={async () => {
                     const confirmMessage = selectedType === 'offer' ? t("confirm_delete_offer") :
                       selectedType === 'distribution' ? t("confirm_delete_distribution") :
-                        t("confirm_delete_sale");
+                        t("confirm_delete_address");
                     if (confirm(confirmMessage)) {
                       try {
                         if (selectedType === 'offer' && 'offer_id' in selectedItem) {
                           await deleteB2BOffer(selectedItem.id);
                         } else if (selectedType === 'distribution' && 'agency_weight' in selectedItem) {
                           await deleteB2BDistribution(selectedItem.id);
-                        } else if (selectedType === 'sale' && 'purchase_id' in selectedItem) {
+                        } else if (selectedType === 'address' && 'purchase_id' in selectedItem) {
+                          await deleteB2BAddress(selectedItem.id);
+                        } else if (selectedType === 'sale' && 'weight' in selectedItem) {
                           await deleteB2BSale(selectedItem.id);
                         }
                         toast.success(tErrors("success_delete"));
@@ -670,9 +1102,9 @@ export default function B2BPage() {
                     <div><strong>{tCommon('detail_labels.offer_id')}</strong> {item.offer_id}</div>
                     <div><strong>{tCommon('detail_labels.product')}</strong> {item.product_name || `${tCommon('product_labels.product_prefix')} ${item.product}`}</div>
                     <div><strong>{tCommon('detail_labels.warehouse_receipt')}</strong> {item.warehouse_receipt_id || item.warehouse_receipt}</div>
-                    <div><strong>{tCommon('detail_labels.offer_weight')}</strong> {item.offer_weight} {tCommon('units.kg')}</div>
-                    <div><strong>{tCommon('detail_labels.unit_price')}</strong> {item.unit_price.toLocaleString()} {tCommon('units.rial')}</div>
-                    <div><strong>{tCommon('detail_labels.total_price')}</strong> {(item.total_price || item.offer_weight * item.unit_price).toLocaleString()} {tCommon('units.rial')}</div>
+                    <div><strong>{tCommon('detail_labels.offer_weight')}</strong> {formatNumber(item.offer_weight)} {tCommon('units.kg')}</div>
+                    <div><strong>{tCommon('detail_labels.unit_price')}</strong> {formatNumber(item.unit_price)} {tCommon('units.rial')}</div>
+                    <div><strong>{tCommon('detail_labels.total_price')}</strong> {formatNumber(item.total_price || item.offer_weight * item.unit_price)} {tCommon('units.rial')}</div>
                     <div><strong>{tCommon('detail_labels.status')}</strong> {
                       item.status === 'active' ? tCommon('status.active') :
                         item.status === 'pending' ? tCommon('status.pending') :
@@ -693,13 +1125,13 @@ export default function B2BPage() {
                       <div><strong>{tCommon('detail_labels.warehouse')}</strong> {item.warehouse_name || `${tCommon('product_labels.warehouse_prefix')} ${item.warehouse}`}</div>
                       <div><strong>{tCommon('detail_labels.product')}</strong> {item.product_name || `${tCommon('product_labels.product_prefix')} ${item.product}`}</div>
                       <div><strong>{tCommon('detail_labels.customer')}</strong> {item.customer_name || `${tCommon('product_labels.customer_prefix')} ${item.customer}`}</div>
-                      <div><strong>{tCommon('detail_labels.agency_weight')}</strong> {item.agency_weight} {tCommon('units.kg')}</div>
+                      <div><strong>{tCommon('detail_labels.agency_weight')}</strong> {formatNumber(item.agency_weight)} {tCommon('units.kg')}</div>
                       <div><strong>{tCommon('detail_labels.agency_date')}</strong> {new Date(item.agency_date).toLocaleDateString('fa-IR')}</div>
                       {item.description && <div><strong>{tCommon('detail_labels.description')}</strong> {item.description}</div>}
                     </>);
                 })()}
-                {selectedType === 'sale' && (() => {
-                  const item = selectedItem as B2BSale;
+                {selectedType === 'address' && (() => {
+                  const item = selectedItem as B2BAddress;
                   return (
                     <>
                       <div><strong>{tCommon('detail_labels.purchase_id')}</strong> {item.purchase_id}</div>
@@ -707,15 +1139,36 @@ export default function B2BPage() {
                       <div><strong>{tCommon('detail_labels.customer')}</strong> {item.customer_name || '-'}</div>
                       <div><strong>{tCommon('detail_labels.receiver')}</strong> {item.receiver_name || '-'}</div>
                       <div><strong>{tCommon('detail_labels.product')}</strong> {item.product_name || '-'}</div>
-                      <div><strong>{tCommon('detail_labels.weight')}</strong> {item.total_weight_purchased} {tCommon('units.kg')}</div>
-                      <div><strong>{tCommon('detail_labels.unit_price')}</strong> {item.unit_price ? Number(item.unit_price).toLocaleString() : '0'} {tCommon('units.rial')}</div>
-                      <div><strong>{tCommon('detail_labels.payment_amount')}</strong> {item.payment_amount ? Number(item.payment_amount).toLocaleString() : '0'} {tCommon('units.rial')}</div>
+                      <div><strong>{tCommon('detail_labels.weight')}</strong> {formatNumber(item.total_weight_purchased)} {tCommon('units.kg')}</div>
+                      <div><strong>{tCommon('detail_labels.unit_price')}</strong> {formatNumber(item.unit_price || 0)} {tCommon('units.rial')}</div>
+                      <div><strong>{tCommon('detail_labels.payment_amount')}</strong> {formatNumber(item.payment_amount || 0)} {tCommon('units.rial')}</div>
                       <div><strong>{tCommon('detail_labels.payment_method')}</strong> {item.payment_method || '-'}</div>
-                      <div><strong>{tCommon('detail_labels.purchase_date')}</strong> {new Date(item.purchase_date).toLocaleDateString('fa-IR')}</div>
+                      <div><strong>{tCommon('detail_labels.purchase_date')}</strong> {item.purchase_date ? new Date(item.purchase_date).toLocaleDateString('fa-IR') : '-'}</div>
                       <div><strong>{tCommon('detail_labels.province')}</strong> {item.province || '-'}</div>
                       <div><strong>{tCommon('detail_labels.city')}</strong> {item.city || '-'}</div>
                       <div><strong>{tCommon('detail_labels.tracking_number')}</strong> {item.tracking_number || '-'}</div>
                       {item.credit_description && <div><strong>{tCommon('detail_labels.description')}</strong> {item.credit_description}</div>}
+                    </>);
+                })()}
+                {selectedType === 'sale' && (() => {
+                  const item = selectedItem as B2BSale;
+                  return (
+                    <>
+                      <div><strong>{tCommon('detail_labels.purchase_id')}</strong> {item.purchase_id}</div>
+                      <div><strong>{tCommon('detail_labels.customer')}</strong> {item.customer_name || `${tCommon('customer_labels.customer_prefix')} ${item.customer}`}</div>
+                      <div><strong>{tCommon('detail_labels.product')}</strong> {item.product_name || `${tCommon('product_labels.product_prefix')} ${item.product}`}</div>
+                      <div><strong>{tCommon('detail_labels.cottage_code')}</strong> {item.cottage_code || '-'}</div>
+                      <div><strong>{tCommon('detail_labels.weight')}</strong> {formatNumber(item.weight)} {tCommon('units.kg')}</div>
+                      <div><strong>{tCommon('detail_labels.unit_price')}</strong> {formatNumber(item.unit_price || 0)} {tCommon('units.rial')}</div>
+                      <div><strong>{tCommon('detail_labels.total_price')}</strong> {formatNumber(item.total_price || 0)} {tCommon('units.rial')}</div>
+                      <div><strong>{tCommon('detail_labels.sale_date')}</strong> {new Date(item.sale_date).toLocaleDateString('fa-IR')}</div>
+                      <div><strong>{tCommon('detail_labels.purchase_type')}</strong> {
+                        item.purchase_type === 'cash' ? t("cash") :
+                        item.purchase_type === 'credit' ? t("credit") :
+                        item.purchase_type === 'agreement' ? t("agreement") :
+                        t("other")
+                      }</div>
+                      {item.description && <div><strong>{tCommon('detail_labels.description')}</strong> {item.description}</div>}
                     </>);
                 })()}
               </div>
@@ -734,13 +1187,41 @@ export default function B2BPage() {
           }}
         />
       )}
-      {showSaleUploadModal && (
-        <UploadSaleModal
-          isOpen={showSaleUploadModal}
-          onClose={() => setShowSaleUploadModal(false)}
+      {showAddressUploadModal && (
+        <UploadAddressModal
+          isOpen={showAddressUploadModal}
+          onClose={() => setShowAddressUploadModal(false)}
           onSuccess={() => {
             loadData();
-            setShowSaleUploadModal(false);
+            setShowAddressUploadModal(false);
+          }}
+        />
+      )}
+
+      {showSaleModal && (
+        <B2BSaleModal
+          initialData={editingSale || undefined}
+          onSubmit={async (data) => {
+            try {
+              if (editingSale) {
+                await updateB2BSale(editingSale.id, data);
+                toast.success(tErrors("success_update"));
+              } else {
+                await createB2BSale(data);
+                toast.success(tErrors("success_create"));
+              }
+              await loadData();
+              setShowSaleModal(false);
+              setEditingSale(null);
+            } catch (error) {
+              console.error(`Failed to ${editingSale ? 'update' : 'create'} sale:`, error);
+              const errorMessage = handleApiError(error, `${editingSale ? 'Update' : 'Create'} sale`);
+              toast.error(errorMessage);
+            }
+          }}
+          onClose={() => {
+            setShowSaleModal(false);
+            setEditingSale(null);
           }}
         />
       )}

@@ -5,6 +5,7 @@ import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { handleApiError } from "@/lib/api/error-handler";
 import { toast } from "@/lib/toast-helper";
+import { formatNumber } from "@/lib/utils/number-format";
 import { Plus, Edit, Trash2 } from "lucide-react";
 import { useModal } from "@/lib/modal-context";
 import { useCoreData } from "@/lib/core-data-context";
@@ -117,7 +118,7 @@ export function SalesProformaTab() {
                 <TableCell className="font-medium">{proforma.serial_number}</TableCell>
                 <TableCell>{proforma.customer}</TableCell>
                 <TableCell>{proforma.date}</TableCell>
-                <TableCell>{proforma.subtotal}</TableCell>
+                <TableCell>{formatNumber(proforma.subtotal)}</TableCell>
                 <TableCell>
                   <span className={`px-2 py-1 rounded text-xs ${proforma.status === 'Active' ? 'bg-green-100 text-green-800' :
                     proforma.status === 'Pending' ? 'bg-yellow-100 text-yellow-800' :

@@ -4,7 +4,7 @@ export interface Warehouse {
   address: string;
   manager: string;
   phone: string;
-  description: string;
+  description?: string;
   created_at: string;
   updated_at: string;
 }
@@ -14,9 +14,9 @@ export interface WarehouseReceipt {
   receipt_id: string | null;
   receipt_type: "import_cottage" | "distribution_cottage" | "purchase";
   date: string;
-  warehouse: number;
+  warehouse: number | null;
   warehouse_name?: string;
-  description: string;
+  description?: string;
   total_weight: number;
   cottage_serial_number: string | null;
   proforma: number | null;
@@ -38,14 +38,14 @@ export interface WarehouseReceiptItem {
 export interface DispatchIssue {
   id: number;
   dispatch_id: string;
-  warehouse: number;
-  warehouse_name: string;
-  sales_proforma: number;
+  warehouse: number | null;
+  warehouse_name?: string;
+  sales_proforma: number | null;
   sales_proforma_serial?: string;
   issue_date: string;
   validity_date: string;
-  description: string;
-  shipping_company: number;
+  description?: string;
+  shipping_company: number | null;
   shipping_company_name?: string;
   total_weight: number;
   created_at: string;
@@ -55,12 +55,12 @@ export interface DispatchIssue {
 
 export interface DispatchIssueItem {
   id: number;
-  dispatch: number;
-  product: number;
+  dispatch: number | null;
+  product: number | null;
   product_name?: string;
   weight: number;
-  vehicle_type: "truck" | "pickup" | "van" | "container" | "other";
-  receiver: number;
+  vehicle_type: "single" | "double" | "trailer";
+  receiver: number | null;
   receiver_name?: string;
 }
 
@@ -69,12 +69,12 @@ export interface DeliveryFulfillment {
   delivery_id: string;
   issue_date: string;
   validity_date: string;
-  warehouse: number;
-  warehouse_name: string;
-  sales_proforma: number;
+  warehouse: number | null;
+  warehouse_name?: string;
+  sales_proforma: number | null;
   sales_proforma_serial?: string;
-  description: string;
-  shipping_company: number;
+  description?: string;
+  shipping_company: number | null;
   shipping_company_name?: string;
   total_weight: number;
   created_at: string;
@@ -84,14 +84,14 @@ export interface DeliveryFulfillment {
 
 export interface DeliveryFulfillmentItem {
   id: number;
-  delivery: number;
+  delivery: number | null;
   shipment_id: string;
   shipment_price: number;
-  product: number;
+  product: number | null;
   product_name?: string;
   weight: number;
-  vehicle_type: "truck" | "pickup" | "van" | "container" | "other";
-  receiver: number;
+  vehicle_type: "single" | "double" | "trailer";
+  receiver: number | null;
   receiver_name?: string;
 }
 export interface WarehouseReceiptCreate {
@@ -117,7 +117,7 @@ export interface DispatchIssueCreate {
   items: {
     product: number;
     weight: number;
-    vehicle_type: "truck" | "pickup" | "van" | "container" | "other";
+    vehicle_type: "single" | "double" | "trailer";
     receiver: number;
   }[];
 }
@@ -136,7 +136,7 @@ export interface DeliveryFulfillmentCreate {
     shipment_price: number;
     product: number;
     weight: number;
-    vehicle_type: "truck" | "pickup" | "van" | "container" | "other";
+    vehicle_type: "single" | "double" | "trailer";
     receiver: number;
   }[];
 }

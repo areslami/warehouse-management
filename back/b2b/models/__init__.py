@@ -1,8 +1,6 @@
 from .base import (
     B2BOffer, 
-    B2BSale, 
-    B2BPurchase, 
-    B2BPurchaseDetail,
+    B2BAddress, 
+    B2BSale,
     B2BDistribution, 
-    STATUS_CHOICES
 )

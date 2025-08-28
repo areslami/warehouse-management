@@ -1,32 +1,20 @@
 from rest_framework import serializers
-from .models import Supplier, Customer, Receiver, PartyType, Product
+from .models import Supplier, Customer, Receiver, Product
 
 
 
 class ProductSerializer(serializers.ModelSerializer):
-    category_name = serializers.CharField(source='category.name', read_only=True)
-    region_name = serializers.CharField(source='b2bregion.name', read_only=True)
-    description = serializers.CharField(required=False, allow_blank=True, allow_null=True)
-    b2bregion = serializers.CharField(required=True)
-    category = serializers.CharField(required=True)
-    
     class Meta:
         model = Product
         fields = [
-            'id', 'name', 'code', 'b2bcode', 'b2bregion', 'region_name',
-            'category', 'category_name', 'description', 'created_at', 'updated_at'
+            'id', 'name', 'code', 'b2bcode', 'b2bregion', 
+            'category' , 'description', 'created_at', 'updated_at'
         ]
         read_only_fields = ['created_at', 'updated_at']
 
 
 
 class SupplierSerializer(serializers.ModelSerializer):
-    company_name = serializers.CharField(required=False, allow_blank=True, max_length=200)
-    national_id = serializers.CharField(required=False, allow_blank=True, max_length=11)
-    full_name = serializers.CharField(required=False, allow_blank=True, max_length=100)
-    personal_code = serializers.CharField(required=False, allow_blank=True, max_length=10)
-    description = serializers.CharField(required=False, allow_blank=True)
-    
     class Meta:
         model = Supplier
         fields = [
@@ -39,36 +27,26 @@ class SupplierSerializer(serializers.ModelSerializer):
     def validate(self, data):
         supplier_type = data.get('supplier_type')
         
-        if supplier_type == PartyType.CORPORATE:
+        if supplier_type == 'corporate':
             if not data.get('company_name'):
                 raise serializers.ValidationError("Company name is required for corporate suppliers")
             if not data.get('national_id'):
                 raise serializers.ValidationError("National ID is required for corporate suppliers")
-            # Clear individual fields for corporate
             data['full_name'] = ''
-            data['personal_code'] = None  # Set to None for unique field
+            data['personal_code'] = None  
             
-        elif supplier_type == PartyType.INDIVIDUAL:
+        elif supplier_type == 'individual':
             if not data.get('full_name'):
                 raise serializers.ValidationError("Full name is required for individual suppliers")
             if not data.get('personal_code'):
                 raise serializers.ValidationError("Personal code is required for individual suppliers")
-            # Clear corporate fields for individual
             data['company_name'] = ''
-            data['national_id'] = None  # Set to None for unique field
+            data['national_id'] = None 
         
         return data
 
 
 class CustomerSerializer(serializers.ModelSerializer):
-    company_name = serializers.CharField(required=False, allow_blank=True, max_length=200)
-    national_id = serializers.CharField(required=False, allow_blank=True, max_length=11)
-    full_name = serializers.CharField(required=False, allow_blank=True, max_length=100)
-    personal_code = serializers.CharField(required=False, allow_blank=True, max_length=10)
-    description = serializers.CharField(required=False, allow_blank=True)
-    tags = serializers.CharField(required=False, allow_blank=True, max_length=200)
-    phone = serializers.CharField(required=False, allow_blank=True, default='')
-    
     class Meta:
         model = Customer
         fields = [
@@ -81,7 +59,7 @@ class CustomerSerializer(serializers.ModelSerializer):
     def validate(self, data):
         customer_type = data.get('customer_type')
         
-        if customer_type == PartyType.CORPORATE:
+        if customer_type == 'corporate':
             if not data.get('company_name'):
                 raise serializers.ValidationError("Company name is required for corporate customers")
             if not data.get('national_id'):
@@ -89,7 +67,7 @@ class CustomerSerializer(serializers.ModelSerializer):
             data['full_name'] = ''
             data['personal_code'] = None  
             
-        elif customer_type == PartyType.INDIVIDUAL:
+        elif customer_type == 'individual':
             if not data.get('full_name'):
                 raise serializers.ValidationError("Full name is required for individual customers")
             data['company_name'] = ''
@@ -101,12 +79,6 @@ class CustomerSerializer(serializers.ModelSerializer):
 
 
 class ReceiverSerializer(serializers.ModelSerializer):
-    company_name = serializers.CharField(required=False, allow_blank=True, max_length=200)
-    national_id = serializers.CharField(required=False, allow_blank=True, max_length=11)
-    full_name = serializers.CharField(required=False, allow_blank=True, max_length=100)
-    personal_code = serializers.CharField(required=False, allow_blank=True, max_length=10)
-    description = serializers.CharField(required=False, allow_blank=True)
-    
     class Meta:
         model = Receiver
         fields = [
@@ -119,7 +91,7 @@ class ReceiverSerializer(serializers.ModelSerializer):
     def validate(self, data):
         receiver_type = data.get('receiver_type')
         
-        if receiver_type == PartyType.CORPORATE:
+        if receiver_type == 'corporate':
             if not data.get('company_name'):
                 raise serializers.ValidationError("Company name is required for corporate receivers")
             if not data.get('national_id'):
@@ -127,7 +99,7 @@ class ReceiverSerializer(serializers.ModelSerializer):
             data['full_name'] = ''
             data['personal_code'] = None 
             
-        elif receiver_type == PartyType.INDIVIDUAL:
+        elif receiver_type == 'individual':
             if not data.get('full_name'):
                 raise serializers.ValidationError("Full name is required for individual receivers")
             if not data.get('personal_code'):

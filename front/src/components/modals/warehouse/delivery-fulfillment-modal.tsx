@@ -38,7 +38,7 @@ type DeliveryFulfillmentFormData = {
     shipment_price: number;
     product: number;
     weight: number;
-    vehicle_type: "truck" | "pickup" | "van" | "container" | "other";
+    vehicle_type: "single" | 'double' | 'trailer';
     receiver: number;
   }[];
 };

@@ -20,6 +20,7 @@ import {
   filterByWarehouse,
   searchFilter
 } from "@/lib/utils/warehouse-utils";
+import { formatNumber } from "@/lib/utils/number-format";
 import { Button } from "../ui/button";
 import { Edit, Plus, Search, Trash2 } from "lucide-react";
 import { Input } from "../ui/input";
@@ -187,7 +188,7 @@ export function DispatchIssueTab({ selectedWarehouseId }: DispatchIssueTabProps)
                   <TableCell>{dispatch.warehouse_name || '-'}</TableCell>
                   <TableCell><PersianDateTableCell date={dispatch.issue_date} /></TableCell>
                   <TableCell><PersianDateTableCell date={dispatch.validity_date} /></TableCell>
-                  <TableCell>{dispatch.total_weight}</TableCell>
+                  <TableCell>{formatNumber(dispatch.total_weight)}</TableCell>
                   <TableCell>
                     <div className="flex gap-2">
                       <Button

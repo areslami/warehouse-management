@@ -30,8 +30,6 @@ class SupplierViewSet(viewsets.ModelViewSet):
     search_fields = ['company_name', 'full_name', 'economic_code', 'phone']
     ordering_fields = ['company_name', 'full_name', 'created_at']
     ordering = ['company_name', 'full_name']
-    
-
 
 class CustomerViewSet(viewsets.ModelViewSet):
     queryset = Customer.objects.all()
@@ -41,8 +39,6 @@ class CustomerViewSet(viewsets.ModelViewSet):
     search_fields = ['company_name', 'full_name', 'economic_code', 'phone', 'tags']
     ordering_fields = ['company_name', 'full_name', 'created_at']
     ordering = ['company_name', 'full_name']
-    
-
 
 class ReceiverViewSet(viewsets.ModelViewSet):
     queryset = Receiver.objects.all()

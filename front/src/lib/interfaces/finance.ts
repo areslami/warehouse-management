@@ -2,7 +2,6 @@ export interface Proforma {
   id: number;
   serial_number: string;
   date: string;
-  status: "Active" | "Pending" | "Sold" | "Expired";
   subtotal: number;
   tax: number;
   discount: number;

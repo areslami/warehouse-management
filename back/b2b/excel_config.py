@@ -51,10 +51,36 @@ EXCEL_FIELD_MAPPING_SALE = {
 
 for i in range(1, 4):
     EXCEL_FIELD_MAPPING_SALE[f'agreement_period_{i}'] = f'بازه {i} پرداخت توافقی (روز)'
-    EXCEL_FIELD_MAPPING_SALE[f'agreement_amount{i}'] = f'مبلغ بازه {i} توافقی-ریال'
+    EXCEL_FIELD_MAPPING_SALE[f'agreement_amount_{i}'] = f'مبلغ بازه {i} توافقی-ریال'
 for i in range(1, 4):
     EXCEL_FIELD_MAPPING_DISTRIBUTION[f'credit_period_{i}'] = f'بازه پرداخت نسیه {i}'
     EXCEL_FIELD_MAPPING_DISTRIBUTION[f'credit_amount_{i}'] = f'مبلغ بازه پرداخت نسیه {i}'
 
+EXCEL_FIELD_MAPPING_YOUR_SALE = {
+    "purchase_id": "شناسه خرید",
+    "cottage_number": "شماره کوتاژ",
+    "description": "توضیحات",
+    "total_weight_purchased": "وزن خرید شده-Kg",
+    "province": "استان",
+    "purchase_date": "تاریخ خرید",
+    "payment_amount": "مبلغ پرداختی-ریال",
+    "unit_price": "قیمت هر واحد-ریال",
+    "delivery_date": "تاریخ تحویل",
+    "tracking_number": "شماره پیگیری",
+    "document_date": "تاریخ ثبت سند",
+    "product_title": "عنوان کالا",
+    "customer_national_code": "کد ملی خریدار",
+    "customer_account_number": "شماره حساب خریدار",
+    "customer_phone": "شماره همراه خریدار",
+    "customer_name": "نام خریدار",
+    "payment_method": "شیوه پرداخت",
+    "offer_id": "شناسه عرضه",
+}
+
+for i in range(1, 4):
+    EXCEL_FIELD_MAPPING_YOUR_SALE[f'agreement_period_{i}'] = f'بازه {i} پرداخت توافقی (روز)'
+    EXCEL_FIELD_MAPPING_YOUR_SALE[f'agreement_amount_{i}'] = f'مبلغ بازه {i} توافقی-ریال'
+
 FIELD_MAPPING_DISTRIBUTION_REVERSE = {v: k for k, v in EXCEL_FIELD_MAPPING_DISTRIBUTION.items()}
 FIELD_MAPPING_SALE_REVERSE = {v: k for k, v in EXCEL_FIELD_MAPPING_SALE.items()}
+FIELD_MAPPING_YOUR_SALE_REVERSE = {v: k for k, v in EXCEL_FIELD_MAPPING_YOUR_SALE.items()}
