@@ -28,8 +28,6 @@ export interface Supplier {
 export interface Receiver {
   id: number;
   receiver_type: "individual" | "corporate";
-  receiver_veichle_type: "single" | "double" | "trailer";
-  unique_id: string;
   company_name?: string;
   national_id?: string;
   full_name?: string;

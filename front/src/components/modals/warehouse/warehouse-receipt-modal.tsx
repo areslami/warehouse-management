@@ -1,5 +1,6 @@
 "use client";
 
+
 import { useState, useEffect } from "react";
 import { useForm, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -33,7 +34,7 @@ export type WarehouseReceiptFormData = {
   proforma?: number;
   items: {
     product: number;
-    weight: number;
+    weight: string | number;
   }[];
 };
 
@@ -64,8 +65,7 @@ export function WarehouseReceiptModal({ trigger, onSubmit, onClose, initialData 
     if (data.suppliers.length === 0) {
       refreshData('suppliers');
     }
-  }, [data.products.length, data.warehouses.length, data.purchaseProformas.length, data.suppliers.length, refreshData]);
-
+  }, []);
   const getTodayDate = () => {
     if (typeof window === 'undefined') return '';
     return getTodayGregorian();
@@ -73,7 +73,7 @@ export function WarehouseReceiptModal({ trigger, onSubmit, onClose, initialData 
 
   const receiptItemSchema = z.object({
     product: z.number().min(1, tval("product-required")),
-    weight: z.number().min(0.00000001, tval("weight")),
+    weight: z.union([z.string(), z.number()]).optional(),
   });
 
   const warehouseReceiptSchema = z.object({
@@ -90,7 +90,7 @@ export function WarehouseReceiptModal({ trigger, onSubmit, onClose, initialData 
   const [open, setOpen] = useState(trigger ? false : true);
 
   const form = useForm<WarehouseReceiptFormData>({
-    resolver: zodResolver(warehouseReceiptSchema),
+    resolver: zodResolver(warehouseReceiptSchema) as any,
     defaultValues: {
       receipt_id: initialData?.receipt_id || "",
       receipt_type: initialData?.receipt_type || "purchase",
@@ -99,7 +99,7 @@ export function WarehouseReceiptModal({ trigger, onSubmit, onClose, initialData 
       description: initialData?.description || "",
       cottage_serial_number: initialData?.cottage_serial_number || "",
       proforma: initialData?.proforma || undefined,
-      items: initialData?.items || [{ product: 0, weight: 0 }],
+      items: initialData?.items || [{ product: 0, weight: "" }],
     },
   });
 
@@ -110,15 +110,12 @@ export function WarehouseReceiptModal({ trigger, onSubmit, onClose, initialData 
 
   const receiptType = form.watch("receipt_type");
 
-  const handleSubmit = async (data: WarehouseReceiptFormData) => {
-    console.log("Form submitted with data:", data);
+  const handleSubmit = async (data: any) => {
+
     try {
       if (onSubmit) {
         await onSubmit(data);
-      } else {
-        console.log("No onSubmit handler provided");
       }
-      // Only close and reset if successful
       if (trigger) {
         setOpen(false);
       } else {
@@ -127,7 +124,6 @@ export function WarehouseReceiptModal({ trigger, onSubmit, onClose, initialData 
       form.reset();
     } catch (error) {
       console.error("Error in form submission:", error);
-      // Don't close the modal if there's an error
     }
   };
 
@@ -157,7 +153,7 @@ export function WarehouseReceiptModal({ trigger, onSubmit, onClose, initialData 
             <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6 py-4 px-12">
               <div className="grid grid-cols-2 gap-4">
                 <FormField
-                  control={form.control}
+                  control={form.control as any}
                   name="receipt_id"
                   render={({ field }) => (
                     <FormItem>
@@ -171,7 +167,7 @@ export function WarehouseReceiptModal({ trigger, onSubmit, onClose, initialData 
                 />
 
                 <FormField
-                  control={form.control}
+                  control={form.control as any}
                   name="date"
                   render={({ field }) => (
                     <FormItem>
@@ -179,7 +175,7 @@ export function WarehouseReceiptModal({ trigger, onSubmit, onClose, initialData 
                       <FormControl>
                         <PersianDatePicker
                           value={field.value}
-                          onChange={field.onChange}
+                          onChange={(value) => field.onChange(value)}
                           placeholder={t("select-date")}
                         />
                       </FormControl>
@@ -191,7 +187,7 @@ export function WarehouseReceiptModal({ trigger, onSubmit, onClose, initialData 
 
               <div className="grid grid-cols-2 gap-4">
                 <FormField
-                  control={form.control}
+                  control={form.control as any}
                   name="receipt_type"
                   render={({ field }) => (
                     <FormItem>
@@ -209,7 +205,7 @@ export function WarehouseReceiptModal({ trigger, onSubmit, onClose, initialData 
                 />
 
                 <FormField
-                  control={form.control}
+                  control={form.control as any}
                   name="warehouse"
                   render={({ field }) => (
                     <FormItem>
@@ -271,7 +267,7 @@ export function WarehouseReceiptModal({ trigger, onSubmit, onClose, initialData 
               <div className="grid grid-cols-2 gap-4">
                 {(receiptType === "import_cottage" || receiptType === "distribution_cottage") && (
                   <FormField
-                    control={form.control}
+                    control={form.control as any}
                     name="cottage_serial_number"
                     render={({ field }) => (
                       <FormItem>
@@ -286,7 +282,7 @@ export function WarehouseReceiptModal({ trigger, onSubmit, onClose, initialData 
                 )}
 
                 <FormField
-                  control={form.control}
+                  control={form.control as any}
                   name="proforma"
                   render={({ field }) => (
                     <FormItem>
@@ -302,12 +298,10 @@ export function WarehouseReceiptModal({ trigger, onSubmit, onClose, initialData 
                                   if (created) {
                                     await refreshData('purchaseProformas');
                                     form.setValue('proforma', created.id);
-                                    // Force the select to update with the new value
                                     form.trigger('proforma');
-                                    // Don't call closeModal() here - let the modal close itself
                                   }
-                                }
-                              });
+                                },
+                              },);
                             } else {
                               field.onChange(value === "none" ? undefined : Number(value));
                             }
@@ -346,7 +340,7 @@ export function WarehouseReceiptModal({ trigger, onSubmit, onClose, initialData 
               </div>
 
               <FormField
-                control={form.control}
+                control={form.control as any}
                 name="description"
                 render={({ field }) => (
                   <FormItem>
@@ -366,7 +360,7 @@ export function WarehouseReceiptModal({ trigger, onSubmit, onClose, initialData 
                     type="button"
                     variant="outline"
                     size="sm"
-                    onClick={() => append({ product: 0, weight: 0 })}
+                    onClick={() => append({ product: 0, weight: "" })}
                   >
                     <Plus className="w-4 h-4 mr-2" />
                     {t("add-item")}
@@ -376,7 +370,7 @@ export function WarehouseReceiptModal({ trigger, onSubmit, onClose, initialData 
                 {fields.map((field, index) => (
                   <div key={field.id} className="grid grid-cols-3 gap-4 p-4 border rounded-lg">
                     <FormField
-                      control={form.control}
+                      control={form.control as any}
                       name={`items.${index}.product`}
                       render={({ field }) => (
                         <FormItem>
@@ -439,17 +433,17 @@ export function WarehouseReceiptModal({ trigger, onSubmit, onClose, initialData 
                     />
 
                     <FormField
-                      control={form.control}
+                      control={form.control as any}
                       name={`items.${index}.weight`}
                       render={({ field }) => (
                         <FormItem>
                           <FormLabel>{t("weight")}</FormLabel>
                           <FormControl>
                             <Input
-                              type="number"
+                              type="text"
                               step="1"
                               {...field}
-                              onChange={(e) => field.onChange(Number(e.target.value))}
+                              onChange={(value) => field.onChange(value)}
                             />
                           </FormControl>
                           <FormMessage />

@@ -82,9 +82,9 @@ class ReceiverSerializer(serializers.ModelSerializer):
     class Meta:
         model = Receiver
         fields = [
-            'id', 'receiver_type', 'unique_id', 'company_name',
+            'id', 'receiver_type', 'company_name',
             'national_id', 'full_name', 'personal_code', 'economic_code',
-            'phone', 'address', 'description', 'postal_code', 'created_at', 'updated_at','receiver_veichle_type'
+            'phone', 'address', 'description', 'postal_code', 'created_at', 'updated_at'
         ]
         read_only_fields = ['created_at', 'updated_at']
 

@@ -1,5 +1,6 @@
 "use client";
 
+
 import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -26,7 +27,6 @@ import { createB2BOffer } from "@/lib/api/b2b";
 
 export type B2BDistributionFormData = {
   purchase_id?: string;
-  b2b_offer?: number;
   warehouse: number;
   product: number;
   customer: number;
@@ -77,11 +77,10 @@ export function B2BDistributionModal({ trigger, onSubmit, onClose, initialData, 
 
   const b2bDistributionSchema = z.object({
     purchase_id: z.string().optional(),
-    b2b_offer: z.number().min(1, tval("b2b-offer")),
-    warehouse: z.number().min(1, tval("warehouse")),
-    product: z.number().min(1, tval("product")),
-    customer: z.number().min(1, tval("customer")),
-    agency_weight: z.number().positive(tval("agency-weight")),
+    warehouse: z.number().min(0),
+    product: z.number().min(1, tval("product-required")),
+    customer: z.number().min(0),
+    agency_weight: z.union([z.string(), z.number()]).optional(),
     agency_date: z.string().min(1, tval("agency-date")),
     description: z.string().optional(),
   });
@@ -89,10 +88,9 @@ export function B2BDistributionModal({ trigger, onSubmit, onClose, initialData, 
   const [open, setOpen] = useState(trigger ? false : true);
 
   const form = useForm<B2BDistributionFormData>({
-    resolver: zodResolver(b2bDistributionSchema),
+    resolver: zodResolver(b2bDistributionSchema) as any,
     defaultValues: {
       purchase_id: initialData?.purchase_id || "",
-      b2b_offer: initialData?.b2b_offer || 0,
       warehouse: initialData?.warehouse || 0,
       product: initialData?.product || 0,
       customer: initialData?.customer || 0,
@@ -102,7 +100,7 @@ export function B2BDistributionModal({ trigger, onSubmit, onClose, initialData, 
     },
   });
 
-  const handleSubmit = async (data: B2BDistributionFormData) => {
+  const handleSubmit = async (data: any) => {
     try {
       await onSubmit?.(data);
       if (trigger) {
@@ -141,7 +139,7 @@ export function B2BDistributionModal({ trigger, onSubmit, onClose, initialData, 
             <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6 py-4 px-12">
               <div className="grid grid-cols-2 gap-4">
                 <FormField
-                  control={form.control}
+                  control={form.control as any}
                   name="purchase_id"
                   render={({ field }) => (
                     <FormItem>
@@ -158,7 +156,7 @@ export function B2BDistributionModal({ trigger, onSubmit, onClose, initialData, 
 
               <div className="grid grid-cols-2 gap-4">
                 <FormField
-                  control={form.control}
+                  control={form.control as any}
                   name="warehouse"
                   render={({ field }) => (
                     <FormItem>
@@ -203,7 +201,7 @@ export function B2BDistributionModal({ trigger, onSubmit, onClose, initialData, 
                 />
 
                 <FormField
-                  control={form.control}
+                  control={form.control as any}
                   name="product"
                   render={({ field }) => (
                     <FormItem>
@@ -249,7 +247,7 @@ export function B2BDistributionModal({ trigger, onSubmit, onClose, initialData, 
               </div>
 
               <FormField
-                control={form.control}
+                control={form.control as any}
                 name="customer"
                 render={({ field }) => (
                   <FormItem>
@@ -293,63 +291,18 @@ export function B2BDistributionModal({ trigger, onSubmit, onClose, initialData, 
                 )}
               />
 
-              <FormField
-                control={form.control}
-                name="b2b_offer"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>{t("b2b-offer")}</FormLabel>
-                    <FormControl>
-                      <Select
-                        value={field.value > 0 ? field.value.toString() : ""}
-                        onValueChange={(value) => {
-                          if (value === "new") {
-                            setShowOfferModal(true);
-                          } else if (value) {
-                            field.onChange(Number(value));
-                          }
-                        }}
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder={t("select-b2b-offer")} />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem
-                            value="new"
-                            className="font-semibold text-[#f6d265]"
-                            onPointerDown={(e) => e.preventDefault()}
-                          >
-                            <Plus className="inline-block w-4 h-4 mr-2" />
-                            {t("create-new-b2b-offer")}
-                          </SelectItem>
-                          {offers.length > 0 && (
-                            <div className="border-t my-1" />
-                          )}
-                          {offers.map((offer) => (
-                            <SelectItem key={offer.id} value={offer.id.toString()}>
-                              {offer.offer_id} - {offer.product_name} ({offer.offer_weight} kg)
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
               <div className="grid grid-cols-2 gap-4">
                 <FormField
-                  control={form.control}
+                  control={form.control as any}
                   name="agency_weight"
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>{t("agency-weight")}</FormLabel>
                       <FormControl>
                         <Input
-                          type="number"
+                          type="text"
                           {...field}
-                          onChange={(e) => field.onChange(Number(e.target.value))}
+                          onChange={(value) => field.onChange(value)}
                         />
                       </FormControl>
                       <FormMessage />
@@ -358,7 +311,7 @@ export function B2BDistributionModal({ trigger, onSubmit, onClose, initialData, 
                 />
 
                 <FormField
-                  control={form.control}
+                  control={form.control as any}
                   name="agency_date"
                   render={({ field }) => (
                     <FormItem>
@@ -366,7 +319,7 @@ export function B2BDistributionModal({ trigger, onSubmit, onClose, initialData, 
                       <FormControl>
                         <PersianDatePicker
                           value={field.value}
-                          onChange={field.onChange}
+                          onChange={(value) => field.onChange(value)}
                           placeholder={t("select-date")}
                         />
                       </FormControl>
@@ -377,7 +330,7 @@ export function B2BDistributionModal({ trigger, onSubmit, onClose, initialData, 
               </div>
 
               <FormField
-                control={form.control}
+                control={form.control as any}
                 name="description"
                 render={({ field }) => (
                   <FormItem>
@@ -443,20 +396,6 @@ export function B2BDistributionModal({ trigger, onSubmit, onClose, initialData, 
         />
       )}
 
-      {showOfferModal && (
-        <B2BOfferModal
-          onSubmit={async (newOffer) => {
-            const created = await createB2BOffer(newOffer);
-            if (created) {
-              await loadOffers();
-              onOfferCreated?.();
-              form.setValue('b2b_offer', created.id);
-              setShowOfferModal(false);
-            }
-          }}
-          onClose={() => setShowOfferModal(false)}
-        />
-      )}
     </>
   );
 }

@@ -125,6 +125,23 @@ class DispatchIssueSerializer(serializers.ModelSerializer):
         dispatch.save()
         return dispatch
 
+    def update(self, instance, validated_data):
+        items_data = validated_data.pop('items', [])
+        
+        for attr, value in validated_data.items():
+            setattr(instance, attr, value)
+        
+        if items_data:
+            instance.items.all().delete()
+            total_weight = 0
+            for item_data in items_data:
+                DispatchIssueItem.objects.create(dispatch=instance, **item_data)
+                total_weight += item_data['weight']
+            instance.total_weight = total_weight
+        
+        instance.save()
+        return instance
+
 
 class DeliveryFulfillmentItemSerializer(serializers.ModelSerializer):
     product_name = serializers.CharField(source='product.name', read_only=True)
@@ -172,6 +189,23 @@ class DeliveryFulfillmentSerializer(serializers.ModelSerializer):
         delivery.total_weight = total_weight
         delivery.save()
         return delivery
+
+    def update(self, instance, validated_data):
+        items_data = validated_data.pop('items', [])
+        
+        for attr, value in validated_data.items():
+            setattr(instance, attr, value)
+        
+        if items_data:
+            instance.items.all().delete()
+            total_weight = 0
+            for item_data in items_data:
+                DeliveryFulfillmentItem.objects.create(delivery=instance, **item_data)
+                total_weight += item_data['weight']
+            instance.total_weight = total_weight
+        
+        instance.save()
+        return instance
 
 
 class WarehouseReceiptListSerializer(serializers.ModelSerializer):

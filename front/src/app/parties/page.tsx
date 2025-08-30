@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
-import { handleApiError } from "@/lib/api/error-handler";
+import { handleApiErrorWithToast } from "@/lib/api/error-toast-handler";
 import { SupplierModal } from "@/components/modals/supplier-modal";
 import { CustomerModal } from "@/components/modals/customer-modal";
 import { ReceiverModal } from "@/components/modals/receiver-modal";
@@ -57,8 +57,8 @@ export default function PartiesPage() {
         refreshData("suppliers");
       } catch (error) {
         console.error("Failed to delete supplier:", error);
-        const errorMessage = handleApiError(error, "Deleting supplier");
-        toast.error(errorMessage);
+        handleApiErrorWithToast(error, "Deleting supplier");
+        
       }
     }
   };
@@ -71,8 +71,8 @@ export default function PartiesPage() {
         refreshData("customers");
       } catch (error) {
         console.error("Failed to delete customer:", error);
-        const errorMessage = handleApiError(error, "Deleting customer");
-        toast.error(errorMessage);
+        handleApiErrorWithToast(error, "Deleting customer");
+        
       }
     }
   };
@@ -85,8 +85,8 @@ export default function PartiesPage() {
         refreshData("receivers");
       } catch (error) {
         console.error("Failed to delete receiver:", error);
-        const errorMessage = handleApiError(error, "Deleting receiver");
-        toast.error(errorMessage);
+        handleApiErrorWithToast(error, "Deleting receiver");
+        
       }
     }
   };
@@ -99,8 +99,8 @@ export default function PartiesPage() {
         refreshData("shippingCompanies");
       } catch (error) {
         console.error("Failed to delete shipping company:", error);
-        const errorMessage = handleApiError(error, "Deleting shipping company");
-        toast.error(errorMessage);
+        handleApiErrorWithToast(error, "Deleting shipping company");
+        
       }
     }
   };
@@ -174,17 +174,22 @@ export default function PartiesPage() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead className="text-center">{tCommon('table_headers.operations')}</TableHead>
-                    <TableHead className="text-right">{tCommon('table_headers.address')}</TableHead>
-                    <TableHead className="text-right">{tCommon('table_headers.phone')}</TableHead>
-                    <TableHead className="text-right">{tCommon('table_headers.economic_code')}</TableHead>
-                    <TableHead className="text-right">{tCommon('table_headers.type')}</TableHead>
                     <TableHead className="text-right">{tCommon('table_headers.name_company')}</TableHead>
+                    <TableHead className="text-right">{tCommon('table_headers.type')}</TableHead>
+                    <TableHead className="text-right">{tCommon('table_headers.phone')}</TableHead>
+                    <TableHead className="text-right">{tCommon('table_headers.address')}</TableHead>
+                    <TableHead className="text-right">{tCommon('table_headers.economic_code')}</TableHead>
+                    <TableHead className="text-center">{tCommon('table_headers.operations')}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {filteredSuppliers.map((supplier) => (
                     <TableRow key={supplier.id} className="cursor-pointer hover:bg-gray-50" onClick={() => handleRowClick(supplier, 'supplier')}>
+                      <TableCell className="font-medium">{getPartyDisplayName(supplier)}</TableCell>
+                      <TableCell>{supplier.supplier_type === "Corporate" ? tCommon('party_types.corporate') : tCommon('party_types.individual')}</TableCell>
+                      <TableCell>{supplier.phone}</TableCell>
+                      <TableCell>{supplier.address}</TableCell>
+                      <TableCell>{supplier.economic_code}</TableCell>
                       <TableCell className="text-center">
                         <div className="flex gap-2 justify-center">
                           <Button
@@ -210,11 +215,6 @@ export default function PartiesPage() {
                           </Button>
                         </div>
                       </TableCell>
-                      <TableCell>{supplier.address}</TableCell>
-                      <TableCell>{supplier.phone}</TableCell>
-                      <TableCell>{supplier.economic_code}</TableCell>
-                      <TableCell>{supplier.supplier_type === "Corporate" ? tCommon('party_types.corporate') : tCommon('party_types.individual')}</TableCell>
-                      <TableCell className="font-medium">{getPartyDisplayName(supplier)}</TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
@@ -248,17 +248,22 @@ export default function PartiesPage() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead className="text-center">{tCommon('table_headers.operations')}</TableHead>
-                    <TableHead className="text-right">{tCommon('table_headers.address')}</TableHead>
-                    <TableHead className="text-right">{tCommon('table_headers.phone')}</TableHead>
-                    <TableHead className="text-right">{tCommon('table_headers.economic_code')}</TableHead>
-                    <TableHead className="text-right">{tCommon('table_headers.type')}</TableHead>
                     <TableHead className="text-right">{tCommon('table_headers.name_company')}</TableHead>
+                    <TableHead className="text-right">{tCommon('table_headers.type')}</TableHead>
+                    <TableHead className="text-right">{tCommon('table_headers.phone')}</TableHead>
+                    <TableHead className="text-right">{tCommon('table_headers.address')}</TableHead>
+                    <TableHead className="text-right">{tCommon('table_headers.economic_code')}</TableHead>
+                    <TableHead className="text-center">{tCommon('table_headers.operations')}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {filteredCustomers.map((customer) => (
                     <TableRow key={customer.id} className="cursor-pointer hover:bg-gray-50" onClick={() => handleRowClick(customer, 'customer')}>
+                      <TableCell className="font-medium">{getPartyDisplayName(customer)}</TableCell>
+                      <TableCell>{customer.customer_type === "Corporate" ? tCommon('party_types.corporate') : tCommon('party_types.individual')}</TableCell>
+                      <TableCell>{customer.phone}</TableCell>
+                      <TableCell>{customer.address}</TableCell>
+                      <TableCell>{customer.economic_code}</TableCell>
                       <TableCell className="text-center">
                         <div className="flex gap-2 justify-center">
                           <Button
@@ -284,11 +289,6 @@ export default function PartiesPage() {
                           </Button>
                         </div>
                       </TableCell>
-                      <TableCell>{customer.address}</TableCell>
-                      <TableCell>{customer.phone}</TableCell>
-                      <TableCell>{customer.economic_code}</TableCell>
-                      <TableCell>{customer.customer_type === "Corporate" ? tCommon('party_types.corporate') : tCommon('party_types.individual')}</TableCell>
-                      <TableCell className="font-medium">{getPartyDisplayName(customer)}</TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
@@ -322,18 +322,24 @@ export default function PartiesPage() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead className="text-center">{tCommon('table_headers.operations')}</TableHead>
-                    <TableHead className="text-right">{tCommon('table_headers.address')}</TableHead>
-                    <TableHead className="text-right">{tCommon('table_headers.phone')}</TableHead>
-                    <TableHead className="text-right">{tCommon('table_headers.economic_code')}</TableHead>
-                    <TableHead className="text-right">{tCommon('table_headers.unique_id')}</TableHead>
-                    <TableHead className="text-right">{tCommon('table_headers.type')}</TableHead>
                     <TableHead className="text-right">{tCommon('table_headers.name_company')}</TableHead>
+                    <TableHead className="text-right">{tCommon('table_headers.type')}</TableHead>
+                    <TableHead className="text-right">{tCommon('table_headers.phone')}</TableHead>
+                    <TableHead className="text-right">{tCommon('table_headers.address')}</TableHead>
+                    <TableHead className="text-right">{tCommon('table_headers.unique_id')}</TableHead>
+                    <TableHead className="text-right">{tCommon('table_headers.economic_code')}</TableHead>
+                    <TableHead className="text-center">{tCommon('table_headers.operations')}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {filteredReceivers.map((receiver) => (
                     <TableRow key={receiver.id} className="cursor-pointer hover:bg-gray-50" onClick={() => handleRowClick(receiver, 'receiver')}>
+                      <TableCell className="font-medium">{getPartyDisplayName(receiver)}</TableCell>
+                      <TableCell>{receiver.receiver_type === "Corporate" ? tCommon('party_types.corporate') : tCommon('party_types.individual')}</TableCell>
+                      <TableCell>{receiver.phone}</TableCell>
+                      <TableCell>{receiver.address}</TableCell>
+                      <TableCell>{receiver.unique_id}</TableCell>
+                      <TableCell>{receiver.economic_code}</TableCell>
                       <TableCell className="text-center">
                         <div className="flex gap-2 justify-center">
                           <Button
@@ -359,12 +365,6 @@ export default function PartiesPage() {
                           </Button>
                         </div>
                       </TableCell>
-                      <TableCell>{receiver.address}</TableCell>
-                      <TableCell>{receiver.phone}</TableCell>
-                      <TableCell>{receiver.economic_code}</TableCell>
-                      <TableCell>{receiver.unique_id}</TableCell>
-                      <TableCell>{receiver.receiver_type === "Corporate" ? tCommon('party_types.corporate') : tCommon('party_types.individual')}</TableCell>
-                      <TableCell className="font-medium">{getPartyDisplayName(receiver)}</TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
@@ -398,17 +398,22 @@ export default function PartiesPage() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead className="text-center">{tCommon('table_headers.operations')}</TableHead>
-                    <TableHead className="text-right">{tCommon('table_headers.address')}</TableHead>
-                    <TableHead className="text-right">{tCommon('table_headers.email')}</TableHead>
-                    <TableHead className="text-right">{tCommon('table_headers.phone')}</TableHead>
-                    <TableHead className="text-right">{tCommon('table_headers.contact_person')}</TableHead>
                     <TableHead className="text-right">{tCommon('table_headers.company_name')}</TableHead>
+                    <TableHead className="text-right">{tCommon('table_headers.contact_person')}</TableHead>
+                    <TableHead className="text-right">{tCommon('table_headers.phone')}</TableHead>
+                    <TableHead className="text-right">{tCommon('table_headers.email')}</TableHead>
+                    <TableHead className="text-right">{tCommon('table_headers.address')}</TableHead>
+                    <TableHead className="text-center">{tCommon('table_headers.operations')}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {filteredShipping.map((company) => (
                     <TableRow key={company.id} className="cursor-pointer hover:bg-gray-50" onClick={() => handleRowClick(company, 'shipping')}>
+                      <TableCell className="font-medium">{company.name}</TableCell>
+                      <TableCell>{company.contact_person}</TableCell>
+                      <TableCell>{company.phone}</TableCell>
+                      <TableCell>{company.email}</TableCell>
+                      <TableCell>{company.address}</TableCell>
                       <TableCell className="text-center">
                         <div className="flex gap-2 justify-center">
                           <Button
@@ -434,11 +439,6 @@ export default function PartiesPage() {
                           </Button>
                         </div>
                       </TableCell>
-                      <TableCell>{company.address}</TableCell>
-                      <TableCell>{company.email}</TableCell>
-                      <TableCell>{company.phone}</TableCell>
-                      <TableCell>{company.contact_person}</TableCell>
-                      <TableCell className="font-medium">{company.name}</TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
@@ -509,8 +509,8 @@ export default function PartiesPage() {
                         setSheetOpen(false);
                       } catch (error) {
                         console.error("Failed to delete party:", error);
-                        const errorMessage = handleApiError(error, "Deleting party");
-                        toast.error(errorMessage);
+                        handleApiErrorWithToast(error, "Deleting party");
+                        
                       }
                     }
                   }}
@@ -585,8 +585,8 @@ export default function PartiesPage() {
               setEditingSupplier(null);
             } catch (error) {
               console.error("Failed to save supplier:", error);
-              const errorMessage = handleApiError(error, editingSupplier ? "Updating supplier" : "Creating supplier");
-              toast.error(errorMessage);
+              handleApiErrorWithToast(error, editingSupplier ? "Updating supplier" : "Creating supplier");
+              
             }
           }}
           onClose={() => {
@@ -613,8 +613,8 @@ export default function PartiesPage() {
               setEditingCustomer(null);
             } catch (error) {
               console.error("Failed to save customer:", error);
-              const errorMessage = handleApiError(error, editingCustomer ? "Updating customer" : "Creating customer");
-              toast.error(errorMessage);
+              handleApiErrorWithToast(error, editingCustomer ? "Updating customer" : "Creating customer");
+              
             }
           }}
           onClose={() => {
@@ -641,8 +641,8 @@ export default function PartiesPage() {
               setEditingReceiver(null);
             } catch (error) {
               console.error("Failed to save receiver:", error);
-              const errorMessage = handleApiError(error, editingReceiver ? "Updating receiver" : "Creating receiver");
-              toast.error(errorMessage);
+              handleApiErrorWithToast(error, editingReceiver ? "Updating receiver" : "Creating receiver");
+              
             }
           }}
           onClose={() => {
@@ -669,8 +669,8 @@ export default function PartiesPage() {
               setEditingShipping(null);
             } catch (error) {
               console.error("Failed to save shipping company:", error);
-              const errorMessage = handleApiError(error, editingShipping ? "Updating shipping company" : "Creating shipping company");
-              toast.error(errorMessage);
+              handleApiErrorWithToast(error, editingShipping ? "Updating shipping company" : "Creating shipping company");
+              
             }
           }}
           onClose={() => {

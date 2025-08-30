@@ -1,5 +1,6 @@
 "use client";
 
+
 import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -20,15 +21,16 @@ import { createCustomer, createProduct, createReceiver } from "@/lib/api/core";
 import { getPartyDisplayName } from "@/lib/utils/party-utils";
 import { fetchB2BOffers } from "@/lib/api/b2b";
 import { B2BOffer } from "@/lib/interfaces/b2b";
+import { convertPersianToEnglishNumbers } from "@/lib/utils/number-format";
 
 export type B2BAddressFormData = {
   purchase_id: string;
   allocation_id?: string;
   cottage_code?: string;
   product_offer?: number;
-  product?: number;
-  customer?: number;
-  receiver?: number;
+  product: number;
+  customer: number;
+  receiver: number;
   total_weight_purchased: number;
   purchase_date: string;
   unit_price: number;
@@ -79,10 +81,10 @@ export function B2BAddressModal({ trigger, onSubmit, onClose, initialData }: B2B
     product_offer: z.number().optional(),
     product: z.number().min(1, tval("product")),
     customer: z.number().min(1, tval("customer")),
-    receiver: z.number().optional(),
-    total_weight_purchased: z.number().positive(tval("weight")),
+    receiver: z.number().min(1, tval("customer")),
+    total_weight_purchased: z.union([z.string(), z.number()]).optional(),
     purchase_date: z.string().min(1, tval("date")),
-    unit_price: z.number().positive(tval("unit-price")),
+    unit_price: z.number().positive(),
     payment_amount: z.number().min(0, tval("amount")),
     payment_method: z.string().min(1, tval("payment-method")),
     province: z.string().optional(),
@@ -94,7 +96,7 @@ export function B2BAddressModal({ trigger, onSubmit, onClose, initialData }: B2B
   const [open, setOpen] = useState(trigger ? false : true);
 
   const form = useForm<B2BAddressFormData>({
-    resolver: zodResolver(b2bSaleSchema),
+    resolver: zodResolver(b2bSaleSchema) as any,
     defaultValues: {
       purchase_id: initialData?.purchase_id || "",
       allocation_id: initialData?.allocation_id || "",
@@ -115,7 +117,7 @@ export function B2BAddressModal({ trigger, onSubmit, onClose, initialData }: B2B
     },
   });
 
-  const handleSubmit = async (data: B2BAddressFormData) => {
+  const handleSubmit = async (data: any) => {
     try {
       await onSubmit?.(data);
       if (trigger) {
@@ -155,7 +157,7 @@ export function B2BAddressModal({ trigger, onSubmit, onClose, initialData }: B2B
               {/* Row 1: IDs */}
               <div className="grid grid-cols-3 gap-4">
                 <FormField
-                  control={form.control}
+                  control={form.control as any}
                   name="purchase_id"
                   render={({ field }) => (
                     <FormItem>
@@ -169,7 +171,7 @@ export function B2BAddressModal({ trigger, onSubmit, onClose, initialData }: B2B
                 />
 
                 <FormField
-                  control={form.control}
+                  control={form.control as any}
                   name="allocation_id"
                   render={({ field }) => (
                     <FormItem>
@@ -183,7 +185,7 @@ export function B2BAddressModal({ trigger, onSubmit, onClose, initialData }: B2B
                 />
 
                 <FormField
-                  control={form.control}
+                  control={form.control as any}
                   name="cottage_code"
                   render={({ field }) => (
                     <FormItem>
@@ -200,7 +202,7 @@ export function B2BAddressModal({ trigger, onSubmit, onClose, initialData }: B2B
               {/* Row 2: Product and Customer */}
               <div className="grid grid-cols-2 gap-4">
                 <FormField
-                  control={form.control}
+                  control={form.control as any}
                   name="product"
                   render={({ field }) => (
                     <FormItem>
@@ -245,7 +247,7 @@ export function B2BAddressModal({ trigger, onSubmit, onClose, initialData }: B2B
                 />
 
                 <FormField
-                  control={form.control}
+                  control={form.control as any}
                   name="customer"
                   render={({ field }) => (
                     <FormItem>
@@ -293,7 +295,7 @@ export function B2BAddressModal({ trigger, onSubmit, onClose, initialData }: B2B
               {/* Row 3: Receiver and Offer */}
               <div className="grid grid-cols-2 gap-4">
                 <FormField
-                  control={form.control}
+                  control={form.control as any}
                   name="receiver"
                   render={({ field }) => (
                     <FormItem>
@@ -343,7 +345,7 @@ export function B2BAddressModal({ trigger, onSubmit, onClose, initialData }: B2B
                 />
 
                 <FormField
-                  control={form.control}
+                  control={form.control as any}
                   name="product_offer"
                   render={({ field }) => (
                     <FormItem>
@@ -379,16 +381,16 @@ export function B2BAddressModal({ trigger, onSubmit, onClose, initialData }: B2B
               {/* Row 4: Weight, Amount, Date */}
               <div className="grid grid-cols-3 gap-4">
                 <FormField
-                  control={form.control}
+                  control={form.control as any}
                   name="total_weight_purchased"
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>{t("weight")}</FormLabel>
                       <FormControl>
                         <Input
-                          type="number"
+                          type="text"
                           {...field}
-                          onChange={(e) => field.onChange(Number(e.target.value))}
+                          onChange={(value) => field.onChange(value)}
                         />
                       </FormControl>
                       <FormMessage />
@@ -397,16 +399,19 @@ export function B2BAddressModal({ trigger, onSubmit, onClose, initialData }: B2B
                 />
 
                 <FormField
-                  control={form.control}
+                  control={form.control as any}
                   name="unit_price"
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>{t("unit-price")}</FormLabel>
                       <FormControl>
                         <Input
-                          type="number"
+                          type="text"
                           {...field}
-                          onChange={(e) => field.onChange(Number(e.target.value))}
+                          onChange={(e) => {
+                            const value = convertPersianToEnglishNumbers(e.target.value);
+                            field.onChange(value === '' ? 0 : parseFloat(value) || 0);
+                          }}
                         />
                       </FormControl>
                       <FormMessage />
@@ -415,16 +420,19 @@ export function B2BAddressModal({ trigger, onSubmit, onClose, initialData }: B2B
                 />
 
                 <FormField
-                  control={form.control}
+                  control={form.control as any}
                   name="payment_amount"
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>{t("payment-amount")}</FormLabel>
                       <FormControl>
                         <Input
-                          type="number"
+                          type="text"
                           {...field}
-                          onChange={(e) => field.onChange(Number(e.target.value))}
+                          onChange={(e) => {
+                            const value = convertPersianToEnglishNumbers(e.target.value);
+                            field.onChange(value === '' ? 0 : parseFloat(value) || 0);
+                          }}
                         />
                       </FormControl>
                       <FormMessage />
@@ -436,7 +444,7 @@ export function B2BAddressModal({ trigger, onSubmit, onClose, initialData }: B2B
               {/* Row 5: Payment Method and Date */}
               <div className="grid grid-cols-2 gap-4">
                 <FormField
-                  control={form.control}
+                  control={form.control as any}
                   name="payment_method"
                   render={({ field }) => (
                     <FormItem>
@@ -457,7 +465,7 @@ export function B2BAddressModal({ trigger, onSubmit, onClose, initialData }: B2B
                 />
 
                 <FormField
-                  control={form.control}
+                  control={form.control as any}
                   name="purchase_date"
                   render={({ field }) => (
                     <FormItem>
@@ -465,7 +473,7 @@ export function B2BAddressModal({ trigger, onSubmit, onClose, initialData }: B2B
                       <FormControl>
                         <PersianDatePicker
                           value={field.value}
-                          onChange={field.onChange}
+                          onChange={(value) => field.onChange(value)}
                           placeholder={t("select-date")}
                         />
                       </FormControl>
@@ -478,7 +486,7 @@ export function B2BAddressModal({ trigger, onSubmit, onClose, initialData }: B2B
               {/* Row 6: Province, City, Tracking */}
               <div className="grid grid-cols-3 gap-4">
                 <FormField
-                  control={form.control}
+                  control={form.control as any}
                   name="province"
                   render={({ field }) => (
                     <FormItem>
@@ -492,7 +500,7 @@ export function B2BAddressModal({ trigger, onSubmit, onClose, initialData }: B2B
                 />
 
                 <FormField
-                  control={form.control}
+                  control={form.control as any}
                   name="city"
                   render={({ field }) => (
                     <FormItem>
@@ -506,7 +514,7 @@ export function B2BAddressModal({ trigger, onSubmit, onClose, initialData }: B2B
                 />
 
                 <FormField
-                  control={form.control}
+                  control={form.control as any}
                   name="tracking_number"
                   render={({ field }) => (
                     <FormItem>
@@ -522,7 +530,7 @@ export function B2BAddressModal({ trigger, onSubmit, onClose, initialData }: B2B
 
               {/* Description */}
               <FormField
-                control={form.control}
+                control={form.control as any}
                 name="credit_description"
                 render={({ field }) => (
                   <FormItem>

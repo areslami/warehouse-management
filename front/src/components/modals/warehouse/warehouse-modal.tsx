@@ -50,7 +50,7 @@ export function WarehouseModal({ trigger, onSubmit, onClose, initialData }: Ware
     },
   });
 
-  const handleSubmit = async (data: WarehouseFormData) => {
+  const handleSubmit = async (data: any) => {
     if (onSubmit) {
       await onSubmit(data);
     }
@@ -87,7 +87,7 @@ export function WarehouseModal({ trigger, onSubmit, onClose, initialData }: Ware
           <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6 py-4 px-8">
             <div className="grid grid-cols-2 gap-4">
               <FormField
-                control={form.control}
+                control={form.control as any}
                 name="name"
                 render={({ field }) => (
                   <FormItem>
@@ -101,7 +101,7 @@ export function WarehouseModal({ trigger, onSubmit, onClose, initialData }: Ware
               />
 
               <FormField
-                control={form.control}
+                control={form.control as any}
                 name="address"
                 render={({ field }) => (
                   <FormItem>
@@ -118,7 +118,7 @@ export function WarehouseModal({ trigger, onSubmit, onClose, initialData }: Ware
             <div className="grid grid-cols-2 gap-4">
 
               <FormField
-                control={form.control}
+                control={form.control as any}
                 name="manager"
                 render={({ field }) => (
                   <FormItem>
@@ -133,7 +133,7 @@ export function WarehouseModal({ trigger, onSubmit, onClose, initialData }: Ware
             </div>
 
             <FormField
-              control={form.control}
+              control={form.control as any}
               name="phone"
               render={({ field }) => (
                 <FormItem>
@@ -147,7 +147,7 @@ export function WarehouseModal({ trigger, onSubmit, onClose, initialData }: Ware
             />
 
             <FormField
-              control={form.control}
+              control={form.control as any}
               name="description"
               render={({ field }) => (
                 <FormItem>

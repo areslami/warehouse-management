@@ -1,12 +1,19 @@
 export const handleApiError = (
   error: unknown,
-  operation: string = "API operation"
+  operation: string = "API operation",
+  shouldToast: boolean = false
 ): string => {
   console.error(`${operation} failed:`, error);
 
   if (!error || typeof error !== "object" || !("response" in error)) {
     console.error("Network error: No response from server");
-    return "خطا در اتصال به سرور";
+    const message = "خطا در اتصال به سرور";
+    if (shouldToast) {
+      import('sonner').then(({ toast }) => {
+        toast.error(message);
+      });
+    }
+    return message;
   }
 
   const errorObj = error as { response: { status: number; data: unknown } };
@@ -25,11 +32,23 @@ export const handleApiError = (
   };
 
   if (statusMessages[status]) {
-    return statusMessages[status];
+    const message = statusMessages[status];
+    if (shouldToast) {
+      import('sonner').then(({ toast }) => {
+        toast.error(message);
+      });
+    }
+    return message;
   }
 
   if (status >= 500) {
-    return "خطا در سرور - لطفاً دوباره تلاش کنید";
+    const message = "خطا در سرور - لطفاً دوباره تلاش کنید";
+    if (shouldToast) {
+      import('sonner').then(({ toast }) => {
+        toast.error(message);
+      });
+    }
+    return message;
   }
 
   if (data && typeof data === "object") {
@@ -64,14 +83,25 @@ export const handleApiError = (
     }
 
     if ("detail" in dataObj && dataObj.detail) {
-      if (Array.isArray(dataObj.detail)) {
-        return (dataObj.detail as string[]).join(", ");
+      const message = Array.isArray(dataObj.detail) 
+        ? (dataObj.detail as string[]).join(", ")
+        : dataObj.detail as string;
+      if (shouldToast) {
+        import('sonner').then(({ toast }) => {
+          toast.error(message);
+        });
       }
-      return dataObj.detail as string;
+      return message;
     }
 
     if ("message" in dataObj && dataObj.message) {
-      return dataObj.message as string;
+      const message = dataObj.message as string;
+      if (shouldToast) {
+        import('sonner').then(({ toast }) => {
+          toast.error(message);
+        });
+      }
+      return message;
     }
 
     if (!Array.isArray(data)) {
@@ -84,19 +114,34 @@ export const handleApiError = (
           return errorList
             .map((e) => {
               let errorMsg = String(e);
-              const errorPatterns: Record<string, string> = {
-                "already exists": "تکراری است",
-                required: "الزامی است",
-                blank: "نمی‌تواند خالی باشد",
-                invalid: "نامعتبر است",
-                max_length: "طول مجاز را رعایت کنید",
-                min_length: "حداقل طول را رعایت کنید",
-              };
+              
+              if (errorMsg.includes("Ensure this field has no more than")) {
+                const match = errorMsg.match(/no more than (\d+) character/);
+                if (match) {
+                  errorMsg = `حداکثر ${match[1]} کاراکتر مجاز است`;
+                }
+              } else if (errorMsg.includes("Ensure this field has at least")) {
+                const match = errorMsg.match(/at least (\d+) character/);
+                if (match) {
+                  errorMsg = `حداقل ${match[1]} کاراکتر مورد نیاز است`;
+                }
+              } else {
+                const errorPatterns: Record<string, string> = {
+                  "already exists": "تکراری است",
+                  "This field is required": "الزامی است",
+                  required: "الزامی است",
+                  blank: "نمی‌تواند خالی باشد",
+                  invalid: "نامعتبر است",
+                  "Enter a valid": "معتبر وارد کنید",
+                  max_length: "طول مجاز را رعایت کنید",
+                  min_length: "حداقل طول را رعایت کنید",
+                };
 
-              for (const [pattern, message] of Object.entries(errorPatterns)) {
-                if (errorMsg.includes(pattern)) {
-                  errorMsg = message;
-                  break;
+                for (const [pattern, message] of Object.entries(errorPatterns)) {
+                  if (errorMsg.includes(pattern)) {
+                    errorMsg = message;
+                    break;
+                  }
                 }
               }
 
@@ -107,11 +152,24 @@ export const handleApiError = (
         .filter(Boolean)
         .join(" | ");
 
-      if (fieldErrors) return fieldErrors;
+      if (fieldErrors) {
+        if (shouldToast) {
+          import('sonner').then(({ toast }) => {
+            toast.error(fieldErrors);
+          });
+        }
+        return fieldErrors;
+      }
     }
   }
 
-  return "خطا در ارتباط با سرور";
+  const finalMessage = "خطا در ارتباط با سرور";
+  if (shouldToast) {
+    import('sonner').then(({ toast }) => {
+      toast.error(finalMessage);
+    });
+  }
+  return finalMessage;
 };
 
 const getFieldNameInFarsi = (field: string): string => {

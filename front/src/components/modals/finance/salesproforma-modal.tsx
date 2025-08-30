@@ -1,5 +1,6 @@
 "use client";
 
+
 import { useState, useEffect } from "react";
 import { useForm, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -8,6 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, Dialog
 import { Button } from "../../ui/button";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "../../ui/form";
 import { Input } from "../../ui/input";
+import { convertPersianToEnglishNumbers } from "@/lib/utils/number-format";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../../ui/select";
 import { Plus, Trash2 } from "lucide-react";
 import { useTranslations } from "next-intl";
@@ -23,15 +25,15 @@ import { createCustomer, createProduct } from "@/lib/api/core";
 export type SalesProformaFormData = {
   serial_number: string;
   date: string;
-  tax: number;
-  discount: number;
+  tax: string;
+  discount: string;
   payment_type: "cash" | "credit" | "other";
   payment_description?: string;
   customer: number;
   lines: {
     product: number;
-    weight: number;
-    unit_price: number;
+    weight: string;
+    unit_price: string;
   }[];
 };
 
@@ -55,8 +57,7 @@ export function SalesProformaModal({ trigger, onSubmit, onClose, initialData }: 
     if (data.products.length === 0) {
       refreshData('products');
     }
-  }, [data.customers.length, data.products.length, refreshData]);
-
+  }, []);
   const getTodayDate = () => {
     if (typeof window === 'undefined') return '';
     return getTodayGregorian();
@@ -64,34 +65,34 @@ export function SalesProformaModal({ trigger, onSubmit, onClose, initialData }: 
 
   const proformaLineSchema = z.object({
     product: z.number().min(1, tval("product-required")),
-    weight: z.number().min(0.00000001, tval("weight")),
-    unit_price: z.number().min(0, tval("unit-price")),
+    weight: z.union([z.string(), z.number()]).optional(),
+    unit_price: z.union([z.string(), z.number()]).optional(),
   });
 
   const salesProformaSchema = z.object({
     serial_number: z.string().min(1, tval('serialnumber')).max(20, tval('serialnumber')),
     date: z.string().min(1, tval('date')),
-    tax: z.number().min(0, tval('tax')),
-    discount: z.number().min(0, tval('discount')),
+    tax: z.number().min(0).optional(),
+    discount: z.number().min(0).optional(),
     payment_type: z.enum(["cash", "credit", "other"]),
     payment_description: z.string().optional(),
-    customer: z.number().min(1, tval('customer')),
+    customer: z.number().min(0, tval('customer')),
     lines: z.array(proformaLineSchema).min(1, tval('lines')),
   });
 
   const [open, setOpen] = useState(trigger ? false : true);
 
   const form = useForm<SalesProformaFormData>({
-    resolver: zodResolver(salesProformaSchema),
+    resolver: zodResolver(salesProformaSchema) as any,
     defaultValues: {
       serial_number: initialData?.serial_number || "",
       date: initialData?.date || getTodayDate(),
-      tax: initialData?.tax || 0,
-      discount: initialData?.discount || 0,
+      tax: initialData?.tax,
+      discount: initialData?.discount,
       payment_type: initialData?.payment_type || "cash",
       payment_description: initialData?.payment_description || "",
       customer: initialData?.customer || 0,
-      lines: initialData?.lines || [{ product: 0, weight: 0, unit_price: 0 }],
+      lines: initialData?.lines || [{ product: 0, weight: "", unit_price: "" }],
     },
   });
 
@@ -100,7 +101,7 @@ export function SalesProformaModal({ trigger, onSubmit, onClose, initialData }: 
     name: "lines",
   });
 
-  const handleSubmit = async (data: SalesProformaFormData) => {
+  const handleSubmit = async (data: any) => {
     if (onSubmit) {
       await onSubmit(data);
     }
@@ -138,7 +139,7 @@ export function SalesProformaModal({ trigger, onSubmit, onClose, initialData }: 
             <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6 py-4 px-12">
               <div className="grid grid-cols-2 gap-4">
                 <FormField
-                  control={form.control}
+                  control={form.control as any}
                   name="serial_number"
                   render={({ field }) => (
                     <FormItem>
@@ -152,7 +153,7 @@ export function SalesProformaModal({ trigger, onSubmit, onClose, initialData }: 
                 />
 
                 <FormField
-                  control={form.control}
+                  control={form.control as any}
                   name="date"
                   render={({ field }) => (
                     <FormItem>
@@ -160,7 +161,7 @@ export function SalesProformaModal({ trigger, onSubmit, onClose, initialData }: 
                       <FormControl>
                         <PersianDatePicker
                           value={field.value}
-                          onChange={field.onChange}
+                          onChange={(value) => field.onChange(value)}
                           placeholder={t("select-date")}
                         />
                       </FormControl>
@@ -172,7 +173,7 @@ export function SalesProformaModal({ trigger, onSubmit, onClose, initialData }: 
 
               <div className="grid grid-cols-2 gap-4">
                 <FormField
-                  control={form.control}
+                  control={form.control as any}
                   name="customer"
                   render={({ field }) => (
                     <FormItem>
@@ -225,7 +226,7 @@ export function SalesProformaModal({ trigger, onSubmit, onClose, initialData }: 
                 />
 
                 <FormField
-                  control={form.control}
+                  control={form.control as any}
                   name="payment_type"
                   render={({ field }) => (
                     <FormItem>
@@ -244,7 +245,7 @@ export function SalesProformaModal({ trigger, onSubmit, onClose, initialData }: 
               </div>
 
               <FormField
-                control={form.control}
+                control={form.control as any}
                 name="payment_description"
                 render={({ field }) => (
                   <FormItem>
@@ -259,17 +260,17 @@ export function SalesProformaModal({ trigger, onSubmit, onClose, initialData }: 
 
               <div className="grid grid-cols-2 gap-4">
                 <FormField
-                  control={form.control}
+                  control={form.control as any}
                   name="tax"
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>{t("tax")}</FormLabel>
                       <FormControl>
                         <Input
-                          type="number"
+                          type="text"
                           step="0.01"
                           {...field}
-                          onChange={(e) => field.onChange(Number(e.target.value))}
+                          onChange={(value) => field.onChange(value)}
                         />
                       </FormControl>
                       <FormMessage />
@@ -278,17 +279,17 @@ export function SalesProformaModal({ trigger, onSubmit, onClose, initialData }: 
                 />
 
                 <FormField
-                  control={form.control}
+                  control={form.control as any}
                   name="discount"
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>{t("discount")}</FormLabel>
                       <FormControl>
                         <Input
-                          type="number"
+                          type="text"
                           step="0.01"
                           {...field}
-                          onChange={(e) => field.onChange(Number(e.target.value))}
+                          onChange={(value) => field.onChange(value)}
                         />
                       </FormControl>
                       <FormMessage />
@@ -304,7 +305,7 @@ export function SalesProformaModal({ trigger, onSubmit, onClose, initialData }: 
                     type="button"
                     variant="outline"
                     size="sm"
-                    onClick={() => append({ product: 0, weight: 0, unit_price: 0 })}
+                    onClick={() => append({ product: 0, weight: "", unit_price: "" })}
                   >
                     <Plus className="w-4 h-4 mr-2" />
                     {t("add-line")}
@@ -314,7 +315,7 @@ export function SalesProformaModal({ trigger, onSubmit, onClose, initialData }: 
                 {fields.map((field, index) => (
                   <div key={field.id} className="grid grid-cols-4 gap-4 p-4 border rounded-lg">
                     <FormField
-                      control={form.control}
+                      control={form.control as any}
                       name={`lines.${index}.product`}
                       render={({ field }) => (
                         <FormItem>
@@ -370,17 +371,17 @@ export function SalesProformaModal({ trigger, onSubmit, onClose, initialData }: 
                     />
 
                     <FormField
-                      control={form.control}
+                      control={form.control as any}
                       name={`lines.${index}.weight`}
                       render={({ field }) => (
                         <FormItem>
                           <FormLabel>{t("weight")}</FormLabel>
                           <FormControl>
                             <Input
-                              type="number"
+                              type="text"
                               step="0.00000001"
                               {...field}
-                              onChange={(e) => field.onChange(Number(e.target.value))}
+                              onChange={(value) => field.onChange(value)}
                             />
                           </FormControl>
                           <FormMessage />
@@ -389,17 +390,17 @@ export function SalesProformaModal({ trigger, onSubmit, onClose, initialData }: 
                     />
 
                     <FormField
-                      control={form.control}
+                      control={form.control as any}
                       name={`lines.${index}.unit_price`}
                       render={({ field }) => (
                         <FormItem>
                           <FormLabel>{t('unit_price')}</FormLabel>
                           <FormControl>
                             <Input
-                              type="number"
+                              type="text"
                               step="0.01"
                               {...field}
-                              onChange={(e) => field.onChange(Number(e.target.value))}
+                              onChange={(value) => field.onChange(value)}
                             />
                           </FormControl>
                           <FormMessage />

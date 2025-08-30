@@ -105,12 +105,12 @@ def preview_sales(request):
         'b2b_offer': offer_id,
         'product': data.get('product', {}).get('id') if data.get('product') else None,
         'customer': data.get('customer', {}).get('id') if data.get('customer') else None,
-        'agency_weight': data.get('distribution_weight') or data.get('weight') or 0,
+        'agency_weight': data.get('distribution_weight') or data.get('weight') or data.get('total_weight_purchased') or 0,
         'agency_date': data.get('distribution_date') or data.get('purchase_date') or datetime.now().isoformat(),
         'unit_price': data.get('unit_price', 0),
-        'total_price': data.get('total_amount', 0),
+        'total_price': data.get('total_amount') or data.get('payment_amount') or 0,
         'description': data.get('credit_description', ''),
-        'cottage_code': data.get('cottage_code', ''),
+        'cottage_code': data.get('cottage_code') or data.get('cottage_number') or '',
         'purchase_type': payment_method
     }
     

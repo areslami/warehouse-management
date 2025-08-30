@@ -5,7 +5,7 @@ import { useSearchParams, useRouter } from "next/navigation";
 import { Plus, Edit2, Trash2, DollarSign, Receipt, Search, FileText, Clock } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
-import { handleApiError } from "@/lib/api/error-handler";
+import { handleApiErrorWithToast } from "@/lib/api/error-toast-handler";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
@@ -59,8 +59,8 @@ export default function FinancePage() {
       setPurchaseProformas(purchaseData || []);
     } catch (error) {
       console.error("Failed to load finance data:", error);
-      const errorMessage = handleApiError(error, "Loading finance data");
-      toast.error(errorMessage);
+      handleApiErrorWithToast(error, "Loading finance data");
+      
     }
   }, []);
 
@@ -82,8 +82,8 @@ export default function FinancePage() {
         loadData();
       } catch (error) {
         console.error("Failed to delete sales proforma:", error);
-        const errorMessage = handleApiError(error, "Deleting sales proforma");
-        toast.error(errorMessage);
+        handleApiErrorWithToast(error, "Deleting sales proforma");
+        
       }
     }
   };
@@ -110,8 +110,8 @@ export default function FinancePage() {
         loadData();
       } catch (error) {
         console.error("Failed to delete purchase proforma:", error);
-        const errorMessage = handleApiError(error, "Deleting purchase proforma");
-        toast.error(errorMessage);
+        handleApiErrorWithToast(error, "Deleting purchase proforma");
+        
       }
     }
   };
@@ -233,8 +233,8 @@ export default function FinancePage() {
                       await loadData();
                     } catch (error) {
                       console.error("Failed to create sales proforma:", error);
-                      const errorMessage = handleApiError(error, "Creating sales proforma");
-                      toast.error(errorMessage);
+                      handleApiErrorWithToast(error, "Creating sales proforma");
+                      
                     }
                   }
                 });
@@ -260,12 +260,12 @@ export default function FinancePage() {
                       }}
                     />
                   </TableHead>
-                  <TableHead className="text-center">{t("sales.operations")}</TableHead>
-                  <TableHead>{t("sales.serial_number")}</TableHead>
                   <TableHead>{t("sales.customer")}</TableHead>
                   <TableHead>{t("sales.date")}</TableHead>
                   <TableHead>{t("sales.total_amount")}</TableHead>
                   <TableHead>{t("sales.payment_type")}</TableHead>
+                  <TableHead>{t("sales.serial_number")}</TableHead>
+                  <TableHead className="text-center">{t("sales.operations")}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -284,6 +284,15 @@ export default function FinancePage() {
                         }}
                       />
                     </TableCell>
+                    <TableCell>{getPartyDisplayName(customers.find(c => c.id === proforma.customer))}</TableCell>
+                    <TableCell>{new Date(proforma.date).toLocaleDateString('fa-IR')}</TableCell>
+                    <TableCell>{formatNumber(calculateTotal(proforma.lines))} {tCommon('units.rial')}</TableCell>
+                    <TableCell>
+                      {proforma.payment_type === 'cash' && tCommon('payment_types.cash')}
+                      {proforma.payment_type === 'credit' && tCommon('payment_types.credit')}
+                      {proforma.payment_type === 'other' && tCommon('payment_types.other')}
+                    </TableCell>
+                    <TableCell>{proforma.serial_number}</TableCell>
                     <TableCell>
                       <div className="flex gap-2 justify-center">
                         <Button size="sm" variant="ghost" onClick={(e) => {
@@ -304,8 +313,8 @@ export default function FinancePage() {
                                 await loadData();
                               } catch (error) {
                                 console.error("Failed to update sales proforma:", error);
-                                const errorMessage = handleApiError(error, "Updating sales proforma");
-                                toast.error(errorMessage);
+                                handleApiErrorWithToast(error, "Updating sales proforma");
+                                
                               }
                             }
                           });
@@ -319,15 +328,6 @@ export default function FinancePage() {
                           <Trash2 className="w-4 h-4 text-red-500" />
                         </Button>
                       </div>
-                    </TableCell>
-                    <TableCell>{proforma.serial_number}</TableCell>
-                    <TableCell>{getPartyDisplayName(customers.find(c => c.id === proforma.customer))}</TableCell>
-                    <TableCell>{new Date(proforma.date).toLocaleDateString('fa-IR')}</TableCell>
-                    <TableCell>{formatNumber(calculateTotal(proforma.lines))} {tCommon('units.rial')}</TableCell>
-                    <TableCell>
-                      {proforma.payment_type === 'cash' && tCommon('payment_types.cash')}
-                      {proforma.payment_type === 'credit' && tCommon('payment_types.credit')}
-                      {proforma.payment_type === 'other' && tCommon('payment_types.other')}
                     </TableCell>
                   </TableRow>
                 ))}
@@ -356,8 +356,8 @@ export default function FinancePage() {
                       await loadData();
                     } catch (error) {
                       console.error("Failed to create purchase proforma:", error);
-                      const errorMessage = handleApiError(error, "Creating purchase proforma");
-                      toast.error(errorMessage);
+                      handleApiErrorWithToast(error, "Creating purchase proforma");
+                      
                     }
                   }
                 });
@@ -383,11 +383,11 @@ export default function FinancePage() {
                       }}
                     />
                   </TableHead>
-                  <TableHead className="text-center">{t("purchase.operations")}</TableHead>
-                  <TableHead>{t("purchase.serial_number")}</TableHead>
                   <TableHead>{t("purchase.supplier")}</TableHead>
                   <TableHead>{t("purchase.date")}</TableHead>
                   <TableHead>{t("purchase.total_amount")}</TableHead>
+                  <TableHead>{t("purchase.serial_number")}</TableHead>
+                  <TableHead className="text-center">{t("purchase.operations")}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -406,6 +406,10 @@ export default function FinancePage() {
                         }}
                       />
                     </TableCell>
+                    <TableCell>{getPartyDisplayName(suppliers.find(s => s.id === proforma.supplier))}</TableCell>
+                    <TableCell>{new Date(proforma.date).toLocaleDateString('fa-IR')}</TableCell>
+                    <TableCell>{formatNumber(calculateTotal(proforma.lines))} {tCommon('units.rial')}</TableCell>
+                    <TableCell>{proforma.serial_number}</TableCell>
                     <TableCell>
                       <div className="flex gap-2 justify-center">
                         <Button size="sm" variant="ghost" onClick={(e) => {
@@ -419,8 +423,8 @@ export default function FinancePage() {
                                 await loadData();
                               } catch (error) {
                                 console.error("Failed to update purchase proforma:", error);
-                                const errorMessage = handleApiError(error, "Updating purchase proforma");
-                                toast.error(errorMessage);
+                                handleApiErrorWithToast(error, "Updating purchase proforma");
+                                
                               }
                             }
                           });
@@ -435,10 +439,6 @@ export default function FinancePage() {
                         </Button>
                       </div>
                     </TableCell>
-                    <TableCell>{proforma.serial_number}</TableCell>
-                    <TableCell>{getPartyDisplayName(suppliers.find(s => s.id === proforma.supplier))}</TableCell>
-                    <TableCell>{new Date(proforma.date).toLocaleDateString('fa-IR')}</TableCell>
-                    <TableCell>{formatNumber(calculateTotal(proforma.lines))} {tCommon('units.rial')}</TableCell>
                   </TableRow>
                 ))}
               </TableBody>
@@ -480,8 +480,8 @@ export default function FinancePage() {
                             await loadData();
                           } catch (error) {
                             console.error("Failed to update sales proforma:", error);
-                            const errorMessage = handleApiError(error, "Updating sales proforma");
-                            toast.error(errorMessage);
+                            handleApiErrorWithToast(error, "Updating sales proforma");
+                            
                           }
                         }
                       });
@@ -496,8 +496,8 @@ export default function FinancePage() {
                             await loadData();
                           } catch (error) {
                             console.error("Failed to update purchase proforma:", error);
-                            const errorMessage = handleApiError(error, "Updating purchase proforma");
-                            toast.error(errorMessage);
+                            handleApiErrorWithToast(error, "Updating purchase proforma");
+                            
                           }
                         }
                       });
@@ -526,8 +526,8 @@ export default function FinancePage() {
                         setSheetOpen(false);
                       } catch (error) {
                         console.error("Failed to delete proforma:", error);
-                        const errorMessage = handleApiError(error, "Deleting proforma");
-                        toast.error(errorMessage);
+                        handleApiErrorWithToast(error, "Deleting proforma");
+                        
                       }
                     }
                   }}

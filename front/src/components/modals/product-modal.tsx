@@ -54,7 +54,7 @@ export function ProductModal({ trigger, onSubmit, onClose, initialData }: Produc
     },
   });
 
-  const handleSubmit = async (data: ProductFormData) => {
+  const handleSubmit = async (data: any) => {
     if (onSubmit) {
       await onSubmit(data);
     }
@@ -92,7 +92,7 @@ export function ProductModal({ trigger, onSubmit, onClose, initialData }: Produc
             <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6 py-4 px-12">
               <div className="grid grid-cols-2 gap-4">
                 <FormField
-                  control={form.control}
+                  control={form.control as any}
                   name="name"
                   render={({ field }) => (
                     <FormItem>
@@ -106,7 +106,7 @@ export function ProductModal({ trigger, onSubmit, onClose, initialData }: Produc
                 />
 
                 <FormField
-                  control={form.control}
+                  control={form.control as any}
                   name="code"
                   render={({ field }) => (
                     <FormItem>
@@ -122,7 +122,7 @@ export function ProductModal({ trigger, onSubmit, onClose, initialData }: Produc
 
               <div className="grid grid-cols-2 gap-4">
                 <FormField
-                  control={form.control}
+                  control={form.control as any}
                   name="b2bcode"
                   render={({ field }) => (
                     <FormItem>
@@ -136,7 +136,7 @@ export function ProductModal({ trigger, onSubmit, onClose, initialData }: Produc
                 />
 
                 <FormField
-                  control={form.control}
+                  control={form.control as any}
                   name="category"
                   render={({ field }) => (
                     <FormItem>
@@ -151,7 +151,7 @@ export function ProductModal({ trigger, onSubmit, onClose, initialData }: Produc
               </div>
 
               <FormField
-                control={form.control}
+                control={form.control as any}
                 name="b2bregion"
                 render={({ field }) => (
                   <FormItem>
@@ -165,7 +165,7 @@ export function ProductModal({ trigger, onSubmit, onClose, initialData }: Produc
               />
 
               <FormField
-                control={form.control}
+                control={form.control as any}
                 name="description"
                 render={({ field }) => (
                   <FormItem>

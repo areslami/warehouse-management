@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 import { Table, TableBody, TableHead, TableHeader, TableRow, TableCell, TableRow as TableRowComponent } from "@/components/ui/table";
-import { handleApiError } from "@/lib/api/error-handler";
+import { handleApiErrorWithToast } from "@/lib/api/error-toast-handler";
 import { toast } from "@/lib/toast-helper";
 import { PersianDateTableCell } from "@/components/ui/persian-date-table-cell";
 import { DeliveryFulfillment, DeliveryFulfillmentCreate } from "@/lib/interfaces/warehouse";
@@ -46,8 +46,8 @@ export function DeliveryFulfillmentTab({ selectedWarehouseId }: DeliveryFulfillm
       }
     } catch (error) {
       console.error('Failed to load deliveries:', error);
-      const errorMessage = handleApiError(error, "Loading delivery fulfillments");
-      toast.error(errorMessage);
+      handleApiErrorWithToast(error, "Loading delivery fulfillments");
+      
     } finally {
       setLoading(false);
     }
@@ -80,8 +80,8 @@ export function DeliveryFulfillmentTab({ selectedWarehouseId }: DeliveryFulfillm
           toast.success(tCommon("toast_messages.create_success"));
         } catch (error) {
           console.error("Failed to create delivery fulfillment:", error);
-          const errorMessage = handleApiError(error, "Creating delivery fulfillment");
-          toast.error(errorMessage);
+          handleApiErrorWithToast(error, "Creating delivery fulfillment");
+          
         }
       }
     });
@@ -124,16 +124,16 @@ export function DeliveryFulfillmentTab({ selectedWarehouseId }: DeliveryFulfillm
               toast.success(tCommon("toast_messages.update_success"));
             } catch (error) {
               console.error("Failed to update delivery fulfillment:", error);
-              const errorMessage = handleApiError(error, "Updating delivery fulfillment");
-              toast.error(errorMessage);
+              handleApiErrorWithToast(error, "Updating delivery fulfillment");
+              
             }
           }
         });
       }
     } catch (error) {
       console.error("Failed to fetch delivery details:", error);
-      const errorMessage = handleApiError(error, "Fetching delivery details");
-      toast.error(errorMessage);
+      handleApiErrorWithToast(error, "Fetching delivery details");
+      
     }
   };
 
@@ -145,8 +145,8 @@ export function DeliveryFulfillmentTab({ selectedWarehouseId }: DeliveryFulfillm
         toast.success(tCommon("toast_messages.delete_success"));
       } catch (error) {
         console.error("Failed to delete delivery fulfillment:", error);
-        const errorMessage = handleApiError(error, "Deleting delivery fulfillment");
-        toast.error(errorMessage);
+        handleApiErrorWithToast(error, "Deleting delivery fulfillment");
+        
       }
     }
   };

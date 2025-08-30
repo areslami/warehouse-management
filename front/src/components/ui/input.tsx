@@ -1,15 +1,14 @@
 import * as React from "react"
 
 import { cn } from "@/lib/utils"
-import { convertPersianToEnglishNumbers } from "@/lib/utils/number-format"
 
 function Input({ className, type, onChange, ...props }: React.ComponentProps<"input">) {
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (type === 'number' || type === 'tel') {
-      const convertedValue = convertPersianToEnglishNumbers(e.target.value);
-      e.target.value = convertedValue;
-    }
-    if (onChange) {
+    if (type === 'text' && onChange) {
+      const convertedValue = e.target.value.replace(/[۰-۹]/g, (d) => "۰۱۲۳۴۵۶۷۸۹".indexOf(d).toString());
+      const newEvent = { ...e, target: { ...e.target, value: convertedValue } };
+      onChange(newEvent);
+    } else if (onChange) {
       onChange(e);
     }
   };

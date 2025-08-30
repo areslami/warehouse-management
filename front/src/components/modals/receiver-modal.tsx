@@ -12,8 +12,6 @@ import { useTranslations } from "next-intl";
 
 export type ReceiverFormData = {
   receiver_type: "individual" | "corporate";
-  receiver_veichle_type: "single" | "double" | "trailer";
-  unique_id: string;
   company_name?: string;
   national_id?: string;
   full_name?: string;
@@ -38,8 +36,6 @@ export function ReceiverModal({ trigger, onSubmit, onClose, initialData }: Recei
 
   const receiverSchema = z.object({
     receiver_type: z.enum(["individual", "corporate"]),
-    receiver_veichle_type: z.enum(["single", "double", "trailer"]),
-    unique_id: z.string().min(1, tval("unique-id")),
     company_name: z.string().optional(),
     national_id: z.string().optional(),
     full_name: z.string().optional(),
@@ -61,11 +57,10 @@ export function ReceiverModal({ trigger, onSubmit, onClose, initialData }: Recei
 
   const [open, setOpen] = useState(trigger ? false : true);
 
-  const form = useForm<ReceiverFormData>({
-    resolver: zodResolver(receiverSchema),
+  const form = useForm({
+    resolver: zodResolver(receiverSchema) as any,
     defaultValues: {
       receiver_type: initialData?.receiver_type || "individual",
-      unique_id: initialData?.unique_id || "",
       company_name: initialData?.company_name || "",
       national_id: initialData?.national_id || "",
       full_name: initialData?.full_name || "",
@@ -80,7 +75,7 @@ export function ReceiverModal({ trigger, onSubmit, onClose, initialData }: Recei
 
   const receiverType = form.watch("receiver_type");
 
-  const handleSubmit = async (data: ReceiverFormData) => {
+  const handleSubmit = async (data: any) => {
     if (onSubmit) {
       await onSubmit(data);
     }
@@ -116,7 +111,7 @@ export function ReceiverModal({ trigger, onSubmit, onClose, initialData }: Recei
         <Form {...form} >
           <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6 py-4 px-12">
             <FormField
-              control={form.control}
+              control={form.control as any}
               name="receiver_type"
               render={({ field }) => (
                 <FormItem>
@@ -132,27 +127,11 @@ export function ReceiverModal({ trigger, onSubmit, onClose, initialData }: Recei
               )}
             />
 
-            <div className="grid grid-cols-2 gap-4">
-
-              <FormField
-                control={form.control}
-                name="unique_id"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>{t("unique-id")}</FormLabel>
-                    <FormControl>
-                      <Input {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
 
             {receiverType === "corporate" ? (
               <div className="grid grid-cols-2 gap-4">
                 <FormField
-                  control={form.control}
+                  control={form.control as any}
                   name="company_name"
                   render={({ field }) => (
                     <FormItem>
@@ -166,7 +145,7 @@ export function ReceiverModal({ trigger, onSubmit, onClose, initialData }: Recei
                 />
 
                 <FormField
-                  control={form.control}
+                  control={form.control as any}
                   name="national_id"
                   render={({ field }) => (
                     <FormItem>
@@ -182,7 +161,7 @@ export function ReceiverModal({ trigger, onSubmit, onClose, initialData }: Recei
             ) : (
               <div className="grid grid-cols-2 gap-4">
                 <FormField
-                  control={form.control}
+                  control={form.control as any}
                   name="full_name"
                   render={({ field }) => (
                     <FormItem>
@@ -196,7 +175,7 @@ export function ReceiverModal({ trigger, onSubmit, onClose, initialData }: Recei
                 />
 
                 <FormField
-                  control={form.control}
+                  control={form.control as any}
                   name="personal_code"
                   render={({ field }) => (
                     <FormItem>
@@ -213,7 +192,7 @@ export function ReceiverModal({ trigger, onSubmit, onClose, initialData }: Recei
 
             <div className="grid grid-cols-2 gap-4">
               <FormField
-                control={form.control}
+                control={form.control as any}
                 name="economic_code"
                 render={({ field }) => (
                   <FormItem>
@@ -227,7 +206,7 @@ export function ReceiverModal({ trigger, onSubmit, onClose, initialData }: Recei
               />
 
               <FormField
-                control={form.control}
+                control={form.control as any}
                 name="phone"
                 render={({ field }) => (
                   <FormItem>
@@ -243,7 +222,7 @@ export function ReceiverModal({ trigger, onSubmit, onClose, initialData }: Recei
 
             <div className="grid grid-cols-2 gap-4">
               <FormField
-                control={form.control}
+                control={form.control as any}
                 name="address"
                 render={({ field }) => (
                   <FormItem>
@@ -257,7 +236,7 @@ export function ReceiverModal({ trigger, onSubmit, onClose, initialData }: Recei
               />
 
               <FormField
-                control={form.control}
+                control={form.control as any}
                 name="postal_code"
                 render={({ field }) => (
                   <FormItem>
@@ -270,26 +249,10 @@ export function ReceiverModal({ trigger, onSubmit, onClose, initialData }: Recei
                 )}
               />
             </div>
-            <FormField
-              control={form.control}
-              name="receiver_veichle_type"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>{t("receiver_veichle_type")}</FormLabel>
-                  <FormControl>
-                    <select {...field} className="w-full px-3 py-2 border rounded-md">
-                      <option value="single">{t("receiver_veichle_type-single")}</option>
-                      <option value="double">{t("receiver_veichle_type-double")}</option>
-                      <option value="trailer">{t("receiver_veichle_type-trailer")}</option>
-                    </select>
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+
 
             <FormField
-              control={form.control}
+              control={form.control as any}
               name="description"
               render={({ field }) => (
                 <FormItem>

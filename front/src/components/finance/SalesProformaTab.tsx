@@ -3,7 +3,7 @@
 import { useEffect } from "react";
 import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
-import { handleApiError } from "@/lib/api/error-handler";
+import { handleApiErrorWithToast } from "@/lib/api/error-toast-handler";
 import { toast } from "@/lib/toast-helper";
 import { formatNumber } from "@/lib/utils/number-format";
 import { Plus, Edit, Trash2 } from "lucide-react";
@@ -42,8 +42,8 @@ export function SalesProformaTab() {
           toast.success(tCommon("toast_messages.create_success"));
         } catch (error) {
           console.error("Failed to create sales proforma:", error);
-          const errorMessage = handleApiError(error, "Creating sales proforma");
-          toast.error(errorMessage);
+          handleApiErrorWithToast(error, "Creating sales proforma");
+          
         }
       }
     });
@@ -59,8 +59,8 @@ export function SalesProformaTab() {
           toast.success(tCommon("toast_messages.update_success"));
         } catch (error) {
           console.error("Failed to update sales proforma:", error);
-          const errorMessage = handleApiError(error, "Updating sales proforma");
-          toast.error(errorMessage);
+          handleApiErrorWithToast(error, "Updating sales proforma");
+          
         }
       }
     });
@@ -74,8 +74,8 @@ export function SalesProformaTab() {
         toast.success(tCommon("toast_messages.delete_success"));
       } catch (error) {
         console.error("Failed to delete sales proforma:", error);
-        const errorMessage = handleApiError(error, "Deleting sales proforma");
-        toast.error(errorMessage);
+        handleApiErrorWithToast(error, "Deleting sales proforma");
+        
       }
     }
   };

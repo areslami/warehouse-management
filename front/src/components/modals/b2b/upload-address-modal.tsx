@@ -94,16 +94,16 @@ export default function UploadAddressModal({ isOpen, onClose, onSuccess }: Uploa
     try {
       const formData = new FormData();
       formData.append("file", file);
-      
+
       const response = await fetch(`http://localhost:8000/b2b/addresses/upload/`, {
         method: "POST",
         body: formData,
       });
-      
+
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
-      
+
       const result = await response.json();
       toast.success(
         `${t("customer_created", { count: result.number_of_customer_created || 0 })}, 
@@ -410,7 +410,7 @@ export default function UploadAddressModal({ isOpen, onClose, onSuccess }: Uploa
               )}
 
               <div className="flex justify-between pt-4">
-                <Button 
+                <Button
                   variant="secondary"
                   onClick={() => {
                     // Accept current previewed row and all remaining rows

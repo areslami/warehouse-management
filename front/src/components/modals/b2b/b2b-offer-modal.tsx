@@ -1,5 +1,6 @@
 "use client";
 
+
 import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -14,12 +15,17 @@ import { useTranslations } from "next-intl";
 import { useCoreData } from "@/lib/core-data-context";
 import { ProductModal } from "../product-modal";
 import { createProduct } from "@/lib/api/core";
+import { fetchWarehouseReceipts, createWarehouseReceipt } from "@/lib/api/warehouse";
+import { WarehouseReceipt } from "@/lib/interfaces/warehouse";
 import { PersianDatePicker } from "../../ui/persian-date-picker";
+import { WarehouseReceiptModal } from "../warehouse/warehouse-receipt-modal";
+import { convertPersianToEnglishNumbers } from "@/lib/utils/number-format";
 
 export type B2BOfferFormData = {
   offer_id: string;
   product: number;
-  offer_weight: number;
+  warehouse_receipt?: number;
+  offer_weight?: number;
   unit_price: number;
   status: 'pending' | 'active' | 'sold' | 'expired';
   offer_type?: 'cash' | 'credit' | 'agreement' | 'other';
@@ -40,6 +46,8 @@ export function B2BOfferModal({ trigger, onSubmit, onClose, initialData }: B2BOf
   const t = useTranslations("modals.b2bOffer");
   const { products, refreshData: refreshCoreData } = useCoreData();
   const [showProductModal, setShowProductModal] = useState(false);
+  const [showWarehouseReceiptModal, setShowWarehouseReceiptModal] = useState(false);
+  const [warehouseReceipts, setWarehouseReceipts] = useState<WarehouseReceipt[]>([]);
 
   useEffect(() => {
     if (products.length === 0) {
@@ -47,14 +55,32 @@ export function B2BOfferModal({ trigger, onSubmit, onClose, initialData }: B2BOf
     }
   }, [products.length, refreshCoreData]);
 
+  const loadWarehouseReceipts = async () => {
+    try {
+      const receipts = await fetchWarehouseReceipts();
+      // Filter for import_cottage and distribution_cottage types
+      const filteredReceipts = receipts?.filter(receipt => 
+        receipt.receipt_type === 'import_cottage' || receipt.receipt_type === 'distribution_cottage'
+      ) || [];
+      setWarehouseReceipts(filteredReceipts);
+    } catch (error) {
+      console.error('Failed to load warehouse receipts:', error);
+    }
+  };
+
+  useEffect(() => {
+    loadWarehouseReceipts();
+  }, []);
+
 
   const b2bOfferSchema = z.object({
     offer_id: z.string().min(1, tval("offer-id")),
-    product: z.number().min(1, tval("product")),
-    offer_weight: z.number().positive(tval("offer-weight")),
-    unit_price: z.number().positive(tval("unit-price")),
+    product: z.number().min(1, tval("product-required")),
+    warehouse_receipt: z.number().optional(),
+    offer_weight: z.number().optional(),
+    unit_price: z.number().positive(),
     status: z.enum(['pending', 'active', 'sold', 'expired']),
-    offer_type: z.enum(['cash', 'credit', 'agreement']).optional(),
+    offer_type: z.enum(['cash', 'credit', 'agreement', 'other']).optional(),
     offer_date: z.string().min(1, tval("offer-date")),
     offer_exp_date: z.string().min(1, tval("offer-exp-date")),
     description: z.string().optional(),
@@ -62,11 +88,12 @@ export function B2BOfferModal({ trigger, onSubmit, onClose, initialData }: B2BOf
 
   const [open, setOpen] = useState(trigger ? false : true);
 
-  const form = useForm<B2BOfferFormData>({
-    resolver: zodResolver(b2bOfferSchema),
+  const form = useForm({
+    resolver: zodResolver(b2bOfferSchema) as any,
     defaultValues: {
       offer_id: initialData?.offer_id || "",
       product: initialData?.product || 0,
+      warehouse_receipt: initialData?.warehouse_receipt || 0,
       offer_weight: initialData?.offer_weight || 0,
       unit_price: initialData?.unit_price || 0,
       status: initialData?.status || 'pending',
@@ -77,7 +104,7 @@ export function B2BOfferModal({ trigger, onSubmit, onClose, initialData }: B2BOf
     },
   });
 
-  const handleSubmit = async (data: B2BOfferFormData) => {
+  const handleSubmit = async (data: any) => {
     try {
       await onSubmit?.(data);
       if (trigger) {
@@ -116,7 +143,7 @@ export function B2BOfferModal({ trigger, onSubmit, onClose, initialData }: B2BOf
             <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6 py-4 px-12">
               <div className="grid grid-cols-2 gap-4">
                 <FormField
-                  control={form.control}
+                  control={form.control as any}
                   name="offer_id"
                   render={({ field }) => (
                     <FormItem>
@@ -130,7 +157,7 @@ export function B2BOfferModal({ trigger, onSubmit, onClose, initialData }: B2BOf
                 />
 
                 <FormField
-                  control={form.control}
+                  control={form.control as any}
                   name="status"
                   render={({ field }) => (
                     <FormItem>
@@ -154,7 +181,7 @@ export function B2BOfferModal({ trigger, onSubmit, onClose, initialData }: B2BOf
 
               <div className="grid grid-cols-2 gap-4">
                 <FormField
-                  control={form.control}
+                  control={form.control as any}
                   name="offer_type"
                   render={({ field }) => (
                     <FormItem>
@@ -177,7 +204,7 @@ export function B2BOfferModal({ trigger, onSubmit, onClose, initialData }: B2BOf
 
               <div className="grid grid-cols-2 gap-4">
                 <FormField
-                  control={form.control}
+                  control={form.control as any}
                   name="product"
                   render={({ field }) => (
                     <FormItem>
@@ -223,18 +250,71 @@ export function B2BOfferModal({ trigger, onSubmit, onClose, initialData }: B2BOf
 
               </div>
 
+              <FormField
+                control={form.control as any}
+                name="warehouse_receipt"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>{t("warehouse-receipt")}</FormLabel>
+                    <FormControl>
+                      <Select
+                        value={field.value > 0 ? field.value.toString() : ""}
+                        onValueChange={(value) => {
+                          if (value === "new") {
+                            setShowWarehouseReceiptModal(true);
+                          } else if (value) {
+                            field.onChange(Number(value));
+                          } else {
+                            field.onChange(0);
+                          }
+                        }}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder={t("select-warehouse-receipt")} />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="0">
+                            {t("no-receipt")}
+                          </SelectItem>
+                          <SelectItem
+                            value="new"
+                            className="font-semibold text-[#f6d265]"
+                            onPointerDown={(e) => e.preventDefault()}
+                          >
+                            <Plus className="inline-block w-4 h-4 mr-2" />
+                            {t("create-new-warehouse-receipt")}
+                          </SelectItem>
+                          {warehouseReceipts.length > 0 && (
+                            <div className="border-t my-1" />
+                          )}
+                          {warehouseReceipts.map((receipt) => (
+                            <SelectItem key={receipt.id} value={receipt.id.toString()}>
+                              {receipt.receipt_id} - {receipt.warehouse_name} ({receipt.cottage_serial_number})
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
               <div className="grid grid-cols-2 gap-4">
                 <FormField
-                  control={form.control}
+                  control={form.control as any}
                   name="offer_weight"
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>{t("offer-weight")}</FormLabel>
                       <FormControl>
                         <Input
-                          type="number"
+                          type="text"
                           {...field}
-                          onChange={(e) => field.onChange(Number(e.target.value))}
+                          onChange={(e) => {
+                            const value = convertPersianToEnglishNumbers(e.target.value);
+                            field.onChange(value === '' ? 0 : parseFloat(value) || 0);
+                          }}
                         />
                       </FormControl>
                       <FormMessage />
@@ -243,16 +323,19 @@ export function B2BOfferModal({ trigger, onSubmit, onClose, initialData }: B2BOf
                 />
 
                 <FormField
-                  control={form.control}
+                  control={form.control as any}
                   name="unit_price"
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>{t("unit-price")}</FormLabel>
                       <FormControl>
                         <Input
-                          type="number"
+                          type="text"
                           {...field}
-                          onChange={(e) => field.onChange(Number(e.target.value))}
+                          onChange={(e) => {
+                            const value = convertPersianToEnglishNumbers(e.target.value);
+                            field.onChange(value === '' ? 0 : parseFloat(value) || 0);
+                          }}
                         />
                       </FormControl>
                       <FormMessage />
@@ -263,7 +346,7 @@ export function B2BOfferModal({ trigger, onSubmit, onClose, initialData }: B2BOf
 
               <div className="grid grid-cols-2 gap-4">
                 <FormField
-                  control={form.control}
+                  control={form.control as any}
                   name="offer_date"
                   render={({ field }) => (
                     <FormItem>
@@ -271,7 +354,7 @@ export function B2BOfferModal({ trigger, onSubmit, onClose, initialData }: B2BOf
                       <FormControl>
                         <PersianDatePicker
                           value={field.value}
-                          onChange={field.onChange}
+                          onChange={(value) => field.onChange(value)}
                           placeholder={t("select-date")}
                         />
                       </FormControl>
@@ -281,7 +364,7 @@ export function B2BOfferModal({ trigger, onSubmit, onClose, initialData }: B2BOf
                 />
 
                 <FormField
-                  control={form.control}
+                  control={form.control as any}
                   name="offer_exp_date"
                   render={({ field }) => (
                     <FormItem>
@@ -289,7 +372,7 @@ export function B2BOfferModal({ trigger, onSubmit, onClose, initialData }: B2BOf
                       <FormControl>
                         <PersianDatePicker
                           value={field.value}
-                          onChange={field.onChange}
+                          onChange={(value) => field.onChange(value)}
                           placeholder={t("select-date")}
                         />
                       </FormControl>
@@ -300,7 +383,7 @@ export function B2BOfferModal({ trigger, onSubmit, onClose, initialData }: B2BOf
               </div>
 
               <FormField
-                control={form.control}
+                control={form.control as any}
                 name="description"
                 render={({ field }) => (
                   <FormItem>
@@ -335,6 +418,20 @@ export function B2BOfferModal({ trigger, onSubmit, onClose, initialData }: B2BOf
             }
           }}
           onClose={() => setShowProductModal(false)}
+        />
+      )}
+
+      {showWarehouseReceiptModal && (
+        <WarehouseReceiptModal
+          onSubmit={async (newReceipt) => {
+            const created = await createWarehouseReceipt(newReceipt);
+            if (created) {
+              await loadWarehouseReceipts();
+              form.setValue('warehouse_receipt', created.id);
+              setShowWarehouseReceiptModal(false);
+            }
+          }}
+          onClose={() => setShowWarehouseReceiptModal(false)}
         />
       )}
 

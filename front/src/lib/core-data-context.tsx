@@ -2,7 +2,7 @@
 
 import { createContext, useCallback, useContext, useEffect, useState } from "react";
 import { toast } from "./toast-helper";
-import { handleApiError } from "@/lib/api/error-handler";
+import { handleApiErrorWithToast } from "@/lib/api/error-toast-handler";
 import { Product, Supplier, Receiver, Customer, ShippingCompany, } from "@/lib/interfaces/core";
 import { Warehouse } from "@/lib/interfaces/warehouse";
 import { PurchaseProforma, SalesProforma } from "@/lib/interfaces/finance";
@@ -81,8 +81,8 @@ export const CoreDataProvider = ({ children }: { children: React.ReactNode }) =>
 
         } catch (error) {
             console.error('Failed to fetch initial data:', error);
-            const errorMessage = handleApiError(error, "Loading initial application data");
-            toast.error(errorMessage);
+            handleApiErrorWithToast(error, "Loading initial application data");
+            
         }
     }, []);
     const updateData = <T extends keyof AppData>(key: T, newData: AppData[T]) => {
@@ -123,11 +123,10 @@ export const CoreDataProvider = ({ children }: { children: React.ReactNode }) =>
         salesProformas: fetchSalesProformas,
     };
 
-    const refreshData = async <T extends keyof AppData>(key: T) => {
+    const refreshData = useCallback(async <T extends keyof AppData>(key: T) => {
         try {
             const fetcher = fetcherMap[key];
             if (fetcher) {
-                // Add error handling for finance endpoints specifically
                 if (key === 'purchaseProformas' || key === 'salesProformas') {
                     const freshData = await fetcher().catch(() => null);
                     if (freshData) {
@@ -143,7 +142,7 @@ export const CoreDataProvider = ({ children }: { children: React.ReactNode }) =>
         } catch (error) {
             console.error(`Failed to refresh ${key}:`, error);
         }
-    };
+    }, []);
 
     const value = { ...data, data, updateData, addItem, updateItem, deleteItem, refreshData };
 

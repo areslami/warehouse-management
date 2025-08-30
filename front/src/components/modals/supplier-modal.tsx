@@ -75,7 +75,7 @@ export function SupplierModal({ trigger, onSubmit, onClose, initialData }: Suppl
 
   const supplierType = form.watch("supplier_type");
 
-  const handleSubmit = async (data: SupplierFormData) => {
+  const handleSubmit = async (data: any) => {
     if (onSubmit) {
       await onSubmit(data);
     }
@@ -111,7 +111,7 @@ export function SupplierModal({ trigger, onSubmit, onClose, initialData }: Suppl
         <Form {...form} >
           <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6 py-4 px-12">
             <FormField
-              control={form.control}
+              control={form.control as any}
               name="supplier_type"
               render={({ field }) => (
                 <FormItem>
@@ -130,7 +130,7 @@ export function SupplierModal({ trigger, onSubmit, onClose, initialData }: Suppl
             {supplierType === "corporate" ? (
               <div className="grid grid-cols-2 gap-4">
                 <FormField
-                  control={form.control}
+                  control={form.control as any}
                   name="company_name"
                   render={({ field }) => (
                     <FormItem>
@@ -144,7 +144,7 @@ export function SupplierModal({ trigger, onSubmit, onClose, initialData }: Suppl
                 />
 
                 <FormField
-                  control={form.control}
+                  control={form.control as any}
                   name="national_id"
                   render={({ field }) => (
                     <FormItem>
@@ -160,7 +160,7 @@ export function SupplierModal({ trigger, onSubmit, onClose, initialData }: Suppl
             ) : (
               <div className="grid grid-cols-2 gap-4">
                 <FormField
-                  control={form.control}
+                  control={form.control as any}
                   name="full_name"
                   render={({ field }) => (
                     <FormItem>
@@ -174,7 +174,7 @@ export function SupplierModal({ trigger, onSubmit, onClose, initialData }: Suppl
                 />
 
                 <FormField
-                  control={form.control}
+                  control={form.control as any}
                   name="personal_code"
                   render={({ field }) => (
                     <FormItem>
@@ -191,7 +191,7 @@ export function SupplierModal({ trigger, onSubmit, onClose, initialData }: Suppl
 
             <div className="grid grid-cols-2 gap-4">
               <FormField
-                control={form.control}
+                control={form.control as any}
                 name="economic_code"
                 render={({ field }) => (
                   <FormItem>
@@ -205,7 +205,7 @@ export function SupplierModal({ trigger, onSubmit, onClose, initialData }: Suppl
               />
 
               <FormField
-                control={form.control}
+                control={form.control as any}
                 name="phone"
                 render={({ field }) => (
                   <FormItem>
@@ -221,7 +221,7 @@ export function SupplierModal({ trigger, onSubmit, onClose, initialData }: Suppl
 
             <div className="grid grid-cols-2 gap-4">
               <FormField
-                control={form.control}
+                control={form.control as any}
                 name="address"
                 render={({ field }) => (
                   <FormItem>
@@ -235,7 +235,7 @@ export function SupplierModal({ trigger, onSubmit, onClose, initialData }: Suppl
               />
 
               <FormField
-                control={form.control}
+                control={form.control as any}
                 name="postal_code"
                 render={({ field }) => (
                   <FormItem>
@@ -250,7 +250,7 @@ export function SupplierModal({ trigger, onSubmit, onClose, initialData }: Suppl
             </div>
 
             <FormField
-              control={form.control}
+              control={form.control as any}
               name="description"
               render={({ field }) => (
                 <FormItem>

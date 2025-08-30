@@ -22,7 +22,7 @@ import {
   fetchB2BDistributions, fetchB2BDistributionById, createB2BDistribution, updateB2BDistribution, deleteB2BDistribution,
   fetchB2BSales, fetchB2BSaleById, createB2BSale, updateB2BSale, deleteB2BSale
 } from "@/lib/api/b2b";
-import { handleApiError } from "@/lib/api/error-handler";
+import { handleApiErrorWithToast } from "@/lib/api/error-toast-handler";
 import { formatNumber } from "@/lib/utils/number-format";
 import UploadAddressModal from "@/components/modals/b2b/upload-address-modal";
 
@@ -84,15 +84,35 @@ export default function B2BPage() {
       setSales(salesData);
     } catch (error) {
       console.error("Failed to load B2B data:", error);
-      const errorMessage = handleApiError(error, "Load B2B data");
-      toast.error(errorMessage);
+      handleApiErrorWithToast(error, "Load B2B data");
+
     }
   };
 
-  const handleRowClick = (item: B2BOffer | B2BAddress | B2BDistribution | B2BSale, type: 'offer' | 'distribution' | 'address' | 'sale') => {
-    setSelectedItem(item);
-    setSelectedType(type);
-    setSheetOpen(true);
+  const handleRowClick = async (item: B2BOffer | B2BAddress | B2BDistribution | B2BSale, type: 'offer' | 'distribution' | 'address' | 'sale') => {
+    try {
+      let fullItem;
+      // Fetch complete data from API to ensure all fields are present
+      if (type === 'offer') {
+        fullItem = await fetchB2BOfferById(item.id);
+      } else if (type === 'address') {
+        fullItem = await fetchB2BAddressById(item.id);
+      } else if (type === 'distribution') {
+        fullItem = await fetchB2BDistributionById(item.id);
+      } else if (type === 'sale') {
+        fullItem = await fetchB2BSaleById(item.id);
+      }
+
+      setSelectedItem(fullItem || item);
+      setSelectedType(type);
+      setSheetOpen(true);
+    } catch (error) {
+      console.error("Failed to fetch full item details:", error);
+      // Fallback to the basic item data
+      setSelectedItem(item);
+      setSelectedType(type);
+      setSheetOpen(true);
+    }
   };
 
   const handleDeleteOffer = async (id: number) => {
@@ -107,8 +127,8 @@ export default function B2BPage() {
         }
       } catch (error) {
         console.error("Failed to delete offer:", error);
-        const errorMessage = handleApiError(error, "Delete offer");
-        toast.error(errorMessage);
+        handleApiErrorWithToast(error, "Delete offer");
+
       }
     }
   };
@@ -120,23 +140,23 @@ export default function B2BPage() {
       try {
         const deletePromises = selectedOffers.map(id => deleteB2BOffer(id));
         const results = await Promise.allSettled(deletePromises);
-        
+
         const successCount = results.filter(r => r.status === 'fulfilled').length;
         const failedCount = results.filter(r => r.status === 'rejected').length;
-        
+
         if (successCount > 0) {
           // Remove successfully deleted items from state
           const successfulIds = selectedOffers.filter((id, index) => results[index].status === 'fulfilled');
           setOffers(offers.filter(o => !successfulIds.includes(o.id)));
-          
+
           // Show success message
           toast.success(t("bulk_delete_success", { count: successCount }));
         }
-        
+
         if (failedCount > 0) {
           toast.error(t("bulk_delete_failed"));
         }
-        
+
         setSelectedOffers([]);
       } catch (error) {
         console.error("Bulk delete error:", error);
@@ -156,8 +176,8 @@ export default function B2BPage() {
         }
       } catch (error) {
         console.error("Failed to delete address:", error);
-        const errorMessage = handleApiError(error, "Delete address");
-        toast.error(errorMessage);
+        handleApiErrorWithToast(error, "Delete address");
+
       }
     }
   };
@@ -169,21 +189,21 @@ export default function B2BPage() {
       try {
         const deletePromises = selectedAddresses.map(id => deleteB2BAddress(id));
         const results = await Promise.allSettled(deletePromises);
-        
+
         const successCount = results.filter(r => r.status === 'fulfilled').length;
         const failedCount = results.filter(r => r.status === 'rejected').length;
-        
+
         if (successCount > 0) {
           const successfulIds = selectedAddresses.filter((id, index) => results[index].status === 'fulfilled');
           setAddresses(addresses.filter(a => !successfulIds.includes(a.id)));
-          
+
           toast.success(t("bulk_delete_success", { count: successCount }));
         }
-        
+
         if (failedCount > 0) {
           toast.error(t("bulk_delete_failed"));
         }
-        
+
         setSelectedAddresses([]);
       } catch (error) {
         console.error("Bulk delete error:", error);
@@ -203,8 +223,8 @@ export default function B2BPage() {
         }
       } catch (error) {
         console.error("Failed to delete distribution:", error);
-        const errorMessage = handleApiError(error, "Delete distribution");
-        toast.error(errorMessage);
+        handleApiErrorWithToast(error, "Delete distribution");
+
       }
     }
   };
@@ -216,21 +236,21 @@ export default function B2BPage() {
       try {
         const deletePromises = selectedDistributions.map(id => deleteB2BDistribution(id));
         const results = await Promise.allSettled(deletePromises);
-        
+
         const successCount = results.filter(r => r.status === 'fulfilled').length;
         const failedCount = results.filter(r => r.status === 'rejected').length;
-        
+
         if (successCount > 0) {
           const successfulIds = selectedDistributions.filter((id, index) => results[index].status === 'fulfilled');
           setDistributions(distributions.filter(d => !successfulIds.includes(d.id)));
-          
+
           toast.success(t("bulk_delete_success", { count: successCount }));
         }
-        
+
         if (failedCount > 0) {
           toast.error(t("bulk_delete_failed"));
         }
-        
+
         setSelectedDistributions([]);
       } catch (error) {
         console.error("Bulk delete error:", error);
@@ -250,8 +270,8 @@ export default function B2BPage() {
         }
       } catch (error) {
         console.error("Failed to delete sale:", error);
-        const errorMessage = handleApiError(error, "Delete sale");
-        toast.error(errorMessage);
+        handleApiErrorWithToast(error, "Delete sale");
+
       }
     }
   };
@@ -263,21 +283,21 @@ export default function B2BPage() {
       try {
         const deletePromises = selectedSales.map(id => deleteB2BSale(id));
         const results = await Promise.allSettled(deletePromises);
-        
+
         const successCount = results.filter(r => r.status === 'fulfilled').length;
         const failedCount = results.filter(r => r.status === 'rejected').length;
-        
+
         if (successCount > 0) {
           const successfulIds = selectedSales.filter((id, index) => results[index].status === 'fulfilled');
           setSales(sales.filter(s => !successfulIds.includes(s.id)));
-          
+
           toast.success(t("bulk_delete_success", { count: successCount }));
         }
-        
+
         if (failedCount > 0) {
           toast.error(t("bulk_delete_failed"));
         }
-        
+
         setSelectedSales([]);
       } catch (error) {
         console.error("Bulk delete error:", error);
@@ -296,7 +316,6 @@ export default function B2BPage() {
 
   const filteredDistributions = useMemo(() => {
     return distributions.filter(dist =>
-      (dist.cottage_number || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
       (dist.customer_name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
       (dist.product_name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
       (dist.purchase_id || '').toLowerCase().includes(searchTerm.toLowerCase())
@@ -365,13 +384,14 @@ export default function B2BPage() {
             <Package className="w-4 h-4 mr-2" />
             {t("distributions_tab")}
           </TabsTrigger>
-          <TabsTrigger value="addresses" className="data-[state=active]:bg-[#f6d265] data-[state=active]:text-black">
-            <TrendingUp className="w-4 h-4 mr-2" />
-            {t("addresses_tab")}
-          </TabsTrigger>
+
           <TabsTrigger value="sales" className="data-[state=active]:bg-[#f6d265] data-[state=active]:text-black">
             <ShoppingCart className="w-4 h-4 mr-2" />
             {t("sales_tab")}
+          </TabsTrigger>
+          <TabsTrigger value="addresses" className="data-[state=active]:bg-[#f6d265] data-[state=active]:text-black">
+            <TrendingUp className="w-4 h-4 mr-2" />
+            {t("addresses_tab")}
           </TabsTrigger>
         </TabsList>
 
@@ -419,15 +439,15 @@ export default function B2BPage() {
                           }}
                         />
                       </TableHead>
-                      <TableHead className="text-right w-16">{t("id")}</TableHead>
-                      <TableHead className="text-right">{t("offer_id")}</TableHead>
+                      <TableHead className="text-right">{t("offer_date")}</TableHead>
+                      <TableHead className="text-right">{t("expiry_date")}</TableHead>
+                      <TableHead className="text-right">{t("status")}</TableHead>
                       <TableHead className="text-right">{t("product")}</TableHead>
                       <TableHead className="text-right">{t("weight")}</TableHead>
                       <TableHead className="text-right">{t("unit_price")}</TableHead>
                       <TableHead className="text-right">{t("total_price")}</TableHead>
-                      <TableHead className="text-right">{t("status")}</TableHead>
-                      <TableHead className="text-right">{t("offer_date")}</TableHead>
-                      <TableHead className="text-right">{t("expiry_date")}</TableHead>
+                      <TableHead className="text-right">{t("offer_id")}</TableHead>
+                      <TableHead className="text-right w-16">{t("id")}</TableHead>
                       <TableHead className="text-center w-24">{t("actions")}</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -447,14 +467,8 @@ export default function B2BPage() {
                             }}
                           />
                         </TableCell>
-                        <TableCell className="font-medium text-right">{offer.id}</TableCell>
-                        <TableCell className="truncate max-w-[120px]" title={offer.offer_id}>{offer.offer_id}</TableCell>
-                        <TableCell className="truncate max-w-[150px]" title={offer.product_name || `${tCommon('product_labels.product_prefix')} ${offer.product}`}>
-                          {offer.product_name || `${tCommon('product_labels.product_prefix')} ${offer.product}`}
-                        </TableCell>
-                        <TableCell>{formatNumber(offer.offer_weight)} {tCommon('units.kg')}</TableCell>
-                        <TableCell className="truncate max-w-[100px]">{formatNumber(offer.unit_price)}</TableCell>
-                        <TableCell className="truncate max-w-[120px]">{formatNumber(offer.total_price || 0)}</TableCell>
+                        <TableCell>{new Date(offer.offer_date).toLocaleDateString('fa-IR')}</TableCell>
+                        <TableCell>{new Date(offer.offer_exp_date).toLocaleDateString('fa-IR')}</TableCell>
                         <TableCell>
                           <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusBadgeClass(offer.status)}`}>
                             {offer.status === 'active' && tCommon('status.active')}
@@ -463,8 +477,14 @@ export default function B2BPage() {
                             {offer.status === 'expired' && tCommon('status.expired')}
                           </span>
                         </TableCell>
-                        <TableCell>{new Date(offer.offer_date).toLocaleDateString('fa-IR')}</TableCell>
-                        <TableCell>{new Date(offer.offer_exp_date).toLocaleDateString('fa-IR')}</TableCell>
+                        <TableCell className="truncate max-w-[150px]" title={offer.product_name || `${tCommon('product_labels.product_prefix')} ${offer.product}`}>
+                          {offer.product_name || `${tCommon('product_labels.product_prefix')} ${offer.product}`}
+                        </TableCell>
+                        <TableCell>{formatNumber(offer.offer_weight)} {tCommon('units.kg')}</TableCell>
+                        <TableCell className="truncate max-w-[100px]">{formatNumber(offer.unit_price)}</TableCell>
+                        <TableCell className="truncate max-w-[120px]">{formatNumber(offer.total_price || 0)}</TableCell>
+                        <TableCell className="truncate max-w-[120px]" title={offer.offer_id}>{offer.offer_id}</TableCell>
+                        <TableCell className="font-medium text-right">{offer.id}</TableCell>
                         <TableCell className="text-center">
                           <div className="flex gap-2 justify-center">
                             <Button
@@ -478,8 +498,8 @@ export default function B2BPage() {
                                   setShowOfferModal(true);
                                 } catch (error) {
                                   console.error("Failed to fetch offer details:", error);
-                                  const errorMessage = handleApiError(error, "Fetch offer details");
-                                  toast.error(errorMessage);
+                                  handleApiErrorWithToast(error, "Fetch offer details");
+
                                 }
                               }}
                             >
@@ -550,15 +570,13 @@ export default function B2BPage() {
                           }}
                         />
                       </TableHead>
-                      <TableHead className="text-right w-16">{t("id")}</TableHead>
-                      <TableHead className="text-right">{t("purchase_id")}</TableHead>
-                      <TableHead className="text-right">{t("cottage_number")}</TableHead>
-                      <TableHead className="text-right">{t("offer_id")}</TableHead>
+                      <TableHead className="text-right">{t("agency_date")}</TableHead>
                       <TableHead className="text-right">{t("warehouse")}</TableHead>
                       <TableHead className="text-right">{t("product")}</TableHead>
                       <TableHead className="text-right">{t("customer")}</TableHead>
                       <TableHead className="text-right">{t("agency_weight")}</TableHead>
-                      <TableHead className="text-right">{t("agency_date")}</TableHead>
+                      <TableHead className="text-right">{t("purchase_id")}</TableHead>
+                      <TableHead className="text-right w-16">{t("id")}</TableHead>
                       <TableHead className="text-center w-24">{t("actions")}</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -578,10 +596,7 @@ export default function B2BPage() {
                             }}
                           />
                         </TableCell>
-                        <TableCell className="font-medium text-right">{distribution.id}</TableCell>
-                        <TableCell className="truncate max-w-[100px]" title={distribution.purchase_id || '-'}>{distribution.purchase_id || '-'}</TableCell>
-                        <TableCell className="truncate max-w-[80px]" title={distribution.cottage_number || '-'}>{distribution.cottage_number || '-'}</TableCell>
-                        <TableCell className="truncate max-w-[100px]" title={distribution.b2b_offer_id || '-'}>{distribution.b2b_offer_id || '-'}</TableCell>
+                        <TableCell>{new Date(distribution.agency_date).toLocaleDateString('fa-IR')}</TableCell>
                         <TableCell className="truncate max-w-[120px]" title={distribution.warehouse_name || `${tCommon('product_labels.warehouse_prefix')} ${distribution.warehouse}`}>
                           {distribution.warehouse_name || `${tCommon('product_labels.warehouse_prefix')} ${distribution.warehouse}`}
                         </TableCell>
@@ -592,7 +607,8 @@ export default function B2BPage() {
                           {distribution.customer_name || `${tCommon('product_labels.customer_prefix')} ${distribution.customer}`}
                         </TableCell>
                         <TableCell>{formatNumber(distribution.agency_weight)} {tCommon('units.kg')}</TableCell>
-                        <TableCell>{new Date(distribution.agency_date).toLocaleDateString('fa-IR')}</TableCell>
+                        <TableCell className="truncate max-w-[100px]" title={distribution.purchase_id || '-'}>{distribution.purchase_id || '-'}</TableCell>
+                        <TableCell className="font-medium text-right">{distribution.id}</TableCell>
                         <TableCell className="text-center">
                           <div className="flex gap-2 justify-center">
                             <Button
@@ -606,8 +622,8 @@ export default function B2BPage() {
                                   setShowDistributionModal(true);
                                 } catch (error) {
                                   console.error("Failed to fetch distribution details:", error);
-                                  const errorMessage = handleApiError(error, "Fetch distribution details");
-                                  toast.error(errorMessage);
+                                  handleApiErrorWithToast(error, "Fetch distribution details");
+
                                 }
                               }}
                             >
@@ -619,150 +635,6 @@ export default function B2BPage() {
                               onClick={(e) => {
                                 e.stopPropagation();
                                 handleDeleteDistribution(distribution.id);
-                              }}
-                            >
-                              <Trash2 className="w-4 h-4 text-red-500" />
-                            </Button>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              )}
-            </div>
-          </div>
-        </TabsContent>
-
-        <TabsContent value="addresses">
-          <div className="bg-white rounded-lg shadow">
-            <div className="p-4 border-b border-gray-200 flex items-center justify-between">
-              <h2 className="text-xl font-semibold text-gray-700">{t("addresses_title")}</h2>
-              <div className="flex gap-2">
-                {selectedAddresses.length > 0 && (
-                  <Button variant="destructive" size="sm" onClick={handleBulkDeleteAddresses}>
-                    <Trash2 className="w-4 h-4 mr-1" />
-                    {t("delete")} ({selectedAddresses.length})
-                  </Button>
-                )}
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => setShowAddressUploadModal(true)}
-                >
-                  <Upload className="w-4 h-4 mr-1" />
-                  {t("import_excel")}
-                </Button>
-                <Button
-                  size="sm"
-                  className="bg-[#f6d265] hover:bg-[#f5c842] text-black"
-                  onClick={() => {
-                    setEditingAddress(null);
-                    setShowAddressModal(true);
-                  }}
-                >
-                  <Plus className="w-4 h-4 mr-1" />
-                  {t("add_address")}
-                </Button>
-              </div>
-            </div>
-            <div className="p-4">
-              {addresses.length === 0 ? (
-                <p className="text-gray-500 text-center py-8">{t("no_addresses")}</p>
-              ) : (
-                <Table dir="rtl">
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead className="w-12">
-                        <input
-                          type="checkbox"
-                          checked={filteredAddresses.length > 0 && selectedAddresses.length === filteredAddresses.length}
-                          onChange={(e) => {
-                            if (e.target.checked) {
-                              setSelectedAddresses(filteredAddresses.map(a => a.id));
-                            } else {
-                              setSelectedAddresses([]);
-                            }
-                          }}
-                        />
-                      </TableHead>
-                      <TableHead className="text-right w-16">{t("id")}</TableHead>
-                      <TableHead className="text-right">{t("purchase_id")}</TableHead>
-                      <TableHead className="text-right">{t("allocation_id")}</TableHead>
-                      <TableHead className="text-right">{t("customer")}</TableHead>
-                      <TableHead className="text-right">{t("receiver")}</TableHead>
-                      <TableHead className="text-right">{t("product")}</TableHead>
-                      <TableHead className="text-right">{t("weight")}</TableHead>
-                      <TableHead className="text-right">{t("amount")}</TableHead>
-                      <TableHead className="text-right">{t("date")}</TableHead>
-                      <TableHead className="text-right">{t("tracking")}</TableHead>
-                      <TableHead className="text-center w-24">{t("actions")}</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {filteredAddresses.map((address) => (
-                      <TableRow key={address.id} className="cursor-pointer hover:bg-gray-50" onClick={() => handleRowClick(address, 'address')}>
-                        <TableCell onClick={(e) => e.stopPropagation()}>
-                          <input
-                            type="checkbox"
-                            checked={selectedAddresses.includes(address.id)}
-                            onChange={(e) => {
-                              if (e.target.checked) {
-                                setSelectedAddresses([...selectedAddresses, address.id]);
-                              } else {
-                                setSelectedAddresses(selectedAddresses.filter(id => id !== address.id));
-                              }
-                            }}
-                          />
-                        </TableCell>
-                        <TableCell className="text-right">{address.id}</TableCell>
-                        <TableCell className="text-right truncate max-w-[100px]" title={address.purchase_id}>
-                          {address.purchase_id}
-                        </TableCell>
-                        <TableCell className="text-right truncate max-w-[100px]" title={address.allocation_id || ''}>
-                          {address.allocation_id || '-'}
-                        </TableCell>
-                        <TableCell className="text-right truncate max-w-[120px]" title={address.customer_name || ''}>
-                          {address.customer_name || '-'}
-                        </TableCell>
-                        <TableCell className="text-right truncate max-w-[120px]" title={address.receiver_name || ''}>
-                          {address.receiver_name || '-'}
-                        </TableCell>
-                        <TableCell className="text-right truncate max-w-[150px]" title={address.product_name || ''}>
-                          {address.product_name || '-'}
-                        </TableCell>
-                        <TableCell className="text-right">{formatNumber(address.total_weight_purchased)}</TableCell>
-                        <TableCell className="text-right">{formatNumber(address.payment_amount)}</TableCell>
-                        <TableCell className="text-right">{address.purchase_date ? new Date(address.purchase_date).toLocaleDateString('fa-IR') : '-'}</TableCell>
-                        <TableCell className="text-right truncate max-w-[100px]" title={address.tracking_number || ''}>
-                          {address.tracking_number || '-'}
-                        </TableCell>
-                        <TableCell className="text-center">
-                          <div className="flex gap-2 justify-center">
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              onClick={async (e) => {
-                                e.stopPropagation();
-                                try {
-                                  const fullAddress = await fetchB2BAddressById(address.id);
-                                  setEditingAddress(fullAddress);
-                                  setShowAddressModal(true);
-                                } catch (error) {
-                                  console.error("Failed to fetch address details:", error);
-                                  const errorMessage = handleApiError(error, "Fetch address details");
-                                  toast.error(errorMessage);
-                                }
-                              }}
-                            >
-                              <Edit2 className="w-4 h-4 text-gray-600" />
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleDeleteAddress(address.id);
                               }}
                             >
                               <Trash2 className="w-4 h-4 text-red-500" />
@@ -830,15 +702,15 @@ export default function B2BPage() {
                           }}
                         />
                       </TableHead>
-                      <TableHead className="text-right w-16">{t("id")}</TableHead>
-                      <TableHead className="text-right">{t("purchase_id")}</TableHead>
+                      <TableHead className="text-right">{t("sale_date")}</TableHead>
+                      <TableHead className="text-right">{t("purchase_type")}</TableHead>
                       <TableHead className="text-right">{t("customer")}</TableHead>
                       <TableHead className="text-right">{t("product")}</TableHead>
                       <TableHead className="text-right">{t("weight")}</TableHead>
                       <TableHead className="text-right">{t("unit_price")}</TableHead>
                       <TableHead className="text-right">{t("total_price")}</TableHead>
-                      <TableHead className="text-right">{t("sale_date")}</TableHead>
-                      <TableHead className="text-right">{t("purchase_type")}</TableHead>
+                      <TableHead className="text-right">{t("purchase_id")}</TableHead>
+                      <TableHead className="text-right w-16">{t("id")}</TableHead>
                       <TableHead className="text-center w-24">{t("actions")}</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -858,19 +730,6 @@ export default function B2BPage() {
                             }}
                           />
                         </TableCell>
-                        <TableCell className="text-right">{sale.id}</TableCell>
-                        <TableCell className="text-right truncate max-w-[100px]" title={sale.purchase_id}>
-                          {sale.purchase_id}
-                        </TableCell>
-                        <TableCell className="text-right truncate max-w-[150px]" title={sale.customer_name || `${tCommon('customer_labels.customer_prefix')} ${sale.customer}`}>
-                          {sale.customer_name || `${tCommon('customer_labels.customer_prefix')} ${sale.customer}`}
-                        </TableCell>
-                        <TableCell className="text-right truncate max-w-[150px]" title={sale.product_name || `${tCommon('product_labels.product_prefix')} ${sale.product}`}>
-                          {sale.product_name || `${tCommon('product_labels.product_prefix')} ${sale.product}`}
-                        </TableCell>
-                        <TableCell className="text-right">{formatNumber(sale.weight)} {tCommon('units.kg')}</TableCell>
-                        <TableCell className="text-right">{formatNumber(sale.unit_price)}</TableCell>
-                        <TableCell className="text-right">{formatNumber(sale.total_price)}</TableCell>
                         <TableCell className="text-right">{new Date(sale.sale_date).toLocaleDateString('fa-IR')}</TableCell>
                         <TableCell className="text-right">
                           <span className="px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
@@ -880,6 +739,19 @@ export default function B2BPage() {
                             {sale.purchase_type === 'other' && t("other")}
                           </span>
                         </TableCell>
+                        <TableCell className="text-right truncate max-w-[150px]" title={sale.customer_name || `${tCommon('customer_labels.customer_prefix')} ${sale.customer}`}>
+                          {sale.customer_name || `${tCommon('customer_labels.customer_prefix')} ${sale.customer}`}
+                        </TableCell>
+                        <TableCell className="text-right truncate max-w-[150px]" title={sale.product_name || `${tCommon('product_labels.product_prefix')} ${sale.product}`}>
+                          {sale.product_name || `${tCommon('product_labels.product_prefix')} ${sale.product}`}
+                        </TableCell>
+                        <TableCell className="text-right">{formatNumber(sale.weight)} {tCommon('units.kg')}</TableCell>
+                        <TableCell className="text-right">{formatNumber(sale.unit_price)}</TableCell>
+                        <TableCell className="text-right">{formatNumber(sale.total_price || (sale.weight && sale.unit_price ? Number(sale.weight) * Number(sale.unit_price) : 0))}</TableCell>
+                        <TableCell className="text-right truncate max-w-[100px]" title={sale.purchase_id}>
+                          {sale.purchase_id}
+                        </TableCell>
+                        <TableCell className="text-right">{sale.id}</TableCell>
                         <TableCell className="text-center">
                           <div className="flex gap-2 justify-center">
                             <Button
@@ -893,8 +765,8 @@ export default function B2BPage() {
                                   setShowSaleModal(true);
                                 } catch (error) {
                                   console.error("Failed to fetch sale details:", error);
-                                  const errorMessage = handleApiError(error, "Fetch sale details");
-                                  toast.error(errorMessage);
+                                  handleApiErrorWithToast(error, "Fetch sale details");
+
                                 }
                               }}
                             >
@@ -906,6 +778,150 @@ export default function B2BPage() {
                               onClick={(e) => {
                                 e.stopPropagation();
                                 handleDeleteSale(sale.id);
+                              }}
+                            >
+                              <Trash2 className="w-4 h-4 text-red-500" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              )}
+            </div>
+          </div>
+        </TabsContent>
+
+        <TabsContent value="addresses">
+          <div className="bg-white rounded-lg shadow">
+            <div className="p-4 border-b border-gray-200 flex items-center justify-between">
+              <h2 className="text-xl font-semibold text-gray-700">{t("addresses_title")}</h2>
+              <div className="flex gap-2">
+                {selectedAddresses.length > 0 && (
+                  <Button variant="destructive" size="sm" onClick={handleBulkDeleteAddresses}>
+                    <Trash2 className="w-4 h-4 mr-1" />
+                    {t("delete")} ({selectedAddresses.length})
+                  </Button>
+                )}
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => setShowAddressUploadModal(true)}
+                >
+                  <Upload className="w-4 h-4 mr-1" />
+                  {t("import_excel")}
+                </Button>
+                <Button
+                  size="sm"
+                  className="bg-[#f6d265] hover:bg-[#f5c842] text-black"
+                  onClick={() => {
+                    setEditingAddress(null);
+                    setShowAddressModal(true);
+                  }}
+                >
+                  <Plus className="w-4 h-4 mr-1" />
+                  {t("add_address")}
+                </Button>
+              </div>
+            </div>
+            <div className="p-4">
+              {addresses.length === 0 ? (
+                <p className="text-gray-500 text-center py-8">{t("no_addresses")}</p>
+              ) : (
+                <Table dir="rtl">
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="w-12">
+                        <input
+                          type="checkbox"
+                          checked={filteredAddresses.length > 0 && selectedAddresses.length === filteredAddresses.length}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              setSelectedAddresses(filteredAddresses.map(a => a.id));
+                            } else {
+                              setSelectedAddresses([]);
+                            }
+                          }}
+                        />
+                      </TableHead>
+                      <TableHead className="text-right">{t("date")}</TableHead>
+                      <TableHead className="text-right">{t("customer")}</TableHead>
+                      <TableHead className="text-right">{t("receiver")}</TableHead>
+                      <TableHead className="text-right">{t("product")}</TableHead>
+                      <TableHead className="text-right">{t("weight")}</TableHead>
+                      <TableHead className="text-right">{t("amount")}</TableHead>
+                      <TableHead className="text-right">{t("tracking")}</TableHead>
+                      <TableHead className="text-right">{t("allocation_id")}</TableHead>
+                      <TableHead className="text-right">{t("purchase_id")}</TableHead>
+                      <TableHead className="text-right w-16">{t("id")}</TableHead>
+                      <TableHead className="text-center w-24">{t("actions")}</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredAddresses.map((address) => (
+                      <TableRow key={address.id} className="cursor-pointer hover:bg-gray-50" onClick={() => handleRowClick(address, 'address')}>
+                        <TableCell onClick={(e) => e.stopPropagation()}>
+                          <input
+                            type="checkbox"
+                            checked={selectedAddresses.includes(address.id)}
+                            onChange={(e) => {
+                              if (e.target.checked) {
+                                setSelectedAddresses([...selectedAddresses, address.id]);
+                              } else {
+                                setSelectedAddresses(selectedAddresses.filter(id => id !== address.id));
+                              }
+                            }}
+                          />
+                        </TableCell>
+                        <TableCell className="text-right">{address.purchase_date ? new Date(address.purchase_date).toLocaleDateString('fa-IR') : '-'}</TableCell>
+                        <TableCell className="text-right truncate max-w-[120px]" title={address.customer_name || ''}>
+                          {address.customer_name || '-'}
+                        </TableCell>
+                        <TableCell className="text-right truncate max-w-[120px]" title={address.receiver_name || ''}>
+                          {address.receiver_name || '-'}
+                        </TableCell>
+                        <TableCell className="text-right truncate max-w-[150px]" title={address.product_name || ''}>
+                          {address.product_name || '-'}
+                        </TableCell>
+                        <TableCell className="text-right">{formatNumber(address.total_weight_purchased)}</TableCell>
+                        <TableCell className="text-right">{formatNumber(address.payment_amount)}</TableCell>
+                        <TableCell className="text-right truncate max-w-[100px]" title={address.tracking_number || ''}>
+                          {address.tracking_number || '-'}
+                        </TableCell>
+                        <TableCell className="text-right truncate max-w-[100px]" title={address.allocation_id || ''}>
+                          {address.allocation_id || '-'}
+                        </TableCell>
+                        <TableCell className="text-right truncate max-w-[100px]" title={address.purchase_id}>
+                          {address.purchase_id}
+                        </TableCell>
+                        <TableCell className="text-right">{address.id}</TableCell>
+                        <TableCell className="text-center">
+                          <div className="flex gap-2 justify-center">
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={async (e) => {
+                                e.stopPropagation();
+                                try {
+                                  const fullAddress = await fetchB2BAddressById(address.id);
+                                  setEditingAddress(fullAddress);
+                                  setShowAddressModal(true);
+                                } catch (error) {
+                                  console.error("Failed to fetch address details:", error);
+                                  handleApiErrorWithToast(error, "Fetch address details");
+
+                                }
+                              }}
+                            >
+                              <Edit2 className="w-4 h-4 text-gray-600" />
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleDeleteAddress(address.id);
                               }}
                             >
                               <Trash2 className="w-4 h-4 text-red-500" />
@@ -939,8 +955,8 @@ export default function B2BPage() {
               setEditingOffer(null);
             } catch (error) {
               console.error(`Failed to ${editingOffer ? 'update' : 'create'} offer:`, error);
-              const errorMessage = handleApiError(error, `${editingOffer ? 'Update' : 'Create'} offer`);
-              toast.error(errorMessage);
+              handleApiErrorWithToast(error, `${editingOffer ? 'Update' : 'Create'} offer`);
+
             }
           }}
           onClose={() => {
@@ -970,8 +986,8 @@ export default function B2BPage() {
               setEditingDistribution(null);
             } catch (error) {
               console.error(`Failed to ${editingDistribution ? 'update' : 'create'} distribution:`, error);
-              const errorMessage = handleApiError(error, `${editingDistribution ? 'Update' : 'Create'} distribution`);
-              toast.error(errorMessage);
+              handleApiErrorWithToast(error, `${editingDistribution ? 'Update' : 'Create'} distribution`);
+
             }
           }}
           onOfferCreated={loadData}
@@ -1004,8 +1020,8 @@ export default function B2BPage() {
               setEditingAddress(null);
             } catch (error) {
               console.error(`Failed to ${editingAddress ? 'update' : 'create'} address:`, error);
-              const errorMessage = handleApiError(error, `${editingAddress ? 'Update' : 'Create'} address`);
-              toast.error(errorMessage);
+              handleApiErrorWithToast(error, `${editingAddress ? 'Update' : 'Create'} address`);
+
             }
           }}
           onClose={() => {
@@ -1053,8 +1069,8 @@ export default function B2BPage() {
                       setSheetOpen(false);
                     } catch (error) {
                       console.error("Failed to fetch details:", error);
-                      const errorMessage = handleApiError(error, "Fetch details");
-                      toast.error(errorMessage);
+                      handleApiErrorWithToast(error, "Fetch details");
+
                     }
                   }}
                 >
@@ -1085,8 +1101,8 @@ export default function B2BPage() {
                         setSheetOpen(false);
                       } catch (error) {
                         console.error("Failed to delete:", error);
-                        const errorMessage = handleApiError(error, "Delete item");
-                        toast.error(errorMessage);
+                        handleApiErrorWithToast(error, "Delete item");
+
                       }
                     }
                   }}
@@ -1120,8 +1136,6 @@ export default function B2BPage() {
                   return (
                     <>
                       <div><strong>{tCommon('detail_labels.purchase_id')}</strong> {item.purchase_id || '-'}</div>
-                      <div><strong>{tCommon('detail_labels.offer_id')}</strong> {item.b2b_offer_id || '-'}</div>
-                      <div><strong>{tCommon('detail_labels.cottage_number')}</strong> {item.cottage_number || '-'}</div>
                       <div><strong>{tCommon('detail_labels.warehouse')}</strong> {item.warehouse_name || `${tCommon('product_labels.warehouse_prefix')} ${item.warehouse}`}</div>
                       <div><strong>{tCommon('detail_labels.product')}</strong> {item.product_name || `${tCommon('product_labels.product_prefix')} ${item.product}`}</div>
                       <div><strong>{tCommon('detail_labels.customer')}</strong> {item.customer_name || `${tCommon('product_labels.customer_prefix')} ${item.customer}`}</div>
@@ -1140,7 +1154,7 @@ export default function B2BPage() {
                       <div><strong>{tCommon('detail_labels.receiver')}</strong> {item.receiver_name || '-'}</div>
                       <div><strong>{tCommon('detail_labels.product')}</strong> {item.product_name || '-'}</div>
                       <div><strong>{tCommon('detail_labels.weight')}</strong> {formatNumber(item.total_weight_purchased)} {tCommon('units.kg')}</div>
-                      <div><strong>{tCommon('detail_labels.unit_price')}</strong> {formatNumber(item.unit_price || 0)} {tCommon('units.rial')}</div>
+                      <div><strong>{tCommon('detail_labels.unit_price')}</strong> {formatNumber(item.unit_price || (item.payment_amount && item.total_weight_purchased ? item.payment_amount / item.total_weight_purchased : 0))} {tCommon('units.rial')}</div>
                       <div><strong>{tCommon('detail_labels.payment_amount')}</strong> {formatNumber(item.payment_amount || 0)} {tCommon('units.rial')}</div>
                       <div><strong>{tCommon('detail_labels.payment_method')}</strong> {item.payment_method || '-'}</div>
                       <div><strong>{tCommon('detail_labels.purchase_date')}</strong> {item.purchase_date ? new Date(item.purchase_date).toLocaleDateString('fa-IR') : '-'}</div>
@@ -1155,18 +1169,19 @@ export default function B2BPage() {
                   return (
                     <>
                       <div><strong>{tCommon('detail_labels.purchase_id')}</strong> {item.purchase_id}</div>
+                      <div><strong>{tCommon('detail_labels.offer_id')}</strong> {item.offer_id || t("distributor-sale")}</div>
                       <div><strong>{tCommon('detail_labels.customer')}</strong> {item.customer_name || `${tCommon('customer_labels.customer_prefix')} ${item.customer}`}</div>
                       <div><strong>{tCommon('detail_labels.product')}</strong> {item.product_name || `${tCommon('product_labels.product_prefix')} ${item.product}`}</div>
                       <div><strong>{tCommon('detail_labels.cottage_code')}</strong> {item.cottage_code || '-'}</div>
                       <div><strong>{tCommon('detail_labels.weight')}</strong> {formatNumber(item.weight)} {tCommon('units.kg')}</div>
                       <div><strong>{tCommon('detail_labels.unit_price')}</strong> {formatNumber(item.unit_price || 0)} {tCommon('units.rial')}</div>
-                      <div><strong>{tCommon('detail_labels.total_price')}</strong> {formatNumber(item.total_price || 0)} {tCommon('units.rial')}</div>
+                      <div><strong>{tCommon('detail_labels.total_price')}</strong> {formatNumber(item.total_price || (item.weight && item.unit_price ? Number(item.weight) * Number(item.unit_price) : 0))} {tCommon('units.rial')}</div>
                       <div><strong>{tCommon('detail_labels.sale_date')}</strong> {new Date(item.sale_date).toLocaleDateString('fa-IR')}</div>
                       <div><strong>{tCommon('detail_labels.purchase_type')}</strong> {
                         item.purchase_type === 'cash' ? t("cash") :
-                        item.purchase_type === 'credit' ? t("credit") :
-                        item.purchase_type === 'agreement' ? t("agreement") :
-                        t("other")
+                          item.purchase_type === 'credit' ? t("credit") :
+                            item.purchase_type === 'agreement' ? t("agreement") :
+                              t("other")
                       }</div>
                       {item.description && <div><strong>{tCommon('detail_labels.description')}</strong> {item.description}</div>}
                     </>);
@@ -1215,8 +1230,8 @@ export default function B2BPage() {
               setEditingSale(null);
             } catch (error) {
               console.error(`Failed to ${editingSale ? 'update' : 'create'} sale:`, error);
-              const errorMessage = handleApiError(error, `${editingSale ? 'Update' : 'Create'} sale`);
-              toast.error(errorMessage);
+              handleApiErrorWithToast(error, `${editingSale ? 'Update' : 'Create'} sale`);
+
             }
           }}
           onClose={() => {

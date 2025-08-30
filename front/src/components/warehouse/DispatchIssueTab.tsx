@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 import { Table, TableBody, TableHead, TableHeader, TableRow, TableCell, TableRow as TableRowComponent } from "@/components/ui/table";
-import { handleApiError } from "@/lib/api/error-handler";
+import { handleApiErrorWithToast } from "@/lib/api/error-toast-handler";
 import { toast } from "@/lib/toast-helper";
 import { PersianDateTableCell } from "@/components/ui/persian-date-table-cell";
 import { DispatchIssue, DispatchIssueCreate } from "@/lib/interfaces/warehouse";
@@ -46,8 +46,8 @@ export function DispatchIssueTab({ selectedWarehouseId }: DispatchIssueTabProps)
       }
     } catch (error) {
       console.error('Failed to load dispatches:', error);
-      const errorMessage = handleApiError(error, "Loading dispatch issues");
-      toast.error(errorMessage);
+      handleApiErrorWithToast(error, "Loading dispatch issues");
+      
     } finally {
       setLoading(false);
     }
@@ -78,8 +78,8 @@ export function DispatchIssueTab({ selectedWarehouseId }: DispatchIssueTabProps)
           toast.success(tCommon("toast_messages.create_success"));
         } catch (error) {
           console.error("Failed to create dispatch issue:", error);
-          const errorMessage = handleApiError(error, "Creating dispatch issue");
-          toast.error(errorMessage);
+          handleApiErrorWithToast(error, "Creating dispatch issue");
+          
         }
       }
     });
@@ -112,16 +112,16 @@ export function DispatchIssueTab({ selectedWarehouseId }: DispatchIssueTabProps)
               toast.success(tCommon("toast_messages.update_success"));
             } catch (error) {
               console.error("Failed to update dispatch issue:", error);
-              const errorMessage = handleApiError(error, "Updating dispatch issue");
-              toast.error(errorMessage);
+              handleApiErrorWithToast(error, "Updating dispatch issue");
+              
             }
           }
         });
       }
     } catch (error) {
       console.error("Failed to fetch dispatch details:", error);
-      const errorMessage = handleApiError(error, "Fetching dispatch details");
-      toast.error(errorMessage);
+      handleApiErrorWithToast(error, "Fetching dispatch details");
+      
     }
   };
 
@@ -133,8 +133,8 @@ export function DispatchIssueTab({ selectedWarehouseId }: DispatchIssueTabProps)
         toast.success(tCommon("toast_messages.delete_success"));
       } catch (error) {
         console.error("Failed to delete dispatch issue:", error);
-        const errorMessage = handleApiError(error, "Deleting dispatch issue");
-        toast.error(errorMessage);
+        handleApiErrorWithToast(error, "Deleting dispatch issue");
+        
       }
     }
   };

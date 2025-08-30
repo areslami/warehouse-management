@@ -82,6 +82,7 @@ class B2BAddressListSerializer(serializers.ModelSerializer):
             return obj.receiver.company_name or obj.receiver.full_name
         return None
 
+
 class B2BSaleSerializer(serializers.ModelSerializer):
     offer_id = serializers.CharField(source='offer.offer_id', read_only=True)
     product_name = serializers.CharField(source='product.name', read_only=True)
@@ -94,7 +95,7 @@ class B2BSaleSerializer(serializers.ModelSerializer):
     
     def get_customer_name(self, obj):
         if obj.customer:
-            if obj.customer.customer_type == 'Corporate':
+            if obj.customer.customer_type == 'corporate':
                 return obj.customer.company_name
             return obj.customer.full_name
         return None
@@ -104,9 +105,6 @@ class B2BDistributionSerializer(serializers.ModelSerializer):
     warehouse_name = serializers.CharField(source='warehouse.name', read_only=True)
     product_name = serializers.CharField(source='product.name', read_only=True)
     customer_name = serializers.SerializerMethodField()
-    b2b_offer_id = serializers.CharField(source='b2b_offer.offer_id', read_only=True)
-    cottage_number = serializers.SerializerMethodField()
-    warehouse_receipt = serializers.SerializerMethodField()
     
     class Meta:
         model = B2BDistribution
@@ -114,33 +112,27 @@ class B2BDistributionSerializer(serializers.ModelSerializer):
         read_only_fields = ['created_at', 'updated_at']
     
     def get_customer_name(self, obj):
-        if obj.customer.customer_type == 'Corporate':
-            return obj.customer.company_name
-        return obj.customer.full_name
-    
-    def get_cottage_number(self, obj):
-        return obj.cottage_number
-    
-    def get_warehouse_receipt(self, obj):
-        return obj.warehouse_receipt.id if obj.warehouse_receipt else None
+        if obj.customer:
+            if obj.customer.customer_type == 'corporate':
+                return obj.customer.company_name
+            return obj.customer.full_name
+        return None
 
 
 class B2BDistributionListSerializer(serializers.ModelSerializer):
     product_name = serializers.CharField(source='product.name', read_only=True)
     customer_name = serializers.SerializerMethodField()
     warehouse_name = serializers.CharField(source='warehouse.name', read_only=True)
-    b2b_offer_id = serializers.CharField(source='b2b_offer.offer_id', read_only=True)
-    cottage_number = serializers.SerializerMethodField()
     
     class Meta:
         model = B2BDistribution
-        fields = ['id', 'purchase_id', 'cottage_number', 'b2b_offer_id', 'warehouse_name', 
+        fields = ['id', 'purchase_id', 'warehouse_name', 
                   'product_name', 'customer_name', 'agency_weight', 'agency_date']
     
     def get_customer_name(self, obj):
-        if obj.customer.customer_type == 'Corporate':
-            return obj.customer.company_name
-        return obj.customer.full_name
+        if obj.customer:
+            if obj.customer.customer_type == 'corporate':
+                return obj.customer.company_name
+            return obj.customer.full_name
+        return None
     
-    def get_cottage_number(self, obj):
-        return obj.cottage_number

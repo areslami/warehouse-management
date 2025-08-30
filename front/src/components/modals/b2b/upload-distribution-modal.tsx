@@ -94,7 +94,7 @@ export function UploadDistributionModal({ open, onClose, onSuccess }: UploadDist
 
   const handleUpload = async () => {
     if (!file) return;
-    
+
     // Only check for offer if it's "your_sale" type
     if (saleType === "your_sale" && !selectedOffer) {
       toast.error(t("select_offer"));
@@ -150,7 +150,7 @@ export function UploadDistributionModal({ open, onClose, onSuccess }: UploadDist
       if (saleType === "your_sale" && selectedOffer) {
         previewData.offer = { id: selectedOffer };
       }
-      
+
       const preview = await previewDistribution(previewData);
       setPreviewData(preview);
       setShowPreview(true);
@@ -546,7 +546,7 @@ export function UploadDistributionModal({ open, onClose, onSuccess }: UploadDist
                 )}
 
                 <div className="flex justify-between pt-4 border-t">
-                  <Button 
+                  <Button
                     variant="secondary"
                     onClick={() => {
                       // Accept all remaining rows without preview

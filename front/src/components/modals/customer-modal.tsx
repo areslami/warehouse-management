@@ -114,7 +114,7 @@ export function CustomerModal({ trigger, onSubmit, onClose, initialData }: Custo
         <Form {...form} >
           <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6 py-4 px-12">
             <FormField
-              control={form.control}
+              control={form.control as any}
               name="customer_type"
               render={({ field }) => (
                 <FormItem>
@@ -133,7 +133,7 @@ export function CustomerModal({ trigger, onSubmit, onClose, initialData }: Custo
             {customerType === "corporate" ? (
               <div className="grid grid-cols-2 gap-4">
                 <FormField
-                  control={form.control}
+                  control={form.control as any}
                   name="company_name"
                   render={({ field }) => (
                     <FormItem>
@@ -147,7 +147,7 @@ export function CustomerModal({ trigger, onSubmit, onClose, initialData }: Custo
                 />
 
                 <FormField
-                  control={form.control}
+                  control={form.control as any}
                   name="national_id"
                   render={({ field }) => (
                     <FormItem>
@@ -163,7 +163,7 @@ export function CustomerModal({ trigger, onSubmit, onClose, initialData }: Custo
             ) : (
               <div className="grid grid-cols-2 gap-4">
                 <FormField
-                  control={form.control}
+                  control={form.control as any}
                   name="full_name"
                   render={({ field }) => (
                     <FormItem>
@@ -177,7 +177,7 @@ export function CustomerModal({ trigger, onSubmit, onClose, initialData }: Custo
                 />
 
                 <FormField
-                  control={form.control}
+                  control={form.control as any}
                   name="personal_code"
                   render={({ field }) => (
                     <FormItem>
@@ -194,7 +194,7 @@ export function CustomerModal({ trigger, onSubmit, onClose, initialData }: Custo
 
             <div className="grid grid-cols-2 gap-4">
               <FormField
-                control={form.control}
+                control={form.control as any}
                 name="economic_code"
                 render={({ field }) => (
                   <FormItem>
@@ -208,7 +208,7 @@ export function CustomerModal({ trigger, onSubmit, onClose, initialData }: Custo
               />
 
               <FormField
-                control={form.control}
+                control={form.control as any}
                 name="phone"
                 render={({ field }) => (
                   <FormItem>
@@ -224,7 +224,7 @@ export function CustomerModal({ trigger, onSubmit, onClose, initialData }: Custo
 
             <div className="grid grid-cols-2 gap-4">
               <FormField
-                control={form.control}
+                control={form.control as any}
                 name="address"
                 render={({ field }) => (
                   <FormItem>
@@ -238,7 +238,7 @@ export function CustomerModal({ trigger, onSubmit, onClose, initialData }: Custo
               />
 
               <FormField
-                control={form.control}
+                control={form.control as any}
                 name="postal_code"
                 render={({ field }) => (
                   <FormItem>
@@ -254,7 +254,7 @@ export function CustomerModal({ trigger, onSubmit, onClose, initialData }: Custo
 
             <div className="grid grid-cols-2 gap-4">
               <FormField
-                control={form.control}
+                control={form.control as any}
                 name="description"
                 render={({ field }) => (
                   <FormItem>
@@ -268,7 +268,7 @@ export function CustomerModal({ trigger, onSubmit, onClose, initialData }: Custo
               />
 
               <FormField
-                control={form.control}
+                control={form.control as any}
                 name="tags"
                 render={({ field }) => (
                   <FormItem>

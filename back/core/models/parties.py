@@ -43,7 +43,7 @@ class Customer(models.Model):
     economic_code = models.CharField(max_length=20, unique=True,null=False)
     phone = models.CharField(max_length=20)
     address = models.TextField(blank=False)
-    postal_code = models.CharField(max_length=10,null=False)
+    postal_code = models.CharField(max_length=20,null=False)
     description = models.TextField(blank=True)
     tags = models.CharField(max_length=200, blank=True)
     
@@ -61,8 +61,6 @@ class Customer(models.Model):
     
 class Receiver(models.Model):
     receiver_type = models.CharField(max_length=10, choices=PARTY_TYPES,null=False)
-    receiver_veichle_type = models.CharField(max_length =20,choices=VEICHLE_TYPES,null=False)
-    unique_id = models.CharField(max_length=50)
     
     # corporate
     company_name = models.CharField(max_length=200, blank=True)
@@ -77,7 +75,7 @@ class Receiver(models.Model):
     phone = models.CharField(max_length=20)
     address = models.TextField(blank=False)
     description = models.TextField(blank=True)
-    postal_code = models.CharField(max_length=10,null=False)
+    postal_code = models.CharField(max_length=20,null=False)
     
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

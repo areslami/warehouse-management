@@ -1,5 +1,6 @@
 "use client";
 
+
 import { useState, useEffect } from "react";
 import { useForm, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -8,6 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, Dialog
 import { Button } from "../../ui/button";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "../../ui/form";
 import { Input } from "../../ui/input";
+import { convertPersianToEnglishNumbers } from "@/lib/utils/number-format";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../../ui/select";
 import { Plus, Trash2 } from "lucide-react";
 import { useTranslations } from "next-intl";
@@ -35,7 +37,7 @@ type DispatchIssueFormData = {
   shipping_company: number;
   items: {
     product: number;
-    weight: number;
+    weight?: string | number;
     vehicle_type: "single" | 'double' | 'trailer';
     receiver: number;
   }[];
@@ -71,7 +73,7 @@ export function DispatchIssueModal({ trigger, onSubmit, onClose, initialData }: 
     if (data.salesProformas.length === 0) {
       refreshData('salesProformas');
     }
-  }, [data.products.length, data.warehouses.length, data.receivers.length, data.shippingCompanies.length, data.salesProformas.length, refreshData]);
+  }, []);
 
   const getTodayDate = () => {
     if (typeof window === 'undefined') return '';
@@ -80,26 +82,26 @@ export function DispatchIssueModal({ trigger, onSubmit, onClose, initialData }: 
 
   const dispatchItemSchema = z.object({
     product: z.number().min(1, tval("product-required")),
-    weight: z.number().min(0.00000001, tval("weight")),
-    vehicle_type: z.enum(["truck", "pickup", "van", "container", "other"]),
-    receiver: z.number().min(1, tval("receiver")),
+    weight: z.union([z.string(), z.number()]).optional(),
+    vehicle_type: z.enum(["single", "double", "trailer"]),
+    receiver: z.number().min(0),
   });
 
   const dispatchIssueSchema = z.object({
     dispatch_id: z.string().min(1, tval("dispatch-id")),
-    warehouse: z.number().min(1, tval("warehouse")),
-    sales_proforma: z.number().min(1, tval("sales-proforma")),
+    warehouse: z.number().min(0),
+    sales_proforma: z.number().min(0),
     issue_date: z.string().min(1, tval("issue-date")),
     validity_date: z.string().min(1, tval("validity-date")),
     description: z.string().optional(),
-    shipping_company: z.number().min(1, tval("shipping-company")),
+    shipping_company: z.number().min(0),
     items: z.array(dispatchItemSchema).min(1, tval("items")),
   });
 
   const [open, setOpen] = useState(trigger ? false : true);
 
   const form = useForm<DispatchIssueFormData>({
-    resolver: zodResolver(dispatchIssueSchema),
+    resolver: zodResolver(dispatchIssueSchema) as any,
     defaultValues: {
       dispatch_id: initialData?.dispatch_id || "",
       warehouse: initialData?.warehouse || 0,
@@ -108,7 +110,7 @@ export function DispatchIssueModal({ trigger, onSubmit, onClose, initialData }: 
       validity_date: initialData?.validity_date || getTodayDate(),
       description: initialData?.description || "",
       shipping_company: initialData?.shipping_company || 0,
-      items: initialData?.items || [{ product: 0, weight: 0, vehicle_type: "truck", receiver: 0 }],
+      items: initialData?.items || [{ product: 0, weight: 0, vehicle_type: "single", receiver: 0 }],
     },
   });
 
@@ -117,7 +119,7 @@ export function DispatchIssueModal({ trigger, onSubmit, onClose, initialData }: 
     name: "items",
   });
 
-  const handleSubmit = async (data: DispatchIssueFormData) => {
+  const handleSubmit = async (data: any) => {
     try {
       if (onSubmit) {
         await onSubmit(data);
@@ -161,7 +163,7 @@ export function DispatchIssueModal({ trigger, onSubmit, onClose, initialData }: 
             <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6 py-4 px-12">
               <div className="grid grid-cols-2 gap-4">
                 <FormField
-                  control={form.control}
+                  control={form.control as any}
                   name="dispatch_id"
                   render={({ field }) => (
                     <FormItem>
@@ -175,7 +177,7 @@ export function DispatchIssueModal({ trigger, onSubmit, onClose, initialData }: 
                 />
 
                 <FormField
-                  control={form.control}
+                  control={form.control as any}
                   name="warehouse"
                   render={({ field }) => (
                     <FormItem>
@@ -230,7 +232,7 @@ export function DispatchIssueModal({ trigger, onSubmit, onClose, initialData }: 
 
               <div className="grid grid-cols-2 gap-4">
                 <FormField
-                  control={form.control}
+                  control={form.control as any}
                   name="sales_proforma"
                   render={({ field }) => (
                     <FormItem>
@@ -242,7 +244,17 @@ export function DispatchIssueModal({ trigger, onSubmit, onClose, initialData }: 
                             if (value === "new") {
                               openModal(SalesProformaModal, {
                                 onSubmit: async (newProforma: SalesProformaFormData) => {
-                                  const created = await createSalesProforma(newProforma);
+                                  const cleanProforma = {
+                                    ...newProforma,
+                                    tax: parseFloat(newProforma.tax) || 0,
+                                    discount: parseFloat(newProforma.discount) || 0,
+                                    lines: newProforma.lines.map(line => ({
+                                      ...line,
+                                      weight: parseFloat(line.weight) || 0,
+                                      unit_price: parseFloat(line.unit_price) || 0
+                                    }))
+                                  };
+                                  const created = await createSalesProforma(cleanProforma);
                                   if (created) {
                                     await refreshData('salesProformas');
                                     form.setValue('sales_proforma', created.id);
@@ -283,7 +295,7 @@ export function DispatchIssueModal({ trigger, onSubmit, onClose, initialData }: 
                 />
 
                 <FormField
-                  control={form.control}
+                  control={form.control as any}
                   name="shipping_company"
                   render={({ field }) => (
                     <FormItem>
@@ -338,7 +350,7 @@ export function DispatchIssueModal({ trigger, onSubmit, onClose, initialData }: 
 
               <div className="grid grid-cols-2 gap-4">
                 <FormField
-                  control={form.control}
+                  control={form.control as any}
                   name="issue_date"
                   render={({ field }) => (
                     <FormItem>
@@ -346,7 +358,7 @@ export function DispatchIssueModal({ trigger, onSubmit, onClose, initialData }: 
                       <FormControl>
                         <PersianDatePicker
                           value={field.value}
-                          onChange={field.onChange}
+                          onChange={(value) => field.onChange(value)}
                           placeholder={t("select-date")}
                         />
                       </FormControl>
@@ -356,7 +368,7 @@ export function DispatchIssueModal({ trigger, onSubmit, onClose, initialData }: 
                 />
 
                 <FormField
-                  control={form.control}
+                  control={form.control as any}
                   name="validity_date"
                   render={({ field }) => (
                     <FormItem>
@@ -364,7 +376,7 @@ export function DispatchIssueModal({ trigger, onSubmit, onClose, initialData }: 
                       <FormControl>
                         <PersianDatePicker
                           value={field.value}
-                          onChange={field.onChange}
+                          onChange={(value) => field.onChange(value)}
                           placeholder={t("select-date")}
                         />
                       </FormControl>
@@ -375,7 +387,7 @@ export function DispatchIssueModal({ trigger, onSubmit, onClose, initialData }: 
               </div>
 
               <FormField
-                control={form.control}
+                control={form.control as any}
                 name="description"
                 render={({ field }) => (
                   <FormItem>
@@ -395,7 +407,7 @@ export function DispatchIssueModal({ trigger, onSubmit, onClose, initialData }: 
                     type="button"
                     variant="outline"
                     size="sm"
-                    onClick={() => append({ product: 0, weight: 0, vehicle_type: "truck", receiver: 0 })}
+                    onClick={() => append({ product: 0, weight: 0, vehicle_type: "single", receiver: 0 })}
                   >
                     <Plus className="w-4 h-4 mr-2" />
                     {t("add-item")}
@@ -405,7 +417,7 @@ export function DispatchIssueModal({ trigger, onSubmit, onClose, initialData }: 
                 {fields.map((field, index) => (
                   <div key={field.id} className="grid grid-cols-5 gap-4 p-4 border rounded-lg">
                     <FormField
-                      control={form.control}
+                      control={form.control as any}
                       name={`items.${index}.product`}
                       render={({ field }) => (
                         <FormItem>
@@ -461,17 +473,21 @@ export function DispatchIssueModal({ trigger, onSubmit, onClose, initialData }: 
                     />
 
                     <FormField
-                      control={form.control}
+                      control={form.control as any}
                       name={`items.${index}.weight`}
                       render={({ field }) => (
                         <FormItem>
                           <FormLabel>{t("weight")}</FormLabel>
                           <FormControl>
                             <Input
-                              type="number"
+                              type="text"
                               step="0.00000001"
                               {...field}
-                              onChange={(e) => field.onChange(Number(e.target.value))}
+                              onChange={(e) => {
+                                const convertedValue = convertPersianToEnglishNumbers(e.target.value);
+                                e.target.value = convertedValue;
+                                field.onChange(Number(convertedValue));
+                              }}
                             />
                           </FormControl>
                           <FormMessage />
@@ -480,18 +496,16 @@ export function DispatchIssueModal({ trigger, onSubmit, onClose, initialData }: 
                     />
 
                     <FormField
-                      control={form.control}
+                      control={form.control as any}
                       name={`items.${index}.vehicle_type`}
                       render={({ field }) => (
                         <FormItem>
                           <FormLabel>{t("vehicle-type")}</FormLabel>
                           <FormControl>
                             <select {...field} className="w-full px-3 py-2 border rounded-md">
-                              <option value="truck">{t("vehicle-truck")}</option>
-                              <option value="pickup">{t("vehicle-pickup")}</option>
-                              <option value="van">{t("vehicle-van")}</option>
-                              <option value="container">{t("vehicle-container")}</option>
-                              <option value="other">{t("vehicle-other")}</option>
+                              <option value="single">{t("vehicle-single")}</option>
+                              <option value="double">{t("vehicle-double")}</option>
+                              <option value="trailer">{t("vehicle-trailer")}</option>
                             </select>
                           </FormControl>
                           <FormMessage />
@@ -500,7 +514,7 @@ export function DispatchIssueModal({ trigger, onSubmit, onClose, initialData }: 
                     />
 
                     <FormField
-                      control={form.control}
+                      control={form.control as any}
                       name={`items.${index}.receiver`}
                       render={({ field }) => (
                         <FormItem>

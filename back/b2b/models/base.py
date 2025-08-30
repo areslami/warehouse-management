@@ -79,6 +79,12 @@ class B2BAddress(models.Model):
     def __str__(self):
         customer_name = self.customer.company_name if self.customer and self.customer.customer_type == 'corporate' else (self.customer.full_name if self.customer else 'No Customer')
         return f"Sale {self.purchase_id} - {customer_name} ({self.total_weight_purchased} kg)"
+    
+    def save(self, *args, **kwargs):
+        # Calculate unit_price if it's 0 and we have payment_amount and weight
+        if (not self.unit_price or self.unit_price == 0) and self.payment_amount and self.total_weight_purchased:
+            self.unit_price = self.payment_amount / self.total_weight_purchased
+        super().save(*args, **kwargs)
 
 class B2BSale(models.Model):
     purchase_id = models.CharField(max_length=100, unique=True)
@@ -97,6 +103,11 @@ class B2BSale(models.Model):
         customer_name = self.customer.company_name if self.customer.customer_type == 'corporate' else self.customer.full_name
         return f"Sale {self.purchase_id} - {customer_name} - {self.product.name} ({self.weight} kg)"
     
+    def save(self, *args, **kwargs):
+        if self.unit_price and self.weight:
+            self.total_price = self.unit_price * self.weight
+        super().save(*args, **kwargs)
+    
 class B2BDistribution(models.Model):
     
     purchase_id = models.CharField(max_length=100, unique=True, null=True, blank=True)
@@ -113,32 +124,10 @@ class B2BDistribution(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     
-    @property
-    def warehouse_receipt(self):
-        if self.b2b_offer:
-            return self.b2b_offer.warehouse_receipt
-        return None
-    
-    @property
-    def cottage_number(self):
-        if self.b2b_offer:
-            return self.b2b_offer.cottage_number
-        return ''
-    
     def __str__(self):
         customer_name = self.customer.company_name if self.customer.customer_type == 'corporate' else self.customer.full_name
         warehouse_name = self.warehouse.name if self.warehouse else 'No Warehouse'
         return f"Distribution {self.product.name} - {customer_name} - {warehouse_name} ({self.agency_weight} kg)"
     
     def save(self, *args, **kwargs):
-        if self.warehouse_receipt:
-            self.warehouse = self.warehouse_receipt.warehouse
-            self.cottage_number = self.warehouse_receipt.cottage_serial_number or ''
-            
-            # Only auto-set product if not already provided
-            if not self.product_id:
-                first_item = self.warehouse_receipt.items.first()
-                if first_item:
-                    self.product = first_item.product
-        
         super().save(*args, **kwargs)

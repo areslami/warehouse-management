@@ -350,7 +350,6 @@ def createOrUpdateReceiver(row):
                 'personal_code': personal_code,
                 'phone': receiver_phone,
                 'address': receiver_address,
-                'receiver_veichle_type': 'single' if single else 'double' if double else 'trailer' if trailer else 'single',
                 'postal_code': receiver_postal_code or '',
                 'description': f'ایجاد شده از طریق بارگذاری فایل فروش بازارگاه ',
             }

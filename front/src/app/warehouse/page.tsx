@@ -5,7 +5,7 @@ import { useSearchParams, useRouter } from "next/navigation";
 import { Plus, Edit2, Trash2, Package, FileText, Truck, Search } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
-import { handleApiError } from "@/lib/api/error-handler";
+import { handleApiErrorWithToast } from "@/lib/api/error-toast-handler";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -77,8 +77,8 @@ export default function WarehousePage() {
       setDeliveries(deliveriesData || []);
     } catch (error) {
       console.error("Failed to load warehouse data:", error);
-      const errorMessage = handleApiError(error, "Loading warehouse data");
-      toast.error(errorMessage);
+      handleApiErrorWithToast(error, "Loading warehouse data");
+      
     }
   }, []);
 
@@ -100,8 +100,8 @@ export default function WarehousePage() {
         loadData();
       } catch (error) {
         console.error("Failed to delete warehouse receipt:", error);
-        const errorMessage = handleApiError(error, "Deleting warehouse receipt");
-        toast.error(errorMessage);
+        handleApiErrorWithToast(error, "Deleting warehouse receipt");
+        
       }
     }
   };
@@ -128,8 +128,8 @@ export default function WarehousePage() {
         loadData();
       } catch (error) {
         console.error("Failed to delete dispatch issue:", error);
-        const errorMessage = handleApiError(error, "Deleting dispatch issue");
-        toast.error(errorMessage);
+        handleApiErrorWithToast(error, "Deleting dispatch issue");
+        
       }
     }
   };
@@ -156,8 +156,8 @@ export default function WarehousePage() {
         loadData();
       } catch (error) {
         console.error("Failed to delete delivery fulfillment:", error);
-        const errorMessage = handleApiError(error, "Deleting delivery fulfillment");
-        toast.error(errorMessage);
+        handleApiErrorWithToast(error, "Deleting delivery fulfillment");
+        
       }
     }
   };
@@ -184,8 +184,8 @@ export default function WarehousePage() {
         refreshCoreData('warehouses');
       } catch (error) {
         console.error("Failed to delete warehouse:", error);
-        const errorMessage = handleApiError(error, "Deleting warehouse");
-        toast.error(errorMessage);
+        handleApiErrorWithToast(error, "Deleting warehouse");
+        
       }
     }
   };
@@ -363,11 +363,11 @@ export default function WarehousePage() {
                       }}
                     />
                   </TableHead>
-                  <TableHead className="text-center">{t("receipts.table.operations")}</TableHead>
-                  <TableHead>{t("receipts.table.receipt_id")}</TableHead>
                   <TableHead>{t("receipts.table.date")}</TableHead>
                   <TableHead>{t("receipts.table.warehouse")}</TableHead>
                   <TableHead>{t("receipts.table.total_weight")}</TableHead>
+                  <TableHead>{t("receipts.table.receipt_id")}</TableHead>
+                  <TableHead className="text-center">{t("receipts.table.operations")}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -386,6 +386,10 @@ export default function WarehousePage() {
                         }}
                       />
                     </TableCell>
+                    <TableCell>{new Date(receipt.date).toLocaleDateString('fa-IR')}</TableCell>
+                    <TableCell>{warehouses.find(w => w.id === receipt.warehouse)?.name}</TableCell>
+                    <TableCell>{receipt.total_weight} {tCommon('units.kg')}</TableCell>
+                    <TableCell>{receipt.receipt_id}</TableCell>
                     <TableCell>
                       <div className="flex gap-2 justify-center">
                         <Button size="sm" variant="ghost" onClick={async (e) => {
@@ -396,8 +400,8 @@ export default function WarehousePage() {
                             setShowReceiptModal(true);
                           } catch (error) {
                             console.error("Failed to fetch receipt details:", error);
-                            const errorMessage = handleApiError(error, "Fetching receipt details");
-                            toast.error(errorMessage);
+                            handleApiErrorWithToast(error, "Fetching receipt details");
+                            
                           }
                         }}>
                           <Edit2 className="w-4 h-4" />
@@ -410,10 +414,6 @@ export default function WarehousePage() {
                         </Button>
                       </div>
                     </TableCell>
-                    <TableCell>{receipt.receipt_id}</TableCell>
-                    <TableCell>{new Date(receipt.date).toLocaleDateString('fa-IR')}</TableCell>
-                    <TableCell>{warehouses.find(w => w.id === receipt.warehouse)?.name}</TableCell>
-                    <TableCell>{receipt.total_weight} {tCommon('units.kg')}</TableCell>
                   </TableRow>
                 ))}
               </TableBody>
@@ -457,11 +457,11 @@ export default function WarehousePage() {
                       }}
                     />
                   </TableHead>
-                  <TableHead className="text-center">{t("issues.table.operations")}</TableHead>
-                  <TableHead>{t("issues.table.dispatch_id")}</TableHead>
                   <TableHead>{t("issues.table.issue_date")}</TableHead>
                   <TableHead>{t("issues.table.warehouse")}</TableHead>
                   <TableHead>{t("issues.table.total_weight")}</TableHead>
+                  <TableHead>{t("issues.table.dispatch_id")}</TableHead>
+                  <TableHead className="text-center">{t("issues.table.operations")}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -480,6 +480,10 @@ export default function WarehousePage() {
                         }}
                       />
                     </TableCell>
+                    <TableCell>{new Date(dispatch.issue_date).toLocaleDateString('fa-IR')}</TableCell>
+                    <TableCell>{warehouses.find(w => w.id === dispatch.warehouse)?.name}</TableCell>
+                    <TableCell>{formatNumber(dispatch.total_weight)} {tCommon('units.kg')}</TableCell>
+                    <TableCell>{dispatch.dispatch_id}</TableCell>
                     <TableCell>
                       <div className="flex gap-2 justify-center">
                         <Button size="sm" variant="ghost" onClick={async (e) => {
@@ -490,8 +494,8 @@ export default function WarehousePage() {
                             setShowDispatchModal(true);
                           } catch (error) {
                             console.error("Failed to fetch dispatch details:", error);
-                            const errorMessage = handleApiError(error, "Fetching dispatch details");
-                            toast.error(errorMessage);
+                            handleApiErrorWithToast(error, "Fetching dispatch details");
+                            
                           }
                         }}>
                           <Edit2 className="w-4 h-4" />
@@ -504,10 +508,6 @@ export default function WarehousePage() {
                         </Button>
                       </div>
                     </TableCell>
-                    <TableCell>{dispatch.dispatch_id}</TableCell>
-                    <TableCell>{new Date(dispatch.issue_date).toLocaleDateString('fa-IR')}</TableCell>
-                    <TableCell>{warehouses.find(w => w.id === dispatch.warehouse)?.name}</TableCell>
-                    <TableCell>{formatNumber(dispatch.total_weight)} {tCommon('units.kg')}</TableCell>
                   </TableRow>
                 ))}
               </TableBody>
@@ -551,11 +551,11 @@ export default function WarehousePage() {
                       }}
                     />
                   </TableHead>
-                  <TableHead className="text-center">{t("deliveries.table.operations")}</TableHead>
-                  <TableHead>{t("deliveries.table.delivery_id")}</TableHead>
                   <TableHead>{t("deliveries.table.issue_date")}</TableHead>
                   <TableHead>{t("deliveries.table.warehouse")}</TableHead>
                   <TableHead>{t("deliveries.table.total_weight")}</TableHead>
+                  <TableHead>{t("deliveries.table.delivery_id")}</TableHead>
+                  <TableHead className="text-center">{t("deliveries.table.operations")}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -574,6 +574,10 @@ export default function WarehousePage() {
                         }}
                       />
                     </TableCell>
+                    <TableCell>{new Date(delivery.issue_date).toLocaleDateString('fa-IR')}</TableCell>
+                    <TableCell>{warehouses.find(w => w.id === delivery.warehouse)?.name}</TableCell>
+                    <TableCell>{delivery.total_weight} {tCommon('units.kg')}</TableCell>
+                    <TableCell>{delivery.delivery_id}</TableCell>
                     <TableCell>
                       <div className="flex gap-2 justify-center">
                         <Button size="sm" variant="ghost" onClick={async (e) => {
@@ -584,8 +588,8 @@ export default function WarehousePage() {
                             setShowDeliveryModal(true);
                           } catch (error) {
                             console.error("Failed to fetch delivery details:", error);
-                            const errorMessage = handleApiError(error, "Fetching delivery details");
-                            toast.error(errorMessage);
+                            handleApiErrorWithToast(error, "Fetching delivery details");
+                            
                           }
                         }}>
                           <Edit2 className="w-4 h-4" />
@@ -598,10 +602,6 @@ export default function WarehousePage() {
                         </Button>
                       </div>
                     </TableCell>
-                    <TableCell>{delivery.delivery_id}</TableCell>
-                    <TableCell>{new Date(delivery.issue_date).toLocaleDateString('fa-IR')}</TableCell>
-                    <TableCell>{warehouses.find(w => w.id === delivery.warehouse)?.name}</TableCell>
-                    <TableCell>{delivery.total_weight} {tCommon('units.kg')}</TableCell>
                   </TableRow>
                 ))}
               </TableBody>
@@ -643,8 +643,8 @@ export default function WarehousePage() {
                       setSheetOpen(false);
                     } catch (error) {
                       console.error("Failed to fetch item details:", error);
-                      const errorMessage = handleApiError(error, "Fetching item details");
-                      toast.error(errorMessage);
+                      handleApiErrorWithToast(error, "Fetching item details");
+                      
                     }
                   }}
                 >
@@ -673,8 +673,8 @@ export default function WarehousePage() {
                         setSheetOpen(false);
                       } catch (error) {
                         console.error("Failed to delete item:", error);
-                        const errorMessage = handleApiError(error, "Deleting item");
-                        toast.error(errorMessage);
+                        handleApiErrorWithToast(error, "Deleting item");
+                        
                       }
                     }
                   }}
@@ -690,7 +690,11 @@ export default function WarehousePage() {
                     <div><strong>{tCommon('detail_labels.date')}</strong> {new Date((selectedItem as WarehouseReceipt).date).toLocaleDateString('fa-IR')}</div>
                     <div><strong>{tCommon('detail_labels.warehouse')}</strong> {warehouses.find(w => w.id === selectedItem.warehouse)?.name}</div>
                     <div><strong>{tCommon('detail_labels.total_weight')}</strong> {selectedItem.total_weight} {tCommon('units.kg')}</div>
-                    <div><strong>{tCommon('detail_labels.receipt_type')}</strong> {(selectedItem as WarehouseReceipt).receipt_type}</div>
+                    <div><strong>{tCommon('detail_labels.receipt_type')}</strong> {
+                      (selectedItem as WarehouseReceipt).receipt_type === 'import_cottage' ? t('receipts.receipt_types.import_cottage') :
+                      (selectedItem as WarehouseReceipt).receipt_type === 'distribution_cottage' ? t('receipts.receipt_types.distribution_cottage') :
+                      t('receipts.receipt_types.purchase')
+                    }</div>
                     {selectedItem.description && <div><strong>{tCommon('detail_labels.description')}</strong> {selectedItem.description}</div>}
                     {(selectedItem as WarehouseReceipt).items?.length > 0 && (
                       <div>
@@ -767,8 +771,8 @@ export default function WarehousePage() {
               setEditingReceipt(null);
             } catch (error) {
               console.error("Failed to save warehouse receipt:", error);
-              const errorMessage = handleApiError(error, editingReceipt ? "Updating warehouse receipt" : "Creating warehouse receipt");
-              toast.error(errorMessage);
+              handleApiErrorWithToast(error, editingReceipt ? "Updating warehouse receipt" : "Creating warehouse receipt");
+              
             }
           }}
           onClose={() => {
@@ -803,8 +807,8 @@ export default function WarehousePage() {
               setEditingDispatch(null);
             } catch (error) {
               console.error("Failed to save dispatch issue:", error);
-              const errorMessage = handleApiError(error, editingDispatch ? "Updating dispatch issue" : "Creating dispatch issue");
-              toast.error(errorMessage);
+              handleApiErrorWithToast(error, editingDispatch ? "Updating dispatch issue" : "Creating dispatch issue");
+              
             }
           }}
           onClose={() => {
@@ -839,8 +843,8 @@ export default function WarehousePage() {
               setEditingDelivery(null);
             } catch (error) {
               console.error("Failed to save delivery fulfillment:", error);
-              const errorMessage = handleApiError(error, editingDelivery ? "Updating delivery fulfillment" : "Creating delivery fulfillment");
-              toast.error(errorMessage);
+              handleApiErrorWithToast(error, editingDelivery ? "Updating delivery fulfillment" : "Creating delivery fulfillment");
+              
             }
           }}
           onClose={() => {
@@ -871,8 +875,8 @@ export default function WarehousePage() {
               setEditingWarehouse(null);
             } catch (error) {
               console.error("Failed to save warehouse:", error);
-              const errorMessage = handleApiError(error, editingWarehouse ? "Updating warehouse" : "Creating warehouse");
-              toast.error(errorMessage);
+              handleApiErrorWithToast(error, editingWarehouse ? "Updating warehouse" : "Creating warehouse");
+              
             }
           }}
           onClose={() => {

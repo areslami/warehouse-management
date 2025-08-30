@@ -1,5 +1,6 @@
 "use client";
 
+import React from "react";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "./ui/collapsible";
 import { Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent, SidebarHeader, SidebarMenuButton, SidebarMenuItem, SidebarMenuSub, SidebarMenuSubItem } from "./ui/sidebar";
 import { useTranslations } from "next-intl";
@@ -7,11 +8,11 @@ import { useModal } from "@/lib/modal-context";
 import { toast } from "sonner";
 import { SalesProformaFormData, SalesProformaModal } from "./modals/finance/salesproforma-modal";
 import { PurchaseProformaFormData, PurchaseProformaModal } from "./modals/finance/purchaseproforma-modal";
-import { WarehouseReceiptModal } from "./modals/warehouse/warehouse-receipt-modal";
+import { WarehouseReceiptFormData, WarehouseReceiptModal } from "./modals/warehouse/warehouse-receipt-modal";
 import { DispatchIssueModal } from "./modals/warehouse/dispatch-issue-modal";
 import { DeliveryFulfillmentModal } from "./modals/warehouse/delivery-fulfillment-modal";
-import { B2BOfferModal } from "./modals/b2b/b2b-offer-modal";
-import { B2BDistributionModal } from "./modals/b2b/b2b-distribution-modal";
+import { B2BOfferFormData, B2BOfferModal } from "./modals/b2b/b2b-offer-modal";
+import { B2BDistributionFormData, B2BDistributionModal } from "./modals/b2b/b2b-distribution-modal";
 import { B2BAddressFormData, B2BAddressModal } from "./modals/b2b/b2b-address-modal";
 
 import { Warehouse, DollarSign, ChevronLeft, BadgeCent, Package, Users, Plus } from "lucide-react";
@@ -20,6 +21,41 @@ import { createB2BOffer, createB2BDistribution, createB2BAddress, createB2BSale 
 import Link from "next/link";
 import { B2BSaleFormData, B2BSaleModal } from "./modals/b2b/b2b-sale-modal";
 import { DeliveryFulfillmentCreate, DispatchIssueCreate } from "@/lib/interfaces/warehouse";
+// Define form data types for modals that don't export them
+type DispatchIssueFormData = {
+  dispatch_id: string;
+  warehouse: number;
+  sales_proforma: number;
+  issue_date: string;
+  validity_date: string;
+  description?: string;
+  shipping_company: number;
+  items: {
+    product: number;
+    weight: number;
+    vehicle_type: "single" | "double" | "trailer";
+    receiver: number;
+  }[];
+};
+
+type DeliveryFulfillmentFormData = {
+  delivery_id: string;
+  issue_date: string;
+  validity_date: string;
+  warehouse: number;
+  sales_proforma: number;
+  description?: string;
+  shipping_company: number;
+  items: {
+    shipment_id: string;
+    shipment_price: number;
+    product: number;
+    weight: number;
+    vehicle_type: "single" | "double" | "trailer";
+    receiver: number;
+  }[];
+};
+
 export function AppSidebar() {
     const t = useTranslations('sidebar')
     const tCommon = useTranslations('common');
@@ -95,8 +131,8 @@ export function AppSidebar() {
                                         <button
                                             className="opacity-0 group-hover:opacity-100 p-1 text-white/50 hover:text-white transition-opacity"
                                             onClick={() => {
-                                                openModal(WarehouseReceiptModal, {
-                                                    onSubmit: async (data) => {
+                                                openModal(WarehouseReceiptModal as React.ComponentType, {
+                                                    onSubmit: async (data: WarehouseReceiptFormData) => {
                                                         try {
                                                             // Clean the data - remove empty strings and undefined values for optional fields
                                                             const cleanData = {
@@ -105,6 +141,10 @@ export function AppSidebar() {
                                                                 description: data.description?.trim() || undefined,
                                                                 cottage_serial_number: data.cottage_serial_number?.trim() || undefined,
                                                                 proforma: data.proforma && data.proforma > 0 ? data.proforma : undefined,
+                                                                items: data.items.map(item => ({
+                                                                    product: item.product,
+                                                                    weight: typeof item.weight === 'string' ? parseFloat(item.weight) || 0 : item.weight || 0
+                                                                }))
                                                             };
                                                             await createWarehouseReceipt(cleanData);
                                                             toast.success(t("warehouse-receipt") + ' - ' + tCommon('toast_messages.create_success_suffix'));
@@ -129,12 +169,12 @@ export function AppSidebar() {
                                         <button
                                             className="opacity-0 group-hover:opacity-100 p-1 text-white/50 hover:text-white transition-opacity"
                                             onClick={() => {
-                                                openModal(DispatchIssueModal, {
-                                                    onSubmit: async (data) => {
+                                                openModal(DispatchIssueModal as React.ComponentType, {
+                                                    onSubmit: async (data: DispatchIssueFormData) => {
                                                         try {
                                                             const data2: DispatchIssueCreate = {
                                                                 ...data,
-                                                                total_weight: data.items.reduce((sum, item) => sum + (item.weight || 0), 0),
+                                                                total_weight: data.items.reduce((sum: number, item) => sum + (item.weight || 0), 0),
                                                                 description: data.description || "",
                                                             }
                                                             await createDispatchIssue(data2);
@@ -160,12 +200,12 @@ export function AppSidebar() {
                                         <button
                                             className="opacity-0 group-hover:opacity-100 p-1 text-white/50 hover:text-white transition-opacity"
                                             onClick={() => {
-                                                openModal(DeliveryFulfillmentModal, {
-                                                    onSubmit: async (data) => {
+                                                openModal(DeliveryFulfillmentModal as React.ComponentType, {
+                                                    onSubmit: async (data: DeliveryFulfillmentFormData) => {
                                                         try {
                                                             const data2: DeliveryFulfillmentCreate = {
                                                                 ...data,
-                                                                total_weight: data.items.reduce((sum, item) => sum + (item.weight || 0), 0),
+                                                                total_weight: data.items.reduce((sum: number, item) => sum + (item.weight || 0), 0),
                                                                 description: data.description || "",
                                                             }
                                                             await createDeliveryFulfillment(data2);
@@ -213,10 +253,9 @@ export function AppSidebar() {
                                         <button
                                             className="opacity-0 group-hover:opacity-100 p-1 text-white/50 hover:text-white transition-opacity"
                                             onClick={() => {
-                                                openModal(B2BOfferModal, {
-                                                    onSubmit: async (data) => {
+                                                openModal(B2BOfferModal as React.ComponentType, {
+                                                    onSubmit: async (data: B2BOfferFormData) => {
                                                         try {
-
                                                             await createB2BOffer(data);
 
                                                             toast.success(t("b2b-offer") + ' - ' + tCommon('toast_messages.create_success_suffix'));
@@ -241,8 +280,8 @@ export function AppSidebar() {
                                         <button
                                             className="opacity-0 group-hover:opacity-100 p-1 text-white/50 hover:text-white transition-opacity"
                                             onClick={() => {
-                                                openModal(B2BDistributionModal, {
-                                                    onSubmit: async (data) => {
+                                                openModal(B2BDistributionModal as React.ComponentType, {
+                                                    onSubmit: async (data: B2BDistributionFormData) => {
                                                         try {
                                                             await createB2BDistribution(data);
                                                             toast.success(t("b2b-distribution") + ' - ' + tCommon('toast_messages.create_success_suffix'));
@@ -267,7 +306,7 @@ export function AppSidebar() {
                                         <button
                                             className="opacity-0 group-hover:opacity-100 p-1 text-white/50 hover:text-white transition-opacity"
                                             onClick={() => {
-                                                openModal(B2BSaleModal, {
+                                                openModal(B2BSaleModal as React.ComponentType, {
                                                     onSubmit: async (data: B2BSaleFormData) => {
                                                         try {
                                                             await createB2BSale(data);
@@ -294,7 +333,7 @@ export function AppSidebar() {
                                         <button
                                             className="opacity-0 group-hover:opacity-100 p-1 text-white/50 hover:text-white transition-opacity"
                                             onClick={() => {
-                                                openModal(B2BAddressModal, {
+                                                openModal(B2BAddressModal as React.ComponentType, {
                                                     onSubmit: async (data: B2BAddressFormData) => {
                                                         try {
                                                             await createB2BAddress(data);
@@ -341,7 +380,7 @@ export function AppSidebar() {
                                         <button
                                             className="opacity-0 group-hover:opacity-100 p-1 text-white/50 hover:text-white transition-opacity"
                                             onClick={() => {
-                                                openModal(SalesProformaModal, {
+                                                openModal(SalesProformaModal as React.ComponentType, {
                                                     onSubmit: (data: SalesProformaFormData) => {
                                                         console.log('Sales Proforma Data:', data);
                                                     }
@@ -360,7 +399,7 @@ export function AppSidebar() {
                                         <button
                                             className="opacity-0 group-hover:opacity-100 p-1 text-white/50 hover:text-white transition-opacity"
                                             onClick={() => {
-                                                openModal(PurchaseProformaModal, {
+                                                openModal(PurchaseProformaModal as React.ComponentType, {
                                                     onSubmit: (data: PurchaseProformaFormData) => {
                                                         console.log('Purchase Proforma Data:', data);
                                                     }

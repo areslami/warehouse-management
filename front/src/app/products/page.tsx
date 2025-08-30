@@ -12,7 +12,7 @@ import { Product } from "@/lib/interfaces/core";
 import {
   createProduct, updateProduct, deleteProduct,
 } from "@/lib/api/core";
-import { handleApiError } from "@/lib/api/error-handler";
+import { handleApiErrorWithToast } from "@/lib/api/error-toast-handler";
 
 export default function ProductsPage() {
   const t = useTranslations("pages.product");
@@ -30,11 +30,12 @@ export default function ProductsPage() {
         toast.success(tErrors("success_delete"));
       } catch (error) {
         console.error("Failed to delete product:", error);
-        const errorMessage = handleApiError(error, "Delete product");
-        toast.error(errorMessage);
+        handleApiErrorWithToast(error, "Delete product");
+        
       }
     }
   };
+  console.log('products', products);
 
 
 
@@ -94,7 +95,7 @@ export default function ProductsPage() {
                     </div>
                     <p className="text-sm text-gray-600">{tCommon('product_labels.product_code')} {product.code}</p>
                     {product.category && (
-                      <p className="text-sm text-gray-600">{tCommon('product_labels.product_category')} {typeof product.category === 'object' ? product.category : ''}</p>
+                      <p className="text-sm text-gray-600">{tCommon('product_labels.product_category')}<span className="text-black mr-1 font-bold">{product.category}</span></p>
                     )}
                   </CardContent>
                 </Card>
@@ -126,8 +127,8 @@ export default function ProductsPage() {
               setEditingProduct(null);
             } catch (error) {
               console.error(`Failed to ${editingProduct ? 'update' : 'create'} product:`, error);
-              const errorMessage = handleApiError(error, `${editingProduct ? 'Update' : 'Create'} product`);
-              toast.error(errorMessage);
+              handleApiErrorWithToast(error, `${editingProduct ? 'Update' : 'Create'} product`);
+              
             }
           }}
           onClose={() => {

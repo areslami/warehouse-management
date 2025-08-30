@@ -29,7 +29,7 @@ class B2BOfferViewSet(viewsets.ModelViewSet):
     
     def get_queryset(self):
         queryset = super().get_queryset()
-        return queryset.select_related('product')
+        return queryset.select_related('product', 'warehouse_receipt')
     
     @action(detail=False, methods=['get'])
     def active(self, request):

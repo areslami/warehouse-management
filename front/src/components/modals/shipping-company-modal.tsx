@@ -55,7 +55,7 @@ export function ShippingCompanyModal({ trigger, onSubmit, onClose, initialData }
     },
   });
 
-  const handleSubmit = async (data: ShippingCompanyFormData) => {
+  const handleSubmit = async (data: any) => {
     if (onSubmit) {
       await onSubmit(data);
     }
@@ -92,7 +92,7 @@ export function ShippingCompanyModal({ trigger, onSubmit, onClose, initialData }
           <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6 py-4 px-12">
             <div className="grid grid-cols-2 gap-4">
               <FormField
-                control={form.control}
+                control={form.control as any}
                 name="name"
                 render={({ field }) => (
                   <FormItem>
@@ -106,7 +106,7 @@ export function ShippingCompanyModal({ trigger, onSubmit, onClose, initialData }
               />
 
               <FormField
-                control={form.control}
+                control={form.control as any}
                 name="contact_person"
                 render={({ field }) => (
                   <FormItem>
@@ -122,7 +122,7 @@ export function ShippingCompanyModal({ trigger, onSubmit, onClose, initialData }
 
             <div className="grid grid-cols-2 gap-4">
               <FormField
-                control={form.control}
+                control={form.control as any}
                 name="phone"
                 render={({ field }) => (
                   <FormItem>
@@ -136,7 +136,7 @@ export function ShippingCompanyModal({ trigger, onSubmit, onClose, initialData }
               />
 
               <FormField
-                control={form.control}
+                control={form.control as any}
                 name="email"
                 render={({ field }) => (
                   <FormItem>
@@ -151,7 +151,7 @@ export function ShippingCompanyModal({ trigger, onSubmit, onClose, initialData }
             </div>
 
             <FormField
-              control={form.control}
+              control={form.control as any}
               name="address"
               render={({ field }) => (
                 <FormItem>
@@ -165,7 +165,7 @@ export function ShippingCompanyModal({ trigger, onSubmit, onClose, initialData }
             />
 
             <FormField
-              control={form.control}
+              control={form.control as any}
               name="description"
               render={({ field }) => (
                 <FormItem>

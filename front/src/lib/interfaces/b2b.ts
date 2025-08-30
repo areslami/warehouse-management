@@ -65,8 +65,6 @@ export interface B2BSale {
 export interface B2BDistribution {
   id: number;
   purchase_id?: string;
-  b2b_offer: number | null;
-  b2b_offer_id?: string;
   warehouse: number;
   warehouse_name?: string;
   warehouse_receipt?: number;
