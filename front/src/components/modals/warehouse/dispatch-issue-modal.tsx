@@ -9,8 +9,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, Dialog
 import { Button } from "../../ui/button";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "../../ui/form";
 import { Input } from "../../ui/input";
-import { convertPersianToEnglishNumbers } from "@/lib/utils/number-format";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../../ui/select";
+import { NumberInput } from "../../ui/number-input";
 import { Plus, Trash2 } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useCoreData } from "@/lib/core-data-context";
@@ -479,15 +479,9 @@ export function DispatchIssueModal({ trigger, onSubmit, onClose, initialData }: 
                         <FormItem>
                           <FormLabel>{t("weight")}</FormLabel>
                           <FormControl>
-                            <Input
-                              type="text"
-                              step="0.00000001"
-                              {...field}
-                              onChange={(e) => {
-                                const convertedValue = convertPersianToEnglishNumbers(e.target.value);
-                                e.target.value = convertedValue;
-                                field.onChange(Number(convertedValue));
-                              }}
+                            <NumberInput
+                              value={field.value || 0}
+                              onChange={(value) => field.onChange(value)}
                             />
                           </FormControl>
                           <FormMessage />

@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
-import { Plus, Edit2, Trash2, DollarSign, Receipt, Search, FileText, Clock } from "lucide-react";
+import { Plus, Edit2, Trash2, DollarSign, Receipt, Search, FileText, Clock, Eye } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { handleApiErrorWithToast } from "@/lib/api/error-toast-handler";
@@ -260,6 +260,7 @@ export default function FinancePage() {
                       }}
                     />
                   </TableHead>
+                  <TableHead className="text-right w-16">ردیف</TableHead>
                   <TableHead>{t("sales.customer")}</TableHead>
                   <TableHead>{t("sales.date")}</TableHead>
                   <TableHead>{t("sales.total_amount")}</TableHead>
@@ -269,8 +270,8 @@ export default function FinancePage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredSalesProformas.map((proforma) => (
-                  <TableRow key={proforma.id} className="cursor-pointer hover:bg-gray-50" onClick={() => handleRowClick(proforma, 'sales')}>
+                {filteredSalesProformas.map((proforma, index) => (
+                  <TableRow key={proforma.id} className="hover:bg-gray-50">
                     <TableCell onClick={(e) => e.stopPropagation()}>
                       <input
                         type="checkbox"
@@ -284,6 +285,7 @@ export default function FinancePage() {
                         }}
                       />
                     </TableCell>
+                    <TableCell className="text-right font-medium">{index + 1}</TableCell>
                     <TableCell>{getPartyDisplayName(customers.find(c => c.id === proforma.customer))}</TableCell>
                     <TableCell>{new Date(proforma.date).toLocaleDateString('fa-IR')}</TableCell>
                     <TableCell>{formatNumber(calculateTotal(proforma.lines))} {tCommon('units.rial')}</TableCell>
@@ -295,6 +297,12 @@ export default function FinancePage() {
                     <TableCell>{proforma.serial_number}</TableCell>
                     <TableCell>
                       <div className="flex gap-2 justify-center">
+                        <Button size="sm" variant="ghost" onClick={(e) => {
+                          e.stopPropagation();
+                          handleRowClick(proforma, 'sales')
+                        }}>
+                          <Eye className="w-4 h-4 text-blue-600" />
+                        </Button>
                         <Button size="sm" variant="ghost" onClick={(e) => {
                           e.stopPropagation();
                           openModal(SalesProformaModal, {
@@ -383,6 +391,7 @@ export default function FinancePage() {
                       }}
                     />
                   </TableHead>
+                  <TableHead className="text-right w-16">ردیف</TableHead>
                   <TableHead>{t("purchase.supplier")}</TableHead>
                   <TableHead>{t("purchase.date")}</TableHead>
                   <TableHead>{t("purchase.total_amount")}</TableHead>
@@ -391,8 +400,8 @@ export default function FinancePage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredPurchaseProformas.map((proforma) => (
-                  <TableRow key={proforma.id} className="cursor-pointer hover:bg-gray-50" onClick={() => handleRowClick(proforma, 'purchase')}>
+                {filteredPurchaseProformas.map((proforma, index) => (
+                  <TableRow key={proforma.id} className="hover:bg-gray-50">
                     <TableCell onClick={(e) => e.stopPropagation()}>
                       <input
                         type="checkbox"
@@ -406,12 +415,19 @@ export default function FinancePage() {
                         }}
                       />
                     </TableCell>
+                    <TableCell className="text-right font-medium">{index + 1}</TableCell>
                     <TableCell>{getPartyDisplayName(suppliers.find(s => s.id === proforma.supplier))}</TableCell>
                     <TableCell>{new Date(proforma.date).toLocaleDateString('fa-IR')}</TableCell>
                     <TableCell>{formatNumber(calculateTotal(proforma.lines))} {tCommon('units.rial')}</TableCell>
                     <TableCell>{proforma.serial_number}</TableCell>
                     <TableCell>
                       <div className="flex gap-2 justify-center">
+                        <Button size="sm" variant="ghost" onClick={(e) => {
+                          e.stopPropagation();
+                          handleRowClick(proforma, 'purchase')
+                        }}>
+                          <Eye className="w-4 h-4 text-blue-600" />
+                        </Button>
                         <Button size="sm" variant="ghost" onClick={(e) => {
                           e.stopPropagation();
                           openModal(PurchaseProformaModal, {

@@ -9,27 +9,22 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Button } from "../../ui/button";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "../../ui/form";
 import { Input } from "../../ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../../ui/select";
-import { Plus } from "lucide-react";
+import { SearchableSelect } from "../../ui/searchable-select";
+import { NumberInput } from "../../ui/number-input";
 import { useTranslations } from "next-intl";
 import { useCoreData } from "@/lib/core-data-context";
 import { CustomerModal } from "../customer-modal";
-import { WarehouseModal } from "../warehouse/warehouse-modal";
-import { ProductModal } from "../product-modal";
-import { createCustomer, createProduct } from "@/lib/api/core";
-import { createWarehouse } from "@/lib/api/warehouse";
+import { WarehouseReceiptModal, WarehouseReceiptFormData } from "../warehouse/warehouse-receipt-modal";
+import { createCustomer } from "@/lib/api/core";
+import { createWarehouseReceipt, fetchWarehouseReceipts } from "@/lib/api/warehouse";
+import { WarehouseReceipt } from "@/lib/interfaces/warehouse";
 import { getPartyDisplayName } from "@/lib/utils/party-utils";
 import { PersianDatePicker } from "../../ui/persian-date-picker";
-import { fetchB2BOffers } from "@/lib/api/b2b";
-import { B2BOffer } from "@/lib/interfaces/b2b";
-import { B2BOfferModal } from "./b2b-offer-modal";
-import { createB2BOffer } from "@/lib/api/b2b";
 
 export type B2BDistributionFormData = {
-  purchase_id?: string;
-  warehouse: number;
-  product: number;
+  transfer_id?: string;
   customer: number;
+  warehouse_receipt: number;
   agency_weight: number;
   agency_date: string;
   description?: string;
@@ -43,42 +38,36 @@ interface B2BDistributionModalProps {
   onOfferCreated?: () => void;
 }
 
-export function B2BDistributionModal({ trigger, onSubmit, onClose, initialData, onOfferCreated }: B2BDistributionModalProps) {
+export function B2BDistributionModal({ trigger, onSubmit, onClose, initialData, }: B2BDistributionModalProps) {
   const tval = useTranslations("modals.b2bDistribution.validation");
   const t = useTranslations("modals.b2bDistribution");
-  const { products, customers, warehouses, refreshData: refreshCoreData } = useCoreData();
-  const [showProductModal, setShowProductModal] = useState(false);
+  const tCommon = useTranslations("common");
+  const { customers, refreshData: refreshCoreData } = useCoreData();
   const [showCustomerModal, setShowCustomerModal] = useState(false);
-  const [showWarehouseModal, setShowWarehouseModal] = useState(false);
-  const [showOfferModal, setShowOfferModal] = useState(false);
-  const [offers, setOffers] = useState<B2BOffer[]>([]);
+  const [showWarehouseReceiptModal, setShowWarehouseReceiptModal] = useState(false);
+  const [warehouseReceipts, setWarehouseReceipts] = useState<WarehouseReceipt[]>([]);
 
   useEffect(() => {
-    if (products.length === 0) {
-      refreshCoreData('products');
-    }
     if (customers.length === 0) {
       refreshCoreData('customers');
     }
-    if (warehouses.length === 0) {
-      refreshCoreData('warehouses');
-    }
-    loadOffers();
-  }, [customers, products, warehouses, refreshCoreData]);
+    loadWarehouseReceipts();
+  }, [customers.length, refreshCoreData]);
 
-  const loadOffers = async () => {
+  const loadWarehouseReceipts = async () => {
     try {
-      const offersData = await fetchB2BOffers();
-      setOffers(offersData || []);
+      const receipts = await fetchWarehouseReceipts();
+      setWarehouseReceipts(receipts || []);
     } catch (error) {
-      console.error('Error loading offers:', error);
+      console.error('Failed to load warehouse receipts:', error);
     }
   };
 
+
+
   const b2bDistributionSchema = z.object({
-    purchase_id: z.string().optional(),
-    warehouse: z.number().min(0),
-    product: z.number().min(1, tval("product-required")),
+    transfer_id: z.string().optional(),
+    warehouse_receipt: z.number().min(0),
     customer: z.number().min(0),
     agency_weight: z.union([z.string(), z.number()]).optional(),
     agency_date: z.string().min(1, tval("agency-date")),
@@ -90,9 +79,8 @@ export function B2BDistributionModal({ trigger, onSubmit, onClose, initialData, 
   const form = useForm<B2BDistributionFormData>({
     resolver: zodResolver(b2bDistributionSchema) as any,
     defaultValues: {
-      purchase_id: initialData?.purchase_id || "",
-      warehouse: initialData?.warehouse || 0,
-      product: initialData?.product || 0,
+      transfer_id: initialData?.transfer_id || "",
+      warehouse_receipt: initialData?.warehouse_receipt || 0,
       customer: initialData?.customer || 0,
       agency_weight: initialData?.agency_weight || 0,
       agency_date: initialData?.agency_date || "",
@@ -140,12 +128,12 @@ export function B2BDistributionModal({ trigger, onSubmit, onClose, initialData, 
               <div className="grid grid-cols-2 gap-4">
                 <FormField
                   control={form.control as any}
-                  name="purchase_id"
+                  name="transfer_id"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>{t("purchase-id")}</FormLabel>
+                      <FormLabel>{t("transfer-id")}</FormLabel>
                       <FormControl>
-                        <Input {...field} placeholder={t("enter-purchase-id")} />
+                        <Input {...field} placeholder={t("enter-transfer-id")} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -157,93 +145,38 @@ export function B2BDistributionModal({ trigger, onSubmit, onClose, initialData, 
               <div className="grid grid-cols-2 gap-4">
                 <FormField
                   control={form.control as any}
-                  name="warehouse"
+                  name="warehouse_receipt"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>{t("warehouse")}</FormLabel>
+                      <FormLabel>{t("warehouse_receipt")}</FormLabel>
                       <FormControl>
-                        <Select
+                        <SearchableSelect
                           value={field.value > 0 ? field.value.toString() : ""}
                           onValueChange={(value) => {
                             if (value === "new") {
-                              setShowWarehouseModal(true);
+                              setShowWarehouseReceiptModal(true);
                             } else if (value) {
                               field.onChange(Number(value));
                             }
                           }}
-                        >
-                          <SelectTrigger>
-                            <SelectValue placeholder={t("select-warehouse")} />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem
-                              value="new"
-                              className="font-semibold text-[#f6d265]"
-                              onPointerDown={(e) => e.preventDefault()}
-                            >
-                              <Plus className="inline-block w-4 h-4 mr-2" />
-                              {t("create-new-warehouse")}
-                            </SelectItem>
-                            {warehouses.length > 0 && (
-                              <div className="border-t my-1" />
-                            )}
-                            {warehouses.map((warehouse) => (
-                              <SelectItem key={warehouse.id} value={warehouse.id.toString()}>
-                                {warehouse.name}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
+                          options={warehouseReceipts.map(receipt => ({
+                            value: receipt.id.toString(),
+                            label: `${receipt.receipt_id || 'Receipt'} - ${receipt.warehouse_name} (ID: ${receipt.id})`,
+                            id: receipt.id,
+                            name: receipt.receipt_id || receipt.id.toString()
+                          }))}
+                          placeholder={t("select-warehouse-receipt")}
+                          searchPlaceholder={tCommon("search_placeholders.search_warehouse_receipts")}
+                          showCreateNew={true}
+                          createNewText={t("create-new-warehouse-receipt")}
+                          onCreateNew={() => setShowWarehouseReceiptModal(true)}
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
 
-                <FormField
-                  control={form.control as any}
-                  name="product"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>{t("product")}</FormLabel>
-                      <FormControl>
-                        <Select
-                          value={field.value > 0 ? field.value.toString() : ""}
-                          onValueChange={(value) => {
-                            if (value === "new") {
-                              setShowProductModal(true);
-                            } else if (value) {
-                              field.onChange(Number(value));
-                            }
-                          }}
-                        >
-                          <SelectTrigger>
-                            <SelectValue placeholder={t("select-product")} />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem
-                              value="new"
-                              className="font-semibold text-[#f6d265]"
-                              onPointerDown={(e) => e.preventDefault()}
-                            >
-                              <Plus className="inline-block w-4 h-4 mr-2" />
-                              {t("create-new-product")}
-                            </SelectItem>
-                            {products.length > 0 && (
-                              <div className="border-t my-1" />
-                            )}
-                            {products.map((product) => (
-                              <SelectItem key={product.id} value={product.id.toString()}>
-                                {product.name}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
               </div>
 
               <FormField
@@ -251,9 +184,9 @@ export function B2BDistributionModal({ trigger, onSubmit, onClose, initialData, 
                 name="customer"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>{t("customer")}</FormLabel>
+                    <FormLabel>{t("distributor")}</FormLabel>
                     <FormControl>
-                      <Select
+                      <SearchableSelect
                         value={field.value > 0 ? field.value.toString() : ""}
                         onValueChange={(value) => {
                           if (value === "new") {
@@ -262,29 +195,18 @@ export function B2BDistributionModal({ trigger, onSubmit, onClose, initialData, 
                             field.onChange(Number(value));
                           }
                         }}
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder={t("select-customer")} />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem
-                            value="new"
-                            className="font-semibold text-[#f6d265]"
-                            onPointerDown={(e) => e.preventDefault()}
-                          >
-                            <Plus className="inline-block w-4 h-4 mr-2" />
-                            {t("create-new-customer")}
-                          </SelectItem>
-                          {customers.length > 0 && (
-                            <div className="border-t my-1" />
-                          )}
-                          {customers.map((customer) => (
-                            <SelectItem key={customer.id} value={customer.id.toString()}>
-                              {getPartyDisplayName(customer)}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                        options={customers.map(customer => ({
+                          value: customer.id.toString(),
+                          label: `${getPartyDisplayName(customer)} (ID: ${customer.id})`,
+                          id: customer.id,
+                          name: getPartyDisplayName(customer)
+                        }))}
+                        placeholder={t("select-distributor")}
+                        searchPlaceholder={tCommon("search_placeholders.search_distributors")}
+                        showCreateNew={true}
+                        createNewText={t("create-new-distributor")}
+                        onCreateNew={() => setShowCustomerModal(true)}
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -299,9 +221,8 @@ export function B2BDistributionModal({ trigger, onSubmit, onClose, initialData, 
                     <FormItem>
                       <FormLabel>{t("agency-weight")}</FormLabel>
                       <FormControl>
-                        <Input
-                          type="text"
-                          {...field}
+                        <NumberInput
+                          value={field.value || 0}
                           onChange={(value) => field.onChange(value)}
                         />
                       </FormControl>
@@ -354,31 +275,26 @@ export function B2BDistributionModal({ trigger, onSubmit, onClose, initialData, 
         </DialogContent>
       </Dialog>
 
-      {showWarehouseModal && (
-        <WarehouseModal
-          onSubmit={async (newWarehouse) => {
-            const created = await createWarehouse(newWarehouse);
-            if (created) {
-              await refreshCoreData('warehouses');
-              form.setValue('warehouse', created.id);
-              setShowWarehouseModal(false);
-            }
-          }}
-          onClose={() => setShowWarehouseModal(false)}
-        />
-      )}
 
-      {showProductModal && (
-        <ProductModal
-          onSubmit={async (newProduct) => {
-            const created = await createProduct(newProduct);
+
+      {showWarehouseReceiptModal && (
+        <WarehouseReceiptModal
+          onSubmit={async (newReceipt: WarehouseReceiptFormData) => {
+            const receiptData = {
+              ...newReceipt,
+              items: newReceipt.items.map(item => ({
+                product: item.product,
+                weight: typeof item.weight === 'string' ? parseFloat(item.weight) || 0 : item.weight
+              }))
+            };
+            const created = await createWarehouseReceipt(receiptData);
             if (created) {
-              await refreshCoreData('products');
-              form.setValue('product', created.id);
-              setShowProductModal(false);
+              await loadWarehouseReceipts();
+              form.setValue('warehouse_receipt', created.id);
+              setShowWarehouseReceiptModal(false);
             }
           }}
-          onClose={() => setShowProductModal(false)}
+          onClose={() => setShowWarehouseReceiptModal(false)}
         />
       )}
 

@@ -18,9 +18,9 @@ class B2BOffer(models.Model):
     offer_date = models.DateTimeField()
     offer_exp_date = models.DateTimeField()
     
-    offer_weight = models.DecimalField(max_digits=20, decimal_places=4)
-    unit_price = models.DecimalField(max_digits=20, decimal_places=4)
-    total_price = models.DecimalField(max_digits=20, decimal_places=4)
+    offer_weight = models.DecimalField(max_digits=20, decimal_places=0)
+    unit_price = models.DecimalField(max_digits=20, decimal_places=0)
+    total_price = models.DecimalField(max_digits=20, decimal_places=0)
     
     offer_type = models.CharField(max_length=10, choices=TRANSACTION_TYPES, default='cash')
     status = models.CharField(max_length=10, choices=STATUS_TYPES, default='pending')
@@ -61,10 +61,10 @@ class B2BAddress(models.Model):
     customer = models.ForeignKey('core.Customer', on_delete=models.CASCADE, null=True)
     receiver = models.ForeignKey('core.Receiver', on_delete=models.SET_NULL, null=True, blank=True)
     
-    total_weight_purchased = models.DecimalField(max_digits=20, decimal_places=4, default=0)
+    total_weight_purchased = models.DecimalField(max_digits=20, decimal_places=0, default=0)
     purchase_date = models.DateField(null=True)
-    unit_price = models.DecimalField(max_digits=20, decimal_places=4, default=0)
-    payment_amount = models.DecimalField(max_digits=20, decimal_places=4, default=0)
+    unit_price = models.DecimalField(max_digits=20, decimal_places=0, default=0)
+    payment_amount = models.DecimalField(max_digits=20, decimal_places=0, default=0)
     payment_method = models.CharField(max_length=50, blank=True)
     
     province = models.CharField(max_length=100, blank=True)
@@ -89,10 +89,9 @@ class B2BAddress(models.Model):
 class B2BSale(models.Model):
     purchase_id = models.CharField(max_length=100, unique=True)
     offer = models.ForeignKey(B2BOffer, on_delete=models.CASCADE, related_name='b2b_sales', null=True)
-    cottage_code = models.CharField(max_length=50, blank=True)
-    weight = models.DecimalField(max_digits=20, decimal_places=4, default=0)
-    unit_price = models.DecimalField(max_digits=20, decimal_places=4, default=0)
-    total_price = models.DecimalField(max_digits=20, decimal_places=4, default=0)
+    weight = models.DecimalField(max_digits=20, decimal_places=0, default=0)
+    unit_price = models.DecimalField(max_digits=20, decimal_places=0, default=0)
+    total_price = models.DecimalField(max_digits=20, decimal_places=0, default=0)
     sale_date = models.DateField(null=True) 
     product = models.ForeignKey('core.Product', on_delete=models.CASCADE)
     customer = models.ForeignKey('core.Customer', on_delete=models.CASCADE)
@@ -110,15 +109,13 @@ class B2BSale(models.Model):
     
 class B2BDistribution(models.Model):
     
-    purchase_id = models.CharField(max_length=100, unique=True, null=True, blank=True)
-    b2b_offer = models.ForeignKey(B2BOffer, on_delete=models.CASCADE, related_name='distributions', null=True)
+    transfer_id = models.CharField(max_length=100, unique=True)
     
-    warehouse = models.ForeignKey('warehouse.Warehouse', on_delete=models.CASCADE)
-    product = models.ForeignKey('core.Product', on_delete=models.CASCADE)
-    customer = models.ForeignKey('core.Customer', on_delete=models.CASCADE)
+    warehouse_receipt = models.ForeignKey('warehouse.WarehouseReceipt', on_delete=models.PROTECT, limit_choices_to={'receipt_type': 'import_cottage'})
+    customer = models.ForeignKey('core.Customer', on_delete=models.PROTECT)
     
     agency_date = models.DateTimeField()
-    agency_weight = models.DecimalField(max_digits=20, decimal_places=4, default=0)
+    agency_weight = models.DecimalField(max_digits=20, decimal_places=0, default=0)
     description = models.TextField(blank=True)
     
     created_at = models.DateTimeField(auto_now_add=True)
@@ -126,8 +123,7 @@ class B2BDistribution(models.Model):
     
     def __str__(self):
         customer_name = self.customer.company_name if self.customer.customer_type == 'corporate' else self.customer.full_name
-        warehouse_name = self.warehouse.name if self.warehouse else 'No Warehouse'
-        return f"Distribution {self.product.name} - {customer_name} - {warehouse_name} ({self.agency_weight} kg)"
+        return f"Distribution {self.warehouse_receipt.receipt_id} - {customer_name} - {self.warehouse_receipt.produc.name} ({self.agency_weight} kg)"
     
     def save(self, *args, **kwargs):
         super().save(*args, **kwargs)

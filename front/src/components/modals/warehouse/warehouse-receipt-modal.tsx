@@ -9,7 +9,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, Dialog
 import { Button } from "../../ui/button";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "../../ui/form";
 import { Input } from "../../ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../../ui/select";
+import { SearchableSelect } from "../../ui/searchable-select";
+import { NumberInput } from "../../ui/number-input";
 import { Plus, Trash2 } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useCoreData } from "@/lib/core-data-context";
@@ -48,6 +49,7 @@ interface WarehouseReceiptModalProps {
 export function WarehouseReceiptModal({ trigger, onSubmit, onClose, initialData }: WarehouseReceiptModalProps) {
   const tval = useTranslations("modals.warehouseReceipt.validation");
   const t = useTranslations("modals.warehouseReceipt");
+  const tCommon = useTranslations("common");
   const { data, refreshData } = useCoreData();
   const { openModal } = useModal();
 
@@ -211,7 +213,7 @@ export function WarehouseReceiptModal({ trigger, onSubmit, onClose, initialData 
                     <FormItem>
                       <FormLabel>{t("warehouse")}</FormLabel>
                       <FormControl>
-                        <Select
+                        <SearchableSelect
                           value={field.value > 0 ? field.value.toString() : ""}
                           onValueChange={(value) => {
                             if (value === "new") {
@@ -228,35 +230,28 @@ export function WarehouseReceiptModal({ trigger, onSubmit, onClose, initialData 
                               field.onChange(Number(value));
                             }
                           }}
-                        >
-                          <SelectTrigger>
-                            <SelectValue placeholder={t("select-warehouse")} />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem
-                              value="new"
-                              className="font-semibold text-[#f6d265]"
-                              onPointerDown={(e) => e.preventDefault()}
-                            >
-                              <Plus className="inline-block w-4 h-4 mr-2" />
-                              {t("create-new-warehouse")}
-                            </SelectItem>
-                            {data.warehouses && data.warehouses.length > 0 && (
-                              <div className="border-t my-1" />
-                            )}
-                            {data.warehouses && data.warehouses.length > 0 ? (
-                              data.warehouses.map((warehouse) => (
-                                <SelectItem key={warehouse.id} value={warehouse.id.toString()}>
-                                  {warehouse.name}
-                                </SelectItem>
-                              ))
-                            ) : (
-                              <SelectItem value="0" disabled>
-                                {t("no-warehouses")}
-                              </SelectItem>
-                            )}
-                          </SelectContent>
-                        </Select>
+                          options={(data.warehouses || []).map(warehouse => ({
+                            value: warehouse.id.toString(),
+                            label: `${warehouse.name} (ID: ${warehouse.id})`,
+                            id: warehouse.id,
+                            name: warehouse.name
+                          }))}
+                          placeholder={t("select-warehouse")}
+                          searchPlaceholder={tCommon("search_placeholders.search_warehouses")}
+                          showCreateNew={true}
+                          createNewText={t("create-new-warehouse")}
+                          onCreateNew={() => {
+                            openModal(WarehouseModal, {
+                              onSubmit: async (newWarehouse: WarehouseFormData) => {
+                                const created = await createWarehouse(newWarehouse);
+                                if (created) {
+                                  await refreshData('warehouses');
+                                  form.setValue('warehouse', created.id);
+                                }
+                              }
+                            });
+                          }}
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -288,7 +283,7 @@ export function WarehouseReceiptModal({ trigger, onSubmit, onClose, initialData 
                     <FormItem>
                       <FormLabel>{t("proforma")}</FormLabel>
                       <FormControl>
-                        <Select
+                        <SearchableSelect
                           value={field.value !== undefined && field.value !== null && field.value > 0 ? field.value.toString() : "none"}
                           onValueChange={(value) => {
                             if (value === "new") {
@@ -306,32 +301,32 @@ export function WarehouseReceiptModal({ trigger, onSubmit, onClose, initialData 
                               field.onChange(value === "none" ? undefined : Number(value));
                             }
                           }}
-                        >
-                          <SelectTrigger>
-                            <SelectValue placeholder={t("select-proforma")} />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem
-                              value="new"
-                              className="font-semibold text-[#f6d265]"
-                              onPointerDown={(e) => e.preventDefault()}
-                            >
-                              <Plus className="inline-block w-4 h-4 mr-2" />
-                              {t("create-new-proforma")}
-                            </SelectItem>
-                            <SelectItem value="none">
-                              {t("no-proforma")}
-                            </SelectItem>
-                            {data.purchaseProformas.length > 0 && (
-                              <div className="border-t my-1" />
-                            )}
-                            {data.purchaseProformas.map((proforma) => (
-                              <SelectItem key={proforma.id} value={proforma.id.toString()}>
-                                {proforma.serial_number} - {getPartyDisplayName(data.suppliers.find(s => s.id === proforma.supplier))}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
+                          options={[
+                            { value: "none", label: t("no-proforma") },
+                            ...(data.purchaseProformas || []).map(proforma => ({
+                              value: proforma.id.toString(),
+                              label: `${proforma.serial_number} - ${getPartyDisplayName(data.suppliers.find(s => s.id === proforma.supplier))} (ID: ${proforma.id})`,
+                              id: proforma.id,
+                              name: proforma.serial_number
+                            }))
+                          ]}
+                          placeholder={t("select-proforma")}
+                          searchPlaceholder={tCommon("search_placeholders.search_proformas")}
+                          showCreateNew={true}
+                          createNewText={t("create-new-proforma")}
+                          onCreateNew={() => {
+                            openModal(PurchaseProformaModal, {
+                              onSubmit: async (newProforma: PurchaseProformaFormData) => {
+                                const created = await createPurchaseProforma(newProforma);
+                                if (created) {
+                                  await refreshData('purchaseProformas');
+                                  form.setValue('proforma', created.id);
+                                  form.trigger('proforma');
+                                }
+                              },
+                            },);
+                          }}
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -376,7 +371,7 @@ export function WarehouseReceiptModal({ trigger, onSubmit, onClose, initialData 
                         <FormItem>
                           <FormLabel>{t("product")}</FormLabel>
                           <FormControl>
-                            <Select
+                            <SearchableSelect
                               value={field.value > 0 ? field.value.toString() : ""}
                               onValueChange={(value) => {
                                 if (value === "new") {
@@ -389,7 +384,6 @@ export function WarehouseReceiptModal({ trigger, onSubmit, onClose, initialData 
                                         const items = form.getValues('items');
                                         items[currentIndex].product = created.id;
                                         form.setValue('items', items);
-                                        // Don't call closeModal() here - let the modal close itself
                                       }
                                     }
                                   });
@@ -397,35 +391,31 @@ export function WarehouseReceiptModal({ trigger, onSubmit, onClose, initialData 
                                   field.onChange(Number(value));
                                 }
                               }}
-                            >
-                              <SelectTrigger>
-                                <SelectValue placeholder={t("select-product")} />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem
-                                  value="new"
-                                  className="font-semibold text-[#f6d265]"
-                                  onPointerDown={(e) => e.preventDefault()}
-                                >
-                                  <Plus className="inline-block w-4 h-4 mr-2" />
-                                  {t("create-new-product")}
-                                </SelectItem>
-                                {data.products && data.products.length > 0 && (
-                                  <div className="border-t my-1" />
-                                )}
-                                {data.products && data.products.length > 0 ? (
-                                  data.products.map((product) => (
-                                    <SelectItem key={product.id} value={product.id.toString()}>
-                                      {product.name}
-                                    </SelectItem>
-                                  ))
-                                ) : (
-                                  <SelectItem value="0" disabled>
-                                    {t("no-products")}
-                                  </SelectItem>
-                                )}
-                              </SelectContent>
-                            </Select>
+                              options={(data.products || []).map(product => ({
+                                value: product.id.toString(),
+                                label: `${product.name} (ID: ${product.id})`,
+                                id: product.id,
+                                name: product.name
+                              }))}
+                              placeholder={t("select-product")}
+                              searchPlaceholder={tCommon("search_placeholders.search_products")}
+                              showCreateNew={true}
+                              createNewText={t("create-new-product")}
+                              onCreateNew={() => {
+                                const currentIndex = index;
+                                openModal(ProductModal, {
+                                  onSubmit: async (newProduct: ProductFormData) => {
+                                    const created = await createProduct(newProduct);
+                                    if (created) {
+                                      await refreshData('products');
+                                      const items = form.getValues('items');
+                                      items[currentIndex].product = created.id;
+                                      form.setValue('items', items);
+                                    }
+                                  }
+                                });
+                              }}
+                            />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -439,10 +429,8 @@ export function WarehouseReceiptModal({ trigger, onSubmit, onClose, initialData 
                         <FormItem>
                           <FormLabel>{t("weight")}</FormLabel>
                           <FormControl>
-                            <Input
-                              type="text"
-                              step="1"
-                              {...field}
+                            <NumberInput
+                              value={typeof field.value === 'string' ? parseInt(field.value) || 0 : field.value || 0}
                               onChange={(value) => field.onChange(value)}
                             />
                           </FormControl>

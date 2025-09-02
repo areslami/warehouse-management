@@ -9,8 +9,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Button } from "../../ui/button";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "../../ui/form";
 import { Input } from "../../ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../../ui/select";
-import { Plus } from "lucide-react";
+import { SearchableSelect } from "../../ui/searchable-select";
+import { NumberInput } from "../../ui/number-input";
 import { useTranslations } from "next-intl";
 import { useCoreData } from "@/lib/core-data-context";
 import { ProductModal } from "../product-modal";
@@ -19,7 +19,6 @@ import { fetchWarehouseReceipts, createWarehouseReceipt } from "@/lib/api/wareho
 import { WarehouseReceipt } from "@/lib/interfaces/warehouse";
 import { PersianDatePicker } from "../../ui/persian-date-picker";
 import { WarehouseReceiptModal } from "../warehouse/warehouse-receipt-modal";
-import { convertPersianToEnglishNumbers } from "@/lib/utils/number-format";
 
 export type B2BOfferFormData = {
   offer_id: string;
@@ -44,6 +43,7 @@ interface B2BOfferModalProps {
 export function B2BOfferModal({ trigger, onSubmit, onClose, initialData }: B2BOfferModalProps) {
   const tval = useTranslations("modals.b2bOffer.validation");
   const t = useTranslations("modals.b2bOffer");
+  const tCommon = useTranslations("common");
   const { products, refreshData: refreshCoreData } = useCoreData();
   const [showProductModal, setShowProductModal] = useState(false);
   const [showWarehouseReceiptModal, setShowWarehouseReceiptModal] = useState(false);
@@ -162,17 +162,18 @@ export function B2BOfferModal({ trigger, onSubmit, onClose, initialData }: B2BOf
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>{t("status")}</FormLabel>
-                      <Select value={field.value} onValueChange={field.onChange}>
-                        <SelectTrigger>
-                          <SelectValue placeholder={t("select-status")} />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="pending">{t("status_options.pending")}</SelectItem>
-                          <SelectItem value="active">{t("status_options.active")}</SelectItem>
-                          <SelectItem value="sold">{t("status_options.sold")}</SelectItem>
-                          <SelectItem value="expired">{t("status_options.expired")}</SelectItem>
-                        </SelectContent>
-                      </Select>
+                      <SearchableSelect
+                        value={field.value}
+                        onValueChange={field.onChange}
+                        options={[
+                          { value: "pending", label: t("status_options.pending") },
+                          { value: "active", label: t("status_options.active") },
+                          { value: "sold", label: t("status_options.sold") },
+                          { value: "expired", label: t("status_options.expired") }
+                        ]}
+                        placeholder={t("select-status")}
+                        searchPlaceholder={tCommon("search_placeholders.search_status")}
+                      />
                       <FormMessage />
                     </FormItem>
                   )}
@@ -186,16 +187,17 @@ export function B2BOfferModal({ trigger, onSubmit, onClose, initialData }: B2BOf
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>{t("offer_type_label")}</FormLabel>
-                      <Select value={field.value} onValueChange={field.onChange}>
-                        <SelectTrigger>
-                          <SelectValue placeholder={t("select_offer_type")} />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="cash">{t("offer_type_options.cash")}</SelectItem>
-                          <SelectItem value="credit">{t("offer_type_options.credit")}</SelectItem>
-                          <SelectItem value="agreement">{t("offer_type_options.agreement")}</SelectItem>
-                        </SelectContent>
-                      </Select>
+                      <SearchableSelect
+                        value={field.value}
+                        onValueChange={field.onChange}
+                        options={[
+                          { value: "cash", label: t("offer_type_options.cash") },
+                          { value: "credit", label: t("offer_type_options.credit") },
+                          { value: "agreement", label: t("offer_type_options.agreement") }
+                        ]}
+                        placeholder={t("select_offer_type")}
+                        searchPlaceholder={tCommon("search_placeholders.search_offer_types")}
+                      />
                       <FormMessage />
                     </FormItem>
                   )}
@@ -210,7 +212,7 @@ export function B2BOfferModal({ trigger, onSubmit, onClose, initialData }: B2BOf
                     <FormItem>
                       <FormLabel>{t("product")}</FormLabel>
                       <FormControl>
-                        <Select
+                        <SearchableSelect
                           value={field.value > 0 ? field.value.toString() : ""}
                           onValueChange={(value) => {
                             if (value === "new") {
@@ -219,29 +221,18 @@ export function B2BOfferModal({ trigger, onSubmit, onClose, initialData }: B2BOf
                               field.onChange(Number(value));
                             }
                           }}
-                        >
-                          <SelectTrigger>
-                            <SelectValue placeholder={t("select-product")} />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem
-                              value="new"
-                              className="font-semibold text-[#f6d265]"
-                              onPointerDown={(e) => e.preventDefault()}
-                            >
-                              <Plus className="inline-block w-4 h-4 mr-2" />
-                              {t("create-new-product")}
-                            </SelectItem>
-                            {products.length > 0 && (
-                              <div className="border-t my-1" />
-                            )}
-                            {products.map((product) => (
-                              <SelectItem key={product.id} value={product.id.toString()}>
-                                {product.name}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
+                          options={products.map(product => ({
+                            value: product.id.toString(),
+                            label: `${product.name} (ID: ${product.id})`,
+                            id: product.id,
+                            name: product.name
+                          }))}
+                          placeholder={t("select-product")}
+                          searchPlaceholder={tCommon("search_placeholders.search_products")}
+                          showCreateNew={true}
+                          createNewText={t("create-new-product")}
+                          onCreateNew={() => setShowProductModal(true)}
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -257,43 +248,32 @@ export function B2BOfferModal({ trigger, onSubmit, onClose, initialData }: B2BOf
                   <FormItem>
                     <FormLabel>{t("warehouse-receipt")}</FormLabel>
                     <FormControl>
-                      <Select
+                      <SearchableSelect
                         value={field.value > 0 ? field.value.toString() : ""}
                         onValueChange={(value) => {
                           if (value === "new") {
                             setShowWarehouseReceiptModal(true);
-                          } else if (value) {
+                          } else if (value && value !== "0") {
                             field.onChange(Number(value));
                           } else {
                             field.onChange(0);
                           }
                         }}
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder={t("select-warehouse-receipt")} />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="0">
-                            {t("no-receipt")}
-                          </SelectItem>
-                          <SelectItem
-                            value="new"
-                            className="font-semibold text-[#f6d265]"
-                            onPointerDown={(e) => e.preventDefault()}
-                          >
-                            <Plus className="inline-block w-4 h-4 mr-2" />
-                            {t("create-new-warehouse-receipt")}
-                          </SelectItem>
-                          {warehouseReceipts.length > 0 && (
-                            <div className="border-t my-1" />
-                          )}
-                          {warehouseReceipts.map((receipt) => (
-                            <SelectItem key={receipt.id} value={receipt.id.toString()}>
-                              {receipt.receipt_id} - {receipt.warehouse_name} ({receipt.cottage_serial_number})
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                        options={[
+                          { value: "0", label: t("no-receipt") },
+                          ...warehouseReceipts.map(receipt => ({
+                            value: receipt.id.toString(),
+                            label: `${receipt.receipt_id} - ${receipt.warehouse_name} (${receipt.cottage_serial_number}) (ID: ${receipt.id})`,
+                            id: receipt.id,
+                            name: receipt.receipt_id
+                          }))
+                        ]}
+                        placeholder={t("select-warehouse-receipt")}
+                        searchPlaceholder={tCommon("search_placeholders.search_warehouse_receipts")}
+                        showCreateNew={true}
+                        createNewText={t("create-new-warehouse-receipt")}
+                        onCreateNew={() => setShowWarehouseReceiptModal(true)}
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -308,13 +288,9 @@ export function B2BOfferModal({ trigger, onSubmit, onClose, initialData }: B2BOf
                     <FormItem>
                       <FormLabel>{t("offer-weight")}</FormLabel>
                       <FormControl>
-                        <Input
-                          type="text"
-                          {...field}
-                          onChange={(e) => {
-                            const value = convertPersianToEnglishNumbers(e.target.value);
-                            field.onChange(value === '' ? 0 : parseFloat(value) || 0);
-                          }}
+                        <NumberInput
+                          value={field.value || 0}
+                          onChange={(value) => field.onChange(value)}
                         />
                       </FormControl>
                       <FormMessage />
@@ -329,13 +305,9 @@ export function B2BOfferModal({ trigger, onSubmit, onClose, initialData }: B2BOf
                     <FormItem>
                       <FormLabel>{t("unit-price")}</FormLabel>
                       <FormControl>
-                        <Input
-                          type="text"
-                          {...field}
-                          onChange={(e) => {
-                            const value = convertPersianToEnglishNumbers(e.target.value);
-                            field.onChange(value === '' ? 0 : parseFloat(value) || 0);
-                          }}
+                        <NumberInput
+                          value={field.value || 0}
+                          onChange={(value) => field.onChange(value)}
                         />
                       </FormControl>
                       <FormMessage />

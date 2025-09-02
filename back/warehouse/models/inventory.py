@@ -17,7 +17,7 @@ class WarehouseReceipt(models.Model):
     date = models.DateTimeField()
     warehouse=models.ForeignKey(Warehouse,on_delete=models.SET_NULL,null=True)
     description = models.TextField(blank=True)
-    total_weight = models.DecimalField(max_digits=20, decimal_places=4, default=0)
+    total_weight = models.DecimalField(max_digits=20, decimal_places=0, default=0)
     
     cottage_serial_number = models.CharField(max_length=100, null=True, blank=True, unique=True)
 
@@ -39,7 +39,7 @@ class WarehouseReceipt(models.Model):
 class WarehouseReceiptItem(models.Model):
     receipt = models.ForeignKey(WarehouseReceipt, related_name='items', on_delete=models.CASCADE)
     product = models.ForeignKey('core.Product', on_delete=models.CASCADE)
-    weight = models.DecimalField(max_digits=20, decimal_places=4,default=0)
+    weight = models.DecimalField(max_digits=20, decimal_places=0,default=0)
      
     
 class DispatchIssue(models.Model):
@@ -52,7 +52,7 @@ class DispatchIssue(models.Model):
     
     description = models.TextField(blank=True)
     shipping_company = models.ForeignKey(ShippingCompany, on_delete=models.SET_NULL,null=True)
-    total_weight = models.DecimalField(max_digits=20, decimal_places=4, default=0)
+    total_weight = models.DecimalField(max_digits=20, decimal_places=0, default=0)
     
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -66,7 +66,7 @@ class DispatchIssueItem(models.Model):
 
     dispatch = models.ForeignKey(DispatchIssue, related_name='items', on_delete=models.SET_NULL,null=True)
     product = models.ForeignKey('core.Product', on_delete=models.SET_NULL,null=True)
-    weight = models.DecimalField(max_digits=20, decimal_places=4,default=0)
+    weight = models.DecimalField(max_digits=20, decimal_places=0,default=0)
     vehicle_type = models.CharField(max_length=20, choices=VEICHLE_TYPES)
     receiver = models.ForeignKey('core.Receiver', on_delete=models.SET_NULL,null=True)
     
@@ -81,7 +81,7 @@ class DeliveryFulfillment(models.Model):
     
     description = models.TextField(blank=True,)
     shipping_company = models.ForeignKey(ShippingCompany, on_delete=models.SET_NULL,null=True,)
-    total_weight = models.DecimalField(max_digits=20, decimal_places=4, default=0, )
+    total_weight = models.DecimalField(max_digits=20, decimal_places=0, default=0, )
     
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -94,9 +94,9 @@ class DeliveryFulfillment(models.Model):
 class DeliveryFulfillmentItem(models.Model):
     delivery = models.ForeignKey(DeliveryFulfillment, related_name='items', on_delete=models.SET_NULL,null=True)
     shipment_id = models.CharField(max_length=50, unique=True, null=False)
-    shipment_price = models.DecimalField(max_digits=20, decimal_places=4,default=0)
+    shipment_price = models.DecimalField(max_digits=20, decimal_places=0,default=0)
     product = models.ForeignKey('core.Product', on_delete=models.SET_NULL,null=True)
-    weight = models.DecimalField(max_digits=20, decimal_places=4,default=0)
+    weight = models.DecimalField(max_digits=20, decimal_places=0,default=0)
     vehicle_type = models.CharField(max_length=20, choices=VEICHLE_TYPES)
     receiver = models.ForeignKey('core.Receiver', on_delete=models.SET_NULL,null=True)
 

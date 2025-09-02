@@ -183,6 +183,7 @@ export function DeliveryFulfillmentTab({ selectedWarehouseId }: DeliveryFulfillm
           <Table className="w-full min-w-[800px]">
             <TableHeader>
               <TableRow>
+                <TableHead className="text-right w-16">ردیف</TableHead>
                 <TableHead className="text-right">{t("table.id")}</TableHead>
                 <TableHead className="text-right">{t("table.delivery_id")}</TableHead>
                 <TableHead className="text-right">{t("table.warehouse")}</TableHead>
@@ -193,8 +194,9 @@ export function DeliveryFulfillmentTab({ selectedWarehouseId }: DeliveryFulfillm
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredDeliveries.map((delivery) => (
+              {filteredDeliveries.map((delivery, index) => (
                 <TableRowComponent key={delivery.id}>
+                  <TableCell className="text-right font-medium">{index + 1}</TableCell>
                   <TableCell>{delivery.id}</TableCell>
                   <TableCell>{delivery.delivery_id}</TableCell>
                   <TableCell>{delivery.warehouse_name || '-'}</TableCell>

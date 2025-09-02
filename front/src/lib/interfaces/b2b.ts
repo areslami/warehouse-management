@@ -53,7 +53,6 @@ export interface B2BSale {
   customer: number;
   customer_id?: string;
   customer_name?: string;
-  cottage_code?: string;
   weight: number;
   unit_price: number;
   total_price: number;
@@ -64,12 +63,8 @@ export interface B2BSale {
 
 export interface B2BDistribution {
   id: number;
-  purchase_id?: string;
-  warehouse: number;
-  warehouse_name?: string;
+  transfer_id?: string;
   warehouse_receipt?: number;
-  product: number;
-  product_name?: string;
   customer: number;
   customer_name?: string;
   cottage_number?: string;

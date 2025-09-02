@@ -89,8 +89,8 @@ class B2BSaleViewSet(viewsets.ModelViewSet):
 class B2BDistributionViewSet(viewsets.ModelViewSet):
     queryset = B2BDistribution.objects.all()
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
-    filterset_fields = ['warehouse', 'customer', 'product', 'b2b_offer']
-    search_fields = ['cottage_number', 'customer__company_name', 'customer__full_name', 'purchase_id']
+    filterset_fields = ['warehouse_receipt', 'customer']
+    search_fields = ['cottage_number', 'customer__company_name', 'customer__full_name', 'transfer_id']
     ordering_fields = ['agency_date', 'agency_weight', 'created_at']
     ordering = ['-agency_date']
     
@@ -101,7 +101,7 @@ class B2BDistributionViewSet(viewsets.ModelViewSet):
     
     def get_queryset(self):
         queryset = super().get_queryset()
-        return queryset.select_related('warehouse', 'product', 'customer', 'b2b_offer')
+        return queryset.select_related('warehouse_receipt', 'customer')
     
     @action(detail=False, methods=['get'])
     def by_customer(self, request):

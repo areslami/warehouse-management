@@ -5,10 +5,10 @@ class Proforma(models.Model):
     serial_number=models.CharField(max_length=20,null=False, unique=True)
     date = models.DateTimeField()
     
-    subtotal = models.DecimalField(max_digits=20, decimal_places=4, default=0)
-    tax = models.DecimalField(max_digits=20, decimal_places=4, default=0)
-    discount = models.DecimalField(max_digits=20, decimal_places=4, default=0)
-    final_price = models.DecimalField(max_digits=20, decimal_places=4, default=0)
+    subtotal = models.DecimalField(max_digits=20, decimal_places=0, default=0)
+    tax = models.DecimalField(max_digits=20, decimal_places=0, default=0)
+    discount = models.DecimalField(max_digits=20, decimal_places=0, default=0)
+    final_price = models.DecimalField(max_digits=20, decimal_places=0, default=0)
     
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -47,8 +47,8 @@ class ProformaLine(models.Model):
     proforma=models.ForeignKey(Proforma,related_name='lines', on_delete=models.CASCADE)
     
     product = models.ForeignKey('core.Product', on_delete=models.PROTECT)
-    weight = models.DecimalField(max_digits=20, decimal_places=4,default=0)
-    unit_price = models.DecimalField(max_digits=20, decimal_places=4,default=0)
+    weight = models.DecimalField(max_digits=20, decimal_places=0,default=0)
+    unit_price = models.DecimalField(max_digits=20, decimal_places=0,default=0)
     @property
     def total_price(self):
         return self.weight * self.unit_price

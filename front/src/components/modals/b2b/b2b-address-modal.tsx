@@ -9,9 +9,9 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Button } from "../../ui/button";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "../../ui/form";
 import { Input } from "../../ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../../ui/select";
+import { SearchableSelect } from "../../ui/searchable-select";
+import { NumberInput } from "../../ui/number-input";
 import { PersianDatePicker } from "../../ui/persian-date-picker";
-import { Plus } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useCoreData } from "@/lib/core-data-context";
 import { CustomerModal } from "../customer-modal";
@@ -21,7 +21,6 @@ import { createCustomer, createProduct, createReceiver } from "@/lib/api/core";
 import { getPartyDisplayName } from "@/lib/utils/party-utils";
 import { fetchB2BOffers } from "@/lib/api/b2b";
 import { B2BOffer } from "@/lib/interfaces/b2b";
-import { convertPersianToEnglishNumbers } from "@/lib/utils/number-format";
 
 export type B2BAddressFormData = {
   purchase_id: string;
@@ -52,6 +51,7 @@ interface B2BAddressModalProps {
 export function B2BAddressModal({ trigger, onSubmit, onClose, initialData }: B2BAddressModalProps) {
   const tval = useTranslations("modals.b2bAddress.validation");
   const t = useTranslations("modals.b2bAddress");
+  const tCommon = useTranslations("common");
   const { products, customers, receivers, refreshData: refreshCoreData } = useCoreData();
   const [offers, setOffers] = useState<B2BOffer[]>([]);
   const [showProductModal, setShowProductModal] = useState(false);
@@ -208,7 +208,7 @@ export function B2BAddressModal({ trigger, onSubmit, onClose, initialData }: B2B
                     <FormItem>
                       <FormLabel>{t("product")}</FormLabel>
                       <FormControl>
-                        <Select
+                        <SearchableSelect
                           value={field.value > 0 ? field.value.toString() : ""}
                           onValueChange={(value) => {
                             if (value === "new") {
@@ -217,29 +217,18 @@ export function B2BAddressModal({ trigger, onSubmit, onClose, initialData }: B2B
                               field.onChange(Number(value));
                             }
                           }}
-                        >
-                          <SelectTrigger>
-                            <SelectValue placeholder={t("select-product")} />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem
-                              value="new"
-                              className="font-semibold text-[#f6d265]"
-                              onPointerDown={(e) => e.preventDefault()}
-                            >
-                              <Plus className="inline-block w-4 h-4 mr-2" />
-                              {t("create-new-product")}
-                            </SelectItem>
-                            {products.length > 0 && (
-                              <div className="border-t my-1" />
-                            )}
-                            {products.map((product) => (
-                              <SelectItem key={product.id} value={product.id.toString()}>
-                                {product.name}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
+                          options={products.map(product => ({
+                            value: product.id.toString(),
+                            label: `${product.name} (ID: ${product.id})`,
+                            id: product.id,
+                            name: product.name
+                          }))}
+                          placeholder={t("select-product")}
+                          searchPlaceholder={tCommon("search_placeholders.search_products")}
+                          showCreateNew={true}
+                          createNewText={t("create-new-product")}
+                          onCreateNew={() => setShowProductModal(true)}
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -253,7 +242,7 @@ export function B2BAddressModal({ trigger, onSubmit, onClose, initialData }: B2B
                     <FormItem>
                       <FormLabel>{t("customer")}</FormLabel>
                       <FormControl>
-                        <Select
+                        <SearchableSelect
                           value={field.value > 0 ? field.value.toString() : ""}
                           onValueChange={(value) => {
                             if (value === "new") {
@@ -262,29 +251,18 @@ export function B2BAddressModal({ trigger, onSubmit, onClose, initialData }: B2B
                               field.onChange(Number(value));
                             }
                           }}
-                        >
-                          <SelectTrigger>
-                            <SelectValue placeholder={t("select-customer")} />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem
-                              value="new"
-                              className="font-semibold text-[#f6d265]"
-                              onPointerDown={(e) => e.preventDefault()}
-                            >
-                              <Plus className="inline-block w-4 h-4 mr-2" />
-                              {t("create-new-customer")}
-                            </SelectItem>
-                            {customers.length > 0 && (
-                              <div className="border-t my-1" />
-                            )}
-                            {customers.map((customer) => (
-                              <SelectItem key={customer.id} value={customer.id.toString()}>
-                                {getPartyDisplayName(customer)}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
+                          options={customers.map(customer => ({
+                            value: customer.id.toString(),
+                            label: `${getPartyDisplayName(customer)} (ID: ${customer.id})`,
+                            id: customer.id,
+                            name: getPartyDisplayName(customer)
+                          }))}
+                          placeholder={t("select-customer")}
+                          searchPlaceholder={tCommon("search_placeholders.search_customers")}
+                          showCreateNew={true}
+                          createNewText={t("create-new-customer")}
+                          onCreateNew={() => setShowCustomerModal(true)}
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -299,45 +277,34 @@ export function B2BAddressModal({ trigger, onSubmit, onClose, initialData }: B2B
                   name="receiver"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>{t("receiver")} <span className="text-gray-400 text-sm">{t("optional")}</span></FormLabel>
+                      <FormLabel>{t("receiver")} <span className="text-gray-400 text-sm"></span></FormLabel>
                       <FormControl>
-                        <Select
+                        <SearchableSelect
                           value={field.value ? field.value.toString() : ""}
                           onValueChange={(value) => {
                             if (value === "new") {
                               setShowReceiverModal(true);
-                            } else if (value) {
+                            } else if (value && value !== "no-receiver") {
                               field.onChange(Number(value));
                             } else {
                               field.onChange(undefined);
                             }
                           }}
-                        >
-                          <SelectTrigger>
-                            <SelectValue placeholder={t("select-receiver")} />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="no-receiver">
-                              {t("no-receiver")}
-                            </SelectItem>
-                            <SelectItem
-                              value="new"
-                              className="font-semibold text-[#f6d265]"
-                              onPointerDown={(e) => e.preventDefault()}
-                            >
-                              <Plus className="inline-block w-4 h-4 mr-2" />
-                              {t("create-new-receiver")}
-                            </SelectItem>
-                            {receivers.length > 0 && (
-                              <div className="border-t my-1" />
-                            )}
-                            {receivers.map((receiver) => (
-                              <SelectItem key={receiver.id} value={receiver.id.toString()}>
-                                {getPartyDisplayName(receiver)}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
+                          options={[
+                            { value: "no-receiver", label: t("no-receiver") },
+                            ...receivers.map(receiver => ({
+                              value: receiver.id.toString(),
+                              label: `${getPartyDisplayName(receiver)} (ID: ${receiver.id})`,
+                              id: receiver.id,
+                              name: getPartyDisplayName(receiver)
+                            }))
+                          ]}
+                          placeholder={t("select-receiver")}
+                          searchPlaceholder={tCommon("search_placeholders.search_receivers")}
+                          showCreateNew={true}
+                          createNewText={t("create-new-receiver")}
+                          onCreateNew={() => setShowReceiverModal(true)}
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -351,26 +318,23 @@ export function B2BAddressModal({ trigger, onSubmit, onClose, initialData }: B2B
                     <FormItem>
                       <FormLabel>{t("product-offer")} <span className="text-gray-400 text-sm">{t("optional")}</span></FormLabel>
                       <FormControl>
-                        <Select
+                        <SearchableSelect
                           value={field.value ? field.value.toString() : ""}
                           onValueChange={(value) => {
-                            field.onChange(value ? Number(value) : undefined);
+                            field.onChange(value && value !== "no-offer" ? Number(value) : undefined);
                           }}
-                        >
-                          <SelectTrigger>
-                            <SelectValue placeholder={t("select-offer")} />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="no-offer">
-                              {t("no-offer")}
-                            </SelectItem>
-                            {offers.map((offer) => (
-                              <SelectItem key={offer.id} value={offer.id.toString()}>
-                                {offer.offer_id} - {offer.product_name}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
+                          options={[
+                            { value: "no-offer", label: t("no-offer") },
+                            ...offers.map(offer => ({
+                              value: offer.id.toString(),
+                              label: `${offer.offer_id} - ${offer.product_name} (ID: ${offer.id})`,
+                              id: offer.id,
+                              name: offer.offer_id
+                            }))
+                          ]}
+                          placeholder={t("select-offer")}
+                          searchPlaceholder={tCommon("search_placeholders.search_offers")}
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -387,9 +351,8 @@ export function B2BAddressModal({ trigger, onSubmit, onClose, initialData }: B2B
                     <FormItem>
                       <FormLabel>{t("weight")}</FormLabel>
                       <FormControl>
-                        <Input
-                          type="text"
-                          {...field}
+                        <NumberInput
+                          value={field.value || 0}
                           onChange={(value) => field.onChange(value)}
                         />
                       </FormControl>
@@ -405,13 +368,9 @@ export function B2BAddressModal({ trigger, onSubmit, onClose, initialData }: B2B
                     <FormItem>
                       <FormLabel>{t("unit-price")}</FormLabel>
                       <FormControl>
-                        <Input
-                          type="text"
-                          {...field}
-                          onChange={(e) => {
-                            const value = convertPersianToEnglishNumbers(e.target.value);
-                            field.onChange(value === '' ? 0 : parseFloat(value) || 0);
-                          }}
+                        <NumberInput
+                          value={field.value || 0}
+                          onChange={(value) => field.onChange(value)}
                         />
                       </FormControl>
                       <FormMessage />
@@ -426,13 +385,9 @@ export function B2BAddressModal({ trigger, onSubmit, onClose, initialData }: B2B
                     <FormItem>
                       <FormLabel>{t("payment-amount")}</FormLabel>
                       <FormControl>
-                        <Input
-                          type="text"
-                          {...field}
-                          onChange={(e) => {
-                            const value = convertPersianToEnglishNumbers(e.target.value);
-                            field.onChange(value === '' ? 0 : parseFloat(value) || 0);
-                          }}
+                        <NumberInput
+                          value={field.value || 0}
+                          onChange={(value) => field.onChange(value)}
                         />
                       </FormControl>
                       <FormMessage />
@@ -449,16 +404,17 @@ export function B2BAddressModal({ trigger, onSubmit, onClose, initialData }: B2B
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>{t("payment-method")}</FormLabel>
-                      <Select value={field.value} onValueChange={field.onChange}>
-                        <SelectTrigger>
-                          <SelectValue placeholder={t("select-payment-method")} />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="cash">{t("cash")}</SelectItem>
-                          <SelectItem value="credit">{t("credit")}</SelectItem>
-                          <SelectItem value="installment">{t("installment")}</SelectItem>
-                        </SelectContent>
-                      </Select>
+                      <SearchableSelect
+                        value={field.value}
+                        onValueChange={field.onChange}
+                        options={[
+                          { value: "cash", label: t("cash") },
+                          { value: "credit", label: t("credit") },
+                          { value: "installment", label: t("installment") }
+                        ]}
+                        placeholder={t("select-payment-method")}
+                        searchPlaceholder={tCommon("search_placeholders.search_payment_methods")}
+                      />
                       <FormMessage />
                     </FormItem>
                   )}

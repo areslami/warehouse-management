@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
-import { Plus, Edit2, Trash2, ShoppingCart, TrendingUp, Package, Search, Upload } from "lucide-react";
+import { Plus, Edit2, Trash2, ShoppingCart, TrendingUp, Package, Search, Upload, Eye } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useTranslations } from "next-intl";
@@ -426,6 +426,7 @@ export default function B2BPage() {
                 <Table dir="rtl">
                   <TableHeader>
                     <TableRow>
+                      <TableHead className="text-right w-16">ردیف</TableHead>
                       <TableHead className="w-12">
                         <input
                           type="checkbox"
@@ -452,8 +453,9 @@ export default function B2BPage() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {filteredOffers.map((offer) => (
-                      <TableRow key={offer.id} className="cursor-pointer hover:bg-gray-50" onClick={() => handleRowClick(offer, 'offer')}>
+                    {filteredOffers.map((offer, index) => (
+                      <TableRow key={offer.id} className="hover:bg-gray-50">
+                        <TableCell className="text-right font-medium">{index + 1}</TableCell>
                         <TableCell onClick={(e) => e.stopPropagation()}>
                           <input
                             type="checkbox"
@@ -487,6 +489,13 @@ export default function B2BPage() {
                         <TableCell className="font-medium text-right">{offer.id}</TableCell>
                         <TableCell className="text-center">
                           <div className="flex gap-2 justify-center">
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => handleRowClick(offer, 'offer')}
+                            >
+                              <Eye className="w-4 h-4 text-blue-600" />
+                            </Button>
                             <Button
                               size="sm"
                               variant="ghost"
@@ -570,6 +579,7 @@ export default function B2BPage() {
                           }}
                         />
                       </TableHead>
+                      <TableHead className="text-right w-16">ردیف</TableHead>
                       <TableHead className="text-right">{t("agency_date")}</TableHead>
                       <TableHead className="text-right">{t("warehouse")}</TableHead>
                       <TableHead className="text-right">{t("product")}</TableHead>
@@ -581,8 +591,8 @@ export default function B2BPage() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {filteredDistributions.map((distribution) => (
-                      <TableRow key={distribution.id} className="cursor-pointer hover:bg-gray-50" onClick={() => handleRowClick(distribution, 'distribution')}>
+                    {filteredDistributions.map((distribution, index) => (
+                      <TableRow key={distribution.id} className="hover:bg-gray-50">
                         <TableCell onClick={(e) => e.stopPropagation()}>
                           <input
                             type="checkbox"
@@ -596,6 +606,7 @@ export default function B2BPage() {
                             }}
                           />
                         </TableCell>
+                        <TableCell className="text-right font-medium">{index + 1}</TableCell>
                         <TableCell>{new Date(distribution.agency_date).toLocaleDateString('fa-IR')}</TableCell>
                         <TableCell className="truncate max-w-[120px]" title={distribution.warehouse_name || `${tCommon('product_labels.warehouse_prefix')} ${distribution.warehouse}`}>
                           {distribution.warehouse_name || `${tCommon('product_labels.warehouse_prefix')} ${distribution.warehouse}`}
@@ -611,6 +622,13 @@ export default function B2BPage() {
                         <TableCell className="font-medium text-right">{distribution.id}</TableCell>
                         <TableCell className="text-center">
                           <div className="flex gap-2 justify-center">
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => handleRowClick(distribution, 'distribution')}
+                            >
+                              <Eye className="w-4 h-4 text-blue-600" />
+                            </Button>
                             <Button
                               size="sm"
                               variant="ghost"
@@ -702,6 +720,7 @@ export default function B2BPage() {
                           }}
                         />
                       </TableHead>
+                      <TableHead className="text-right w-16">ردیف</TableHead>
                       <TableHead className="text-right">{t("sale_date")}</TableHead>
                       <TableHead className="text-right">{t("purchase_type")}</TableHead>
                       <TableHead className="text-right">{t("customer")}</TableHead>
@@ -715,8 +734,8 @@ export default function B2BPage() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {filteredSales.map((sale) => (
-                      <TableRow key={sale.id} className="cursor-pointer hover:bg-gray-50" onClick={() => handleRowClick(sale, 'sale')}>
+                    {filteredSales.map((sale, index) => (
+                      <TableRow key={sale.id} className="hover:bg-gray-50">
                         <TableCell onClick={(e) => e.stopPropagation()}>
                           <input
                             type="checkbox"
@@ -730,6 +749,7 @@ export default function B2BPage() {
                             }}
                           />
                         </TableCell>
+                        <TableCell className="text-right font-medium">{index + 1}</TableCell>
                         <TableCell className="text-right">{new Date(sale.sale_date).toLocaleDateString('fa-IR')}</TableCell>
                         <TableCell className="text-right">
                           <span className="px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
@@ -754,6 +774,13 @@ export default function B2BPage() {
                         <TableCell className="text-right">{sale.id}</TableCell>
                         <TableCell className="text-center">
                           <div className="flex gap-2 justify-center">
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => handleRowClick(sale, 'sale')}
+                            >
+                              <Eye className="w-4 h-4 text-blue-600" />
+                            </Button>
                             <Button
                               size="sm"
                               variant="ghost"
@@ -845,6 +872,7 @@ export default function B2BPage() {
                           }}
                         />
                       </TableHead>
+                      <TableHead className="text-right w-16">ردیف</TableHead>
                       <TableHead className="text-right">{t("date")}</TableHead>
                       <TableHead className="text-right">{t("customer")}</TableHead>
                       <TableHead className="text-right">{t("receiver")}</TableHead>
@@ -859,8 +887,8 @@ export default function B2BPage() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {filteredAddresses.map((address) => (
-                      <TableRow key={address.id} className="cursor-pointer hover:bg-gray-50" onClick={() => handleRowClick(address, 'address')}>
+                    {filteredAddresses.map((address, index) => (
+                      <TableRow key={address.id} className="hover:bg-gray-50">
                         <TableCell onClick={(e) => e.stopPropagation()}>
                           <input
                             type="checkbox"
@@ -874,6 +902,7 @@ export default function B2BPage() {
                             }}
                           />
                         </TableCell>
+                        <TableCell className="text-right font-medium">{index + 1}</TableCell>
                         <TableCell className="text-right">{address.purchase_date ? new Date(address.purchase_date).toLocaleDateString('fa-IR') : '-'}</TableCell>
                         <TableCell className="text-right truncate max-w-[120px]" title={address.customer_name || ''}>
                           {address.customer_name || '-'}
@@ -898,6 +927,13 @@ export default function B2BPage() {
                         <TableCell className="text-right">{address.id}</TableCell>
                         <TableCell className="text-center">
                           <div className="flex gap-2 justify-center">
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => handleRowClick(address, 'address')}
+                            >
+                              <Eye className="w-4 h-4 text-blue-600" />
+                            </Button>
                             <Button
                               size="sm"
                               variant="ghost"

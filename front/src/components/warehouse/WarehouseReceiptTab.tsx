@@ -169,6 +169,7 @@ export function WarehouseReceiptTab({ selectedWarehouseId }: WarehouseReceiptTab
           <Table className="w-full min-w-[800px]">
             <TableHeader>
               <TableRow>
+                <TableHead className="text-right w-16">ردیف</TableHead>
                 <TableHead className="text-right">{t("table.id")}</TableHead>
                 <TableHead className="text-right">{t("table.receipt_id")}</TableHead>
                 <TableHead className="text-right">{t("table.receipt_type")}</TableHead>
@@ -179,8 +180,9 @@ export function WarehouseReceiptTab({ selectedWarehouseId }: WarehouseReceiptTab
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredReceipts.map((receipt) => (
+              {filteredReceipts.map((receipt, index) => (
                 <TableRowComponent key={receipt.id}>
+                  <TableCell className="text-right font-medium">{index + 1}</TableCell>
                   <TableCell>{receipt.id}</TableCell>
                   <TableCell>{receipt.receipt_id || '-'}</TableCell>
                   <TableCell>{getReceiptTypeLabel(receipt.receipt_type)}</TableCell>

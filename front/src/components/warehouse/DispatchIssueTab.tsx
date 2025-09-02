@@ -171,6 +171,7 @@ export function DispatchIssueTab({ selectedWarehouseId }: DispatchIssueTabProps)
           <Table className="w-full min-w-[800px]">
             <TableHeader>
               <TableRow>
+                <TableHead className="text-right w-16">ردیف</TableHead>
                 <TableHead className="text-right">{t("table.id")}</TableHead>
                 <TableHead className="text-right">{t("table.dispatch_id")}</TableHead>
                 <TableHead className="text-right">{t("table.warehouse")}</TableHead>
@@ -181,8 +182,9 @@ export function DispatchIssueTab({ selectedWarehouseId }: DispatchIssueTabProps)
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredDispatches.map((dispatch) => (
+              {filteredDispatches.map((dispatch, index) => (
                 <TableRowComponent key={dispatch.id}>
+                  <TableCell className="text-right font-medium">{index + 1}</TableCell>
                   <TableCell>{dispatch.id}</TableCell>
                   <TableCell>{dispatch.dispatch_id}</TableCell>
                   <TableCell>{dispatch.warehouse_name || '-'}</TableCell>
