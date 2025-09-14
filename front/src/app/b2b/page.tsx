@@ -14,7 +14,7 @@ import { B2BOfferModal } from "@/components/modals/b2b/b2b-offer-modal";
 import { B2BDistributionModal } from "@/components/modals/b2b/b2b-distribution-modal";
 import { B2BAddressModal } from "@/components/modals/b2b/b2b-address-modal";
 import { B2BSaleModal } from "@/components/modals/b2b/b2b-sale-modal";
-import { UploadDistributionModal } from "@/components/modals/b2b/upload-distribution-modal";
+import { UploadSaleModal } from "@/components/modals/b2b/upload-sale-modal";
 import { B2BOffer, B2BAddress, B2BDistribution, B2BSale } from "@/lib/interfaces/b2b";
 import {
   fetchB2BOffers, fetchB2BOfferById, createB2BOffer, updateB2BOffer, deleteB2BOffer,
@@ -25,6 +25,7 @@ import {
 import { handleApiErrorWithToast } from "@/lib/api/error-toast-handler";
 import { formatNumber } from "@/lib/utils/number-format";
 import UploadAddressModal from "@/components/modals/b2b/upload-address-modal";
+import { da } from "zod/v4/locales";
 
 export default function B2BPage() {
   const t = useTranslations("pages.b2b");
@@ -1229,7 +1230,7 @@ export default function B2BPage() {
       </Sheet>
 
       {showDistributionUploadModal && (
-        <UploadDistributionModal
+        <UploadSaleModal
           open={showDistributionUploadModal}
           onClose={() => setShowDistributionUploadModal(false)}
           onSuccess={() => {
@@ -1258,7 +1259,7 @@ export default function B2BPage() {
                 await updateB2BSale(editingSale.id, data);
                 toast.success(tErrors("success_update"));
               } else {
-                await createB2BSale(data);
+                await createB2BSale({ ...data, unit_price: Math.floor(data.unit_price), weight: Math.floor(data.weight) });
                 toast.success(tErrors("success_create"));
               }
               await loadData();

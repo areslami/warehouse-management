@@ -5,10 +5,11 @@ from decimal import Decimal
 from datetime import datetime
 import re
 from django.db.models import Q
+from b2b.models.base import B2BSale
 from core.models.parties import  Receiver
 from core.models import Product, Customer
 from .models import B2BOffer
-from .excel_config import EXCEL_FIELD_MAPPING_DISTRIBUTION, EXCEL_FIELD_MAPPING_SALE, EXCEL_FIELD_MAPPING_YOUR_SALE
+from .excel_config import EXCEL_FIELD_MAPPING_SALE, EXCEL_FIELD_MAPPING_ADDRESS, EXCEL_FIELD_MAPPING_YOUR_SALE
 
 
 def parse_html_table(content):
@@ -134,14 +135,12 @@ def build_description_your_sale(row, product_name):
         period = str(row.get(EXCEL_FIELD_MAPPING_YOUR_SALE.get(f'agreement_period_{i}', ''), '0')).strip()
         amount = str(row.get(EXCEL_FIELD_MAPPING_YOUR_SALE.get(f'agreement_amount_{i}', ''), '0')).strip()
         
-        # Clean and validate the values
         if period and period != '0' and period != '' and amount and amount != '0' and amount != '':
             try:
                 amount_float = float(amount)
                 amount_formatted = f"{int(amount_float):,}".replace(',', '،')
                 credits.append(f"دوره {i}: {convert_to_persian_numbers(period)} روز × {convert_to_persian_numbers(amount_formatted)} ریال")
             except (ValueError, TypeError):
-                # Skip if conversion fails
                 pass
     
     if credits:
@@ -155,32 +154,32 @@ def build_description_your_sale(row, product_name):
     return "\n".join(parts)
 
 
-def process_distribution_row(row):
-    product_str = row.get(EXCEL_FIELD_MAPPING_DISTRIBUTION['product_title'], '')
+def process_sale_row(row):
+    product_str = row.get(EXCEL_FIELD_MAPPING_SALE['product_title'], '')
     product_name, product_code = extract_product_parts(product_str)
     
-    date_str = row.get(EXCEL_FIELD_MAPPING_DISTRIBUTION['date'], '')
+    date_str = row.get(EXCEL_FIELD_MAPPING_SALE['date'], '')
     if not date_str:
         date_str = datetime.now().strftime('%Y/%m/%d')
     
     processed = {
-        'purchase_id': row.get(EXCEL_FIELD_MAPPING_DISTRIBUTION['purchase_id']),
-        'cottage_code': row.get(EXCEL_FIELD_MAPPING_DISTRIBUTION['cottage_code']),
-        'distribution_weight': clean_number(row.get(EXCEL_FIELD_MAPPING_DISTRIBUTION['weight'], '0')),
+        'purchase_id': row.get(EXCEL_FIELD_MAPPING_SALE['purchase_id']),
+        'cottage_code': row.get(EXCEL_FIELD_MAPPING_SALE['cottage_code']),
+        'distribution_weight': clean_number(row.get(EXCEL_FIELD_MAPPING_SALE['weight'], '0')),
         'distribution_date': persian_to_gregorian(date_str),
-        'total_amount': clean_number(row.get(EXCEL_FIELD_MAPPING_DISTRIBUTION['total_amount'], '0')),
-        'unit_price': clean_number(row.get(EXCEL_FIELD_MAPPING_DISTRIBUTION['unit_price'], '0')),
+        'total_amount': clean_number(row.get(EXCEL_FIELD_MAPPING_SALE['total_amount'], '0')),
+        'unit_price': clean_number(row.get(EXCEL_FIELD_MAPPING_SALE['unit_price'], '0')),
         'product_name': product_name,
         'product_code': product_code,
-        'customer_name': row.get(EXCEL_FIELD_MAPPING_DISTRIBUTION['customer_name']),
-        'payment_method': row.get(EXCEL_FIELD_MAPPING_DISTRIBUTION['payment_method']),
-        'credit_description': build_description(row, product_name, EXCEL_FIELD_MAPPING_DISTRIBUTION, 'dist'),
+        'customer_name': row.get(EXCEL_FIELD_MAPPING_SALE['customer_name']),
+        'payment_method': row.get(EXCEL_FIELD_MAPPING_SALE['payment_method']),
+        'credit_description': build_description(row, product_name, EXCEL_FIELD_MAPPING_SALE, 'dist'),
         'unmapped': {},
     }
     
     product = find_product(product_name, product_code)
-    customer = find_customer(row.get(EXCEL_FIELD_MAPPING_DISTRIBUTION['customer_name']))
-    offer = find_offer(row.get(EXCEL_FIELD_MAPPING_DISTRIBUTION['cottage_code']))
+    customer = find_customer(row.get(EXCEL_FIELD_MAPPING_SALE['customer_name']))
+    offer = find_offer(row.get(EXCEL_FIELD_MAPPING_SALE['cottage_code']))
     
     if product:
         processed['product'] = {'id': product.id, 'name': product.name}
@@ -197,7 +196,7 @@ def process_distribution_row(row):
     else:
         processed['offer'] = None
     
-    known = set(EXCEL_FIELD_MAPPING_DISTRIBUTION.values())
+    known = set(EXCEL_FIELD_MAPPING_SALE.values())
     for key, value in row.items():
         if key not in known and value and value != '0':
             processed['unmapped'][key] = value
@@ -206,37 +205,39 @@ def process_distribution_row(row):
 
 
 
-def process_sale_row(row):
-    product_title = str(row.get(EXCEL_FIELD_MAPPING_SALE['product_title'], ''))
+def process_address_row(row,address_type,id):
+    product_title = str(row.get(EXCEL_FIELD_MAPPING_ADDRESS['product_title'], ''))
     product_name, product_code = extract_product_parts(product_title)
     
-    date_str = str(row.get(EXCEL_FIELD_MAPPING_SALE['purchase_date'], ''))
+    date_str = str(row.get(EXCEL_FIELD_MAPPING_ADDRESS['purchase_date'], ''))
     if not date_str:
         date_str = datetime.now().strftime('%Y/%m/%d')
     
     processed = {
-        'purchase_id': row.get(EXCEL_FIELD_MAPPING_SALE['purchase_id']),
-        'allocation_id': row.get(EXCEL_FIELD_MAPPING_SALE['allocation_id']),
-        'cottage_code': row.get(EXCEL_FIELD_MAPPING_SALE['cottage_code']),
-        'total_weight_purchased': clean_number(row.get(EXCEL_FIELD_MAPPING_SALE['total_weight_purchased'], '0')),
+        'purchase_id': row.get(EXCEL_FIELD_MAPPING_ADDRESS['purchase_id']),
+        'allocation_id': row.get(EXCEL_FIELD_MAPPING_ADDRESS['allocation_id']),
+        'cottage_code': row.get(EXCEL_FIELD_MAPPING_ADDRESS['cottage_code']),
+        'total_weight_purchased': clean_number(row.get(EXCEL_FIELD_MAPPING_ADDRESS['total_weight_purchased'], '0')),
         'purchase_date': persian_to_gregorian(date_str),
-        'unit_price': clean_number(row.get(EXCEL_FIELD_MAPPING_SALE['unit_price'], '0')),
-        'payment_amount': clean_number(row.get(EXCEL_FIELD_MAPPING_SALE['payment_amount'], '0')),
+        'unit_price': clean_number(row.get(EXCEL_FIELD_MAPPING_ADDRESS['unit_price'], '0')),
+        'payment_amount': clean_number(row.get(EXCEL_FIELD_MAPPING_ADDRESS['payment_amount'], '0')),
         'product_name': product_name,
         'product_code': product_code,
-        'customer_name': row.get(EXCEL_FIELD_MAPPING_SALE['customer_name']),
-        'payment_method': row.get(EXCEL_FIELD_MAPPING_SALE['payment_method']),
-        'credit_description': build_description(row, product_name, EXCEL_FIELD_MAPPING_SALE, 'sale'),
-        'province': row.get(EXCEL_FIELD_MAPPING_SALE['province']),
-        'city': row.get(EXCEL_FIELD_MAPPING_SALE['city']),
-        'tracking_number': row.get(EXCEL_FIELD_MAPPING_SALE['tracking_number']),
+        'customer_name': row.get(EXCEL_FIELD_MAPPING_ADDRESS['customer_name']),
+        'payment_method': row.get(EXCEL_FIELD_MAPPING_ADDRESS['payment_method']),
+        'credit_description': build_description(row, product_name, EXCEL_FIELD_MAPPING_ADDRESS, 'sale'),
+        'province': row.get(EXCEL_FIELD_MAPPING_ADDRESS['province']),
+        'city': row.get(EXCEL_FIELD_MAPPING_ADDRESS['city']),
+        'tracking_number': row.get(EXCEL_FIELD_MAPPING_ADDRESS['tracking_number']),
     }
     
     customer, customerCreated = createOrUpdateCustomer(row)
     receiver, receiverCreated = createOrUpdateReceiver(row)
+    sale, saleCreated = createOrUpdateSale(row,address_type,id,customer)
     
-    offer_id = row.get(EXCEL_FIELD_MAPPING_SALE['offer_id'])
-    cottage_code = row.get(EXCEL_FIELD_MAPPING_SALE['cottage_code'])
+    
+    offer_id = row.get(EXCEL_FIELD_MAPPING_ADDRESS['offer_id'])
+    cottage_code = row.get(EXCEL_FIELD_MAPPING_ADDRESS['cottage_code'])
     offer = find_offer(offer_id) if offer_id else find_offer(cottage_code)
     product = find_product(product_name, product_code)
     
@@ -260,7 +261,7 @@ def process_sale_row(row):
     else:
         processed['receiver'] = None
     
-    return processed,customerCreated,receiverCreated
+    return processed,customerCreated,receiverCreated,saleCreated
 
 def process_your_sale_row(row):
     product_title = str(row.get(EXCEL_FIELD_MAPPING_YOUR_SALE['product_title'], ''))
@@ -314,16 +315,42 @@ def process_your_sale_row(row):
     
     return processed
 
+def createOrUpdateSale(row,address_type,id,customer):
+    purchase_id = str(row.get(EXCEL_FIELD_MAPPING_ADDRESS['purchase_id'], ''))
+    cottage_code = str(row.get(EXCEL_FIELD_MAPPING_ADDRESS['cottage_code'], ''))
+    total_weight_purchased = clean_number(row.get(EXCEL_FIELD_MAPPING_ADDRESS['total_weight_purchased'], '0'))
+    purchase_date = persian_to_gregorian(row.get(EXCEL_FIELD_MAPPING_ADDRESS['purchase_date'], datetime.now().strftime('%Y/%m/%d')))          
+    unit_price = clean_number(row.get(EXCEL_FIELD_MAPPING_ADDRESS['unit_price'], '0'))
+    payment_amount = clean_number(row.get(EXCEL_FIELD_MAPPING_ADDRESS['payment_amount'], '0'))    
+    purchase_type = str(row.get(EXCEL_FIELD_MAPPING_ADDRESS['payment_method'], ''))
+    
+    with transaction.atomic():
+        sale, created = B2BSale.objects.update_or_create(
+            purchase_id=purchase_id,
+            defaults={
+                'cottage_code': cottage_code,
+                'is_distributor': False  if address_type == 'your_address' else True ,
+                'b2b_distribution':id if address_type == 'your_address'else None,
+                'offer':id if address_type == 'your_address'else None,
+                'weight': total_weight_purchased,
+                'unit_price': unit_price,
+                'sale_date': purchase_date,
+                'purchase_type': purchase_type,
+                'customer': customer,
+                'description': f'ایجاد شده از طریق بارگذاری فایل فروش بازارگاه ',
+            }
+        )
+    return sale,created
 def createOrUpdateReceiver(row):
-    receiver_name = str(row.get(EXCEL_FIELD_MAPPING_SALE['receiver_name'], ''))
-    receiver_economic_code = str(row.get(EXCEL_FIELD_MAPPING_SALE['receiver_economic_code'], ''))
-    single = str(row.get(EXCEL_FIELD_MAPPING_SALE['single'], ''))
-    double = str(row.get(EXCEL_FIELD_MAPPING_SALE['double'], ''))
-    trailer = str(row.get(EXCEL_FIELD_MAPPING_SALE['trailer'], ''))
-    receiver_address = str(row.get(EXCEL_FIELD_MAPPING_SALE['receiver_address'], ''))
-    receiver_postal_code = str(row.get(EXCEL_FIELD_MAPPING_SALE['receiver_postal_code'], ''))
-    receiver_phone = str(row.get(EXCEL_FIELD_MAPPING_SALE['receiver_phone'], ''))
-    receiver_national_id = str(row.get(EXCEL_FIELD_MAPPING_SALE['receiver_national_id'], '')).strip()
+    receiver_name = str(row.get(EXCEL_FIELD_MAPPING_ADDRESS['receiver_name'], ''))
+    receiver_economic_code = str(row.get(EXCEL_FIELD_MAPPING_ADDRESS['receiver_economic_code'], ''))
+    single = str(row.get(EXCEL_FIELD_MAPPING_ADDRESS['single'], ''))
+    double = str(row.get(EXCEL_FIELD_MAPPING_ADDRESS['double'], ''))
+    trailer = str(row.get(EXCEL_FIELD_MAPPING_ADDRESS['trailer'], ''))
+    receiver_address = str(row.get(EXCEL_FIELD_MAPPING_ADDRESS['receiver_address'], ''))
+    receiver_postal_code = str(row.get(EXCEL_FIELD_MAPPING_ADDRESS['receiver_postal_code'], ''))
+    receiver_phone = str(row.get(EXCEL_FIELD_MAPPING_ADDRESS['receiver_phone'], ''))
+    receiver_national_id = str(row.get(EXCEL_FIELD_MAPPING_ADDRESS['receiver_national_id'], '')).strip()
     
     # Determine type based on national_id length or name content
     # 10 digits (or starts with 0) = individual, 11 digits = corporate
@@ -357,13 +384,13 @@ def createOrUpdateReceiver(row):
     return receiver,created
 def createOrUpdateCustomer(row):
     
-    customer_name = str(row.get(EXCEL_FIELD_MAPPING_SALE['customer_name'], ''))
-    customer_national_code = str(row.get(EXCEL_FIELD_MAPPING_SALE['customer_national_code'], '')).strip()
-    customer_postal_code = str(row.get(EXCEL_FIELD_MAPPING_SALE['customer_postal_code'], ''))
-    customer_address = str(row.get(EXCEL_FIELD_MAPPING_SALE['customer_address'], ''))
-    customer_phone = str(row.get(EXCEL_FIELD_MAPPING_SALE['customer_phone'], ''))
-    customer_economic_code = str(row.get(EXCEL_FIELD_MAPPING_SALE['customer_economic_code'], ''))
-    customer_type = str(row.get(EXCEL_FIELD_MAPPING_SALE['customer_type'], ''))
+    customer_name = str(row.get(EXCEL_FIELD_MAPPING_ADDRESS['customer_name'], ''))
+    customer_national_code = str(row.get(EXCEL_FIELD_MAPPING_ADDRESS['customer_national_code'], '')).strip()
+    customer_postal_code = str(row.get(EXCEL_FIELD_MAPPING_ADDRESS['customer_postal_code'], ''))
+    customer_address = str(row.get(EXCEL_FIELD_MAPPING_ADDRESS['customer_address'], ''))
+    customer_phone = str(row.get(EXCEL_FIELD_MAPPING_ADDRESS['customer_phone'], ''))
+    customer_economic_code = str(row.get(EXCEL_FIELD_MAPPING_ADDRESS['customer_economic_code'], ''))
+    customer_type = str(row.get(EXCEL_FIELD_MAPPING_ADDRESS['customer_type'], ''))
     
     # Determine type based on national_code length, customer_type, or defaults
     # 10 digits (or starts with 0) = individual, 11 digits = corporate
@@ -418,7 +445,6 @@ def find_customer(name):
 
 def find_offer(cottage_code):
     return B2BOffer.objects.filter(
-        Q(offer_id=cottage_code) |
-        Q(cottage_number=cottage_code)
+        Q(offer_id=cottage_code) 
     ).first()
 

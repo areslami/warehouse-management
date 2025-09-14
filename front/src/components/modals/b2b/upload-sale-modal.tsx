@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { Upload, FileSpreadsheet, X, Check, AlertCircle } from "lucide-react";
-import { uploadDistributionExcel, previewDistribution, createDistributionsBatch } from "@/lib/api/excel";
+import { uploadSalesExcel, previewSales, createSalesBatch } from "@/lib/api/excel";
 import { Button } from "../../ui/button";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
@@ -11,37 +11,33 @@ import { CustomerFormData, CustomerModal } from "../customer-modal";
 import { B2BOfferFormData, B2BOfferModal } from "./b2b-offer-modal";
 import { ProductFormData, ProductModal } from "../product-modal";
 import { createCustomer, createProduct } from "@/lib/api/core";
-import { fetchB2BOffers, createB2BOffer } from "@/lib/api/b2b";
+import { fetchB2BOffers, createB2BOffer, fetchB2BDistributions, createB2BDistribution } from "@/lib/api/b2b";
 import { Card } from "../../ui/card";
 import { Progress } from "../../ui/progress";
 import { B2BOffer } from "@/lib/interfaces/b2b";
+import { B2BDistributionModal } from "./b2b-distribution-modal";
+import { fetchWarehouseReceiptById } from "@/lib/api/warehouse";
 
-interface UploadDistributionModalProps {
+interface UploadSaleModalProps {
   open: boolean;
   onClose: () => void;
   onSuccess?: () => void;
 }
 
-interface DistributionData {
-  purchase_id: number;
+interface SaleData {
+  b2b_distribution: number;
   b2b_offer: number;
-  warehouse_receipt: number;
-  product: number;
-  customer: number | undefined;
-  agency_weight: number;
-  agency_date: string;
-  description: string;
 };
 interface PreviewResponse {
-  distribution_data: DistributionData;
+  sale_data: SaleData;
   unmapped_fields: { [key: string]: string | number | null };
   needs_customer_creation: boolean;
   customer_name: string;
   needs_product_creation: boolean;
   product_name: string;
 }
-export function UploadDistributionModal({ open, onClose, onSuccess }: UploadDistributionModalProps) {
-  const t = useTranslations("modals.uploadDistribution");
+export function UploadSaleModal({ open, onClose, onSuccess }: UploadSaleModalProps) {
+  const t = useTranslations("modals.uploadSales");
 
   const [file, setFile] = useState<File | null>(null);
   const [loading, setLoading] = useState(false);
@@ -51,9 +47,10 @@ export function UploadDistributionModal({ open, onClose, onSuccess }: UploadDist
   const [previewData, setPreviewData] = useState<PreviewResponse>({} as PreviewResponse);
   const [showPreview, setShowPreview] = useState(false);
 
-  const [showCustomerModal, setShowCustomerModal] = useState(false);
   const [showProductModal, setShowProductModal] = useState(false);
+  const [showCustomerModal, setShowCustomerModal] = useState(false);
   const [showOfferModal, setShowOfferModal] = useState(false);
+  const [showDistributionModal, setShowDistributionModal] = useState(false);
   const [createdProducts, setCreatedProducts] = useState<{ [key: string]: number }>({});
   const [createdCustomers, setCreatedCustomers] = useState<{ [key: string]: number }>({});
 
@@ -61,17 +58,17 @@ export function UploadDistributionModal({ open, onClose, onSuccess }: UploadDist
   const [uploadStep, setUploadStep] = useState<"select" | "processing" | "complete">("select");
 
 
-
-  const [selectedReceipt, setSelectedReceipt] = useState<number | null>(null);
   const [selectedOffer, setSelectedOffer] = useState<number | null>(null);
+  const [selectedDistribution, setSelectedDistribution] = useState<number | null>(null);
   const [saleType, setSaleType] = useState<"your_sale" | "distributor_sale">("your_sale");
 
-  const [receipts, setReceipts] = useState<object[]>([]);
   const [offers, setOffers] = useState<object[]>([]);
+  const [distributions, setDistributions] = useState<object[]>([]);
 
   useEffect(() => {
     if (open) {
       loadOffers();
+      loadDistributions();
     }
   }, [open]);
 
@@ -82,6 +79,15 @@ export function UploadDistributionModal({ open, onClose, onSuccess }: UploadDist
       setOffers(activeOffers);
     } catch (error) {
       console.error("Failed to load offers:", error);
+    }
+  };
+  const loadDistributions = async () => {
+    try {
+      const data = await fetchB2BDistributions();
+      const activeDistributions = data
+      setDistributions(activeDistributions);
+    } catch (error) {
+      console.error("Failed to load distributions:", error);
     }
   };
 
@@ -95,16 +101,19 @@ export function UploadDistributionModal({ open, onClose, onSuccess }: UploadDist
   const handleUpload = async () => {
     if (!file) return;
 
-    // Only check for offer if it's "your_sale" type
     if (saleType === "your_sale" && !selectedOffer) {
       toast.error(t("select_offer"));
+      return;
+    }
+    if (saleType === "distributor_sale" && !selectedDistribution) {
+      toast.error(t("select_distribution"));
       return;
     }
 
     setLoading(true);
     setUploadStep("processing");
     try {
-      const result = await uploadDistributionExcel(file, saleType);
+      const result = await uploadSalesExcel(file, saleType);
       setRows(result.rows);
       if (result.rows.length > 0) {
         processNextRow(result.rows, 0, []);
@@ -118,16 +127,16 @@ export function UploadDistributionModal({ open, onClose, onSuccess }: UploadDist
     }
   };
 
-  const processNextRow = async (allRows: object[], index: number, processed: object[]) => {
+  const processNextRow = async (allRows: object[], index: number, processed: object[] = []) => {
     if (index >= allRows.length) {
-      submitBatch(processed);
+      console.log("All rows processed:", processed);
+      submitBatch(processedRows);
       return;
     }
 
     setCurrentRowIndex(index);
     let row: any = allRows[index];
 
-    // Check if we have already created this product or customer
     const productName = row.product_name;
     if (productName && createdProducts[productName.toLowerCase()]) {
       row = {
@@ -146,13 +155,15 @@ export function UploadDistributionModal({ open, onClose, onSuccess }: UploadDist
 
     try {
       const previewData: any = { ...row };
-      // Only add offer for "your_sale" type and if it's selected
       if (saleType === "your_sale" && selectedOffer) {
-        previewData.offer = { id: selectedOffer };
+        previewData.b2b_offer = { id: selectedOffer };
+      }
+      if (saleType === "distributor_sale" && selectedDistribution) {
+        previewData.b2b_distribution = { id: selectedDistribution };
       }
 
-      const preview = await previewDistribution(previewData);
-      setPreviewData(preview);
+      const preview = await previewSales(previewData);
+      setPreviewData({ ...preview, sale_data: preview.sale_data });
       setShowPreview(true);
     } catch (error) {
       console.error("Preview failed:", error);
@@ -162,7 +173,8 @@ export function UploadDistributionModal({ open, onClose, onSuccess }: UploadDist
   };
 
   const handleConfirmRow = async (updatedData?: unknown) => {
-    const dataToSave = updatedData || previewData.distribution_data;
+    const dataToSave = updatedData || previewData.sale_data;
+    console.log("Data to save:", dataToSave);
 
     const newProcessed = [...processedRows, dataToSave];
     setProcessedRows(newProcessed);
@@ -176,16 +188,15 @@ export function UploadDistributionModal({ open, onClose, onSuccess }: UploadDist
     processNextRow(rows, currentRowIndex + 1, processedRows);
   };
 
-  const submitBatch = async (distributions: object[]) => {
-    if (distributions.length === 0) {
+  const submitBatch = async (sales: object[]) => {
+    if (sales.length === 0) {
       toast.info(t("no_rows_to_process"));
       resetState();
       return;
     }
-
     setLoading(true);
     try {
-      const result = await createDistributionsBatch(distributions);
+      const result = await createSalesBatch(sales);
       toast.success(t("batch_success", { count: result.count }));
       setUploadStep("complete");
       setTimeout(() => {
@@ -216,37 +227,6 @@ export function UploadDistributionModal({ open, onClose, onSuccess }: UploadDist
     onClose();
   };
 
-  const handleCreateProduct = async (productData: ProductFormData) => {
-    try {
-      const newProduct = await createProduct(productData);
-      if (previewData && newProduct) {
-        // Store the created product for future rows
-        const productName = previewData.product_name;
-        if (productName) {
-          setCreatedProducts(prev => ({
-            ...prev,
-            [productName.toLowerCase()]: newProduct.id
-          }));
-        }
-
-        const updatedData = {
-          ...previewData.distribution_data,
-          product: newProduct.id,
-        };
-        setPreviewData({
-          ...previewData,
-          needs_product_creation: false,
-          distribution_data: updatedData,
-        });
-      }
-      toast.success(t("product_created"));
-      setShowProductModal(false);
-    } catch (error) {
-      console.error("Failed to create product:", error);
-      toast.error(t("product_creation_failed"));
-    }
-  };
-
   const handleCreateCustomer = async (customerData: CustomerFormData) => {
     try {
       const newCustomer = await createCustomer(customerData);
@@ -262,12 +242,12 @@ export function UploadDistributionModal({ open, onClose, onSuccess }: UploadDist
         }
 
         const updatedData = {
-          ...previewData.distribution_data,
+          ...previewData.sale_data,
           customer: newCustomer.id,
         };
         setPreviewData({
           ...previewData,
-          distribution_data: updatedData,
+          sale_data: updatedData,
           needs_customer_creation: false,
         });
       }
@@ -294,6 +274,21 @@ export function UploadDistributionModal({ open, onClose, onSuccess }: UploadDist
       toast.error(t("offer_creation_failed"));
     }
   };
+  const handleCreateDistribution = async (distributionData: any) => {
+    try {
+
+      const newDistribution = await createB2BDistribution(distributionData);
+      if (newDistribution) {
+        await loadDistributions();
+        setSelectedDistribution(newDistribution.id);
+        setShowDistributionModal(false);
+        toast.success(t("distribution_created"));
+      }
+    } catch (error) {
+      console.error("Distribution creation failed:", error);
+      toast.error(t("distribution_creation_failed"));
+    }
+  }
 
   const progress = rows.length > 0 ? ((currentRowIndex + 1) / rows.length) * 100 : 0;
 
@@ -383,11 +378,40 @@ export function UploadDistributionModal({ open, onClose, onSuccess }: UploadDist
                     >
                       <option value="">{t("select_offer")}</option>
                       <option value="new" style={{ color: '#f6d265', fontWeight: 'bold' }}>+ {t("create_new_offer")}</option>
-                      {(offers as B2BOffer[]).map((o) => (
-                        <option key={o.id} value={o.id}>
-                          {o.offer_id} - {o.product_name} ({o.offer_weight} kg)
-                        </option>
-                      ))}
+                      {(offers as B2BOffer[]).map(async (o) => {
+                        const id = Number(o.warehouse_receipt || o.warehouse_receipt_id);
+                        const productName = (await fetchWarehouseReceiptById(id))?.items[0].product_name;
+                        const productWeight = (await fetchWarehouseReceiptById(id))?.items[0].weight;
+
+                        return (<option key={o.id} value={o.id}>
+                          {o.offer_id} - {productName} ({productWeight} kg)
+                        </option>);
+                      })}
+                    </select>
+                  </div>
+                )}
+                {saleType === "distributor_sale" && (
+                  <div>
+                    <label className="block text-sm font-medium mb-1">{t("distribution")}</label>
+                    <select
+                      className="w-full px-3 py-2 border rounded-md"
+                      value={selectedDistribution || ""}
+                      onChange={(e) => {
+                        if (e.target.value === "new") {
+                          setShowDistributionModal(true);
+                        } else {
+                          setSelectedDistribution(e.target.value ? Number(e.target.value) : null);
+                        }
+                      }}
+                    >
+                      <option value="">{t("select_distribution")}</option>
+                      <option value="new" style={{ color: '#f6d265', fontWeight: 'bold' }}>+ {t("create_new_distribution")}</option>
+                      {distributions.map((d: any) => {
+                        return (
+                          <option key={d.id} value={d.id}>
+                            {d.transfer_id} - {d.customer_name} - {d.product_name} - {d.agency_weight} kg
+                          </option>);
+                      })}
                     </select>
                   </div>
                 )}
@@ -448,32 +472,31 @@ export function UploadDistributionModal({ open, onClose, onSuccess }: UploadDist
           </DialogHeader>
 
           {previewData && (() => {
-            console.log(previewData);
             return (
               <div className="space-y-4">
                 <Card className="p-4">
                   <h3 className="font-semibold mb-3">{t("mapped_fields")}</h3>
                   <div className="grid grid-cols-2 gap-3 text-sm">
                     <div>
-                      <span className="font-medium text-gray-600">{t("purchase_id")}:</span>
-                      <p className="mt-1">{previewData.distribution_data?.purchase_id || "-"}</p>
+                      <span className="font-medium text-gray-600">{t("transfer_id")}:</span>
+                      <p className="mt-1">{previewData.sale_data?.transfer_id || "-"}</p>
                     </div>
                     <div>
                       <span className="font-medium text-gray-600">{t("weight")}:</span>
-                      <p className="mt-1">{previewData.distribution_data?.agency_weight} kg</p>
+                      <p className="mt-1">{previewData.sale_data?.agency_weight} kg</p>
                     </div>
                     <div>
                       <span className="font-medium text-gray-600">{t("date")}:</span>
-                      <p className="mt-1">{previewData.distribution_data?.agency_date}</p>
+                      <p className="mt-1">{previewData.sale_data?.agency_date}</p>
                     </div>
                     <div>
                       <span className="font-medium text-gray-600">{t("customer")}:</span>
                       <p className="mt-1">{previewData.customer_name}</p>
                     </div>
-                    {previewData.distribution_data?.description && (
+                    {previewData.sale_data?.description && (
                       <div className="col-span-2">
                         <span className="font-medium text-gray-600">{t("description")}:</span>
-                        <p className="mt-1">{previewData.distribution_data?.description}</p>
+                        <p className="mt-1">{previewData.sale_data?.description}</p>
                       </div>
                     )}
                   </div>
@@ -554,7 +577,6 @@ export function UploadDistributionModal({ open, onClose, onSuccess }: UploadDist
                       const acceptedRows = remainingRows.map(row => ({
                         ...row,
                         b2b_offer: selectedOffer,
-                        warehouse: selectedReceipt,
                       }));
                       submitBatch([...processedRows, ...acceptedRows]);
                     }}
@@ -589,19 +611,56 @@ export function UploadDistributionModal({ open, onClose, onSuccess }: UploadDist
           onClose={() => setShowCustomerModal(false)}
         />
       )}
-      {showProductModal && previewData && (
-        <ProductModal
-          initialData={{ name: previewData?.product_name }}
-          onSubmit={handleCreateProduct}
-          onClose={() => setShowProductModal(false)}
-        />
-      )}
+
       {showOfferModal && (
         <B2BOfferModal
           onSubmit={handleCreateOffer}
           onClose={() => setShowOfferModal(false)}
         />
       )}
+      {showDistributionModal && (
+        <B2BDistributionModal
+          onSubmit={handleCreateDistribution}
+          onClose={() => setShowDistributionModal(false)}
+        />
+      )}
+      {showProductModal && (
+        <ProductModal
+          initialData={{ name: previewData?.product_name } as ProductFormData}
+          onSubmit={async (data) => {
+            try {
+              const newProduct = await createProduct(data);
+              if (newProduct && previewData) {
+                const productName = previewData.product_name;
+                if (productName) {
+                  setCreatedProducts(prev => ({
+                    ...prev,
+                    [productName.toLowerCase()]: newProduct.id
+                  }));
+                }
+                const updatedData = {
+                  ...previewData.sale_data,
+                  product: newProduct.id,
+                };
+                setPreviewData({
+                  ...previewData,
+                  sale_data: updatedData,
+                  needs_product_creation: false,
+                });
+              }
+              setShowProductModal(false);
+              toast.success(t("product_created"));
+            } catch (error) {
+              console.error("Product creation failed:", error);
+              toast.error(t("product_creation_failed"));
+            }
+          }}
+          onClose={() => setShowProductModal(false)}
+
+        />
+      )}
+
+
     </>
   );
 }

@@ -8,22 +8,25 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Button } from "../../ui/button";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "../../ui/form";
 import { Input } from "../../ui/input";
-import { SearchableSelect } from "../../ui/searchable-select";
+import { SimpleCombobox } from "../../ui/simple-combobox";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../../ui/select";
 import { NumberInput } from "../../ui/number-input";
 import { useTranslations } from "next-intl";
 import { useCoreData } from "@/lib/core-data-context";
 import { ProductModal } from "../product-modal";
 import { CustomerModal } from "../customer-modal";
 import { createProduct, createCustomer } from "@/lib/api/core";
-import { fetchB2BOffers, createB2BOffer } from "@/lib/api/b2b";
-import { B2BOffer } from "@/lib/interfaces/b2b";
+import { fetchB2BOffers, createB2BOffer, createB2BDistribution, fetchB2BDistributions } from "@/lib/api/b2b";
+import { B2BDistribution, B2BOffer } from "@/lib/interfaces/b2b";
 import { PersianDatePicker } from "../../ui/persian-date-picker";
 import { getPartyDisplayName } from "@/lib/utils/party-utils";
 import { B2BOfferModal } from "./b2b-offer-modal";
+import { B2BDistributionModal } from "./b2b-distribution-modal";
 
 export type B2BSaleFormData = {
     purchase_id: string;
     offer: number | null;
+    distribution: number | null;
     weight: number;
     unit_price: number;
     sale_date: string;
@@ -46,9 +49,12 @@ export function B2BSaleModal({ trigger, onSubmit, onClose, initialData }: B2BSal
     const tCommon = useTranslations("common");
     const { products, customers, refreshData: refreshCoreData } = useCoreData();
     const [offers, setOffers] = useState<B2BOffer[]>([]);
+    const [distributions, setDistributions] = useState<B2BDistribution[]>([]);
     const [showProductModal, setShowProductModal] = useState(false);
     const [showCustomerModal, setShowCustomerModal] = useState(false);
     const [showOfferModal, setShowOfferModal] = useState(false);
+    const [ShowDistribtuionModal, setShowDistribtuionModal] = useState(false);
+    const [saleType, setSaleType] = useState<"your_sale" | "distributor_sale">("your_sale");
 
     useEffect(() => {
         if (products.length === 0) {
@@ -58,20 +64,31 @@ export function B2BSaleModal({ trigger, onSubmit, onClose, initialData }: B2BSal
             refreshCoreData('customers');
         }
         loadOffers();
+        loadDistributions();
     }, [products.length, customers.length, refreshCoreData]);
 
     const loadOffers = async () => {
         try {
             const offersData = await fetchB2BOffers();
-            setOffers(offersData.filter((o: B2BOffer) => o.status === 'active') || []);
+            setOffers(offersData);
         } catch (error) {
             console.error('Error loading offers:', error);
         }
     };
+    const loadDistributions = async () => {
+        try {
+            const offersData = await fetchB2BDistributions();
+            setDistributions(offersData);
+        } catch (error) {
+            console.error('Error loading distribuitons:', error);
+        }
+    };
+
 
     const b2bSaleSchema = z.object({
         purchase_id: z.string().min(1, tval("purchase-id")),
         offer: z.number().nullable().optional(),
+        distribution: z.number().nullable().optional(),
         weight: z.number().positive(tval("weight")),
         unit_price: z.number().positive(tval("unit-price")),
         sale_date: z.string().min(1, tval("sale-date")),
@@ -88,6 +105,7 @@ export function B2BSaleModal({ trigger, onSubmit, onClose, initialData }: B2BSal
         defaultValues: {
             purchase_id: initialData?.purchase_id || "",
             offer: initialData?.offer || null,
+            distribution: initialData?.distribution || null,
             weight: initialData?.weight || 0,
             unit_price: initialData?.unit_price || 0,
             sale_date: initialData?.sale_date || new Date().toISOString().split('T')[0],
@@ -99,8 +117,6 @@ export function B2BSaleModal({ trigger, onSubmit, onClose, initialData }: B2BSal
     });
 
     const selectedOffer = form.watch("offer");
-    const weight = form.watch("weight");
-    const unitPrice = form.watch("unit_price");
 
     useEffect(() => {
         if (selectedOffer && selectedOffer !== 0 && offers.length > 0) {
@@ -164,43 +180,96 @@ export function B2BSaleModal({ trigger, onSubmit, onClose, initialData }: B2BSal
                                         </FormItem>
                                     )}
                                 />
+                                <div>
+                                    <label className="block text-sm font-medium mb-1">{t("sale_type")}</label>
+                                    <div className="flex gap-4">
+                                        <label className="flex items-center">
+                                            <input
+                                                type="radio"
+                                                value="your_sale"
+                                                checked={saleType === "your_sale"}
+                                                onChange={(e) => setSaleType(e.target.value as "your_sale" | "distributor_sale")}
+                                                className="mr-2"
+                                            />
+                                            {t("your_sale")}
+                                        </label>
+                                        <label className="flex items-center">
+                                            <input
+                                                type="radio"
+                                                value="distributor_sale"
+                                                checked={saleType === "distributor_sale"}
+                                                onChange={(e) => setSaleType(e.target.value as "your_sale" | "distributor_sale")}
+                                                className="mr-2"
+                                            />
+                                            {t("distributor_sale")}
+                                        </label>
+                                    </div>
+                                </div>
 
-                                <FormField
+                                {saleType === "your_sale" && (
+                                    <FormField
+                                        control={form.control as any}
+                                        name="offer"
+                                        render={({ field }) => (
+                                            <FormItem>
+                                                <FormLabel>{t("offer")}</FormLabel>
+                                                <FormControl>
+                                                    <SimpleCombobox
+                                                        value={field.value ? field.value.toString() : ""}
+                                                        onValueChange={(value) => {
+                                                            field.onChange(value && value !== "0" ? Number(value) : null);
+                                                        }}
+                                                        options={[
+                                                            { value: "0", label: t("no-offer") },
+                                                            ...offers.map(offer => ({
+                                                                value: offer.id.toString(),
+                                                                label: `${offer.offer_id} - ${offer.product_name} (${offer.offer_weight} kg) (ID: ${offer.id})`,
+                                                                id: offer.id,
+                                                                name: offer.offer_id
+                                                            }))
+                                                        ]}
+                                                        placeholder={t("select-offer")}
+                                                        searchPlaceholder={tCommon("search_placeholders.search_offers")}
+                                                        showCreateNew={true}
+                                                        createNewText={t("create-new-offer")}
+                                                        onCreateNew={() => setShowOfferModal(true)}
+                                                    />
+                                                </FormControl>
+                                                <FormMessage />
+                                            </FormItem>
+                                        )}
+                                    />)}
+                                {saleType === "distributor_sale" && (<FormField
                                     control={form.control as any}
-                                    name="offer"
+                                    name="distribution"
                                     render={({ field }) => (
                                         <FormItem>
-                                            <FormLabel>{t("offer")}</FormLabel>
+                                            <FormLabel>{t("distribution")}</FormLabel>
                                             <FormControl>
-                                                <SearchableSelect
+                                                <SimpleCombobox
                                                     value={field.value ? field.value.toString() : ""}
                                                     onValueChange={(value) => {
-                                                        if (value === "new") {
-                                                            setShowOfferModal(true);
-                                                        } else {
-                                                            field.onChange(value && value !== "0" ? Number(value) : null);
-                                                        }
+                                                        field.onChange(value && value !== "0" ? Number(value) : null);
                                                     }}
                                                     options={[
-                                                        { value: "0", label: t("no-offer") },
-                                                        ...offers.map(offer => ({
-                                                            value: offer.id.toString(),
-                                                            label: `${offer.offer_id} - ${offer.product_name} (${offer.offer_weight} kg) (ID: ${offer.id})`,
-                                                            id: offer.id,
-                                                            name: offer.offer_id
+                                                        ...distributions.map(distribution => ({
+                                                            value: distribution.id.toString(),
+                                                            label: `${distribution.transfer_id} - ${distribution.product_name} (${distribution.agency_weight} kg) (ID: ${distribution.id})`,
+                                                            id: distribution.id,
+                                                            name: distribution.transfer_id
                                                         }))
                                                     ]}
-                                                    placeholder={t("select-offer")}
-                                                    searchPlaceholder={tCommon("search_placeholders.search_offers")}
+                                                    placeholder={t("select-distribution")}
+                                                    searchPlaceholder={tCommon("search_placeholders.search_distributions")}
                                                     showCreateNew={true}
-                                                    createNewText={t("create-new-offer")}
-                                                    onCreateNew={() => setShowOfferModal(true)}
+                                                    createNewText={t("create-new-distribution")}
+                                                    onCreateNew={() => setShowDistribtuionModal(true)}
                                                 />
                                             </FormControl>
                                             <FormMessage />
                                         </FormItem>
                                     )}
-                                />
+                                />)}
                             </div>
 
                             <div className="grid grid-cols-2 gap-4">
@@ -211,12 +280,10 @@ export function B2BSaleModal({ trigger, onSubmit, onClose, initialData }: B2BSal
                                         <FormItem>
                                             <FormLabel>{t("product")}</FormLabel>
                                             <FormControl>
-                                                <SearchableSelect
+                                                <SimpleCombobox
                                                     value={field.value > 0 ? field.value.toString() : ""}
                                                     onValueChange={(value) => {
-                                                        if (value === "new") {
-                                                            setShowProductModal(true);
-                                                        } else if (value) {
+                                                        if (value) {
                                                             field.onChange(Number(value));
                                                         }
                                                     }}
@@ -246,12 +313,10 @@ export function B2BSaleModal({ trigger, onSubmit, onClose, initialData }: B2BSal
                                         <FormItem>
                                             <FormLabel>{t("customer")}</FormLabel>
                                             <FormControl>
-                                                <SearchableSelect
+                                                <SimpleCombobox
                                                     value={field.value > 0 ? field.value.toString() : ""}
                                                     onValueChange={(value) => {
-                                                        if (value === "new") {
-                                                            setShowCustomerModal(true);
-                                                        } else if (value) {
+                                                        if (value) {
                                                             field.onChange(Number(value));
                                                         }
                                                     }}
@@ -336,18 +401,17 @@ export function B2BSaleModal({ trigger, onSubmit, onClose, initialData }: B2BSal
                                     render={({ field }) => (
                                         <FormItem>
                                             <FormLabel>{t("purchase-type")}</FormLabel>
-                                            <SearchableSelect
-                                                value={field.value}
-                                                onValueChange={field.onChange}
-                                                options={[
-                                                    { value: "cash", label: t("cash") },
-                                                    { value: "credit", label: t("credit") },
-                                                    { value: "agreement", label: t("agreement") },
-                                                    { value: "other", label: t("other") }
-                                                ]}
-                                                placeholder={t("select-purchase-type")}
-                                                searchPlaceholder={tCommon("search_placeholders.search_purchase_types")}
-                                            />
+                                            <Select value={field.value} onValueChange={field.onChange}>
+                                                <SelectTrigger>
+                                                    <SelectValue placeholder={t("select-purchase-type")} />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    <SelectItem value="cash">{t("cash")}</SelectItem>
+                                                    <SelectItem value="credit">{t("credit")}</SelectItem>
+                                                    <SelectItem value="agreement">{t("agreement")}</SelectItem>
+                                                    <SelectItem value="other">{t("other")}</SelectItem>
+                                                </SelectContent>
+                                            </Select>
                                             <FormMessage />
                                         </FormItem>
                                     )}
@@ -420,6 +484,20 @@ export function B2BSaleModal({ trigger, onSubmit, onClose, initialData }: B2BSal
                         }
                     }}
                     onClose={() => setShowOfferModal(false)}
+                />
+            )}
+
+            {ShowDistribtuionModal && (
+                <B2BDistributionModal
+                    onSubmit={async (newDistribution) => {
+                        const created = await createB2BDistribution(newDistribution);
+                        if (created) {
+                            await loadDistributions();
+                            form.setValue('distribution', created.id);
+                            setShowDistribtuionModal(false);
+                        }
+                    }}
+                    onClose={() => setShowDistribtuionModal(false)}
                 />
             )}
         </>

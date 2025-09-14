@@ -9,7 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Button } from "../../ui/button";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "../../ui/form";
 import { Input } from "../../ui/input";
-import { SearchableSelect } from "../../ui/searchable-select";
+import { SimpleCombobox } from "../../ui/simple-combobox";
 import { NumberInput } from "../../ui/number-input";
 import { useTranslations } from "next-intl";
 import { useCoreData } from "@/lib/core-data-context";
@@ -150,12 +150,10 @@ export function B2BDistributionModal({ trigger, onSubmit, onClose, initialData, 
                     <FormItem>
                       <FormLabel>{t("warehouse_receipt")}</FormLabel>
                       <FormControl>
-                        <SearchableSelect
+                        <SimpleCombobox
                           value={field.value > 0 ? field.value.toString() : ""}
                           onValueChange={(value) => {
-                            if (value === "new") {
-                              setShowWarehouseReceiptModal(true);
-                            } else if (value) {
+                            if (value) {
                               field.onChange(Number(value));
                             }
                           }}
@@ -186,12 +184,10 @@ export function B2BDistributionModal({ trigger, onSubmit, onClose, initialData, 
                   <FormItem>
                     <FormLabel>{t("distributor")}</FormLabel>
                     <FormControl>
-                      <SearchableSelect
+                      <SimpleCombobox
                         value={field.value > 0 ? field.value.toString() : ""}
                         onValueChange={(value) => {
-                          if (value === "new") {
-                            setShowCustomerModal(true);
-                          } else if (value) {
+                          if (value) {
                             field.onChange(Number(value));
                           }
                         }}

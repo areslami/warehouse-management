@@ -76,7 +76,7 @@ export function SearchableSelect({
           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0" align="start">
+      <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0 z-[9999]" align="start" sideOffset={4}>
         <div className="p-2">
           <Input
             placeholder={searchPlaceholder}
@@ -118,7 +118,9 @@ export function SearchableSelect({
                   "flex items-center px-2 py-1.5 text-sm cursor-pointer hover:bg-accent rounded-sm",
                   value === option.value && "bg-accent"
                 )}
-                onClick={() => {
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
                   onValueChange?.(option.value);
                   setOpen(false);
                   setSearch("");

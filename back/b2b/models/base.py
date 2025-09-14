@@ -12,8 +12,6 @@ class B2BOffer(models.Model):
         blank=True
     )
     
-    product = models.ForeignKey('core.Product', on_delete=models.CASCADE)
-    cottage_number = models.CharField(max_length=50, blank=True)
     
     offer_date = models.DateTimeField()
     offer_exp_date = models.DateTimeField()
@@ -31,13 +29,17 @@ class B2BOffer(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
     
     def __str__(self):
-        cottage_info = f" - {self.cottage_number}" if self.cottage_number else ""
-        return f"{self.offer_id} - {self.product.name} ({self.offer_weight} kg){cottage_info} - {self.status}"
+        cottage_info = ""
+        product_name = 'No Product'
+        if self.warehouse_receipt:
+            if self.warehouse_receipt.cottage_serial_number:
+                cottage_info = f" - {self.warehouse_receipt.cottage_serial_number}"
+            first_item = self.warehouse_receipt.items.first()
+            if first_item and getattr(first_item, 'product', None):
+                product_name = first_item.product.name
+        return f"{self.offer_id}{cottage_info} - {product_name} ({self.offer_weight} kg) - {self.status}"
     
     def save(self, *args, **kwargs):
-        if self.warehouse_receipt:
-            self.cottage_number = getattr(self.warehouse_receipt, 'cottage_serial_number', '') or ''
-            
         if self.unit_price and self.offer_weight:
             self.total_price = self.unit_price * self.offer_weight
         
@@ -86,27 +88,7 @@ class B2BAddress(models.Model):
             self.unit_price = self.payment_amount / self.total_weight_purchased
         super().save(*args, **kwargs)
 
-class B2BSale(models.Model):
-    purchase_id = models.CharField(max_length=100, unique=True)
-    offer = models.ForeignKey(B2BOffer, on_delete=models.CASCADE, related_name='b2b_sales', null=True)
-    weight = models.DecimalField(max_digits=20, decimal_places=0, default=0)
-    unit_price = models.DecimalField(max_digits=20, decimal_places=0, default=0)
-    total_price = models.DecimalField(max_digits=20, decimal_places=0, default=0)
-    sale_date = models.DateField(null=True) 
-    product = models.ForeignKey('core.Product', on_delete=models.CASCADE)
-    customer = models.ForeignKey('core.Customer', on_delete=models.CASCADE)
-    purchase_type = models.CharField(max_length=10, choices=TRANSACTION_TYPES, default='cash')
-    description = models.TextField(blank=True)
-    
-    def __str__(self):
-        customer_name = self.customer.company_name if self.customer.customer_type == 'corporate' else self.customer.full_name
-        return f"Sale {self.purchase_id} - {customer_name} - {self.product.name} ({self.weight} kg)"
-    
-    def save(self, *args, **kwargs):
-        if self.unit_price and self.weight:
-            self.total_price = self.unit_price * self.weight
-        super().save(*args, **kwargs)
-    
+ 
 class B2BDistribution(models.Model):
     
     transfer_id = models.CharField(max_length=100, unique=True)
@@ -123,7 +105,37 @@ class B2BDistribution(models.Model):
     
     def __str__(self):
         customer_name = self.customer.company_name if self.customer.customer_type == 'corporate' else self.customer.full_name
-        return f"Distribution {self.warehouse_receipt.receipt_id} - {customer_name} - {self.warehouse_receipt.produc.name} ({self.agency_weight} kg)"
+        product_name = 'No Product'
+        if self.warehouse_receipt:
+            first_item = self.warehouse_receipt.items.first()
+            if first_item and getattr(first_item, 'product', None):
+                product_name = first_item.product.name
+        receipt_id = self.warehouse_receipt.receipt_id if self.warehouse_receipt else 'N/A'
+        return f"Distribution {receipt_id} - {customer_name} - {product_name} ({self.agency_weight} kg)"
     
     def save(self, *args, **kwargs):
         super().save(*args, **kwargs)
+        
+class B2BSale(models.Model):
+    purchase_id = models.CharField(max_length=100, unique=True)
+    is_distributor = models.BooleanField(default=False)
+    b2b_distribution = models.ForeignKey(B2BDistribution, on_delete=models.CASCADE, related_name='b2b_sales', null=True, blank=True)
+    offer = models.ForeignKey(B2BOffer, on_delete=models.CASCADE, related_name='b2b_sales', null=True)
+    weight = models.DecimalField(max_digits=20, decimal_places=0, default=0)
+    unit_price = models.DecimalField(max_digits=20, decimal_places=0, default=0)
+    total_price = models.DecimalField(max_digits=20, decimal_places=0, default=0)
+    sale_date = models.DateField(null=True) 
+    customer = models.ForeignKey('core.Customer', on_delete=models.CASCADE)
+    purchase_type = models.CharField(max_length=10, choices=TRANSACTION_TYPES, default='cash')
+    description = models.TextField(blank=True)
+    
+    def __str__(self):
+        customer_name = self.customer.company_name if self.customer.customer_type == 'corporate' else self.customer.full_name
+        product_name = self.offer.warehouse_receipt.product.name if self.offer else self.b2b_distribution.warehouse_receipt.product.name if self.b2b_distribution else 'No Product'
+        return f"Sale {self.purchase_id} - {customer_name} - {product_name} ({self.weight} kg)"
+    
+    def save(self, *args, **kwargs):
+        if self.unit_price and self.weight:
+            self.total_price = self.unit_price * self.weight
+        super().save(*args, **kwargs)
+   

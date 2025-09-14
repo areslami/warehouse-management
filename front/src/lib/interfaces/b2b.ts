@@ -1,8 +1,6 @@
 export interface B2BOffer {
   id: number;
   offer_id: string;
-  product: number;
-  product_name?: string;
   warehouse_receipt?: number;
   warehouse_receipt_id?: string;
   offer_weight: number;
@@ -65,6 +63,9 @@ export interface B2BDistribution {
   id: number;
   transfer_id?: string;
   warehouse_receipt?: number;
+  warehouse_receipt_id?: string;
+  product_id?: number;
+  product_name?: string;
   customer: number;
   customer_name?: string;
   cottage_number?: string;

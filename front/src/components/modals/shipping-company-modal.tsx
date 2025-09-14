@@ -14,7 +14,6 @@ export type ShippingCompanyFormData = {
   name: string;
   contact_person: string;
   phone: string;
-  email?: string;
   address?: string;
   description?: string;
 };
@@ -34,9 +33,6 @@ export function ShippingCompanyModal({ trigger, onSubmit, onClose, initialData }
     name: z.string().min(1, tval("name")),
     contact_person: z.string().min(1, tval("contact-person")),
     phone: z.string().min(1, tval("phone")),
-    email: z.string().optional().refine((val) => !val || z.string().email().safeParse(val).success, {
-      message: tval("email")
-    }),
     address: z.string().optional(),
     description: z.string().optional(),
   });
@@ -49,7 +45,6 @@ export function ShippingCompanyModal({ trigger, onSubmit, onClose, initialData }
       name: initialData?.name || "",
       contact_person: initialData?.contact_person || "",
       phone: initialData?.phone || "",
-      email: initialData?.email || "",
       address: initialData?.address || "",
       description: initialData?.description || "",
     },
@@ -129,20 +124,6 @@ export function ShippingCompanyModal({ trigger, onSubmit, onClose, initialData }
                     <FormLabel>{t("phone")}</FormLabel>
                     <FormControl>
                       <Input {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control as any}
-                name="email"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>{t("email")}</FormLabel>
-                    <FormControl>
-                      <Input type="email" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>

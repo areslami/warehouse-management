@@ -5,13 +5,13 @@ export function getPartyDisplayName(
 ): string {
   if (!party) return "";
 
-  if ("customer_type" in party && party.customer_type === "Corporate") {
+  if ("customer_type" in party && party.customer_type === "corporate") {
     return party.company_name || party.full_name || "";
   }
-  if ("supplier_type" in party && party.supplier_type === "Corporate") {
+  if ("supplier_type" in party && party.supplier_type === "corporate") {
     return party.company_name || party.full_name || "";
   }
-  if ("receiver_type" in party && party.receiver_type === "Corporate") {
+  if ("receiver_type" in party && party.receiver_type === "corporate") {
     return party.company_name || party.full_name || "";
   }
 

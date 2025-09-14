@@ -7,28 +7,22 @@ from warehouse.serializers import WarehouseSerializer
 
 
 class B2BOfferSerializer(serializers.ModelSerializer):
-    product_name = serializers.CharField(source='product.name', read_only=True)
     warehouse_receipt_id = serializers.CharField(source='warehouse_receipt.receipt_id', read_only=True)
     
     class Meta:
         model = B2BOffer
         fields = '__all__'
-        read_only_fields = ['cottage_number', 'total_price', 'created_at', 'updated_at']
+        read_only_fields = [ 'total_price', 'created_at', 'updated_at']
 
 
 class B2BOfferListSerializer(serializers.ModelSerializer):
-    product_name = serializers.CharField(source='product.name', read_only=True)
     remaining_weight = serializers.SerializerMethodField()
     
     class Meta:
         model = B2BOffer
-        fields = ['id', 'offer_id', 'product_name', 'offer_weight', 'unit_price', 
-                  'total_price', 'status', 'offer_date', 'offer_exp_date', 'remaining_weight']
+        fields = ['id', 'offer_id', 'offer_weight', 'unit_price', 
+                  'total_price', 'status', 'offer_date', 'offer_exp_date',]
     
-    def get_remaining_weight(self, obj):
-        if hasattr(obj, 'sale'):
-            return obj.offer_weight - (obj.sale.sold_weight_before_transport or 0)
-        return obj.offer_weight
 
 
 class B2BAddressSerializer(serializers.ModelSerializer):
@@ -85,7 +79,7 @@ class B2BAddressListSerializer(serializers.ModelSerializer):
 
 class B2BSaleSerializer(serializers.ModelSerializer):
     offer_id = serializers.CharField(source='offer.offer_id', read_only=True)
-    product_name = serializers.CharField(source='product.name', read_only=True)
+    distribution_id = serializers.CharField(source='b2b_distribution.purchase_id', read_only=True)
     customer_name = serializers.SerializerMethodField()
     
     class Meta:
@@ -103,6 +97,8 @@ class B2BSaleSerializer(serializers.ModelSerializer):
 
 class B2BDistributionSerializer(serializers.ModelSerializer):
     warehouse_receipt_id = serializers.CharField(source='warehouse_receipt.receipt_id', read_only=True)
+    product_id = serializers.IntegerField(source='warehouse_receipt.items.first.product.id', read_only=True)
+    product_name = serializers.CharField(source='warehouse_receipt.items.first.product.name', read_only=True)
     customer_name = serializers.SerializerMethodField()
     
     class Meta:
@@ -121,9 +117,12 @@ class B2BDistributionSerializer(serializers.ModelSerializer):
 class B2BDistributionListSerializer(serializers.ModelSerializer):
     customer_name = serializers.SerializerMethodField()
     warehouse_receipt_id = serializers.CharField(source='warehouse_receipt.receipt_id', read_only=True)
+    product_id = serializers.IntegerField(source='warehouse_receipt.items.first.product.id', read_only=True)
+    product_name = serializers.CharField(source='warehouse_receipt.items.first.product.name', read_only=True)
+    
     class Meta:
         model = B2BDistribution
-        fields = ['id', 'purchase_id', 'customer_name', 'agency_weight', 'agency_date']
+        fields = ['id', 'transfer_id', 'customer_name', 'product_name', 'agency_weight', 'agency_date', 'warehouse_receipt_id', 'product_id']
     
     def get_customer_name(self, obj):
         if obj.customer:

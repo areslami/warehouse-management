@@ -186,7 +186,7 @@ export default function PartiesPage() {
                   {filteredSuppliers.map((supplier) => (
                     <TableRow key={supplier.id} className="cursor-pointer hover:bg-gray-50" onClick={() => handleRowClick(supplier, 'supplier')}>
                       <TableCell className="font-medium">{getPartyDisplayName(supplier)}</TableCell>
-                      <TableCell>{supplier.supplier_type === "Corporate" ? tCommon('party_types.corporate') : tCommon('party_types.individual')}</TableCell>
+                      <TableCell>{supplier.supplier_type === "corporate" ? tCommon('party_types.corporate') : tCommon('party_types.individual')}</TableCell>
                       <TableCell>{supplier.phone}</TableCell>
                       <TableCell>{supplier.address}</TableCell>
                       <TableCell>{supplier.economic_code}</TableCell>
@@ -260,7 +260,7 @@ export default function PartiesPage() {
                   {filteredCustomers.map((customer) => (
                     <TableRow key={customer.id} className="cursor-pointer hover:bg-gray-50" onClick={() => handleRowClick(customer, 'customer')}>
                       <TableCell className="font-medium">{getPartyDisplayName(customer)}</TableCell>
-                      <TableCell>{customer.customer_type === "Corporate" ? tCommon('party_types.corporate') : tCommon('party_types.individual')}</TableCell>
+                      <TableCell>{customer.customer_type === "corporate" ? tCommon('party_types.corporate') : tCommon('party_types.individual')}</TableCell>
                       <TableCell>{customer.phone}</TableCell>
                       <TableCell>{customer.address}</TableCell>
                       <TableCell>{customer.economic_code}</TableCell>
@@ -335,7 +335,7 @@ export default function PartiesPage() {
                   {filteredReceivers.map((receiver) => (
                     <TableRow key={receiver.id} className="cursor-pointer hover:bg-gray-50" onClick={() => handleRowClick(receiver, 'receiver')}>
                       <TableCell className="font-medium">{getPartyDisplayName(receiver)}</TableCell>
-                      <TableCell>{receiver.receiver_type === "Corporate" ? tCommon('party_types.corporate') : tCommon('party_types.individual')}</TableCell>
+                      <TableCell>{receiver.receiver_type === "corporate" ? tCommon('party_types.corporate') : tCommon('party_types.individual')}</TableCell>
                       <TableCell>{receiver.phone}</TableCell>
                       <TableCell>{receiver.address}</TableCell>
                       <TableCell>{receiver.unique_id}</TableCell>
@@ -401,7 +401,6 @@ export default function PartiesPage() {
                     <TableHead className="text-right">{tCommon('table_headers.company_name')}</TableHead>
                     <TableHead className="text-right">{tCommon('table_headers.contact_person')}</TableHead>
                     <TableHead className="text-right">{tCommon('table_headers.phone')}</TableHead>
-                    <TableHead className="text-right">{tCommon('table_headers.email')}</TableHead>
                     <TableHead className="text-right">{tCommon('table_headers.address')}</TableHead>
                     <TableHead className="text-center">{tCommon('table_headers.operations')}</TableHead>
                   </TableRow>
@@ -412,7 +411,6 @@ export default function PartiesPage() {
                       <TableCell className="font-medium">{company.name}</TableCell>
                       <TableCell>{company.contact_person}</TableCell>
                       <TableCell>{company.phone}</TableCell>
-                      <TableCell>{company.email}</TableCell>
                       <TableCell>{company.address}</TableCell>
                       <TableCell className="text-center">
                         <div className="flex gap-2 justify-center">
@@ -524,9 +522,9 @@ export default function PartiesPage() {
                   <>
                     <div><strong>{tCommon('detail_labels.name')}</strong> {getPartyDisplayName(selectedItem)}</div>
                     <div><strong>{tCommon('table_headers.type')}</strong> {
-                      selectedItem[`${selectedType}_type`] === "Corporate" ? tCommon('party_types.corporate') : tCommon('party_types.individual')
+                      selectedItem[`${selectedType}_type`] === "corporate" ? tCommon('party_types.corporate') : tCommon('party_types.individual')
                     }</div>
-                    {selectedItem[`${selectedType}_type`] === "Corporate" ? (
+                    {selectedItem[`${selectedType}_type`] === "corporate" ? (
                       <>
                         <div><strong>{tCommon('detail_labels.company_name_label')}</strong> {selectedItem.company_name || '-'}</div>
                         <div><strong>{tCommon('detail_labels.national_id')}</strong> {selectedItem.national_id || '-'}</div>

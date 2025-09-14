@@ -5,11 +5,12 @@ import { Card } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Progress } from "@/components/ui/progress";
 import { createAddressBatch, previewAddress, uploadAddressExcel } from "@/lib/api/excel";
+import { fetchB2BOffers, fetchB2BDistributions } from "@/lib/api/b2b";
 import { ProductFormData, ProductModal } from "../product-modal";
 import { createProduct } from "@/lib/api/core";
 import { Check, FileSpreadsheet, Upload, X } from "lucide-react";
 import { useTranslations } from "next-intl";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { formatNumber } from "@/lib/utils/number-format";
 
@@ -24,10 +25,16 @@ interface UploadAddressModalProps {
 
 export default function UploadAddressModal({ isOpen, onClose, onSuccess }: UploadAddressModalProps) {
   const t = useTranslations("modals.uploadAddress")
+  const tDist = useTranslations("modals.uploadDistribution")
   const [file, setFile] = useState<File | null>(null);
   const [rows, setRows] = useState<object[]>([]);
   const [currentRowIndex, setCurrentRowIndex] = useState(0);
   const [processedRows, setProcessedRows] = useState<object[]>([]);
+  const [addressType, setAddressType] = useState<"your_address" | "distributor_address">("your_address")
+  const [selectedOffer, setSelectedOffer] = useState<number | "" | "new">("")
+  const [selectedDistribution, setSelectedDistribution] = useState<number | "" | "new">("")
+  const [offers, setOffers] = useState<any[]>([])
+  const [distributions, setDistributions] = useState<any[]>([])
 
   const [loading, setLoading] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
@@ -36,6 +43,19 @@ export default function UploadAddressModal({ isOpen, onClose, onSuccess }: Uploa
   const [createdProducts, setCreatedProducts] = useState<{ [key: string]: number }>({});
 
   const [uploadStep, setUploadStep] = useState<"select" | "processing" | "complete">("select");
+  useEffect(() => {
+    const loadLists = async () => {
+      try {
+        const [o, d] = await Promise.all([
+          fetchB2BOffers(),
+          fetchB2BDistributions()
+        ])
+        setOffers(o || [])
+        setDistributions(d || [])
+      } catch {}
+    }
+    if (isOpen) loadLists()
+  }, [isOpen])
 
   const handleClose = () => {
     resetState();
@@ -47,6 +67,9 @@ export default function UploadAddressModal({ isOpen, onClose, onSuccess }: Uploa
     setUploadStep("select");
     setShowProductModal(false);
     setCreatedProducts({});
+    setAddressType("your_address")
+    setSelectedOffer("")
+    setSelectedDistribution("")
   };
 
   const handleCreateProduct = async (productData: ProductFormData) => {
@@ -89,6 +112,14 @@ export default function UploadAddressModal({ isOpen, onClose, onSuccess }: Uploa
   };
   const handleUpload = async () => {
     if (!file) return;
+    if (addressType === "your_address" && !selectedOffer) {
+      toast.error(tDist("select_offer"));
+      return;
+    }
+    if (addressType === "distributor_address" && !selectedDistribution) {
+      toast.error(tDist("select_distribution"));
+      return;
+    }
     setLoading(true);
     setUploadStep("processing");
     try {
@@ -160,6 +191,13 @@ export default function UploadAddressModal({ isOpen, onClose, onSuccess }: Uploa
       };
     }
 
+    if (addressType === "your_address" && selectedOffer && selectedOffer !== "new") {
+      row = { ...row, offer: { id: Number(selectedOffer) } }
+    }
+    if (addressType === "distributor_address" && selectedDistribution && selectedDistribution !== "new") {
+      row = { ...row, b2b_distribution: { id: Number(selectedDistribution) } }
+    }
+
     try {
       const preview = await previewAddress(row);
       setPreviewData(preview);
@@ -197,6 +235,49 @@ export default function UploadAddressModal({ isOpen, onClose, onSuccess }: Uploa
 
           {uploadStep === "select" && (
             <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium mb-1">{t("sale_type")}</label>
+                  <select
+                    className="w-full px-3 py-2 border rounded-md"
+                    value={addressType}
+                    onChange={(e) => setAddressType(e.target.value as any)}
+                  >
+                    <option value="your_address">{t("your_sale")}</option>
+                    <option value="distributor_address">{t("distributor_sale")}</option>
+                  </select>
+                </div>
+                {addressType === "your_address" && (
+                  <div>
+                    <label className="block text-sm font-medium mb-1">{tDist("b2b_offer")}</label>
+                    <select
+                      className="w-full px-3 py-2 border rounded-md"
+                      value={selectedOffer as any}
+                      onChange={(e) => setSelectedOffer(e.target.value as any)}
+                    >
+                      <option value="">{tDist("select_offer")}</option>
+                      {offers.map((o) => (
+                        <option key={o.id} value={o.id}>{o.offer_id}</option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+                {addressType === "distributor_address" && (
+                  <div>
+                    <label className="block text-sm font-medium mb-1">{tDist("distribution")}</label>
+                    <select
+                      className="w-full px-3 py-2 border rounded-md"
+                      value={selectedDistribution as any}
+                      onChange={(e) => setSelectedDistribution(e.target.value as any)}
+                    >
+                      <option value="">{tDist("select_distribution")}</option>
+                      {distributions.map((d) => (
+                        <option key={d.id} value={d.id}>{d.transfer_id}</option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+              </div>
               <div className="flex items-center justify-center w-full">
                 <label className="flex flex-col items-center justify-center w-full h-48 border-2 border-gray-300 border-dashed rounded-lg cursor-pointer bg-gray-50 hover:bg-gray-100">
                   <div className="flex flex-col items-center justify-center pt-5 pb-6">

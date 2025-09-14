@@ -41,11 +41,7 @@ class WarehouseReceiptSerializer(serializers.ModelSerializer):
     
     class Meta:
         model = WarehouseReceipt
-        fields = [
-            'id', 'receipt_id', 'receipt_type', 'date', 'warehouse', 'warehouse_name',
-            'description', 'total_weight', 'cottage_serial_number', 'proforma',
-            'proforma_serial', 'items', 'created_at', 'updated_at'
-        ]
+        fields = '__all__'
         read_only_fields = ['created_at', 'updated_at']
 
     def create(self, validated_data):
@@ -213,7 +209,4 @@ class WarehouseReceiptListSerializer(serializers.ModelSerializer):
     
     class Meta:
         model = WarehouseReceipt
-        fields = [
-            'id', 'receipt_id', 'receipt_type', 'date', 'warehouse', 'warehouse_name',
-            'total_weight', 'created_at'
-        ]
+        fields = '__all__'

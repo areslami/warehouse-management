@@ -1,4 +1,4 @@
-EXCEL_FIELD_MAPPING_DISTRIBUTION = {
+EXCEL_FIELD_MAPPING_SALE = {
     'purchase_id': 'شناسه خرید',
     'cottage_code': 'کد کوتاژ',
     'weight': 'وزن خرید',
@@ -10,7 +10,7 @@ EXCEL_FIELD_MAPPING_DISTRIBUTION = {
     'payment_method': 'شیوه پرداخت',
     
 }
-EXCEL_FIELD_MAPPING_SALE = {
+EXCEL_FIELD_MAPPING_ADDRESS = {
     "purchase_id": "کد",
     "total_weight_purchased": "وزن کل خرید",
     "purchase_date": "تاریخ خرید",
@@ -50,11 +50,11 @@ EXCEL_FIELD_MAPPING_SALE = {
 }
 
 for i in range(1, 4):
-    EXCEL_FIELD_MAPPING_SALE[f'agreement_period_{i}'] = f'بازه {i} پرداخت توافقی (روز)'
-    EXCEL_FIELD_MAPPING_SALE[f'agreement_amount_{i}'] = f'مبلغ بازه {i} توافقی-ریال'
+    EXCEL_FIELD_MAPPING_ADDRESS[f'agreement_period_{i}'] = f'بازه {i} پرداخت توافقی (روز)'
+    EXCEL_FIELD_MAPPING_ADDRESS[f'agreement_amount_{i}'] = f'مبلغ بازه {i} توافقی-ریال'
 for i in range(1, 4):
-    EXCEL_FIELD_MAPPING_DISTRIBUTION[f'credit_period_{i}'] = f'بازه پرداخت نسیه {i}'
-    EXCEL_FIELD_MAPPING_DISTRIBUTION[f'credit_amount_{i}'] = f'مبلغ بازه پرداخت نسیه {i}'
+    EXCEL_FIELD_MAPPING_SALE[f'credit_period_{i}'] = f'بازه پرداخت نسیه {i}'
+    EXCEL_FIELD_MAPPING_SALE[f'credit_amount_{i}'] = f'مبلغ بازه پرداخت نسیه {i}'
 
 EXCEL_FIELD_MAPPING_YOUR_SALE = {
     "purchase_id": "شناسه خرید",
@@ -81,6 +81,6 @@ for i in range(1, 4):
     EXCEL_FIELD_MAPPING_YOUR_SALE[f'agreement_period_{i}'] = f'بازه {i} پرداخت توافقی (روز)'
     EXCEL_FIELD_MAPPING_YOUR_SALE[f'agreement_amount_{i}'] = f'مبلغ بازه {i} توافقی-ریال'
 
-FIELD_MAPPING_DISTRIBUTION_REVERSE = {v: k for k, v in EXCEL_FIELD_MAPPING_DISTRIBUTION.items()}
 FIELD_MAPPING_SALE_REVERSE = {v: k for k, v in EXCEL_FIELD_MAPPING_SALE.items()}
+FIELD_MAPPING_ADDRESS_REVERSE = {v: k for k, v in EXCEL_FIELD_MAPPING_ADDRESS.items()}
 FIELD_MAPPING_YOUR_SALE_REVERSE = {v: k for k, v in EXCEL_FIELD_MAPPING_YOUR_SALE.items()}

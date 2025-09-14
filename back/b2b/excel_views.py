@@ -3,7 +3,7 @@ from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from django.db import transaction, models
 from datetime import datetime
-from .utils import parse_html_table, process_distribution_row, process_sale_row, process_your_sale_row
+from .utils import parse_html_table, process_address_row, process_sale_row, process_your_sale_row
 from .models import B2BDistribution, B2BSale
 from .serializers import B2BDistributionSerializer, B2BAddressSerializer, B2BSaleSerializer
 from core.models import Customer
@@ -35,7 +35,7 @@ def upload_excel_sales(request):
             content = file.read()
             rows = parse_html_table(content)
             print(f"Distributor sale HTML columns: {list(rows[0].keys()) if rows else 'No rows'}")
-            processed_rows = [process_distribution_row(row) for row in rows]
+            processed_rows = [process_sale_row(row) for row in rows]
             
             return Response({
                 'rows': processed_rows,
@@ -54,24 +54,29 @@ def upload_excel_addresses(request):
         return Response({'error': 'No file provided'}, status=status.HTTP_400_BAD_REQUEST)
     
     file = request.FILES['file']
-    
+    address_type = request.get('address_type','')
     try:
         df = pd.read_excel(io.BytesIO(file.read()))
         rows = df.fillna('').to_dict('records')
         
-        # Debug: Print column names
-        print(f"Excel columns: {list(df.columns)}")
-        
-        result = [process_sale_row(row) for row in rows]
-        number_of_customer_created = sum([c for _,c,_ in result])
-        number_of_receiver_created = sum([r for _,_,r in result])
-        processed_rows = [processed for processed,_,_ in result]
+        if address_type == "your_address":
+            offer_id = request.get('offer_id',"")
+            result = [process_address_row(row,address_type,offer_id) for row in rows]
+        else:
+            transfer_id = request.get('transfer_id',"")
+            result = [process_address_row(row,address_type,transfer_id) for row in rows]
+            
+        number_of_customer_created = sum([c for _,c,_,_ in result])
+        number_of_receiver_created = sum([r for _,_,r,_ in result])
+        number_of_sales_created = sum([s for _,_,_,s in result])
+        processed_rows = [processed for processed,_,_,_ in result]
         
         return Response({
             'rows': processed_rows,
             'count': len(processed_rows),
             'number_of_customer_created':number_of_customer_created,
             'number_of_receiver_created':number_of_receiver_created,
+            'number_of_sales_created':number_of_sales_created,
         })
     except Exception as e:
         import traceback
@@ -115,7 +120,7 @@ def preview_sales(request):
     }
     
     response_data = {
-        'distribution_data': sale_data,
+        'sale_data': sale_data,
         'unmapped_fields': data.get('unmapped', {}),
         'needs_customer_creation': not bool(data.get('customer')),
         'customer_name': data.get('customer_name'),
@@ -172,9 +177,9 @@ def preview_addresses(request):
 
 @api_view(['POST'])
 def create_sales_batch(request):
-    distributions = request.data.get('distributions', [])
+    sales = request.data.get('sales', [])
     
-    if not distributions:
+    if not sales:
         return Response({'error': 'No sales provided'}, status=status.HTTP_400_BAD_REQUEST)
     
     created = []
@@ -182,7 +187,7 @@ def create_sales_batch(request):
     
     try:
         with transaction.atomic():
-            for idx, sale_data in enumerate(distributions):
+            for idx, sale_data in enumerate(sales):
                 # Map distribution fields to B2BSale fields
                 # Map Persian payment types to valid choices
                 payment_type = sale_data.get('purchase_type', 'cash')
@@ -195,9 +200,9 @@ def create_sales_batch(request):
                 elif payment_type not in ['cash', 'credit', 'agreement', 'other']:
                     payment_type = 'other'
                     
-                weight = float(sale_data.get('agency_weight', 0) or 0)
-                unit_price = float(sale_data.get('unit_price', 0) or 0)
-                total_price = float(sale_data.get('total_price', 0) or 0)
+                weight = int(sale_data.get('agency_weight', 0) or sale_data.get('weight', 0) or sale_data.get('total_weight_purchased', 0) or 0)
+                unit_price = int(sale_data.get('unit_price', 0) or 0)
+                total_price = int(sale_data.get('total_price', 0) or 0)
                 
                 # Calculate total_price if not provided
                 if total_price == 0 and weight > 0 and unit_price > 0:
@@ -253,9 +258,9 @@ def create_sales_batch(request):
 
 @api_view(['POST'])
 def create_addresses_batch(request):
-    distributions = request.data.get('sales', [])
+    sales = request.data.get('sales', [])
     
-    if not distributions:
+    if not sales:
         return Response({'error': 'No sales provided'}, status=status.HTTP_400_BAD_REQUEST)
     
     created = []
@@ -263,7 +268,7 @@ def create_addresses_batch(request):
     
     try:
         with transaction.atomic():
-            for idx, dist_data in enumerate(distributions):
+            for idx, dist_data in enumerate(sales):
                 # Clean the data - remove None or empty foreign key references
                 cleaned_data = {}
                 for key, value in dist_data.items():

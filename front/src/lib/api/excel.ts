@@ -16,7 +16,8 @@ async function fetchWithAuth(url: string, options?: RequestInit) {
   return response.json();
 }
 
-export async function uploadDistributionExcel(file: File, saleType?: "your_sale" | "distributor_sale") {
+// Sales (B2B Sale) Excel APIs
+export async function uploadSalesExcel(file: File, saleType?: "your_sale" | "distributor_sale") {
   const formData = new FormData();
   formData.append("file", file);
   if (saleType) {
@@ -35,20 +36,21 @@ export async function uploadDistributionExcel(file: File, saleType?: "your_sale"
   return response.json();
 }
 
-export async function previewDistribution(rowData: unknown) {
+export async function previewSales(rowData: unknown) {
   return fetchWithAuth(`${API_BASE_URL}sales/preview/`, {
     method: "POST",
     body: JSON.stringify(rowData),
   });
 }
 
-export async function createDistributionsBatch(distributions: object[]) {
+export async function createSalesBatch(sales: object[]) {
   return fetchWithAuth(`${API_BASE_URL}sales/create/`, {
     method: "POST",
-    body: JSON.stringify({ distributions }),
+    body: JSON.stringify({ sales }),
   });
 }
 
+// Address Excel APIs
 export async function uploadAddressExcel(file: File) {
   const formData = new FormData();
   formData.append("file", file);
@@ -65,21 +67,11 @@ export async function uploadAddressExcel(file: File) {
   return response.json();
 }
 
-// Legacy function name for backward compatibility
-export async function uploadSaleExcel(file: File) {
-  return uploadAddressExcel(file);
-}
-
 export async function previewAddress(rowData: unknown) {
   return fetchWithAuth(`${API_BASE_URL}addresses/preview/`, {
     method: "POST",
     body: JSON.stringify(rowData),
   });
-}
-
-// Legacy function name for backward compatibility
-export async function previewSale(rowData: unknown) {
-  return previewAddress(rowData);
 }
 
 export async function createAddressBatch(addresses: object[]) {
@@ -89,7 +81,16 @@ export async function createAddressBatch(addresses: object[]) {
   });
 }
 
-// Legacy function name for backward compatibility
+// Legacy aliases (for any older imports)
+export const uploadDistributionExcel = uploadSalesExcel;
+export const previewDistribution = previewSales;
+export const createDistributionsBatch = createSalesBatch;
+export async function uploadSaleExcel(file: File, saleType?: "your_sale" | "distributor_sale") {
+  return uploadSalesExcel(file, saleType);
+}
+export async function previewSale(rowData: unknown) {
+  return previewSales(rowData);
+}
 export async function createSaleBatch(sales: object[]) {
-  return createAddressBatch(sales);
+  return createSalesBatch(sales);
 }

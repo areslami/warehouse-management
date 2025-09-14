@@ -9,12 +9,11 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Button } from "../../ui/button";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "../../ui/form";
 import { Input } from "../../ui/input";
-import { SearchableSelect } from "../../ui/searchable-select";
+import { SimpleCombobox } from "../../ui/simple-combobox";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../../ui/select";
 import { NumberInput } from "../../ui/number-input";
 import { useTranslations } from "next-intl";
 import { useCoreData } from "@/lib/core-data-context";
-import { ProductModal } from "../product-modal";
-import { createProduct } from "@/lib/api/core";
 import { fetchWarehouseReceipts, createWarehouseReceipt } from "@/lib/api/warehouse";
 import { WarehouseReceipt } from "@/lib/interfaces/warehouse";
 import { PersianDatePicker } from "../../ui/persian-date-picker";
@@ -22,7 +21,6 @@ import { WarehouseReceiptModal } from "../warehouse/warehouse-receipt-modal";
 
 export type B2BOfferFormData = {
   offer_id: string;
-  product: number;
   warehouse_receipt?: number;
   offer_weight?: number;
   unit_price: number;
@@ -44,22 +42,17 @@ export function B2BOfferModal({ trigger, onSubmit, onClose, initialData }: B2BOf
   const tval = useTranslations("modals.b2bOffer.validation");
   const t = useTranslations("modals.b2bOffer");
   const tCommon = useTranslations("common");
-  const { products, refreshData: refreshCoreData } = useCoreData();
-  const [showProductModal, setShowProductModal] = useState(false);
+  const { refreshData: refreshCoreData } = useCoreData();
+
   const [showWarehouseReceiptModal, setShowWarehouseReceiptModal] = useState(false);
   const [warehouseReceipts, setWarehouseReceipts] = useState<WarehouseReceipt[]>([]);
 
-  useEffect(() => {
-    if (products.length === 0) {
-      refreshCoreData('products');
-    }
-  }, [products.length, refreshCoreData]);
+
 
   const loadWarehouseReceipts = async () => {
     try {
       const receipts = await fetchWarehouseReceipts();
-      // Filter for import_cottage and distribution_cottage types
-      const filteredReceipts = receipts?.filter(receipt => 
+      const filteredReceipts = receipts?.filter(receipt =>
         receipt.receipt_type === 'import_cottage' || receipt.receipt_type === 'distribution_cottage'
       ) || [];
       setWarehouseReceipts(filteredReceipts);
@@ -70,12 +63,11 @@ export function B2BOfferModal({ trigger, onSubmit, onClose, initialData }: B2BOf
 
   useEffect(() => {
     loadWarehouseReceipts();
-  }, []);
+  }, [refreshCoreData]);
 
 
   const b2bOfferSchema = z.object({
     offer_id: z.string().min(1, tval("offer-id")),
-    product: z.number().min(1, tval("product-required")),
     warehouse_receipt: z.number().optional(),
     offer_weight: z.number().optional(),
     unit_price: z.number().positive(),
@@ -92,7 +84,6 @@ export function B2BOfferModal({ trigger, onSubmit, onClose, initialData }: B2BOf
     resolver: zodResolver(b2bOfferSchema) as any,
     defaultValues: {
       offer_id: initialData?.offer_id || "",
-      product: initialData?.product || 0,
       warehouse_receipt: initialData?.warehouse_receipt || 0,
       offer_weight: initialData?.offer_weight || 0,
       unit_price: initialData?.unit_price || 0,
@@ -162,18 +153,17 @@ export function B2BOfferModal({ trigger, onSubmit, onClose, initialData }: B2BOf
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>{t("status")}</FormLabel>
-                      <SearchableSelect
-                        value={field.value}
-                        onValueChange={field.onChange}
-                        options={[
-                          { value: "pending", label: t("status_options.pending") },
-                          { value: "active", label: t("status_options.active") },
-                          { value: "sold", label: t("status_options.sold") },
-                          { value: "expired", label: t("status_options.expired") }
-                        ]}
-                        placeholder={t("select-status")}
-                        searchPlaceholder={tCommon("search_placeholders.search_status")}
-                      />
+                      <Select value={field.value} onValueChange={field.onChange}>
+                        <SelectTrigger>
+                          <SelectValue placeholder={t("select-status")} />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="pending">{t("status_options.pending")}</SelectItem>
+                          <SelectItem value="active">{t("status_options.active")}</SelectItem>
+                          <SelectItem value="sold">{t("status_options.sold")}</SelectItem>
+                          <SelectItem value="expired">{t("status_options.expired")}</SelectItem>
+                        </SelectContent>
+                      </Select>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -187,59 +177,22 @@ export function B2BOfferModal({ trigger, onSubmit, onClose, initialData }: B2BOf
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>{t("offer_type_label")}</FormLabel>
-                      <SearchableSelect
-                        value={field.value}
-                        onValueChange={field.onChange}
-                        options={[
-                          { value: "cash", label: t("offer_type_options.cash") },
-                          { value: "credit", label: t("offer_type_options.credit") },
-                          { value: "agreement", label: t("offer_type_options.agreement") }
-                        ]}
-                        placeholder={t("select_offer_type")}
-                        searchPlaceholder={tCommon("search_placeholders.search_offer_types")}
-                      />
+                      <Select value={field.value} onValueChange={field.onChange}>
+                        <SelectTrigger>
+                          <SelectValue placeholder={t("select_offer_type")} />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="cash">{t("offer_type_options.cash")}</SelectItem>
+                          <SelectItem value="credit">{t("offer_type_options.credit")}</SelectItem>
+                          <SelectItem value="agreement">{t("offer_type_options.agreement")}</SelectItem>
+                        </SelectContent>
+                      </Select>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <FormField
-                  control={form.control as any}
-                  name="product"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>{t("product")}</FormLabel>
-                      <FormControl>
-                        <SearchableSelect
-                          value={field.value > 0 ? field.value.toString() : ""}
-                          onValueChange={(value) => {
-                            if (value === "new") {
-                              setShowProductModal(true);
-                            } else if (value) {
-                              field.onChange(Number(value));
-                            }
-                          }}
-                          options={products.map(product => ({
-                            value: product.id.toString(),
-                            label: `${product.name} (ID: ${product.id})`,
-                            id: product.id,
-                            name: product.name
-                          }))}
-                          placeholder={t("select-product")}
-                          searchPlaceholder={tCommon("search_placeholders.search_products")}
-                          showCreateNew={true}
-                          createNewText={t("create-new-product")}
-                          onCreateNew={() => setShowProductModal(true)}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-              </div>
 
               <FormField
                 control={form.control as any}
@@ -248,12 +201,10 @@ export function B2BOfferModal({ trigger, onSubmit, onClose, initialData }: B2BOf
                   <FormItem>
                     <FormLabel>{t("warehouse-receipt")}</FormLabel>
                     <FormControl>
-                      <SearchableSelect
+                      <SimpleCombobox
                         value={field.value > 0 ? field.value.toString() : ""}
                         onValueChange={(value) => {
-                          if (value === "new") {
-                            setShowWarehouseReceiptModal(true);
-                          } else if (value && value !== "0") {
+                          if (value && value !== "0") {
                             field.onChange(Number(value));
                           } else {
                             field.onChange(0);
@@ -263,9 +214,9 @@ export function B2BOfferModal({ trigger, onSubmit, onClose, initialData }: B2BOf
                           { value: "0", label: t("no-receipt") },
                           ...warehouseReceipts.map(receipt => ({
                             value: receipt.id.toString(),
-                            label: `${receipt.receipt_id} - ${receipt.warehouse_name} (${receipt.cottage_serial_number}) (ID: ${receipt.id})`,
+                            label: `${receipt.receipt_id} - ${receipt.warehouse_name} - ${t("cottage_number")} : ${receipt.cottage_serial_number} `,
                             id: receipt.id,
-                            name: receipt.receipt_id
+                            name: receipt.receipt_id || receipt.id.toString()
                           }))
                         ]}
                         placeholder={t("select-warehouse-receipt")}
@@ -379,24 +330,20 @@ export function B2BOfferModal({ trigger, onSubmit, onClose, initialData }: B2BOf
         </DialogContent>
       </Dialog>
 
-      {showProductModal && (
-        <ProductModal
-          onSubmit={async (newProduct) => {
-            const created = await createProduct(newProduct);
-            if (created) {
-              await refreshCoreData('products');
-              form.setValue('product', created.id);
-              setShowProductModal(false);
-            }
-          }}
-          onClose={() => setShowProductModal(false)}
-        />
-      )}
 
       {showWarehouseReceiptModal && (
         <WarehouseReceiptModal
           onSubmit={async (newReceipt) => {
-            const created = await createWarehouseReceipt(newReceipt);
+            const receiptData = {
+              ...newReceipt,
+              items: newReceipt.items.map(item => ({
+                product: item.product,
+                weight: typeof item.weight === 'string' ? parseFloat(item.weight) || 0 : item.weight
+              }))
+            };
+            console.log("MMD");
+            console.log(receiptData);
+            const created = await createWarehouseReceipt(receiptData);
             if (created) {
               await loadWarehouseReceipts();
               form.setValue('warehouse_receipt', created.id);

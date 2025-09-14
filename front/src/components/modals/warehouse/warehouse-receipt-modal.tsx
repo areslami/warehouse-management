@@ -9,7 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, Dialog
 import { Button } from "../../ui/button";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "../../ui/form";
 import { Input } from "../../ui/input";
-import { SearchableSelect } from "../../ui/searchable-select";
+import { SimpleCombobox } from "../../ui/simple-combobox";
 import { NumberInput } from "../../ui/number-input";
 import { Plus, Trash2 } from "lucide-react";
 import { useTranslations } from "next-intl";
@@ -213,20 +213,10 @@ export function WarehouseReceiptModal({ trigger, onSubmit, onClose, initialData 
                     <FormItem>
                       <FormLabel>{t("warehouse")}</FormLabel>
                       <FormControl>
-                        <SearchableSelect
+                        <SimpleCombobox
                           value={field.value > 0 ? field.value.toString() : ""}
                           onValueChange={(value) => {
-                            if (value === "new") {
-                              openModal(WarehouseModal, {
-                                onSubmit: async (newWarehouse: WarehouseFormData) => {
-                                  const created = await createWarehouse(newWarehouse);
-                                  if (created) {
-                                    await refreshData('warehouses');
-                                    form.setValue('warehouse', created.id);
-                                  }
-                                }
-                              });
-                            } else if (value) {
+                            if (value) {
                               field.onChange(Number(value));
                             }
                           }}
@@ -283,7 +273,7 @@ export function WarehouseReceiptModal({ trigger, onSubmit, onClose, initialData 
                     <FormItem>
                       <FormLabel>{t("proforma")}</FormLabel>
                       <FormControl>
-                        <SearchableSelect
+                        <SimpleCombobox
                           value={field.value !== undefined && field.value !== null && field.value > 0 ? field.value.toString() : "none"}
                           onValueChange={(value) => {
                             if (value === "new") {
@@ -371,23 +361,10 @@ export function WarehouseReceiptModal({ trigger, onSubmit, onClose, initialData 
                         <FormItem>
                           <FormLabel>{t("product")}</FormLabel>
                           <FormControl>
-                            <SearchableSelect
+                            <SimpleCombobox
                               value={field.value > 0 ? field.value.toString() : ""}
                               onValueChange={(value) => {
-                                if (value === "new") {
-                                  const currentIndex = index;
-                                  openModal(ProductModal, {
-                                    onSubmit: async (newProduct: ProductFormData) => {
-                                      const created = await createProduct(newProduct);
-                                      if (created) {
-                                        await refreshData('products');
-                                        const items = form.getValues('items');
-                                        items[currentIndex].product = created.id;
-                                        form.setValue('items', items);
-                                      }
-                                    }
-                                  });
-                                } else if (value) {
+                                if (value) {
                                   field.onChange(Number(value));
                                 }
                               }}

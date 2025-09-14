@@ -9,7 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Button } from "../../ui/button";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "../../ui/form";
 import { Input } from "../../ui/input";
-import { SearchableSelect } from "../../ui/searchable-select";
+import { SimpleCombobox } from "../../ui/simple-combobox";
 import { NumberInput } from "../../ui/number-input";
 import { PersianDatePicker } from "../../ui/persian-date-picker";
 import { useTranslations } from "next-intl";
@@ -208,12 +208,10 @@ export function B2BAddressModal({ trigger, onSubmit, onClose, initialData }: B2B
                     <FormItem>
                       <FormLabel>{t("product")}</FormLabel>
                       <FormControl>
-                        <SearchableSelect
+                        <SimpleCombobox
                           value={field.value > 0 ? field.value.toString() : ""}
                           onValueChange={(value) => {
-                            if (value === "new") {
-                              setShowProductModal(true);
-                            } else if (value) {
+                            if (value) {
                               field.onChange(Number(value));
                             }
                           }}
@@ -242,12 +240,10 @@ export function B2BAddressModal({ trigger, onSubmit, onClose, initialData }: B2B
                     <FormItem>
                       <FormLabel>{t("customer")}</FormLabel>
                       <FormControl>
-                        <SearchableSelect
+                        <SimpleCombobox
                           value={field.value > 0 ? field.value.toString() : ""}
                           onValueChange={(value) => {
-                            if (value === "new") {
-                              setShowCustomerModal(true);
-                            } else if (value) {
+                            if (value) {
                               field.onChange(Number(value));
                             }
                           }}
@@ -279,12 +275,10 @@ export function B2BAddressModal({ trigger, onSubmit, onClose, initialData }: B2B
                     <FormItem>
                       <FormLabel>{t("receiver")} <span className="text-gray-400 text-sm"></span></FormLabel>
                       <FormControl>
-                        <SearchableSelect
+                        <SimpleCombobox
                           value={field.value ? field.value.toString() : ""}
                           onValueChange={(value) => {
-                            if (value === "new") {
-                              setShowReceiverModal(true);
-                            } else if (value && value !== "no-receiver") {
+                            if (value && value !== "no-receiver") {
                               field.onChange(Number(value));
                             } else {
                               field.onChange(undefined);
@@ -318,7 +312,7 @@ export function B2BAddressModal({ trigger, onSubmit, onClose, initialData }: B2B
                     <FormItem>
                       <FormLabel>{t("product-offer")} <span className="text-gray-400 text-sm">{t("optional")}</span></FormLabel>
                       <FormControl>
-                        <SearchableSelect
+                        <SimpleCombobox
                           value={field.value ? field.value.toString() : ""}
                           onValueChange={(value) => {
                             field.onChange(value && value !== "no-offer" ? Number(value) : undefined);
@@ -404,7 +398,7 @@ export function B2BAddressModal({ trigger, onSubmit, onClose, initialData }: B2B
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>{t("payment-method")}</FormLabel>
-                      <SearchableSelect
+                      <SimpleCombobox
                         value={field.value}
                         onValueChange={field.onChange}
                         options={[

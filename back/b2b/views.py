@@ -17,8 +17,8 @@ from .serializers import (
 class B2BOfferViewSet(viewsets.ModelViewSet):
     queryset = B2BOffer.objects.all()
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
-    filterset_fields = ['status', 'offer_type', 'product']
-    search_fields = ['offer_id', 'product__name', 'cottage_number']
+    filterset_fields = ['status', 'offer_type', ]
+    search_fields = ['offer_id', 'warehouse_receipt__receipt_id', 'warehouse_receipt__product__name','warehouse_receipt__cottage_serial_number']
     ordering_fields = ['offer_date', 'offer_exp_date', 'created_at']
     ordering = ['-offer_date']
     
@@ -29,7 +29,7 @@ class B2BOfferViewSet(viewsets.ModelViewSet):
     
     def get_queryset(self):
         queryset = super().get_queryset()
-        return queryset.select_related('product', 'warehouse_receipt')
+        return queryset.select_related( 'warehouse_receipt')
     
     @action(detail=False, methods=['get'])
     def active(self, request):
@@ -68,9 +68,9 @@ class B2BAddressViewSet(viewsets.ModelViewSet):
 class B2BSaleViewSet(viewsets.ModelViewSet):   
     queryset = B2BSale.objects.all()
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
-    filterset_fields = ['offer', 'product', 'customer']
-    search_fields = ['offer__offer_id', 'product__name', 'customer__company_name', 'purchase_id']
-    ordering_fields = ['sale_date', 'sold_weight_before_transport', 'created_at']
+    filterset_fields = ['offer',  'customer','b2b_distribution']
+    search_fields = ['offer__offer_id',  'customer__company_name', 'purchase_id','b2b_distribution__transfer_id', ]
+    ordering_fields = ['sale_date',  'created_at']
     ordering = ['-sale_date']
     
     def get_serializer_class(self):
@@ -78,7 +78,7 @@ class B2BSaleViewSet(viewsets.ModelViewSet):
     
     def get_queryset(self):
         queryset = super().get_queryset()
-        return queryset.select_related('offer', 'product', 'customer')
+        return queryset.select_related('offer', 'b2b_distribution', 'customer')
     
     @action(detail=False, methods=['get'])
     def total_sales(self, request):
@@ -90,7 +90,7 @@ class B2BDistributionViewSet(viewsets.ModelViewSet):
     queryset = B2BDistribution.objects.all()
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_fields = ['warehouse_receipt', 'customer']
-    search_fields = ['cottage_number', 'customer__company_name', 'customer__full_name', 'transfer_id']
+    search_fields = ['warehouse_receipt__cottage_serial_number', 'customer__company_name', 'customer__full_name', 'transfer_id']
     ordering_fields = ['agency_date', 'agency_weight', 'created_at']
     ordering = ['-agency_date']
     

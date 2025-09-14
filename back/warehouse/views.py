@@ -25,7 +25,7 @@ class ShippingCompanyViewSet(viewsets.ModelViewSet):
     queryset = ShippingCompany.objects.all()
     serializer_class = ShippingCompanySerializer
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
-    search_fields = ['name', 'contact_person', 'phone', 'email']
+    search_fields = ['name', 'contact_person', 'phone']
     ordering_fields = ['name', 'created_at']
     ordering = ['name']
 
