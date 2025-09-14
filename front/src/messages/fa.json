@@ -15,6 +15,7 @@
       "distributions_title": "لیست عاملیت‌های توزیع",
       "addresses_title": "لیست آدرس‌های بازارگاه",
       "sales_title": "لیست فروش‌های بازارگاه",
+      "export_type": "نوع",
       "add_offer": "افزودن عرضه",
       "add_distribution": "افزودن عاملیت",
       "add_address": "افزودن آدرس",
@@ -69,7 +70,21 @@
       "credit": "اعتباری",
       "agreement": "قراردادی",
       "other": "سایر",
-      "distributor-sale": "فروش‌های عامل توزیع"
+      "distributor-sale": "فروش‌های عامل توزیع",
+      "distributor_sale": "فروش‌های عامل توزیع",
+      "your_sale": "فروش شما",
+      "filters": "فیلترها",
+      "reset": "بازنشانی",
+      "offer_type": "نوع عرضه",
+      "warehouse_receipt_id": "شناسه رسید انبار",
+      "offer_weight": "وزن عرضه",
+      "cottage_code": "کد کوتاژ",
+      "distributor": "عامل توزیع",
+      "transfer_id": "شناسه انتقال",
+      "warehouse_receipt": "رسید انبار",
+      "payment_method": "روش پرداخت",
+      "province": "استان",
+      "city": "شهرستان"
     },
     "warehouse": {
       "title": "انبار",
@@ -1236,9 +1251,13 @@
       "expired": "منقضی",
       "unknown": "نامشخص"
     },
+    "buttons": {
+      "excel_export": "خروجی اکسل"
+    },
     "payment_types": {
       "cash": "نقدی",
       "credit": "اعتباری",
+      "agreement": "توافقی",
       "other": "سایر"
     },
     "party_types": {

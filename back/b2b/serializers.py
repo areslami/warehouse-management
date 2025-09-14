@@ -17,11 +17,13 @@ class B2BOfferSerializer(serializers.ModelSerializer):
 
 class B2BOfferListSerializer(serializers.ModelSerializer):
     remaining_weight = serializers.SerializerMethodField()
+    product_name = serializers.SerializerMethodField()
+    product_id = serializers.SerializerMethodField()
     
     class Meta:
         model = B2BOffer
         fields = ['id', 'offer_id', 'offer_weight', 'unit_price', 
-                  'total_price', 'status', 'offer_date', 'offer_exp_date',]
+                  'total_price', 'status', 'offer_date', 'offer_exp_date', 'product_name', 'product_id']
     
 
 
@@ -55,11 +57,13 @@ class B2BAddressListSerializer(serializers.ModelSerializer):
     product_name = serializers.SerializerMethodField()
     customer_name = serializers.SerializerMethodField()
     receiver_name = serializers.SerializerMethodField()
+    distributor_name = serializers.SerializerMethodField()
+    warehouse_name = serializers.SerializerMethodField()
     
     class Meta:
         model = B2BAddress
-        fields = ['id', 'purchase_id', 'allocation_id', 'product_name', 'customer_name',
-                  'receiver_name', 'total_weight_purchased', 'payment_amount', 'purchase_date', 'tracking_number']
+        fields = ['id', 'purchase_id', 'allocation_id', 'cottage_code', 'product_name', 'customer_name',
+                  'receiver_name', 'distributor_name', 'total_weight_purchased', 'purchase_date', 'warehouse_name']
     
     def get_product_name(self, obj):
         if obj.product:
@@ -76,11 +80,35 @@ class B2BAddressListSerializer(serializers.ModelSerializer):
             return obj.receiver.company_name or obj.receiver.full_name
         return None
 
+    def get_warehouse_name(self, obj):
+        try:
+            offer = getattr(obj, 'product_offer', None)
+            if offer and offer.warehouse_receipt and offer.warehouse_receipt.warehouse:
+                return offer.warehouse_receipt.warehouse.name
+            sale = B2BSale.objects.select_related('b2b_distribution__warehouse_receipt__warehouse').filter(purchase_id=obj.purchase_id).first()
+            if sale and sale.b2b_distribution and sale.b2b_distribution.warehouse_receipt and sale.b2b_distribution.warehouse_receipt.warehouse:
+                return sale.b2b_distribution.warehouse_receipt.warehouse.name
+        except Exception:
+            pass
+        return None
+
+    def get_distributor_name(self, obj):
+        try:
+            sale = B2BSale.objects.select_related('b2b_distribution__customer').filter(purchase_id=obj.purchase_id).first()
+            if sale and sale.b2b_distribution and sale.b2b_distribution.customer:
+                c = sale.b2b_distribution.customer
+                return c.company_name or c.full_name
+        except Exception:
+            pass
+        return None
+
 
 class B2BSaleSerializer(serializers.ModelSerializer):
     offer_id = serializers.CharField(source='offer.offer_id', read_only=True)
-    distribution_id = serializers.CharField(source='b2b_distribution.purchase_id', read_only=True)
+    distribution_id = serializers.CharField(source='b2b_distribution.transfer_id', read_only=True)
     customer_name = serializers.SerializerMethodField()
+    product_name = serializers.SerializerMethodField()
+    product_id = serializers.SerializerMethodField()
     
     class Meta:
         model = B2BSale
@@ -94,9 +122,38 @@ class B2BSaleSerializer(serializers.ModelSerializer):
             return obj.customer.full_name
         return None
 
+    def get_product_name(self, obj):
+        try:
+            if obj.offer and obj.offer.warehouse_receipt:
+                first_item = obj.offer.warehouse_receipt.items.first()
+                if first_item and first_item.product:
+                    return first_item.product.name
+            if obj.b2b_distribution and obj.b2b_distribution.warehouse_receipt:
+                first_item = obj.b2b_distribution.warehouse_receipt.items.first()
+                if first_item and first_item.product:
+                    return first_item.product.name
+        except Exception:
+            pass
+        return None
+
+    def get_product_id(self, obj):
+        try:
+            if obj.offer and obj.offer.warehouse_receipt:
+                first_item = obj.offer.warehouse_receipt.items.first()
+                if first_item and first_item.product:
+                    return first_item.product.id
+            if obj.b2b_distribution and obj.b2b_distribution.warehouse_receipt:
+                first_item = obj.b2b_distribution.warehouse_receipt.items.first()
+                if first_item and first_item.product:
+                    return first_item.product.id
+        except Exception:
+            pass
+        return None
+
 
 class B2BDistributionSerializer(serializers.ModelSerializer):
     warehouse_receipt_id = serializers.CharField(source='warehouse_receipt.receipt_id', read_only=True)
+    warehouse_name = serializers.CharField(source='warehouse_receipt.warehouse.name', read_only=True)
     product_id = serializers.IntegerField(source='warehouse_receipt.items.first.product.id', read_only=True)
     product_name = serializers.CharField(source='warehouse_receipt.items.first.product.name', read_only=True)
     customer_name = serializers.SerializerMethodField()
@@ -117,12 +174,13 @@ class B2BDistributionSerializer(serializers.ModelSerializer):
 class B2BDistributionListSerializer(serializers.ModelSerializer):
     customer_name = serializers.SerializerMethodField()
     warehouse_receipt_id = serializers.CharField(source='warehouse_receipt.receipt_id', read_only=True)
+    warehouse_name = serializers.CharField(source='warehouse_receipt.warehouse.name', read_only=True)
     product_id = serializers.IntegerField(source='warehouse_receipt.items.first.product.id', read_only=True)
     product_name = serializers.CharField(source='warehouse_receipt.items.first.product.name', read_only=True)
     
     class Meta:
         model = B2BDistribution
-        fields = ['id', 'transfer_id', 'customer_name', 'product_name', 'agency_weight', 'agency_date', 'warehouse_receipt_id', 'product_id']
+        fields = ['id', 'transfer_id', 'customer_name', 'product_name', 'agency_weight', 'agency_date', 'warehouse_receipt_id', 'warehouse_name', 'product_id']
     
     def get_customer_name(self, obj):
         if obj.customer:
@@ -131,3 +189,22 @@ class B2BDistributionListSerializer(serializers.ModelSerializer):
             return obj.customer.full_name
         return None
     
+    def get_product_name(self, obj):
+        try:
+            if obj.warehouse_receipt:
+                first_item = obj.warehouse_receipt.items.first()
+                if first_item and first_item.product:
+                    return first_item.product.name
+        except Exception:
+            pass
+        return None
+
+    def get_product_id(self, obj):
+        try:
+            if obj.warehouse_receipt:
+                first_item = obj.warehouse_receipt.items.first()
+                if first_item and first_item.product:
+                    return first_item.product.id
+        except Exception:
+            pass
+        return None

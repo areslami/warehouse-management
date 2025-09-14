@@ -62,7 +62,7 @@ class B2BAddressViewSet(viewsets.ModelViewSet):
     
     def get_queryset(self):
         queryset = super().get_queryset()
-        return queryset.select_related('product', 'customer', 'receiver', 'product_offer')
+        return queryset.select_related('product', 'customer', 'receiver', 'product_offer', 'product_offer__warehouse_receipt', 'product_offer__warehouse_receipt__warehouse')
     
     
 class B2BSaleViewSet(viewsets.ModelViewSet):   

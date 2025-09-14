@@ -315,7 +315,7 @@ def process_your_sale_row(row):
     
     return processed
 
-def createOrUpdateSale(row,address_type,id,customer):
+def createOrUpdateSale(row, address_type, id, customer):
     purchase_id = str(row.get(EXCEL_FIELD_MAPPING_ADDRESS['purchase_id'], ''))
     cottage_code = str(row.get(EXCEL_FIELD_MAPPING_ADDRESS['cottage_code'], ''))
     total_weight_purchased = clean_number(row.get(EXCEL_FIELD_MAPPING_ADDRESS['total_weight_purchased'], '0'))
@@ -325,13 +325,21 @@ def createOrUpdateSale(row,address_type,id,customer):
     purchase_type = str(row.get(EXCEL_FIELD_MAPPING_ADDRESS['payment_method'], ''))
     
     with transaction.atomic():
+        dist_id = None
+        offer_id = None
+        try:
+            dist_id = int(id) if id is not None else None
+        except (TypeError, ValueError):
+            dist_id = None
+        offer_id = dist_id
+
         sale, created = B2BSale.objects.update_or_create(
             purchase_id=purchase_id,
             defaults={
                 'cottage_code': cottage_code,
-                'is_distributor': False  if address_type == 'your_address' else True ,
-                'b2b_distribution':id if address_type == 'your_address'else None,
-                'offer':id if address_type == 'your_address'else None,
+                'is_distributor': True if address_type == 'distributor_address' else False,
+                'b2b_distribution_id': dist_id if address_type == 'distributor_address' else None,
+                'offer_id': offer_id if address_type == 'your_address' else None,
                 'weight': total_weight_purchased,
                 'unit_price': unit_price,
                 'sale_date': purchase_date,
@@ -447,4 +455,3 @@ def find_offer(cottage_code):
     return B2BOffer.objects.filter(
         Q(offer_id=cottage_code) 
     ).first()
-

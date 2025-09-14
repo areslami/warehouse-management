@@ -50,7 +50,7 @@ class B2BAddress(models.Model):
     
     purchase_id = models.CharField(max_length=100, unique=True, default='')
     allocation_id = models.CharField(max_length=100, blank=True, default='')
-    cottage_code = models.CharField(max_length=50, blank=True)
+    cottage_code = models.CharField(max_length=50,null=False, blank=False)
     
     product_offer = models.ForeignKey(
         B2BOffer,
@@ -120,6 +120,7 @@ class B2BSale(models.Model):
     purchase_id = models.CharField(max_length=100, unique=True)
     is_distributor = models.BooleanField(default=False)
     b2b_distribution = models.ForeignKey(B2BDistribution, on_delete=models.CASCADE, related_name='b2b_sales', null=True, blank=True)
+    cottage_code = models.CharField(max_length=50,null=False, blank=False)
     offer = models.ForeignKey(B2BOffer, on_delete=models.CASCADE, related_name='b2b_sales', null=True)
     weight = models.DecimalField(max_digits=20, decimal_places=0, default=0)
     unit_price = models.DecimalField(max_digits=20, decimal_places=0, default=0)

@@ -17,6 +17,7 @@ import { Progress } from "../../ui/progress";
 import { B2BOffer } from "@/lib/interfaces/b2b";
 import { B2BDistributionModal } from "./b2b-distribution-modal";
 import { fetchWarehouseReceiptById } from "@/lib/api/warehouse";
+import { SimpleCombobox } from "../../ui/simple-combobox";
 
 interface UploadSaleModalProps {
   open: boolean;
@@ -365,54 +366,41 @@ export function UploadSaleModal({ open, onClose, onSuccess }: UploadSaleModalPro
                 {saleType === "your_sale" && (
                   <div>
                     <label className="block text-sm font-medium mb-1">{t("b2b_offer")}</label>
-                    <select
-                      className="w-full px-3 py-2 border rounded-md"
-                      value={selectedOffer || ""}
-                      onChange={(e) => {
-                        if (e.target.value === "new") {
-                          setShowOfferModal(true);
-                        } else {
-                          setSelectedOffer(e.target.value ? Number(e.target.value) : null);
-                        }
-                      }}
-                    >
-                      <option value="">{t("select_offer")}</option>
-                      <option value="new" style={{ color: '#f6d265', fontWeight: 'bold' }}>+ {t("create_new_offer")}</option>
-                      {(offers as B2BOffer[]).map(async (o) => {
-                        const id = Number(o.warehouse_receipt || o.warehouse_receipt_id);
-                        const productName = (await fetchWarehouseReceiptById(id))?.items[0].product_name;
-                        const productWeight = (await fetchWarehouseReceiptById(id))?.items[0].weight;
-
-                        return (<option key={o.id} value={o.id}>
-                          {o.offer_id} - {productName} ({productWeight} kg)
-                        </option>);
-                      })}
-                    </select>
+                    <SimpleCombobox
+                      options={(offers as any[]).map((o) => ({
+                        value: String(o.id),
+                        label: `${o.offer_id} - ${o.offer_weight || 0} kg`,
+                        id: o.id,
+                        name: o.offer_id,
+                      }))}
+                      value={selectedOffer ? String(selectedOffer) : ""}
+                      onValueChange={(v) => setSelectedOffer(v ? Number(v) : null)}
+                      placeholder={t("select_offer")}
+                      searchPlaceholder={t("select_offer")}
+                      showCreateNew={true}
+                      createNewText={t("create_new_offer")}
+                      onCreateNew={() => setShowOfferModal(true)}
+                    />
                   </div>
                 )}
                 {saleType === "distributor_sale" && (
                   <div>
                     <label className="block text-sm font-medium mb-1">{t("distribution")}</label>
-                    <select
-                      className="w-full px-3 py-2 border rounded-md"
-                      value={selectedDistribution || ""}
-                      onChange={(e) => {
-                        if (e.target.value === "new") {
-                          setShowDistributionModal(true);
-                        } else {
-                          setSelectedDistribution(e.target.value ? Number(e.target.value) : null);
-                        }
-                      }}
-                    >
-                      <option value="">{t("select_distribution")}</option>
-                      <option value="new" style={{ color: '#f6d265', fontWeight: 'bold' }}>+ {t("create_new_distribution")}</option>
-                      {distributions.map((d: any) => {
-                        return (
-                          <option key={d.id} value={d.id}>
-                            {d.transfer_id} - {d.customer_name} - {d.product_name} - {d.agency_weight} kg
-                          </option>);
-                      })}
-                    </select>
+                    <SimpleCombobox
+                      options={distributions.map((d: any) => ({
+                        value: String(d.id),
+                        label: `${d.transfer_id} - ${d.customer_name} - ${d.product_name} - ${d.agency_weight} kg`,
+                        id: d.id,
+                        name: d.product_name,
+                      }))}
+                      value={selectedDistribution ? String(selectedDistribution) : ""}
+                      onValueChange={(v) => setSelectedDistribution(v ? Number(v) : null)}
+                      placeholder={t("select_distribution")}
+                      searchPlaceholder={t("select_distribution")}
+                      showCreateNew={true}
+                      createNewText={t("create_new_distribution")}
+                      onCreateNew={() => setShowDistributionModal(true)}
+                    />
                   </div>
                 )}
 
@@ -574,9 +562,11 @@ export function UploadSaleModal({ open, onClose, onSuccess }: UploadSaleModalPro
                     onClick={() => {
                       // Accept all remaining rows without preview
                       const remainingRows = rows.slice(currentRowIndex);
-                      const acceptedRows = remainingRows.map(row => ({
+                      const acceptedRows = remainingRows.map((row: any) => ({
                         ...row,
-                        b2b_offer: selectedOffer,
+                        ...(saleType === "your_sale"
+                          ? { b2b_offer: selectedOffer }
+                          : { b2b_distribution: selectedDistribution }),
                       }));
                       submitBatch([...processedRows, ...acceptedRows]);
                     }}

@@ -4,7 +4,7 @@ from rest_framework.response import Response
 from django.db import transaction, models
 from datetime import datetime
 from .utils import parse_html_table, process_address_row, process_sale_row, process_your_sale_row
-from .models import B2BDistribution, B2BSale
+from .models import B2BDistribution, B2BSale, B2BOffer
 from .serializers import B2BDistributionSerializer, B2BAddressSerializer, B2BSaleSerializer
 from core.models import Customer
 from core.serializers import CustomerSerializer
@@ -54,16 +54,16 @@ def upload_excel_addresses(request):
         return Response({'error': 'No file provided'}, status=status.HTTP_400_BAD_REQUEST)
     
     file = request.FILES['file']
-    address_type = request.get('address_type','')
+    address_type = request.POST.get('address_type','')
     try:
         df = pd.read_excel(io.BytesIO(file.read()))
         rows = df.fillna('').to_dict('records')
         
         if address_type == "your_address":
-            offer_id = request.get('offer_id',"")
+            offer_id = request.POST.get('offer_id',"")
             result = [process_address_row(row,address_type,offer_id) for row in rows]
         else:
-            transfer_id = request.get('transfer_id',"")
+            transfer_id = request.POST.get('transfer_id',"")
             result = [process_address_row(row,address_type,transfer_id) for row in rows]
             
         number_of_customer_created = sum([c for _,c,_,_ in result])
@@ -134,16 +134,29 @@ def preview_sales(request):
 @api_view(['POST'])
 def preview_addresses(request):
     data = request.data
-    
-    # Handle offer field properly - check if it has a valid id
-    offer_id = None
-    if data.get('offer') and isinstance(data.get('offer'), dict):
-        offer_id = data.get('offer').get('id')
-    
-    # Build address data without null foreign key references
+
+    # Normalize payment method
+    pm = data.get('payment_method')
+    if isinstance(pm, str):
+      pm_str = pm.strip()
+    else:
+      pm_str = ''
+    if pm_str in ['cash', 'credit', 'agreement', 'other']:
+        normalized_pm = pm_str
+    else:
+        if pm_str == 'توافقی':
+            normalized_pm = 'agreement'
+        elif pm_str == 'نقدی':
+            normalized_pm = 'cash'
+        elif pm_str == 'اعتباری':
+            normalized_pm = 'credit'
+        else:
+            normalized_pm = 'other' if pm_str else ''
+
     address_data = {
         'allocation_id': data.get('allocation_id'),
         'purchase_id': data.get('purchase_id'),
+        'cottage_code': data.get('cottage_code') or data.get('cottage_number') or '',
         'product': data.get('product', {}).get('id') if data.get('product') else None,
         'customer': data.get('customer', {}).get('id') if data.get('customer') else None,
         'receiver': data.get('receiver', {}).get('id') if data.get('receiver') else None,
@@ -151,16 +164,13 @@ def preview_addresses(request):
         'purchase_date': data.get('purchase_date'),
         'unit_price': data.get('unit_price'),
         'payment_amount': data.get('payment_amount'),
-        'payment_method': data.get('payment_method'),
+        'payment_method': normalized_pm,
         'province': data.get('province'),
         'city': data.get('city'),
         'tracking_number': data.get('tracking_number'),
         'description': data.get('credit_description', ''),
     }
-    
-    # Only add product_offer if it has a valid value
-    if offer_id:
-        address_data['product_offer'] = offer_id
+
     
     response_data = {
         'address_data': address_data,
@@ -259,7 +269,6 @@ def create_sales_batch(request):
 @api_view(['POST'])
 def create_addresses_batch(request):
     sales = request.data.get('sales', [])
-    
     if not sales:
         return Response({'error': 'No sales provided'}, status=status.HTTP_400_BAD_REQUEST)
     
@@ -279,6 +288,19 @@ def create_addresses_batch(request):
                             continue
                         cleaned_data[key] = value
                 
+                pm = cleaned_data.get('payment_method', '')
+                if isinstance(pm, str):
+                    pm_str = pm.strip()
+                    if pm_str not in ['cash', 'credit', 'agreement', 'other']:
+                        if pm_str == 'توافقی':
+                            cleaned_data['payment_method'] = 'agreement'
+                        elif pm_str == 'نقدی':
+                            cleaned_data['payment_method'] = 'cash'
+                        elif pm_str == 'اعتباری':
+                            cleaned_data['payment_method'] = 'credit'
+                        else:
+                            cleaned_data['payment_method'] = 'other' if pm_str else ''
+
                 serializer = B2BAddressSerializer(data=cleaned_data)
                 if serializer.is_valid():
                     serializer.save()
@@ -304,4 +326,3 @@ def create_addresses_batch(request):
         'created': created,
         'count': len(created)
     })
-

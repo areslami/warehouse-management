@@ -5,7 +5,7 @@ import { Card } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Progress } from "@/components/ui/progress";
 import { createAddressBatch, previewAddress, uploadAddressExcel } from "@/lib/api/excel";
-import { fetchB2BOffers, fetchB2BDistributions } from "@/lib/api/b2b";
+import { fetchB2BOffers, fetchB2BDistributions, createB2BOffer, createB2BDistribution } from "@/lib/api/b2b";
 import { ProductFormData, ProductModal } from "../product-modal";
 import { createProduct } from "@/lib/api/core";
 import { Check, FileSpreadsheet, Upload, X } from "lucide-react";
@@ -13,6 +13,9 @@ import { useTranslations } from "next-intl";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { formatNumber } from "@/lib/utils/number-format";
+import { SimpleCombobox } from "@/components/ui/simple-combobox";
+import { B2BOfferModal } from "./b2b-offer-modal";
+import { B2BDistributionModal } from "./b2b-distribution-modal";
 
 
 
@@ -43,6 +46,8 @@ export default function UploadAddressModal({ isOpen, onClose, onSuccess }: Uploa
   const [createdProducts, setCreatedProducts] = useState<{ [key: string]: number }>({});
 
   const [uploadStep, setUploadStep] = useState<"select" | "processing" | "complete">("select");
+  const [showOfferModal, setShowOfferModal] = useState(false);
+  const [showDistributionModal, setShowDistributionModal] = useState(false);
   useEffect(() => {
     const loadLists = async () => {
       try {
@@ -52,7 +57,7 @@ export default function UploadAddressModal({ isOpen, onClose, onSuccess }: Uploa
         ])
         setOffers(o || [])
         setDistributions(d || [])
-      } catch {}
+      } catch { }
     }
     if (isOpen) loadLists()
   }, [isOpen])
@@ -70,6 +75,28 @@ export default function UploadAddressModal({ isOpen, onClose, onSuccess }: Uploa
     setAddressType("your_address")
     setSelectedOffer("")
     setSelectedDistribution("")
+  };
+  const handleCreateOffer = async (data: any) => {
+    try {
+      const created = await createB2BOffer(data);
+      if (created) {
+        const list = await fetchB2BOffers();
+        setOffers(list || []);
+        setSelectedOffer(created.id);
+      }
+      setShowOfferModal(false);
+    } catch { }
+  };
+  const handleCreateDistribution = async (data: any) => {
+    try {
+      const created = await createB2BDistribution(data);
+      if (created) {
+        const list = await fetchB2BDistributions();
+        setDistributions(list || []);
+        setSelectedDistribution(created.id);
+      }
+      setShowDistributionModal(false);
+    } catch { }
   };
 
   const handleCreateProduct = async (productData: ProductFormData) => {
@@ -125,6 +152,12 @@ export default function UploadAddressModal({ isOpen, onClose, onSuccess }: Uploa
     try {
       const formData = new FormData();
       formData.append("file", file);
+      formData.append("address_type", addressType);
+      if (addressType === "your_address") {
+        formData.append("offer_id", String(selectedOffer));
+      } else if (addressType === "distributor_address") {
+        formData.append("transfer_id", String(selectedDistribution));
+      }
 
       const response = await fetch(`http://localhost:8000/b2b/addresses/upload/`, {
         method: "POST",
@@ -235,46 +268,70 @@ export default function UploadAddressModal({ isOpen, onClose, onSuccess }: Uploa
 
           {uploadStep === "select" && (
             <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-3">
                 <div>
                   <label className="block text-sm font-medium mb-1">{t("sale_type")}</label>
-                  <select
-                    className="w-full px-3 py-2 border rounded-md"
-                    value={addressType}
-                    onChange={(e) => setAddressType(e.target.value as any)}
-                  >
-                    <option value="your_address">{t("your_sale")}</option>
-                    <option value="distributor_address">{t("distributor_sale")}</option>
-                  </select>
+                  <div className="flex gap-4">
+                    <label className="flex items-center">
+                      <input
+                        type="radio"
+                        value="your_address"
+                        checked={addressType === "your_address"}
+                        onChange={(e) => setAddressType(e.target.value as any)}
+                        className="mr-2"
+                      />
+                      {t("your_sale")}
+                    </label>
+                    <label className="flex items-center">
+                      <input
+                        type="radio"
+                        value="distributor_address"
+                        checked={addressType === "distributor_address"}
+                        onChange={(e) => setAddressType(e.target.value as any)}
+                        className="mr-2"
+                      />
+                      {t("distributor_sale")}
+                    </label>
+                  </div>
                 </div>
                 {addressType === "your_address" && (
                   <div>
                     <label className="block text-sm font-medium mb-1">{tDist("b2b_offer")}</label>
-                    <select
-                      className="w-full px-3 py-2 border rounded-md"
-                      value={selectedOffer as any}
-                      onChange={(e) => setSelectedOffer(e.target.value as any)}
-                    >
-                      <option value="">{tDist("select_offer")}</option>
-                      {offers.map((o) => (
-                        <option key={o.id} value={o.id}>{o.offer_id}</option>
-                      ))}
-                    </select>
+                    <SimpleCombobox
+                      options={offers.map((o: any) => ({
+                        value: String(o.id),
+                        label: `${o.offer_id} - ${o.offer_weight || 0} kg`,
+                        id: o.id,
+                        name: o.offer_id,
+                      }))}
+                      value={selectedOffer ? String(selectedOffer as any) : ""}
+                      onValueChange={(v) => setSelectedOffer(v ? Number(v) : "")}
+                      placeholder={tDist("select_offer")}
+                      searchPlaceholder={tDist("select_offer")}
+                      showCreateNew={true}
+                      createNewText={tDist("create_new_offer")}
+                      onCreateNew={() => setShowOfferModal(true)}
+                    />
                   </div>
                 )}
                 {addressType === "distributor_address" && (
                   <div>
                     <label className="block text-sm font-medium mb-1">{tDist("distribution")}</label>
-                    <select
-                      className="w-full px-3 py-2 border rounded-md"
-                      value={selectedDistribution as any}
-                      onChange={(e) => setSelectedDistribution(e.target.value as any)}
-                    >
-                      <option value="">{tDist("select_distribution")}</option>
-                      {distributions.map((d) => (
-                        <option key={d.id} value={d.id}>{d.transfer_id}</option>
-                      ))}
-                    </select>
+                    <SimpleCombobox
+                      options={distributions.map((d: any) => ({
+                        value: String(d.id),
+                        label: `${d.transfer_id} - ${d.customer_name} - ${d.product_name} - ${d.agency_weight} kg`,
+                        id: d.id,
+                        name: d.product_name,
+                      }))}
+                      value={selectedDistribution ? String(selectedDistribution as any) : ""}
+                      onValueChange={(v) => setSelectedDistribution(v ? Number(v) : "")}
+                      placeholder={tDist("select_distribution")}
+                      searchPlaceholder={tDist("select_distribution")}
+                      showCreateNew={true}
+                      createNewText={tDist("create_new_distribution")}
+                      onCreateNew={() => setShowDistributionModal(true)}
+                    />
                   </div>
                 )}
               </div>
@@ -505,6 +562,7 @@ export default function UploadAddressModal({ isOpen, onClose, onSuccess }: Uploa
                         customer: row.customer?.id || row.customer,
                         receiver: row.receiver?.id || row.receiver,
                         total_weight_purchased: row.total_weight_purchased,
+                        cottage_code: row.cottage_code,
                         purchase_date: row.purchase_date,
                         unit_price: row.unit_price,
                         payment_amount: row.payment_amount,
@@ -544,6 +602,18 @@ export default function UploadAddressModal({ isOpen, onClose, onSuccess }: Uploa
           initialData={{ name: previewData?.product_name || previewData?.address_data?.product_name }}
           onSubmit={handleCreateProduct}
           onClose={() => setShowProductModal(false)}
+        />
+      )}
+      {showOfferModal && (
+        <B2BOfferModal
+          onSubmit={handleCreateOffer}
+          onClose={() => setShowOfferModal(false)}
+        />
+      )}
+      {showDistributionModal && (
+        <B2BDistributionModal
+          onSubmit={handleCreateDistribution}
+          onClose={() => setShowDistributionModal(false)}
         />
       )}
     </>

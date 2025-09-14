@@ -37,6 +37,8 @@ export interface B2BAddress {
   product_name?: string;
   customer_name?: string;
   receiver_name?: string;
+  distributor_name?: string;
+  warehouse_name?: string;
   created_at?: string;
   updated_at?: string;
 }
