@@ -25,7 +25,12 @@ SECRET_KEY = "django-insecure-w0$fva@=byw!&%)=br=8e$r7x3mtun-4!#7^87#sfktqm*zott
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = [
+    "localhost",
+    "127.0.0.1",
+    # Allow all hosts on local network during development
+    "*",
+]
 
 
 # Application definition
@@ -135,9 +140,16 @@ STATIC_URL = "static/"
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
-CORS_ALLOWED_ORIGINS = [
-    'http://localhost:3000','http://localhost'
+# CSRF/CORS for local development
+# If you prefer restricting origins, replace '*' with your LAN IP:3000
+# e.g. 'http://192.168.142.69:3000'
+CSRF_TRUSTED_ORIGINS = [
+    'http://localhost:3000',
+    'http://192.168.142.69:3000',
 ]
+CORS_ORIGIN_ALLOW_ALL = True
+# ALLOWED_HOSTS = ["*"]
+ALLOWED_HOSTS = ["127.0.0.1", "localhost", "192.168.*", "10.*",'192.168.142.69']
 
 # Django REST Framework settings
 REST_FRAMEWORK = {
@@ -146,4 +158,3 @@ REST_FRAMEWORK = {
     ],
     'NON_FIELD_ERRORS_KEY': 'detail',
 }
-

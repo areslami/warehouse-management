@@ -18,6 +18,7 @@ import { useModal } from "@/lib/modal-context";
 import { PersianDatePicker } from "../../ui/persian-date-picker";
 import { getTodayGregorian } from "@/lib/utils/persian-date";
 import { getPartyDisplayName } from "@/lib/utils/party-utils";
+import { describeWarehouse, describePurchaseProforma, describeProduct } from "@/lib/utils/label-utils";
 import { WarehouseFormData, WarehouseModal } from "./warehouse-modal";
 import { ProductFormData, ProductModal } from "../product-modal";
 import { PurchaseProformaFormData, PurchaseProformaModal } from "../finance/purchaseproforma-modal";
@@ -222,7 +223,7 @@ export function WarehouseReceiptModal({ trigger, onSubmit, onClose, initialData 
                           }}
                           options={(data.warehouses || []).map(warehouse => ({
                             value: warehouse.id.toString(),
-                            label: `${warehouse.name} (ID: ${warehouse.id})`,
+                            label: describeWarehouse(warehouse),
                             id: warehouse.id,
                             name: warehouse.name
                           }))}
@@ -295,7 +296,7 @@ export function WarehouseReceiptModal({ trigger, onSubmit, onClose, initialData 
                             { value: "none", label: t("no-proforma") },
                             ...(data.purchaseProformas || []).map(proforma => ({
                               value: proforma.id.toString(),
-                              label: `${proforma.serial_number} - ${getPartyDisplayName(data.suppliers.find(s => s.id === proforma.supplier))} (ID: ${proforma.id})`,
+                              label: describePurchaseProforma(proforma),
                               id: proforma.id,
                               name: proforma.serial_number
                             }))
@@ -370,7 +371,7 @@ export function WarehouseReceiptModal({ trigger, onSubmit, onClose, initialData 
                               }}
                               options={(data.products || []).map(product => ({
                                 value: product.id.toString(),
-                                label: `${product.name} (ID: ${product.id})`,
+                                label: describeProduct(product),
                                 id: product.id,
                                 name: product.name
                               }))}

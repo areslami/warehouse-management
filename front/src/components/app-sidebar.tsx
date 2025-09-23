@@ -74,7 +74,7 @@ export function AppSidebar() {
         },
     ];
     return (
-        <Sidebar dir="rtl" side="right" className="m-0 p-0 w-[20%] list-none">
+        <Sidebar dir="rtl" side="right" collapsible="icon" className="m-0 p-0 list-none">
             <SidebarHeader className="m-0 p-0">
                 <SidebarMenuItem className="px-2.5 py-3.5" style={{ backgroundColor: "#f6d265" }}>
                     <Link href="/" className="block w-full">

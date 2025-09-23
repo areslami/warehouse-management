@@ -589,7 +589,8 @@ export default function B2BPage() {
   const exportSelectedAddresses = async () => {
     const ids = addresses.filter(a=>selectedAddresses.includes(a.id)).map(a=>a.id)
     if (ids.length===0) return
-    const res = await fetch('http://localhost:8000/b2b/addresses/export/', {
+    const { getApiBaseUrl } = await import("@/lib/api/config");
+    const res = await fetch(`${getApiBaseUrl()}b2b/addresses/export/`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ ids })

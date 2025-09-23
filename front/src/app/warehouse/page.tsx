@@ -8,6 +8,7 @@ import { toast } from "sonner";
 import { handleApiErrorWithToast } from "@/lib/api/error-toast-handler";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
+import { describeWarehouse } from "@/lib/utils/label-utils";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
@@ -236,7 +237,7 @@ export default function WarehousePage() {
                   <SelectItem value="all">{t("all_warehouses")}</SelectItem>
                   {warehouses.map((warehouse) => (
                     <SelectItem key={warehouse.id} value={warehouse.id.toString()}>
-                      {warehouse.name}
+                      {describeWarehouse(warehouse)}
                     </SelectItem>
                   ))}
                 </SelectContent>

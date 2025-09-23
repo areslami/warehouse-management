@@ -206,7 +206,8 @@ class DeliveryFulfillmentSerializer(serializers.ModelSerializer):
 
 class WarehouseReceiptListSerializer(serializers.ModelSerializer):
     warehouse_name = serializers.CharField(source='warehouse.name', read_only=True)
-    
+    items = WarehouseReceiptItemSerializer(many=True, read_only=True)
+
     class Meta:
         model = WarehouseReceipt
         fields = '__all__'

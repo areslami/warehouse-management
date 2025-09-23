@@ -10,19 +10,20 @@ import type {
 
 import { getCoreContext } from "../core-data-context";
 import { apiFetch } from "./api-client";
+import { getApiBaseUrl } from "./config";
 
-const API_BASE_URL = "http://localhost:8000/warehouse/";
+const API_BASE_URL = () => `${getApiBaseUrl()}warehouse/`;
 
 export const fetchWarehouses = () =>
-  apiFetch<Warehouse[]>(`${API_BASE_URL}warehouses/`);
+  apiFetch<Warehouse[]>(`${API_BASE_URL()}warehouses/`);
 
 export const fetchWarehouseById = (id: number) =>
-  apiFetch<Warehouse>(`${API_BASE_URL}warehouses/${id}/`);
+  apiFetch<Warehouse>(`${API_BASE_URL()}warehouses/${id}/`);
 
 export const createWarehouse = async (
   data: Omit<Warehouse, "id" | "created_at" | "updated_at">
 ) => {
-  const result = await apiFetch<Warehouse>(`${API_BASE_URL}warehouses/`, {
+  const result = await apiFetch<Warehouse>(`${API_BASE_URL()}warehouses/`, {
     method: "POST",
     body: data,
   });
@@ -36,7 +37,7 @@ export const createWarehouse = async (
 };
 
 export const updateWarehouse = async (id: number, data: Partial<Warehouse>) => {
-  const result = await apiFetch<Warehouse>(`${API_BASE_URL}warehouses/${id}/`, {
+  const result = await apiFetch<Warehouse>(`${API_BASE_URL()}warehouses/${id}/`, {
     method: "PATCH",
     body: data,
   });
@@ -50,7 +51,7 @@ export const updateWarehouse = async (id: number, data: Partial<Warehouse>) => {
 };
 
 export const deleteWarehouse = async (id: number) => {
-  const result = await apiFetch(`${API_BASE_URL}warehouses/${id}/`, {
+  const result = await apiFetch(`${API_BASE_URL()}warehouses/${id}/`, {
     method: "DELETE",
   });
 
@@ -64,13 +65,13 @@ export const deleteWarehouse = async (id: number) => {
 
 // --------------- WarehouseReceipt  ---------------
 export const fetchWarehouseReceipts = () =>
-  apiFetch<WarehouseReceipt[]>(`${API_BASE_URL}receipts/`);
+  apiFetch<WarehouseReceipt[]>(`${API_BASE_URL()}receipts/`);
 
 export const fetchWarehouseReceiptById = (id: number) =>
-  apiFetch<WarehouseReceipt>(`${API_BASE_URL}receipts/${id}/`);
+  apiFetch<WarehouseReceipt>(`${API_BASE_URL()}receipts/${id}/`);
 
 export const createWarehouseReceipt = (data: WarehouseReceiptCreate) =>
-  apiFetch<WarehouseReceipt>(`${API_BASE_URL}receipts/`, {
+  apiFetch<WarehouseReceipt>(`${API_BASE_URL()}receipts/`, {
     method: "POST",
     body: data,
   });
@@ -79,31 +80,31 @@ export const updateWarehouseReceipt = (
   id: number,
   data: Partial<WarehouseReceiptCreate>
 ) =>
-  apiFetch<WarehouseReceipt>(`${API_BASE_URL}receipts/${id}/`, {
+  apiFetch<WarehouseReceipt>(`${API_BASE_URL()}receipts/${id}/`, {
     method: "PATCH",
     body: data,
   });
 
 export const deleteWarehouseReceipt = (id: number) =>
-  apiFetch(`${API_BASE_URL}receipts/${id}/`, { method: "DELETE" });
+  apiFetch(`${API_BASE_URL()}receipts/${id}/`, { method: "DELETE" });
 
 export const fetchWarehouseReceiptsByDateRange = (
   startDate: string,
   endDate: string
 ) =>
   apiFetch<WarehouseReceipt[]>(
-    `${API_BASE_URL}receipts/by_date_range/?start_date=${startDate}&end_date=${endDate}`
+    `${API_BASE_URL()}receipts/by_date_range/?start_date=${startDate}&end_date=${endDate}`
   );
 
 // --------------- DispatchIssue  ---------------
 export const fetchDispatchIssues = () =>
-  apiFetch<DispatchIssue[]>(`${API_BASE_URL}dispatches/`);
+  apiFetch<DispatchIssue[]>(`${API_BASE_URL()}dispatches/`);
 
 export const fetchDispatchIssueById = (id: number) =>
-  apiFetch<DispatchIssue>(`${API_BASE_URL}dispatches/${id}/`);
+  apiFetch<DispatchIssue>(`${API_BASE_URL()}dispatches/${id}/`);
 
 export const createDispatchIssue = (data: DispatchIssueCreate) =>
-  apiFetch<DispatchIssue>(`${API_BASE_URL}dispatches/`, {
+  apiFetch<DispatchIssue>(`${API_BASE_URL()}dispatches/`, {
     method: "POST",
     body: data,
   });
@@ -112,23 +113,23 @@ export const updateDispatchIssue = (
   id: number,
   data: Partial<DispatchIssueCreate>
 ) =>
-  apiFetch<DispatchIssue>(`${API_BASE_URL}dispatches/${id}/`, {
+  apiFetch<DispatchIssue>(`${API_BASE_URL()}dispatches/${id}/`, {
     method: "PATCH",
     body: data,
   });
 
 export const deleteDispatchIssue = (id: number) =>
-  apiFetch(`${API_BASE_URL}dispatches/${id}/`, { method: "DELETE" });
+  apiFetch(`${API_BASE_URL()}dispatches/${id}/`, { method: "DELETE" });
 
 // --------------- DeliveryFulfillment  ---------------
 export const fetchDeliveryFulfillments = () =>
-  apiFetch<DeliveryFulfillment[]>(`${API_BASE_URL}deliveries/`);
+  apiFetch<DeliveryFulfillment[]>(`${API_BASE_URL()}deliveries/`);
 
 export const fetchDeliveryFulfillmentById = (id: number) =>
-  apiFetch<DeliveryFulfillment>(`${API_BASE_URL}deliveries/${id}/`);
+  apiFetch<DeliveryFulfillment>(`${API_BASE_URL()}deliveries/${id}/`);
 
 export const createDeliveryFulfillment = (data: DeliveryFulfillmentCreate) =>
-  apiFetch<DeliveryFulfillment>(`${API_BASE_URL}deliveries/`, {
+  apiFetch<DeliveryFulfillment>(`${API_BASE_URL()}deliveries/`, {
     method: "POST",
     body: data,
   });
@@ -137,10 +138,10 @@ export const updateDeliveryFulfillment = (
   id: number,
   data: Partial<DeliveryFulfillmentCreate>
 ) =>
-  apiFetch<DeliveryFulfillment>(`${API_BASE_URL}deliveries/${id}/`, {
+  apiFetch<DeliveryFulfillment>(`${API_BASE_URL()}deliveries/${id}/`, {
     method: "PATCH",
     body: data,
   });
 
 export const deleteDeliveryFulfillment = (id: number) =>
-  apiFetch(`${API_BASE_URL}deliveries/${id}/`, { method: "DELETE" });
+  apiFetch(`${API_BASE_URL()}deliveries/${id}/`, { method: "DELETE" });

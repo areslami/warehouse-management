@@ -18,6 +18,7 @@ import { WarehouseReceiptModal, WarehouseReceiptFormData } from "../warehouse/wa
 import { createCustomer } from "@/lib/api/core";
 import { createWarehouseReceipt, fetchWarehouseReceipts } from "@/lib/api/warehouse";
 import { WarehouseReceipt } from "@/lib/interfaces/warehouse";
+import { describeWarehouseReceipt, describeParty } from "@/lib/utils/label-utils";
 import { getPartyDisplayName } from "@/lib/utils/party-utils";
 import { PersianDatePicker } from "../../ui/persian-date-picker";
 
@@ -159,7 +160,7 @@ export function B2BDistributionModal({ trigger, onSubmit, onClose, initialData, 
                           }}
                           options={warehouseReceipts.map(receipt => ({
                             value: receipt.id.toString(),
-                            label: `${receipt.receipt_id || 'Receipt'} - ${receipt.warehouse_name} (ID: ${receipt.id})`,
+                            label: describeWarehouseReceipt(receipt),
                             id: receipt.id,
                             name: receipt.receipt_id || receipt.id.toString()
                           }))}
@@ -193,7 +194,7 @@ export function B2BDistributionModal({ trigger, onSubmit, onClose, initialData, 
                         }}
                         options={customers.map(customer => ({
                           value: customer.id.toString(),
-                          label: `${getPartyDisplayName(customer)} (ID: ${customer.id})`,
+                          label: describeParty(customer),
                           id: customer.id,
                           name: getPartyDisplayName(customer)
                         }))}

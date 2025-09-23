@@ -17,6 +17,7 @@ import { useModal } from "@/lib/modal-context";
 import { PersianDatePicker } from "../../ui/persian-date-picker";
 import { getTodayGregorian } from "@/lib/utils/persian-date";
 import { getPartyDisplayName } from "@/lib/utils/party-utils";
+import { describeParty, describeProduct } from "@/lib/utils/label-utils";
 import { CustomerFormData, CustomerModal } from "../customer-modal";
 import { ProductFormData, ProductModal } from "../product-modal";
 import { createCustomer, createProduct } from "@/lib/api/core";
@@ -213,7 +214,7 @@ export function SalesProformaModal({ trigger, onSubmit, onClose, initialData }: 
                             )}
                             {data.customers.map((customer) => (
                               <SelectItem key={customer.id} value={customer.id.toString()}>
-                                {getPartyDisplayName(customer)}
+                                {describeParty(customer)}
                               </SelectItem>
                             ))}
                           </SelectContent>
@@ -358,7 +359,7 @@ export function SalesProformaModal({ trigger, onSubmit, onClose, initialData }: 
                                 )}
                                 {data.products.map((product) => (
                                   <SelectItem key={product.id} value={product.id.toString()}>
-                                    {product.name}
+                                    {describeProduct(product)}
                                   </SelectItem>
                                 ))}
                               </SelectContent>

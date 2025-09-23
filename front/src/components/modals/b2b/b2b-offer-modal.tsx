@@ -16,6 +16,7 @@ import { useTranslations } from "next-intl";
 import { useCoreData } from "@/lib/core-data-context";
 import { fetchWarehouseReceipts, createWarehouseReceipt } from "@/lib/api/warehouse";
 import { WarehouseReceipt } from "@/lib/interfaces/warehouse";
+import { describeWarehouseReceipt } from "@/lib/utils/label-utils";
 import { PersianDatePicker } from "../../ui/persian-date-picker";
 import { WarehouseReceiptModal } from "../warehouse/warehouse-receipt-modal";
 
@@ -214,7 +215,7 @@ export function B2BOfferModal({ trigger, onSubmit, onClose, initialData }: B2BOf
                           { value: "0", label: t("no-receipt") },
                           ...warehouseReceipts.map(receipt => ({
                             value: receipt.id.toString(),
-                            label: `${receipt.receipt_id} - ${receipt.warehouse_name} - ${t("cottage_number")} : ${receipt.cottage_serial_number} `,
+                            label: describeWarehouseReceipt(receipt),
                             id: receipt.id,
                             name: receipt.receipt_id || receipt.id.toString()
                           }))

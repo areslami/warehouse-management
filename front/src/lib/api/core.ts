@@ -7,20 +7,21 @@ import type {
 } from "./../interfaces/core";
 import { getCoreContext } from "../core-data-context";
 import { apiFetch } from "./api-client";
+import { getApiBaseUrl } from "./config";
 
-const API_BASE_URL = "http://localhost:8000/";
+const API_BASE_URL = () => getApiBaseUrl();
 
 // ------------------  Product ------------------
 export const fetchProducts = () =>
-  apiFetch<Product[]>(`${API_BASE_URL}products/`);
+  apiFetch<Product[]>(`${API_BASE_URL()}products/`);
 
 export const fetchProductById = (id: number) =>
-  apiFetch(`${API_BASE_URL}products/${id}/`);
+  apiFetch(`${API_BASE_URL()}products/${id}/`);
 
 export const createProduct = async (
   data: Omit<Product, "id" | "created_at" | "updated_at">
 ) => {
-  const result = await apiFetch<Product>(`${API_BASE_URL}products/`, {
+  const result = await apiFetch<Product>(`${API_BASE_URL()}products/`, {
     method: "POST",
     body: data,
   });
@@ -34,7 +35,7 @@ export const createProduct = async (
 };
 
 export const updateProduct = async (id: number, data: Partial<Product>) => {
-  const result = await apiFetch<Product>(`${API_BASE_URL}products/${id}/`, {
+  const result = await apiFetch<Product>(`${API_BASE_URL()}products/${id}/`, {
     method: "PATCH",
     body: data,
   });
@@ -48,7 +49,7 @@ export const updateProduct = async (id: number, data: Partial<Product>) => {
 };
 
 export const deleteProduct = async (id: number) => {
-  const result = await apiFetch(`${API_BASE_URL}products/${id}/`, {
+  const result = await apiFetch(`${API_BASE_URL()}products/${id}/`, {
     method: "DELETE",
   });
 
@@ -62,15 +63,15 @@ export const deleteProduct = async (id: number) => {
 
 // ------------------  Supplier ------------------
 export const fetchSuppliers = () =>
-  apiFetch<Supplier[]>(`${API_BASE_URL}suppliers/`);
+  apiFetch<Supplier[]>(`${API_BASE_URL()}suppliers/`);
 
 export const fetchSupplierById = (id: number) =>
-  apiFetch(`${API_BASE_URL}suppliers/${id}/`);
+  apiFetch(`${API_BASE_URL()}suppliers/${id}/`);
 
 export const createSupplier = async (
   data: Omit<Supplier, "id" | "created_at" | "updated_at">
 ) => {
-  const result = await apiFetch<Supplier>(`${API_BASE_URL}suppliers/`, {
+  const result = await apiFetch<Supplier>(`${API_BASE_URL()}suppliers/`, {
     method: "POST",
     body: data,
   });
@@ -84,7 +85,7 @@ export const createSupplier = async (
 };
 
 export const updateSupplier = async (id: number, data: Partial<Supplier>) => {
-  const result = await apiFetch<Supplier>(`${API_BASE_URL}suppliers/${id}/`, {
+  const result = await apiFetch<Supplier>(`${API_BASE_URL()}suppliers/${id}/`, {
     method: "PATCH",
     body: data,
   });
@@ -98,7 +99,7 @@ export const updateSupplier = async (id: number, data: Partial<Supplier>) => {
 };
 
 export const deleteSupplier = async (id: number) => {
-  const result = await apiFetch(`${API_BASE_URL}suppliers/${id}/`, {
+  const result = await apiFetch(`${API_BASE_URL()}suppliers/${id}/`, {
     method: "DELETE",
   });
 
@@ -112,15 +113,15 @@ export const deleteSupplier = async (id: number) => {
 
 // ------------------  Customer ------------------
 export const fetchCustomers = () =>
-  apiFetch<Customer[]>(`${API_BASE_URL}customers/`);
+  apiFetch<Customer[]>(`${API_BASE_URL()}customers/`);
 
 export const fetchCustomerById = (id: number) =>
-  apiFetch(`${API_BASE_URL}customers/${id}/`);
+  apiFetch(`${API_BASE_URL()}customers/${id}/`);
 
 export const createCustomer = async (
   data: Omit<Customer, "id" | "created_at" | "updated_at">
 ) => {
-  const result = await apiFetch<Customer>(`${API_BASE_URL}customers/`, {
+  const result = await apiFetch<Customer>(`${API_BASE_URL()}customers/`, {
     method: "POST",
     body: data,
   });
@@ -134,7 +135,7 @@ export const createCustomer = async (
 };
 
 export const updateCustomer = async (id: number, data: Partial<Customer>) => {
-  const result = await apiFetch<Customer>(`${API_BASE_URL}customers/${id}/`, {
+  const result = await apiFetch<Customer>(`${API_BASE_URL()}customers/${id}/`, {
     method: "PATCH",
     body: data,
   });
@@ -148,7 +149,7 @@ export const updateCustomer = async (id: number, data: Partial<Customer>) => {
 };
 
 export const deleteCustomer = async (id: number) => {
-  const result = await apiFetch(`${API_BASE_URL}customers/${id}/`, {
+  const result = await apiFetch(`${API_BASE_URL()}customers/${id}/`, {
     method: "DELETE",
   });
 
@@ -162,15 +163,15 @@ export const deleteCustomer = async (id: number) => {
 
 // ------------------  Receiver ------------------
 export const fetchReceivers = () =>
-  apiFetch<Receiver[]>(`${API_BASE_URL}receivers/`);
+  apiFetch<Receiver[]>(`${API_BASE_URL()}receivers/`);
 
 export const fetchReceiverById = (id: number) =>
-  apiFetch(`${API_BASE_URL}receivers/${id}/`);
+  apiFetch(`${API_BASE_URL()}receivers/${id}/`);
 
 export const createReceiver = async (
   data: Omit<Receiver, "id" | "created_at" | "updated_at">
 ) => {
-  const result = await apiFetch<Receiver>(`${API_BASE_URL}receivers/`, {
+  const result = await apiFetch<Receiver>(`${API_BASE_URL()}receivers/`, {
     method: "POST",
     body: data,
   });
@@ -184,7 +185,7 @@ export const createReceiver = async (
 };
 
 export const updateReceiver = async (id: number, data: Partial<Receiver>) => {
-  const result = await apiFetch<Receiver>(`${API_BASE_URL}receivers/${id}/`, {
+  const result = await apiFetch<Receiver>(`${API_BASE_URL()}receivers/${id}/`, {
     method: "PATCH",
     body: data,
   });
@@ -198,7 +199,7 @@ export const updateReceiver = async (id: number, data: Partial<Receiver>) => {
 };
 
 export const deleteReceiver = async (id: number) => {
-  const result = await apiFetch(`${API_BASE_URL}receivers/${id}/`, {
+  const result = await apiFetch(`${API_BASE_URL()}receivers/${id}/`, {
     method: "DELETE",
   });
 
@@ -211,18 +212,18 @@ export const deleteReceiver = async (id: number) => {
 };
 
 export const fetchShippingCompanies = () =>
-  apiFetch<ShippingCompany[]>(`http://localhost:8000/warehouse/shipping-companies/`);
+  apiFetch<ShippingCompany[]>(`${API_BASE_URL()}warehouse/shipping-companies/`);
 
 export const fetchShippingCompanyById = (id: number) =>
   apiFetch<ShippingCompany>(
-    `http://localhost:8000/warehouse/shipping-companies/${id}/`
+    `${API_BASE_URL()}warehouse/shipping-companies/${id}/`
   );
 
 export const createShippingCompany = async (
   data: Omit<ShippingCompany, "id" | "created_at" | "updated_at">
 ) => {
   const result = await apiFetch<ShippingCompany>(
-    `http://localhost:8000/warehouse/shipping-companies/`,
+    `${API_BASE_URL()}warehouse/shipping-companies/`,
     {
       method: "POST",
       body: data,
@@ -242,7 +243,7 @@ export const updateShippingCompany = async (
   data: Partial<ShippingCompany>
 ) => {
   const result = await apiFetch<ShippingCompany>(
-    `http://localhost:8000/warehouse/shipping-companies/${id}/`,
+    `${API_BASE_URL()}warehouse/shipping-companies/${id}/`,
     { method: "PATCH", body: data }
   );
 
@@ -256,7 +257,7 @@ export const updateShippingCompany = async (
 
 export const deleteShippingCompany = async (id: number) => {
   const result = await apiFetch(
-    `http://localhost:8000/warehouse/shipping-companies/${id}/`,
+    `${API_BASE_URL()}warehouse/shipping-companies/${id}/`,
     {
       method: "DELETE",
     }

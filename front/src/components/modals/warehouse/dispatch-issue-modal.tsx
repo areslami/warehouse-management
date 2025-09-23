@@ -18,6 +18,7 @@ import { useModal } from "@/lib/modal-context";
 import { PersianDatePicker } from "../../ui/persian-date-picker";
 import { getTodayGregorian } from "@/lib/utils/persian-date";
 import { getPartyDisplayName } from "@/lib/utils/party-utils";
+import { describeWarehouse, describeSalesProforma, describeShippingCompany, describeProduct, describeParty } from "@/lib/utils/label-utils";
 import { WarehouseFormData, WarehouseModal } from "./warehouse-modal";
 import { ProductFormData, ProductModal } from "../product-modal";
 import { ReceiverFormData, ReceiverModal } from "../receiver-modal";
@@ -218,7 +219,7 @@ export function DispatchIssueModal({ trigger, onSubmit, onClose, initialData }: 
                             )}
                             {data.warehouses.map((warehouse) => (
                               <SelectItem key={warehouse.id} value={warehouse.id.toString()}>
-                                {warehouse.name}
+                                {describeWarehouse(warehouse)}
                               </SelectItem>
                             ))}
                           </SelectContent>
@@ -283,7 +284,7 @@ export function DispatchIssueModal({ trigger, onSubmit, onClose, initialData }: 
                             )}
                             {data.salesProformas.map((proforma) => (
                               <SelectItem key={proforma.id} value={proforma.id.toString()}>
-                                {proforma.serial_number}
+                                {describeSalesProforma(proforma)}
                               </SelectItem>
                             ))}
                           </SelectContent>
@@ -336,7 +337,7 @@ export function DispatchIssueModal({ trigger, onSubmit, onClose, initialData }: 
                             )}
                             {data.shippingCompanies.map((company) => (
                               <SelectItem key={company.id} value={company.id.toString()}>
-                                {company.name}
+                                {describeShippingCompany(company)}
                               </SelectItem>
                             ))}
                           </SelectContent>
@@ -461,7 +462,7 @@ export function DispatchIssueModal({ trigger, onSubmit, onClose, initialData }: 
                                 )}
                                 {data.products.map((product) => (
                                   <SelectItem key={product.id} value={product.id.toString()}>
-                                    {product.name}
+                                    {describeProduct(product)}
                                   </SelectItem>
                                 ))}
                               </SelectContent>
@@ -552,7 +553,7 @@ export function DispatchIssueModal({ trigger, onSubmit, onClose, initialData }: 
                                 )}
                                 {data.receivers.map((receiver) => (
                                   <SelectItem key={receiver.id} value={receiver.id.toString()}>
-                                    {getPartyDisplayName(receiver)}
+                                    {describeParty(receiver)}
                                   </SelectItem>
                                 ))}
                               </SelectContent>

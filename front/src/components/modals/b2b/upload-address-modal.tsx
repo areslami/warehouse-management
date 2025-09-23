@@ -14,6 +14,7 @@ import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { formatNumber } from "@/lib/utils/number-format";
 import { SimpleCombobox } from "@/components/ui/simple-combobox";
+import { describeOffer, describeDistribution } from "@/lib/utils/label-utils";
 import { B2BOfferModal } from "./b2b-offer-modal";
 import { B2BDistributionModal } from "./b2b-distribution-modal";
 
@@ -159,7 +160,8 @@ export default function UploadAddressModal({ isOpen, onClose, onSuccess }: Uploa
         formData.append("transfer_id", String(selectedDistribution));
       }
 
-      const response = await fetch(`http://localhost:8000/b2b/addresses/upload/`, {
+      const { getApiBaseUrl } = await import("@/lib/api/config");
+      const response = await fetch(`${getApiBaseUrl()}b2b/addresses/upload/`, {
         method: "POST",
         body: formData,
       });
@@ -300,7 +302,7 @@ export default function UploadAddressModal({ isOpen, onClose, onSuccess }: Uploa
                     <SimpleCombobox
                       options={offers.map((o: any) => ({
                         value: String(o.id),
-                        label: `${o.offer_id} - ${o.offer_weight || 0} kg`,
+                        label: describeOffer(o as any),
                         id: o.id,
                         name: o.offer_id,
                       }))}
@@ -320,7 +322,7 @@ export default function UploadAddressModal({ isOpen, onClose, onSuccess }: Uploa
                     <SimpleCombobox
                       options={distributions.map((d: any) => ({
                         value: String(d.id),
-                        label: `${d.transfer_id} - ${d.customer_name} - ${d.product_name} - ${d.agency_weight} kg`,
+                        label: describeDistribution(d as any),
                         id: d.id,
                         name: d.product_name,
                       }))}

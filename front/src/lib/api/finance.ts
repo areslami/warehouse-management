@@ -8,19 +8,20 @@ import type {
 } from "./../interfaces/finance";
 import { getCoreContext } from "../core-data-context";
 import { apiFetch } from "./api-client";
+import { getApiBaseUrl } from "./config";
 
-const API_BASE_URL = "http://localhost:8000/finance/";
+const API_BASE_URL = () => `${getApiBaseUrl()}finance/`;
 
 // ------------------------ PurchaseProforma  ------------------------
 export const fetchPurchaseProformas = () =>
-  apiFetch<PurchaseProforma[]>(`${API_BASE_URL}purchase-proformas/`);
+  apiFetch<PurchaseProforma[]>(`${API_BASE_URL()}purchase-proformas/`);
 
 export const fetchPurchaseProformaById = (id: number) =>
-  apiFetch<PurchaseProforma>(`${API_BASE_URL}purchase-proformas/${id}/`);
+  apiFetch<PurchaseProforma>(`${API_BASE_URL()}purchase-proformas/${id}/`);
 
 export const createPurchaseProforma = async (data: PurchaseProformaCreate) => {
   const result = await apiFetch<PurchaseProforma>(
-    `${API_BASE_URL}purchase-proformas/`,
+    `${API_BASE_URL()}purchase-proformas/`,
     {
       method: "POST",
       body: data,
@@ -39,7 +40,7 @@ export const updatePurchaseProforma = async (
   data: Partial<PurchaseProformaCreate>
 ) => {
   const result = await apiFetch<PurchaseProforma>(
-    `${API_BASE_URL}purchase-proformas/${id}/`,
+    `${API_BASE_URL()}purchase-proformas/${id}/`,
     {
       method: "PATCH",
       body: data,
@@ -54,7 +55,7 @@ export const updatePurchaseProforma = async (
   return result;
 };
 export const deletePurchaseProforma = async (id: number) => {
-  const result = await apiFetch(`${API_BASE_URL}purchase-proformas/${id}/`, {
+  const result = await apiFetch(`${API_BASE_URL()}purchase-proformas/${id}/`, {
     method: "DELETE",
   });
 
@@ -68,24 +69,24 @@ export const deletePurchaseProforma = async (id: number) => {
 
 export const fetchPurchaseProformasBySupplier = (supplierId: number) =>
   apiFetch<PurchaseProforma[]>(
-    `${API_BASE_URL}purchase-proformas/by_supplier/?supplier_id=${supplierId}`
+    `${API_BASE_URL()}purchase-proformas/by_supplier/?supplier_id=${supplierId}`
   );
 export const fetchPurchaseProformasByDateRange = (
   startDate: string,
   endDate: string
 ) =>
   apiFetch<PurchaseProforma[]>(
-    `${API_BASE_URL}purchase-proformas/by_date_range/?start_date=${startDate}&end_date=${endDate}`
+    `${API_BASE_URL()}purchase-proformas/by_date_range/?start_date=${startDate}&end_date=${endDate}`
   );
 
 // ------------------------ SalesProforma  ------------------------
 export const fetchSalesProformas = () =>
-  apiFetch<SalesProforma[]>(`${API_BASE_URL}sales-proformas/`);
+  apiFetch<SalesProforma[]>(`${API_BASE_URL()}sales-proformas/`);
 export const fetchSalesProformaById = (id: number) =>
-  apiFetch<SalesProforma>(`${API_BASE_URL}sales-proformas/${id}/`);
+  apiFetch<SalesProforma>(`${API_BASE_URL()}sales-proformas/${id}/`);
 export const createSalesProforma = async (data: SalesProformaCreate) => {
   const result = await apiFetch<SalesProforma>(
-    `${API_BASE_URL}sales-proformas/`,
+    `${API_BASE_URL()}sales-proformas/`,
     {
       method: "POST",
       body: data,
@@ -104,7 +105,7 @@ export const updateSalesProforma = async (
   data: Partial<SalesProformaCreate>
 ) => {
   const result = await apiFetch<SalesProforma>(
-    `${API_BASE_URL}sales-proformas/${id}/`,
+    `${API_BASE_URL()}sales-proformas/${id}/`,
     {
       method: "PATCH",
       body: data,
@@ -119,7 +120,7 @@ export const updateSalesProforma = async (
   return result;
 };
 export const deleteSalesProforma = async (id: number) => {
-  const result = await apiFetch(`${API_BASE_URL}sales-proformas/${id}/`, {
+  const result = await apiFetch(`${API_BASE_URL()}sales-proformas/${id}/`, {
     method: "DELETE",
   });
 
@@ -133,23 +134,23 @@ export const deleteSalesProforma = async (id: number) => {
 
 export const fetchSalesProformasByCustomer = (customerId: number) =>
   apiFetch<SalesProforma[]>(
-    `${API_BASE_URL}sales-proformas/by_customer/?customer_id=${customerId}`
+    `${API_BASE_URL()}sales-proformas/by_customer/?customer_id=${customerId}`
   );
 export const fetchSalesProformasByDateRange = (
   startDate: string,
   endDate: string
 ) =>
   apiFetch<SalesProforma[]>(
-    `${API_BASE_URL}sales-proformas/by_date_range/?start_date=${startDate}&end_date=${endDate}`
+    `${API_BASE_URL()}sales-proformas/by_date_range/?start_date=${startDate}&end_date=${endDate}`
   );
 
 // ------------------------ ProformaLine  ------------------------
 export const fetchProformaLines = () =>
-  apiFetch<ProformaLine[]>(`${API_BASE_URL}proforma-lines/`);
+  apiFetch<ProformaLine[]>(`${API_BASE_URL()}proforma-lines/`);
 export const fetchProformaLineById = (id: number) =>
-  apiFetch<ProformaLine>(`${API_BASE_URL}proforma-lines/${id}/`);
+  apiFetch<ProformaLine>(`${API_BASE_URL()}proforma-lines/${id}/`);
 export const createProformaLine = (data: Omit<ProformaLineCreate, "id">) =>
-  apiFetch<ProformaLine>(`${API_BASE_URL}proforma-lines/`, {
+  apiFetch<ProformaLine>(`${API_BASE_URL()}proforma-lines/`, {
     method: "POST",
     body: data,
   });
@@ -157,14 +158,14 @@ export const updateProformaLine = (
   id: number,
   data: Partial<ProformaLineCreate>
 ) =>
-  apiFetch<ProformaLine>(`${API_BASE_URL}proforma-lines/${id}/`, {
+  apiFetch<ProformaLine>(`${API_BASE_URL()}proforma-lines/${id}/`, {
     method: "PATCH",
     body: data,
   });
 export const deleteProformaLine = (id: number) =>
-  apiFetch(`${API_BASE_URL}proforma-lines/${id}/`, { method: "DELETE" });
+  apiFetch(`${API_BASE_URL()}proforma-lines/${id}/`, { method: "DELETE" });
 
 export const fetchProformaLinesByProduct = (productId: number) =>
   apiFetch<ProformaLine[]>(
-    `${API_BASE_URL}proforma-lines/by_product/?product_id=${productId}`
+    `${API_BASE_URL()}proforma-lines/by_product/?product_id=${productId}`
   );

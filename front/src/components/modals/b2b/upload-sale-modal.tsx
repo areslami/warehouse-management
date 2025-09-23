@@ -18,6 +18,7 @@ import { B2BOffer } from "@/lib/interfaces/b2b";
 import { B2BDistributionModal } from "./b2b-distribution-modal";
 import { fetchWarehouseReceiptById } from "@/lib/api/warehouse";
 import { SimpleCombobox } from "../../ui/simple-combobox";
+import { describeOffer, describeDistribution } from "@/lib/utils/label-utils";
 
 interface UploadSaleModalProps {
   open: boolean;
@@ -369,7 +370,7 @@ export function UploadSaleModal({ open, onClose, onSuccess }: UploadSaleModalPro
                     <SimpleCombobox
                       options={(offers as any[]).map((o) => ({
                         value: String(o.id),
-                        label: `${o.offer_id} - ${o.offer_weight || 0} kg`,
+                        label: describeOffer(o as any),
                         id: o.id,
                         name: o.offer_id,
                       }))}
@@ -389,7 +390,7 @@ export function UploadSaleModal({ open, onClose, onSuccess }: UploadSaleModalPro
                     <SimpleCombobox
                       options={distributions.map((d: any) => ({
                         value: String(d.id),
-                        label: `${d.transfer_id} - ${d.customer_name} - ${d.product_name} - ${d.agency_weight} kg`,
+                        label: describeDistribution(d as any),
                         id: d.id,
                         name: d.product_name,
                       }))}

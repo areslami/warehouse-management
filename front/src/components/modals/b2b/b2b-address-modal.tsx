@@ -19,6 +19,7 @@ import { ReceiverModal } from "../receiver-modal";
 import { ProductModal } from "../product-modal";
 import { createCustomer, createProduct, createReceiver } from "@/lib/api/core";
 import { getPartyDisplayName } from "@/lib/utils/party-utils";
+import { describeProduct, describeParty, describeOffer } from "@/lib/utils/label-utils";
 import { fetchB2BOffers } from "@/lib/api/b2b";
 import { B2BOffer } from "@/lib/interfaces/b2b";
 
@@ -217,7 +218,7 @@ export function B2BAddressModal({ trigger, onSubmit, onClose, initialData }: B2B
                           }}
                           options={products.map(product => ({
                             value: product.id.toString(),
-                            label: `${product.name} (ID: ${product.id})`,
+                            label: describeProduct(product),
                             id: product.id,
                             name: product.name
                           }))}
@@ -249,7 +250,7 @@ export function B2BAddressModal({ trigger, onSubmit, onClose, initialData }: B2B
                           }}
                           options={customers.map(customer => ({
                             value: customer.id.toString(),
-                            label: `${getPartyDisplayName(customer)} (ID: ${customer.id})`,
+                            label: describeParty(customer),
                             id: customer.id,
                             name: getPartyDisplayName(customer)
                           }))}
@@ -288,7 +289,7 @@ export function B2BAddressModal({ trigger, onSubmit, onClose, initialData }: B2B
                             { value: "no-receiver", label: t("no-receiver") },
                             ...receivers.map(receiver => ({
                               value: receiver.id.toString(),
-                              label: `${getPartyDisplayName(receiver)} (ID: ${receiver.id})`,
+                              label: describeParty(receiver),
                               id: receiver.id,
                               name: getPartyDisplayName(receiver)
                             }))
@@ -321,7 +322,7 @@ export function B2BAddressModal({ trigger, onSubmit, onClose, initialData }: B2B
                             { value: "no-offer", label: t("no-offer") },
                             ...offers.map(offer => ({
                               value: offer.id.toString(),
-                              label: `${offer.offer_id} - ${offer.product_name} (ID: ${offer.id})`,
+                              label: describeOffer(offer),
                               id: offer.id,
                               name: offer.offer_id
                             }))

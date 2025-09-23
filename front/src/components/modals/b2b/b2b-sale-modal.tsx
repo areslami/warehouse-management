@@ -20,6 +20,7 @@ import { fetchB2BOffers, createB2BOffer, createB2BDistribution, fetchB2BDistribu
 import { B2BDistribution, B2BOffer } from "@/lib/interfaces/b2b";
 import { PersianDatePicker } from "../../ui/persian-date-picker";
 import { getPartyDisplayName } from "@/lib/utils/party-utils";
+import { describeProduct, describeParty, describeOffer, describeDistribution } from "@/lib/utils/label-utils";
 import { B2BOfferModal } from "./b2b-offer-modal";
 import { B2BDistributionModal } from "./b2b-distribution-modal";
 
@@ -223,7 +224,7 @@ export function B2BSaleModal({ trigger, onSubmit, onClose, initialData }: B2BSal
                                                             { value: "0", label: t("no-offer") },
                                                             ...offers.map(offer => ({
                                                                 value: offer.id.toString(),
-                                                                label: `${offer.offer_id} - ${offer.product_name} (${offer.offer_weight} kg) (ID: ${offer.id})`,
+                                                                label: describeOffer(offer),
                                                                 id: offer.id,
                                                                 name: offer.offer_id
                                                             }))
@@ -254,7 +255,7 @@ export function B2BSaleModal({ trigger, onSubmit, onClose, initialData }: B2BSal
                                                     options={[
                                                         ...distributions.map(distribution => ({
                                                             value: distribution.id.toString(),
-                                                            label: `${distribution.transfer_id} - ${distribution.product_name} (${distribution.agency_weight} kg) (ID: ${distribution.id})`,
+                                                            label: describeDistribution(distribution),
                                                             id: distribution.id,
                                                             name: distribution.transfer_id
                                                         }))
@@ -290,7 +291,7 @@ export function B2BSaleModal({ trigger, onSubmit, onClose, initialData }: B2BSal
                                                     disabled={!!selectedOffer}
                                                     options={products.map(product => ({
                                                         value: product.id.toString(),
-                                                        label: `${product.name} (ID: ${product.id})`,
+                                                        label: describeProduct(product),
                                                         id: product.id,
                                                         name: product.name
                                                     }))}
@@ -322,7 +323,7 @@ export function B2BSaleModal({ trigger, onSubmit, onClose, initialData }: B2BSal
                                                     }}
                                                     options={customers.map(customer => ({
                                                         value: customer.id.toString(),
-                                                        label: `${getPartyDisplayName(customer)} (ID: ${customer.id})`,
+                                                        label: describeParty(customer),
                                                         id: customer.id,
                                                         name: getPartyDisplayName(customer)
                                                     }))}
