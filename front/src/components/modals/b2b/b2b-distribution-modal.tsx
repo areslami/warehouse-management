@@ -58,7 +58,9 @@ export function B2BDistributionModal({ trigger, onSubmit, onClose, initialData, 
   const loadWarehouseReceipts = async () => {
     try {
       const receipts = await fetchWarehouseReceipts();
-      setWarehouseReceipts(receipts || []);
+      // Only receipts valid for B2BDistribution: import_cottage
+      const filtered = (receipts || []).filter(r => r.receipt_type === 'import_cottage');
+      setWarehouseReceipts(filtered);
     } catch (error) {
       console.error('Failed to load warehouse receipts:', error);
     }
@@ -68,8 +70,8 @@ export function B2BDistributionModal({ trigger, onSubmit, onClose, initialData, 
 
   const b2bDistributionSchema = z.object({
     transfer_id: z.string().optional(),
-    warehouse_receipt: z.number().min(0),
-    customer: z.number().min(0),
+    warehouse_receipt: z.number().min(1),
+    customer: z.number().min(1),
     agency_weight: z.union([z.string(), z.number()]).optional(),
     agency_date: z.string().min(1, tval("agency-date")),
     description: z.string().optional(),
