@@ -586,48 +586,24 @@ export default function B2BPage() {
     }
   }
 
-  const exportSelectedAddresses = () => {
-    const sel = addresses.filter(a=>selectedAddresses.includes(a.id))
-    if (sel.length===0) return
-    const headers = ADDRESS_HEADERS
-    const rows = sel.map(a=>[
-      a.purchase_id||'',
-      a.total_weight_purchased||'',
-      a.purchase_date||'',
-      a.unit_price||'',
-      a.tracking_number||'',
-      a.province||'',
-      a.city||'',
-      a.payment_amount||'',
-      '',
-      a.cottage_code||'',
-      a.product_name||'',
-      a.credit_description||'',
-      a.payment_method||'',
-      '',
-      '',
-      a.allocation_id||'',
-      a.customer_name||'',
-      '',
-      '',
-      '',
-      '',
-      '',
-      '',
-      '',
-      a.receiver_name||'',
-      '',
-      '',
-      '',
-      '',
-      '',
-      '',
-      '',
-      '',
-      '',
-      '', '', '', '', '', ''
-    ])
-    exportHtmlTable(headers, rows, `b2b-addresses-${new Date().toISOString().slice(0,16).replace(/[-:T]/g,'')}`)
+  const exportSelectedAddresses = async () => {
+    const ids = addresses.filter(a=>selectedAddresses.includes(a.id)).map(a=>a.id)
+    if (ids.length===0) return
+    const res = await fetch('http://localhost:8000/b2b/addresses/export/', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ids })
+    })
+    if (!res.ok) { toast.error('Export failed'); return }
+    const blob = await res.blob()
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `b2b-addresses-${new Date().toISOString().slice(0,16).replace(/[-:T]/g,'')}.xlsx`
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    URL.revokeObjectURL(url)
   }
 
   return (
@@ -936,7 +912,7 @@ export default function B2BPage() {
                   </CollapsibleTrigger>
                 </div>
                 <CollapsibleContent dir="rtl">
-                  <div className="grid grid-cols-6 gap-3 mb-4">
+                  <div className="grid grid-cols-6 gap-4 mb-4">
                     <Input placeholder={t('transfer_id')} value={distributionFilters.transfer_id} onChange={e=>setDistributionFilters({...distributionFilters, transfer_id:e.target.value})} />
                     <Input placeholder={t('warehouse_receipt')} value={distributionFilters.warehouse_receipt_id} onChange={e=>setDistributionFilters({...distributionFilters, warehouse_receipt_id:e.target.value})} />
                     <SimpleCombobox
@@ -982,7 +958,7 @@ export default function B2BPage() {
                       <Input value={distributionFilters.weight_max} onChange={e=>setDistributionFilters({...distributionFilters, weight_max:e.target.value})} />
                     </div>
                   </div>
-                  <div className="flex justify-end"><Button className="bg-red-100 text-red-700 hover:bg-red-200" onClick={()=>setDistributionFilters({
+                  <div className="flex justify-end"><Button variant="outline" className="border-destructive text-destructive hover:text-destructive" onClick={()=>setDistributionFilters({
                     transfer_id: "",
                     warehouse_receipt_id: "",
                     customer_name: "",
@@ -991,7 +967,7 @@ export default function B2BPage() {
                     date_to: "",
                     weight_min: "",
                     weight_max: "",
-                  })}>ریست</Button></div>
+                  })}>{t('reset')}</Button></div>
                 </CollapsibleContent>
               </Collapsible>
               {distributions.length === 0 ? (
@@ -1268,7 +1244,7 @@ export default function B2BPage() {
                       />
                     </div>
                   </div>
-                  <div className="flex justify-end"><Button className="bg-red-100 text-red-700 hover:bg-red-200" onClick={()=>setSalesFilters({
+                  <div className="flex justify-end"><Button variant="outline" className="border-destructive text-destructive hover:text-destructive" onClick={()=>setSalesFilters({
                     purchase_id: "",
                     offer_id: "",
                     product_id: "",
@@ -1284,7 +1260,7 @@ export default function B2BPage() {
                     total_price_min: "",
                     total_price_max: "",
                     export_type: "your_sale",
-                  })}>ریست</Button></div>
+                  })}>{t('reset')}</Button></div>
                 </CollapsibleContent>
               </Collapsible>
               {sales.length === 0 ? (

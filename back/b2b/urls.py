@@ -12,7 +12,8 @@ from .excel_views import (
     preview_sales,
     preview_addresses,
     create_sales_batch,
-    create_addresses_batch
+    create_addresses_batch,
+    export_addresses_xlsx
 )
 
 router = DefaultRouter()
@@ -28,5 +29,6 @@ urlpatterns = [
     path('addresses/preview/', preview_addresses, name='addresses-preview'),
     path('sales/create/', create_sales_batch, name='sales-create'),
     path('addresses/create/', create_addresses_batch, name='addresses-create'),
+    path('addresses/export/', export_addresses_xlsx, name='addresses-export'),
     path('', include(router.urls)),
 ]

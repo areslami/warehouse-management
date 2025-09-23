@@ -570,7 +570,24 @@ export default function UploadAddressModal({ isOpen, onClose, onSuccess }: Uploa
                         province: row.province,
                         city: row.city,
                         tracking_number: row.tracking_number,
-                        description: row.credit_description || '',
+                        credit_description: row.credit_description || '',
+                        customer_account_number: row.customer_account_number || '',
+                        address_register_date: row.address_register_date || null,
+                        agreement_period_1: row.agreement_period_1 || '',
+                        agreement_amount_1: row.agreement_amount_1 || '',
+                        agreement_period_2: row.agreement_period_2 || '',
+                        agreement_amount_2: row.agreement_amount_2 || '',
+                        agreement_period_3: row.agreement_period_3 || '',
+                        agreement_amount_3: row.agreement_amount_3 || '',
+                        deposit_id: row.deposit_id || '',
+                        purchase_weight: row.purchase_weight || 0,
+                        non_waybilled_weight: row.non_waybilled_weight || 0,
+                        waybilled_weight: row.waybilled_weight || 0,
+                        description: row.description || '',
+                        single: row.single || '',
+                        double: row.double || '',
+                        trailer: row.trailer || '',
+
                       }));
                       submitBatch([...processedRows, previewData.address_data, ...remainingAddresses]);
                     }

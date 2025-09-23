@@ -74,6 +74,23 @@ class B2BAddress(models.Model):
     tracking_number = models.CharField(max_length=100, blank=True)
     
     credit_description = models.TextField(blank=True)
+    description = models.TextField(blank=True)
+
+    customer_account_number = models.CharField(max_length=50, blank=True, default='')
+    address_register_date = models.DateField(null=True, blank=True)
+    deposit_id = models.CharField(max_length=50, blank=True, default='')
+    single = models.CharField(max_length=10, blank=True, default='')
+    double = models.CharField(max_length=10, blank=True, default='')
+    trailer = models.CharField(max_length=10, blank=True, default='')
+    purchase_weight = models.DecimalField(max_digits=20, decimal_places=0, default=0)
+    waybilled_weight = models.DecimalField(max_digits=20, decimal_places=0, default=0)
+    non_waybilled_weight = models.DecimalField(max_digits=20, decimal_places=0, default=0)
+    agreement_period_1 = models.CharField(max_length=100, blank=True, default='')
+    agreement_amount_1 = models.CharField(max_length=100, blank=True, default='')
+    agreement_period_2 = models.CharField(max_length=100, blank=True, default='')
+    agreement_amount_2 = models.CharField(max_length=100, blank=True, default='')
+    agreement_period_3 = models.CharField(max_length=100, blank=True, default='')
+    agreement_amount_3 = models.CharField(max_length=100, blank=True, default='')
     
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

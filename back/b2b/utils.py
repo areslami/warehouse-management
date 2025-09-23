@@ -40,8 +40,21 @@ def persian_to_gregorian(date_str):
         return datetime.now().strftime('%Y-%m-%d')
 
 
+def convert_to_english_numbers(text):
+    if text is None:
+        return ''
+    s = str(text)
+    persian_digits = '۰۱۲۳۴۵۶۷۸۹'
+    arabic_digits = '٠١٢٣٤٥٦٧٨٩'
+    for i, d in enumerate(persian_digits):
+        s = s.replace(d, str(i))
+    for i, d in enumerate(arabic_digits):
+        s = s.replace(d, str(i))
+    return s
+
 def clean_number(value):
-    cleaned = re.sub(r'[^\d.]', '', str(value))
+    s = convert_to_english_numbers(value)
+    cleaned = re.sub(r'[^0-9.]', '', s)
     return Decimal(cleaned) if cleaned else Decimal('0')
 
 
@@ -229,7 +242,25 @@ def process_address_row(row,address_type,id):
         'province': row.get(EXCEL_FIELD_MAPPING_ADDRESS['province']),
         'city': row.get(EXCEL_FIELD_MAPPING_ADDRESS['city']),
         'tracking_number': row.get(EXCEL_FIELD_MAPPING_ADDRESS['tracking_number']),
+        'agreement_period_1': row.get(EXCEL_FIELD_MAPPING_ADDRESS.get('agreement_period_1', ''), ''),
+        'agreement_amount_1': row.get(EXCEL_FIELD_MAPPING_ADDRESS.get('agreement_amount_1', ''), ''),
+        'agreement_period_2': row.get(EXCEL_FIELD_MAPPING_ADDRESS.get('agreement_period_2', ''), ''),
+        'agreement_amount_2': row.get(EXCEL_FIELD_MAPPING_ADDRESS.get('agreement_amount_2', ''), ''),
+        'agreement_period_3': row.get(EXCEL_FIELD_MAPPING_ADDRESS.get('agreement_period_3', ''), ''),
+        'agreement_amount_3': row.get(EXCEL_FIELD_MAPPING_ADDRESS.get('agreement_amount_3', ''), ''),
+        'description': row.get(EXCEL_FIELD_MAPPING_ADDRESS.get('description', ''), ''),
     }
+
+    processed['customer_account_number'] = row.get(EXCEL_FIELD_MAPPING_ADDRESS.get('customoer_account_number', ''), '')
+    adr_date = str(row.get(EXCEL_FIELD_MAPPING_ADDRESS.get('address_register_date', ''), '')).strip()
+    processed['address_register_date'] = persian_to_gregorian(adr_date) if adr_date else None
+    processed['deposit_id'] = row.get(EXCEL_FIELD_MAPPING_ADDRESS.get('deposit_id', ''), '')
+    processed['single'] = row.get(EXCEL_FIELD_MAPPING_ADDRESS.get('single', ''), '')
+    processed['double'] = row.get(EXCEL_FIELD_MAPPING_ADDRESS.get('double', ''), '')
+    processed['trailer'] = row.get(EXCEL_FIELD_MAPPING_ADDRESS.get('trailer', ''), '')
+    processed['purchase_weight'] = clean_number(row.get(EXCEL_FIELD_MAPPING_ADDRESS.get('purchase_weight', ''), '0'))
+    processed['waybilled_weight'] = clean_number(row.get(EXCEL_FIELD_MAPPING_ADDRESS.get('waybilled_weight', ''), '0'))
+    processed['non_waybilled_weight'] = clean_number(row.get(EXCEL_FIELD_MAPPING_ADDRESS.get('non_waybilled_weight', ''), '0'))
     
     customer, customerCreated = createOrUpdateCustomer(row)
     receiver, receiverCreated = createOrUpdateReceiver(row)

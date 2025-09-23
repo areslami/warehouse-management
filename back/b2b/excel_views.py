@@ -1,15 +1,21 @@
 from rest_framework import status
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
+from django.http import HttpResponse
 from django.db import transaction, models
 from datetime import datetime
 from .utils import parse_html_table, process_address_row, process_sale_row, process_your_sale_row
-from .models import B2BDistribution, B2BSale, B2BOffer
+from .models import B2BDistribution, B2BSale, B2BOffer, B2BAddress
 from .serializers import B2BDistributionSerializer, B2BAddressSerializer, B2BSaleSerializer
 from core.models import Customer
 from core.serializers import CustomerSerializer
 import pandas as pd
 import io
+from io import BytesIO
+import jdatetime
+import re
+import os
+from django.conf import settings
 
 @api_view(['POST'])
 def upload_excel_sales(request):
@@ -153,6 +159,11 @@ def preview_addresses(request):
         else:
             normalized_pm = 'other' if pm_str else ''
 
+    # Extract offer id if provided
+    offer_id = None
+    if data.get('offer') and isinstance(data.get('offer'), dict):
+        offer_id = data.get('offer').get('id')
+
     address_data = {
         'allocation_id': data.get('allocation_id'),
         'purchase_id': data.get('purchase_id'),
@@ -168,10 +179,16 @@ def preview_addresses(request):
         'province': data.get('province'),
         'city': data.get('city'),
         'tracking_number': data.get('tracking_number'),
-        'description': data.get('credit_description', ''),
+        'credit_description': data.get('credit_description', ''),
     }
 
-    
+    if offer_id:
+        address_data['product_offer'] = offer_id
+
+    for k in ['customer_account_number','address_register_date','deposit_id','single','double','trailer','purchase_weight','waybilled_weight','non_waybilled_weight',"agreement_period_1","agreement_amount_1","agreement_period_2","agreement_amount_2","agreement_period_3","agreement_amount_3","description"]:
+        if data.get(k) not in [None, '']:
+            address_data[k] = data.get(k)
+
     response_data = {
         'address_data': address_data,
         'needs_customer_creation': not bool(data.get('customer')),
@@ -228,8 +245,15 @@ def create_sales_batch(request):
                     'product': sale_data.get('product'),
                     'customer': sale_data.get('customer'),
                     'purchase_type': payment_type,
-                    'description': sale_data.get('description', ''),
-                    'cottage_code': sale_data.get('cottage_code', '')
+                    'credit_description': sale_data.get('credit_description', ''),
+                    'cottage_code': sale_data.get('cottage_code', ''),
+                    "agreement_period_1": sale_data.get('agreement_period_1', ''),
+                    "agreement_amount_1": sale_data.get('agreement_amount_1', ''),
+                    "agreement_period_2": sale_data.get('agreement_period_2', ''),
+                    "agreement_amount_2": sale_data.get('agreement_amount_2', ''),
+                    "agreement_period_3": sale_data.get('agreement_period_3', ''),  
+                    "agreement_amount_3": sale_data.get('agreement_amount_3', ''),
+                    "description": sale_data.get('description', ''),
                 }
                 
                 # Remove None values
@@ -300,7 +324,6 @@ def create_addresses_batch(request):
                             cleaned_data['payment_method'] = 'credit'
                         else:
                             cleaned_data['payment_method'] = 'other' if pm_str else ''
-
                 serializer = B2BAddressSerializer(data=cleaned_data)
                 if serializer.is_valid():
                     serializer.save()
@@ -326,3 +349,281 @@ def create_addresses_batch(request):
         'created': created,
         'count': len(created)
     })
+
+
+def _fa_payment_label(code: str) -> str:
+    m = (code or '').strip()
+    if m in ['cash', 'نقدی']:
+        return 'نقدی'
+    if m in ['credit', 'اعتباری']:
+        return 'اعتباری'
+    if m in ['agreement', 'توافقی', 'قراردادی']:
+        return 'توافقی'
+    return 'سایر'
+
+
+def _extract_agreements(desc: str):
+    p1 = d1 = p2 = d2 = p3 = d3 = ''
+    text = (desc or '').replace('\n', ' ')
+    for i in [1, 2, 3]:
+        m = re.search(rf"دوره\s+{i}\s*:\s*(\d+)\s*روز\s*×\s*([\d\،,]+)", text)
+        if m:
+            days = m.group(1)
+            amount = m.group(2).replace('،', '').replace(',', '')
+            if i == 1:
+                p1, d1 = days, amount
+            elif i == 2:
+                p2, d2 = days, amount
+            else:
+                p3, d3 = days, amount
+    return p1, d1, p2, d2, p3, d3
+
+
+@api_view(['POST'])
+def export_addresses_xlsx(request):
+    ids = request.data.get('ids', [])
+    qs = B2BAddress.objects.filter(id__in=ids).select_related(
+        'product', 'customer', 'receiver', 'product_offer__warehouse_receipt__warehouse'
+    )
+    headers = [
+        'کد','وزن کل خرید','تاریخ خرید','قیمت هر واحد','شماره پیگیری','استان','شهرستان','مبلغ پرداختی','شماره حساب خریدار',
+        'کد کوتاژ','عنوان کالا','توضیحات','شیوه پرداخت','شناسه عرضه','تاریخ ثبت آدرس','شناسه تخصیص','نام خریدار','شناسه ملی خریدار',
+        'کدپستی خریدار','آدرس خریدار','شناسه واریز','شماره همراه خریدار','شناسه یکتا خریدار','نوع کاربری خریدار','نام تحویل گیرنده',
+        'شناسه یکتای تحویل','تک','جفت','تریلی','آدرس تحویل','کد پستی تحویل','شماره هماهنگی تحویل','کد ملی تحویل','وزن سفارش',
+        'بازه 1 پرداخت توافقی (روز)','بازه 2 پرداخت توافقی (روز)','بازه 3 پرداخت توافقی (روز)',
+        'مبلغ بازه 1 توافقی-ریال','مبلغ بازه 2 توافقی-ریال','مبلغ بازه 3 توافقی-ریال',
+        'وزن بارنامه شده','وزن بارنامه نشده'
+    ]
+    rows = []
+    for a in qs:
+        customer = a.customer
+        receiver = a.receiver
+        offer = getattr(a, 'product_offer', None)
+        sale = B2BSale.objects.select_related('b2b_distribution__warehouse_receipt__warehouse').filter(purchase_id=a.purchase_id).first()
+        _ = offer or sale  # reserved in case we expand mapping later
+        ag_p1, ag_d1, ag_p2, ag_d2, ag_p3, ag_d3 = _extract_agreements(getattr(a, 'credit_description', ''))
+        row = [
+            a.purchase_id or '',
+            int(a.total_weight_purchased or 0),
+            a.purchase_date.strftime('%Y-%m-%d') if a.purchase_date else '',
+            int(a.unit_price or 0),
+            a.tracking_number or '',
+            a.province or '',
+            a.city or '',
+            int(a.payment_amount or 0),
+            (a.customer_account_number or ''),
+            a.cottage_code or '',
+            (f"{a.product.code} / {a.product.name}"  if a.product else ''),
+            getattr(a, 'credit_description', '') or '',
+            _fa_payment_label(getattr(a, 'payment_method', '')),
+            (offer.offer_id if offer else ''),
+            (jdatetime.date.fromgregorian(date=a.created_at.date()).strftime('%Y/%m/%d') if getattr(a, 'created_at', None) else ''),
+            a.allocation_id or '',
+            (customer.company_name or customer.full_name) if customer else '',
+            (customer.national_id or customer.personal_code or '') if customer else '',
+            (customer.postal_code or '') if customer else '',
+            (customer.address or '') if customer else '',
+            (a.deposit_id or ''),
+            (customer.phone or '') if customer else '',
+            (customer.economic_code or '') if customer else '',
+            ('حقوقی' if (customer and customer.customer_type=='corporate') else ('حقیقی' if customer else '')),
+            (receiver.company_name or receiver.full_name) if receiver else '',
+            (receiver.economic_code or '') if receiver else '',
+            (a.single or ''), (a.double or ''), (a.trailer or ''),
+            (receiver.address or '') if receiver else '',
+            (receiver.postal_code or '') if receiver else '',
+            (receiver.phone or '') if receiver else '',
+            (receiver.personal_code or receiver.national_id or '') if receiver else '',
+            int(a.purchase_weight or a.total_weight_purchased or 0),
+            ag_p1, ag_d1, ag_p2, ag_d2, ag_p3, ag_d3,
+            int(a.waybilled_weight or 0),
+            int(a.non_waybilled_weight or 0),
+        ]
+        rows.append(row)
+
+    df = pd.DataFrame(rows, columns=headers)
+    output = BytesIO()
+    with pd.ExcelWriter(output, engine='openpyxl') as writer:
+        df.to_excel(writer, index=False, sheet_name='Addresses')
+        ws = writer.book.active
+        ws.sheet_view.rightToLeft = True
+        # Apply styling to match template at back/tmp/2.xlsx
+        from openpyxl.styles import Font, Alignment, PatternFill, Border, Side
+        from openpyxl.utils import get_column_letter
+        try:
+            # Resolve template path using Django BASE_DIR with fallbacks
+            candidates = [
+                os.path.join(getattr(settings, 'BASE_DIR', ''), 'tmp', '2.xlsx'),
+                os.path.normpath(os.path.join(os.path.dirname(__file__), '../tmp/2.xlsx')),
+                os.path.join(getattr(settings, 'BASE_DIR', ''), 'back', 'tmp', '2.xlsx'),
+            ]
+            template_path = next((p for p in candidates if p and os.path.exists(p)), None)
+            from openpyxl import load_workbook
+            if template_path and os.path.exists(template_path):
+                tmpl_wb = load_workbook(template_path)
+                tmpl_ws = tmpl_wb.active
+
+                # Copy sheet-level options
+                try:
+                    ws.sheet_view.showGridLines = tmpl_ws.sheet_view.showGridLines
+                except Exception:
+                    pass
+
+                # Header row height
+                try:
+                    hdr_h = tmpl_ws.row_dimensions[1].height
+                    if hdr_h:
+                        ws.row_dimensions[1].height = hdr_h
+                except Exception:
+                    pass
+
+                # Apply per-column header styles and column widths
+                num_cols = ws.max_column
+                t_first_header = tmpl_ws.cell(row=1, column=1) if tmpl_ws.max_column >= 1 else None
+                for col_idx in range(1, num_cols + 1):
+                    col_letter = get_column_letter(col_idx)
+                    out_cell = ws.cell(row=1, column=col_idx)
+                    t_cell = tmpl_ws.cell(row=1, column=col_idx) if col_idx <= tmpl_ws.max_column else None
+                    if not t_cell:
+                        t_cell = t_first_header
+
+                    if t_cell:
+                        try:
+                            out_cell.font = t_cell.font
+                        except Exception:
+                            out_cell.font = Font(bold=True)
+                        try:
+                            out_cell.fill = t_cell.fill
+                        except Exception:
+                            pass
+                        try:
+                            out_cell.alignment = t_cell.alignment or Alignment(horizontal='center', vertical='center')
+                        except Exception:
+                            out_cell.alignment = Alignment(horizontal='center', vertical='center')
+                        try:
+                            out_cell.border = t_cell.border or Border()
+                        except Exception:
+                            pass
+
+                    # Column width
+                    try:
+                        t_dim = tmpl_ws.column_dimensions.get(col_letter)
+                        if t_dim and t_dim.width:
+                            ws.column_dimensions[col_letter].width = t_dim.width
+                    except Exception:
+                        pass
+
+                # Data row baseline style sampled from template row 2
+                template_has_row2 = tmpl_ws.max_row >= 2
+                t_first_body = tmpl_ws.cell(row=2, column=1) if (tmpl_ws.max_row >= 2 and tmpl_ws.max_column >= 1) else None
+                if template_has_row2:
+                    max_r = ws.max_row
+                    max_c = ws.max_column
+                    for col_idx in range(1, max_c + 1):
+                        t_body_cell = tmpl_ws.cell(row=2, column=col_idx) if col_idx <= tmpl_ws.max_column else None
+                        if not t_body_cell:
+                            t_body_cell = t_first_body
+                        if not t_body_cell:
+                            continue
+                        for row_idx in range(2, max_r + 1):
+                            c = ws.cell(row=row_idx, column=col_idx)
+                            # Apply font, alignment, and number format; avoid copying fills broadly
+                            try:
+                                c.font = t_body_cell.font
+                            except Exception:
+                                pass
+                            try:
+                                c.alignment = t_body_cell.alignment
+                            except Exception:
+                                pass
+                            try:
+                                if t_body_cell.number_format and t_body_cell.number_format != 'General':
+                                    c.number_format = t_body_cell.number_format
+                            except Exception:
+                                pass
+
+                # Ensure borders and fills even if template styles are partial
+                thin_side = Side(style='thin', color='FF000000')
+                thin_border = Border(left=thin_side, right=thin_side, top=thin_side, bottom=thin_side)
+                # Derive header/body fills from template if present, otherwise set explicit colors
+                def _resolve_rgb(fill, default_rgb):
+                    try:
+                        if getattr(fill, 'patternType', None) == 'solid':
+                            fg = getattr(fill, 'fgColor', None)
+                            if fg is not None and getattr(fg, 'rgb', None):
+                                rgb = fg.rgb
+                                if len(rgb) == 6:
+                                    return 'FF' + rgb
+                                return rgb
+                        return default_rgb
+                    except Exception:
+                        return default_rgb
+
+                default_header_rgb = 'FF7030A0'   # purple
+                default_body_rgb = 'FFF2F2F2'     # light gray
+
+                header_source = tmpl_ws.cell(row=1, column=1) if tmpl_ws and tmpl_ws.max_row >= 1 and tmpl_ws.max_column >= 1 else None
+                body_source = tmpl_ws.cell(row=2, column=1) if tmpl_ws and tmpl_ws.max_row >= 2 and tmpl_ws.max_column >= 1 else None
+
+                header_rgb = _resolve_rgb(getattr(header_source, 'fill', None), default_header_rgb) if header_source else default_header_rgb
+                body_rgb = _resolve_rgb(getattr(body_source, 'fill', None), default_body_rgb) if body_source else default_body_rgb
+
+                header_fill = PatternFill(fill_type='solid', fgColor=header_rgb)
+                body_fill = PatternFill(fill_type='solid', fgColor=body_rgb)
+
+                # Apply to header row
+                for c in ws[1]:
+                    c.fill = header_fill
+                    c.border = thin_border
+                    # Force white, bold header text while preserving font family/size if possible
+                    try:
+                        existing = c.font
+                        c.font = Font(name=getattr(existing, 'name', None), size=getattr(existing, 'size', None), bold=True, color='FFFFFFFF')
+                    except Exception:
+                        c.font = Font(bold=True, color='FFFFFFFF')
+                # Apply to all data cells
+                for row in ws.iter_rows(min_row=2, max_row=ws.max_row, min_col=1, max_col=ws.max_column):
+                    for c in row:
+                        c.fill = body_fill
+                        c.border = thin_border
+            else:
+                # No template found: keep a simple readable header
+                header_font = Font(bold=True, color='FFFFFFFF')
+                header_fill = PatternFill(fill_type='solid', fgColor='FF7030A0')  # purple
+                body_fill = PatternFill(fill_type='solid', fgColor='FFF2F2F2')    # light gray
+                thin_side = Side(style='thin', color='FF000000')
+                thin_border = Border(left=thin_side, right=thin_side, top=thin_side, bottom=thin_side)
+                for cell in ws[1]:
+                    cell.font = header_font
+                    cell.fill = header_fill
+                    cell.alignment = Alignment(horizontal='center', vertical='center')
+                    cell.border = thin_border
+                for row in ws.iter_rows(min_row=2, max_row=ws.max_row, min_col=1, max_col=ws.max_column):
+                    for c in row:
+                        c.fill = body_fill
+                        c.border = thin_border
+        except Exception:
+            # Any unexpected styling error should not break export
+            header_font = Font(bold=True, color='FFFFFFFF')
+            header_fill = PatternFill(fill_type='solid', fgColor='FF7030A0')
+            body_fill = PatternFill(fill_type='solid', fgColor='FFF2F2F2')
+            thin_side = Side(style='thin', color='FF000000')
+            thin_border = Border(left=thin_side, right=thin_side, top=thin_side, bottom=thin_side)
+            for cell in ws[1]:
+                cell.font = header_font
+                cell.fill = header_fill
+                cell.alignment = Alignment(horizontal='center', vertical='center')
+                cell.border = thin_border
+            for row in ws.iter_rows(min_row=2, max_row=ws.max_row, min_col=1, max_col=ws.max_column):
+                for c in row:
+                    c.fill = body_fill
+                    c.border = thin_border
+        for col_cells in ws.columns:
+            max_len = max((len(str(c.value)) if c.value is not None else 0) for c in col_cells[:100])
+            ws.column_dimensions[col_cells[0].column_letter].width = min(max(12, max_len + 2), 40)
+        ws.freeze_panes = 'A2'
+
+    output.seek(0)
+    resp = HttpResponse(output.getvalue(), content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+    resp['Content-Disposition'] = 'attachment; filename="b2b-addresses.xlsx"'
+    return resp
