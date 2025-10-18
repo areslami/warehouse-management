@@ -158,7 +158,7 @@ export function SalesProformaModal({ trigger, onSubmit, onClose, initialData, re
 
           <Form {...form} >
             <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6 py-4 px-12">
-              <fieldset disabled={!isEditMode}>
+              <fieldset disabled={!isEditMode} className="space-y-6">
               <div className="grid grid-cols-2 gap-4">
                 <FormField
                   control={form.control as any}
