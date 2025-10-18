@@ -10,7 +10,7 @@ import { Button } from "../../ui/button";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "../../ui/form";
 import { Input } from "../../ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../../ui/select";
-import { Plus, Trash2 } from "lucide-react";
+import { Plus, Trash2, Edit2 } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useCoreData } from "@/lib/core-data-context";
 import { useModal } from "@/lib/modal-context";
@@ -42,13 +42,15 @@ interface SalesProformaModalProps {
   onSubmit?: (data: SalesProformaFormData) => void;
   onClose?: () => void;
   initialData?: Partial<SalesProformaFormData>;
+  readOnly?: boolean;
 }
 
-export function SalesProformaModal({ trigger, onSubmit, onClose, initialData }: SalesProformaModalProps) {
+export function SalesProformaModal({ trigger, onSubmit, onClose, initialData, readOnly = false }: SalesProformaModalProps) {
   const tval = useTranslations("modals.salesProforma.validation");
   const t = useTranslations("modals.salesProforma");
   const { data, refreshData } = useCoreData();
   const { openModal } = useModal();
+  const [isEditMode, setIsEditMode] = useState(!readOnly);
 
   useEffect(() => {
     if (data.customers.length === 0) {
@@ -72,8 +74,16 @@ export function SalesProformaModal({ trigger, onSubmit, onClose, initialData }: 
   const salesProformaSchema = z.object({
     serial_number: z.string().min(1, tval('serialnumber')).max(20, tval('serialnumber')),
     date: z.string().min(1, tval('date')),
-    tax: z.number().min(0).optional(),
-    discount: z.number().min(0).optional(),
+    tax: z.union([z.string(), z.number()]).transform((val) => {
+      if (val === "" || val === null || val === undefined) return 0;
+      const num = typeof val === 'string' ? parseFloat(val) : val;
+      return isNaN(num) ? 0 : num;
+    }).pipe(z.number().min(0)),
+    discount: z.union([z.string(), z.number()]).transform((val) => {
+      if (val === "" || val === null || val === undefined) return 0;
+      const num = typeof val === 'string' ? parseFloat(val) : val;
+      return isNaN(num) ? 0 : num;
+    }).pipe(z.number().min(0)),
     payment_type: z.enum(["cash", "credit", "other"]),
     payment_description: z.string().optional(),
     customer: z.number().min(0, tval('customer')),
@@ -87,8 +97,8 @@ export function SalesProformaModal({ trigger, onSubmit, onClose, initialData }: 
     defaultValues: {
       serial_number: initialData?.serial_number || "",
       date: initialData?.date || getTodayDate(),
-      tax: initialData?.tax,
-      discount: initialData?.discount,
+      tax: initialData?.tax || "",
+      discount: initialData?.discount || "",
       payment_type: initialData?.payment_type || "cash",
       payment_description: initialData?.payment_description || "",
       customer: initialData?.customer || 0,
@@ -130,13 +140,25 @@ export function SalesProformaModal({ trigger, onSubmit, onClose, initialData }: 
           </DialogTrigger>
         )}
         <DialogContent dir="rtl" className="min-w-[80%] max-h-[90vh] overflow-y-auto scrollbar-hide  p-0 my-0 mx-auto [&>button]:hidden">
-          <DialogHeader className="px-3.5 py-4.5  justify-start" style={{ backgroundColor: "#f6d265" }}>
+          <DialogHeader className="px-3.5 py-4.5  justify-start relative" style={{ backgroundColor: "#f6d265" }}>
             <DialogTitle className="font-bold text-white text-right">{t("title")}</DialogTitle>
             <DialogDescription className="sr-only">Create or edit sales proforma</DialogDescription>
+            {readOnly && !isEditMode && (
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="absolute left-4 top-1/2 -translate-y-1/2 text-white hover:bg-white/20"
+                onClick={() => setIsEditMode(true)}
+              >
+                <Edit2 className="h-4 w-4" />
+              </Button>
+            )}
           </DialogHeader>
 
           <Form {...form} >
             <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6 py-4 px-12">
+              <fieldset disabled={!isEditMode}>
               <div className="grid grid-cols-2 gap-4">
                 <FormField
                   control={form.control as any}
@@ -145,7 +167,7 @@ export function SalesProformaModal({ trigger, onSubmit, onClose, initialData }: 
                     <FormItem>
                       <FormLabel>{t('serialnumber')}</FormLabel>
                       <FormControl>
-                        <Input {...field} />
+                        <Input {...field} disabled={!isEditMode} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -163,6 +185,7 @@ export function SalesProformaModal({ trigger, onSubmit, onClose, initialData }: 
                           value={field.value}
                           onChange={(value) => field.onChange(value)}
                           placeholder={t("select-date")}
+                          disabled={!isEditMode}
                         />
                       </FormControl>
                       <FormMessage />
@@ -270,7 +293,7 @@ export function SalesProformaModal({ trigger, onSubmit, onClose, initialData }: 
                           type="text"
                           step="0.01"
                           {...field}
-                          onChange={(value) => field.onChange(value)}
+                          onChange={(e) => field.onChange(e.target.value)}
                         />
                       </FormControl>
                       <FormMessage />
@@ -289,7 +312,7 @@ export function SalesProformaModal({ trigger, onSubmit, onClose, initialData }: 
                           type="text"
                           step="0.01"
                           {...field}
-                          onChange={(value) => field.onChange(value)}
+                          onChange={(e) => field.onChange(e.target.value)}
                         />
                       </FormControl>
                       <FormMessage />
@@ -422,13 +445,16 @@ export function SalesProformaModal({ trigger, onSubmit, onClose, initialData }: 
                   </div>
                 ))}
               </div>
+              </fieldset>
 
-              <div className="flex justify-end space-x-2">
-                <Button type="button" variant="outline" onClick={handleClose}>
-                  {t("cancel")}
-                </Button>
-                <Button type="submit" className="hover:bg-[#f6d265]"> {t("save")}</Button>
-              </div>
+              {isEditMode && (
+                <div className="flex justify-end space-x-2">
+                  <Button type="button" variant="outline" onClick={handleClose}>
+                    {t("cancel")}
+                  </Button>
+                  <Button type="submit" className="hover:bg-[#f6d265]"> {t("save")}</Button>
+                </div>
+              )}
             </form>
           </Form>
         </DialogContent>

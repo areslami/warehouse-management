@@ -70,8 +70,16 @@ export function PurchaseProformaModal({ trigger, onSubmit, onClose, initialData 
   const purchaseProformaSchema = z.object({
     serial_number: z.string().min(1, tval('serialnumber')).max(20, tval('serialnumber')),
     date: z.string().min(1, tval('date')),
-    tax: z.number().min(0),
-    discount: z.number().min(0),
+    tax: z.union([z.string(), z.number()]).transform((val) => {
+      if (val === "" || val === null || val === undefined) return 0;
+      const num = typeof val === 'string' ? parseFloat(val) : val;
+      return isNaN(num) ? 0 : num;
+    }).pipe(z.number().min(0)),
+    discount: z.union([z.string(), z.number()]).transform((val) => {
+      if (val === "" || val === null || val === undefined) return 0;
+      const num = typeof val === 'string' ? parseFloat(val) : val;
+      return isNaN(num) ? 0 : num;
+    }).pipe(z.number().min(0)),
     supplier: z.number().min(0),
     lines: z.array(proformaLineSchema).min(1, tval('lines')),
   });
@@ -230,7 +238,7 @@ export function PurchaseProformaModal({ trigger, onSubmit, onClose, initialData 
                           type="text"
                           step="0.01"
                           {...field}
-                          onChange={(value) => field.onChange(value)}
+                          onChange={(e) => field.onChange(e.target.value)}
                         />
                       </FormControl>
                       <FormMessage />
@@ -249,7 +257,7 @@ export function PurchaseProformaModal({ trigger, onSubmit, onClose, initialData 
                           type="text"
                           step="0.01"
                           {...field}
-                          onChange={(value) => field.onChange(value)}
+                          onChange={(e) => field.onChange(e.target.value)}
                         />
                       </FormControl>
                       <FormMessage />

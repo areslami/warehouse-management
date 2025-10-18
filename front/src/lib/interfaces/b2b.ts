@@ -66,14 +66,22 @@ export interface B2BDistribution {
   transfer_id?: string;
   warehouse_receipt?: number;
   warehouse_receipt_id?: string;
+  sales_proforma?: number;
+  sales_proforma_serial?: string;
+  sales_proforma_customer_name?: string;
   product_id?: number;
   product_name?: string;
   customer: number;
   customer_name?: string;
   cottage_number?: string;
   agency_weight: number;
+  unit_price: number;
   agency_date: string;
   description?: string;
+  warehouse?: number;
+  warehouse_name?: string;
+  product?: number;
+  purchase_id?: string;
   created_at?: string;
   updated_at?: string;
 }

@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
-import { Plus, Edit2, Trash2, ShoppingCart, TrendingUp, Package, Search, Upload, Eye, ChevronDown, ChevronUp } from "lucide-react";
+import { Plus, Edit2, Trash2, ShoppingCart, TrendingUp, Package, Search, Upload, Eye, ChevronDown, ChevronUp, Info } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { PersianDatePicker } from "@/components/ui/persian-date-picker";
@@ -19,6 +19,7 @@ import { B2BDistributionModal } from "@/components/modals/b2b/b2b-distribution-m
 import { B2BAddressModal } from "@/components/modals/b2b/b2b-address-modal";
 import { B2BSaleModal } from "@/components/modals/b2b/b2b-sale-modal";
 import { UploadSaleModal } from "@/components/modals/b2b/upload-sale-modal";
+import { SalesProformaModal } from "@/components/modals/finance/salesproforma-modal";
 import { B2BOffer, B2BAddress, B2BDistribution, B2BSale } from "@/lib/interfaces/b2b";
 import type { Product } from "@/lib/interfaces/core";
 import type { Customer } from "@/lib/interfaces/core";
@@ -29,6 +30,7 @@ import {
   fetchB2BSales, fetchB2BSaleById, createB2BSale, updateB2BSale, deleteB2BSale
 } from "@/lib/api/b2b";
 import { fetchCustomers, fetchReceivers, fetchProducts } from "@/lib/api/core";
+import { fetchSalesProformaById } from "@/lib/api/finance";
 import { handleApiErrorWithToast } from "@/lib/api/error-toast-handler";
 import { formatNumber } from "@/lib/utils/number-format";
 import UploadAddressModal from "@/components/modals/b2b/upload-address-modal";
@@ -123,6 +125,9 @@ export default function B2BPage() {
   const [showSaleModal, setShowSaleModal] = useState(false);
   const [showDistributionUploadModal, setShowDistributionUploadModal] = useState(false);
   const [showAddressUploadModal, setShowAddressUploadModal] = useState(false);
+  const [showProformaModal, setShowProformaModal] = useState(false);
+  const [viewingProformaId, setViewingProformaId] = useState<number | null>(null);
+  const [viewingProformaData, setViewingProformaData] = useState<any>(null);
 
   const [editingOffer, setEditingOffer] = useState<B2BOffer | null>(null);
   const [editingAddress, setEditingAddress] = useState<B2BAddress | null>(null);
@@ -994,10 +999,12 @@ export default function B2BPage() {
                       <TableHead className="text-right">{t("agency_date")}</TableHead>
                       <TableHead className="text-right">{t("warehouse")}</TableHead>
                       <TableHead className="text-right">{t("product")}</TableHead>
+                      <TableHead className="text-right">{tCommon("detail_labels.sales_proforma_header")}</TableHead>
                       <TableHead className="text-right">{t("customer")}</TableHead>
+                      <TableHead className="text-right">{t("distributor")}</TableHead>
                       <TableHead className="text-right">{t("agency_weight")}</TableHead>
                       <TableHead className="text-right">{t("transfer_id")}</TableHead>
-                      
+
                       <TableHead className="text-center w-24">{t("actions")}</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -1025,10 +1032,16 @@ export default function B2BPage() {
                         <TableCell className="truncate max-w-[150px]" title={distribution.product_name || `${tCommon('product_labels.product_prefix')} ${distribution.product}`}>
                           {distribution.product_name || `${tCommon('product_labels.product_prefix')} ${distribution.product}`}
                         </TableCell>
+                        <TableCell className="truncate max-w-[120px]" title={distribution.sales_proforma_serial || '-'}>
+                          {distribution.sales_proforma_serial || '-'}
+                        </TableCell>
+                        <TableCell className="truncate max-w-[150px]" title={distribution.sales_proforma_customer_name || '-'}>
+                          {distribution.sales_proforma_customer_name || '-'}
+                        </TableCell>
                         <TableCell className="truncate max-w-[150px]" title={distribution.customer_name || `${tCommon('product_labels.customer_prefix')} ${distribution.customer}`}>
                           {distribution.customer_name || `${tCommon('product_labels.customer_prefix')} ${distribution.customer}`}
                         </TableCell>
-                        <TableCell>{formatNumber(distribution.agency_weight)} {tCommon('units.kg')}</TableCell>
+                        <TableCell>{formatNumber(distribution.agency_weight)}</TableCell>
                         <TableCell className="truncate max-w-[140px]" title={distribution.transfer_id || '-'}>{distribution.transfer_id || '-'}</TableCell>
                         
                         <TableCell className="text-center">
@@ -1888,10 +1901,35 @@ export default function B2BPage() {
                   const item = selectedItem as B2BDistribution;
                   return (
                     <>
-                      <div><strong>{tCommon('detail_labels.purchase_id')}</strong> {item.purchase_id || '-'}</div>
+                      <div><strong>{tCommon('detail_labels.purchase_id')}</strong> {item.transfer_id || '-'}</div>
+                      {item.sales_proforma && (
+                        <div className="flex items-center gap-2">
+                          <strong>{tCommon('detail_labels.sales_proforma')}</strong>
+                          <span>{item.sales_proforma_serial || item.sales_proforma}</span>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-6 w-6 p-0 text-[#f6d265] hover:text-[#f6d265]/80"
+                            onClick={async () => {
+                              try {
+                                const proforma = await fetchSalesProformaById(item.sales_proforma!);
+                                setViewingProformaData(proforma);
+                                setViewingProformaId(item.sales_proforma!);
+                                setShowProformaModal(true);
+                              } catch (error) {
+                                console.error("Failed to fetch proforma:", error);
+                                handleApiErrorWithToast(error, "Fetch proforma");
+                              }
+                            }}
+                          >
+                            <Info className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      )}
                       <div><strong>{tCommon('detail_labels.warehouse')}</strong> {item.warehouse_name || `${tCommon('product_labels.warehouse_prefix')} ${item.warehouse}`}</div>
                       <div><strong>{tCommon('detail_labels.product')}</strong> {item.product_name || `${tCommon('product_labels.product_prefix')} ${item.product}`}</div>
-                      <div><strong>{tCommon('detail_labels.customer')}</strong> {item.customer_name || `${tCommon('product_labels.customer_prefix')} ${item.customer}`}</div>
+                      <div><strong>{tCommon('detail_labels.customer')}</strong> {item.sales_proforma_customer_name || '-'}</div>
+                      <div><strong>{tCommon('detail_labels.distributor')}</strong> {item.customer_name || `${tCommon('product_labels.customer_prefix')} ${item.customer}`}</div>
                       <div><strong>{tCommon('detail_labels.agency_weight')}</strong> {formatNumber(item.agency_weight)} {tCommon('units.kg')}</div>
                       <div><strong>{tCommon('detail_labels.agency_date')}</strong> {new Date(item.agency_date).toLocaleDateString('fa-IR')}</div>
                       {item.description && <div><strong>{tCommon('detail_labels.description')}</strong> {item.description}</div>}
@@ -1990,6 +2028,24 @@ export default function B2BPage() {
           onClose={() => {
             setShowSaleModal(false);
             setEditingSale(null);
+          }}
+        />
+      )}
+
+      {showProformaModal && viewingProformaData && (
+        <SalesProformaModal
+          initialData={viewingProformaData}
+          readOnly={true}
+          onSubmit={async () => {
+            // View only - do nothing
+            setShowProformaModal(false);
+            setViewingProformaData(null);
+            setViewingProformaId(null);
+          }}
+          onClose={() => {
+            setShowProformaModal(false);
+            setViewingProformaData(null);
+            setViewingProformaId(null);
           }}
         />
       )}

@@ -704,6 +704,9 @@
       "distributor": "عامل توزیع",
       "warehouse_receipt": "رسید انبار",
       "select-warehouse-receipt": "انتخاب رسید انبار",
+      "sales-proforma": "پیش فاکتور",
+      "select-sales-proforma": "انتخاب پیش فاکتور",
+      "unit-price": "قیمت واحد",
       "product": "محصول",
       "customer": "مشتری",
       "agency-weight": "وزن عاملیت (کیلوگرم)",
@@ -714,6 +717,7 @@
       "select-distributor": "انتخاب عامل توزیع",
       "select-date": "انتخاب تاریخ",
       "create-new-warehouse-receipt": " ایجاد رسید انبار جدید",
+      "create-new-sales-proforma": " ایجاد پیش فاکتور فروش جدید",
       "create-new-distributor": "ایجاد عامل توزیع جدید",
       "select-b2b-offer": "انتخاب عرضه بازارگاه",
       "no-offer": "بدون عرضه",
@@ -722,14 +726,18 @@
       "cancel": "لغو",
       "optional": "(اختیاری)",
       "validation": {
+        "transfer-id": "شناسه انتقال الزامی است",
+        "warehouse-receipt": "رسید انبار الزامی است",
         "b2b-offer": "عرضه بازارگاه الزامی است",
         "warehouse": "انبار الزامی است",
         "warehouse_receipt": "رسید انبار الزامی است",
         "product": "محصول الزامی است",
         "product-required": "محصول الزامی است",
-        "customer": "مشتری الزامی است",
+        "customer": "عامل توزیع الزامی است",
+        "sales-proforma": "پیش فاکتور فروش الزامی است",
         "sales_proforma": "پیش فاکتور فروش الزامی است",
         "agency-weight": "وزن عاملیت باید بزرگتر از صفر باشد",
+        "agency-weight-exceeds-max": "وزن عاملیت نباید بیشتر از حداکثر وزن پیش‌فاکتور باشد",
         "agency-date": "تاریخ عاملیت الزامی است"
       }
     },
@@ -1221,6 +1229,9 @@
       "search_purchase_types": "جستجوی نوع خرید...",
       "search": "جستجو..."
     },
+    "create_new": {
+      "customer": "ایجاد عامل توزیع جدید"
+    },
     "toast_messages": {
       "receipt_create_success": "رسید با موفقیت ایجاد شد",
       "receipt_create_error": "خطا در ایجاد رسید",
@@ -1292,6 +1303,9 @@
       "cottage_code": "کد کوتاژ:",
       "warehouse": "انبار:",
       "customer": "مشتری:",
+      "distributor": "عامل توزیع:",
+      "sales_proforma": "پیش فاکتور:",
+      "sales_proforma_header": "پیش فاکتور",
       "receiver": "گیرنده:",
       "agency_weight": "وزن عاملیت:",
       "agency_date": "تاریخ عاملیت:",

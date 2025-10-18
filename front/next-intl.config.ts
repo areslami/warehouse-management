@@ -12,5 +12,6 @@ export default async function getRequestConfig({
   return {
     locale: activeLocale,
     messages,
+    timeZone: "Asia/Tehran",
   };
 }

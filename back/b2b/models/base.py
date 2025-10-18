@@ -107,19 +107,21 @@ class B2BAddress(models.Model):
 
  
 class B2BDistribution(models.Model):
-    
+
     transfer_id = models.CharField(max_length=100, unique=True)
-    
+
     warehouse_receipt = models.ForeignKey('warehouse.WarehouseReceipt', on_delete=models.PROTECT, limit_choices_to={'receipt_type': 'import_cottage'})
+    sales_proforma = models.ForeignKey('finance.SalesProforma', on_delete=models.PROTECT, null=True, blank=True)
     customer = models.ForeignKey('core.Customer', on_delete=models.PROTECT)
-    
+
     agency_date = models.DateTimeField()
     agency_weight = models.DecimalField(max_digits=20, decimal_places=0, default=0)
+    unit_price = models.DecimalField(max_digits=20, decimal_places=0, default=0)
     description = models.TextField(blank=True)
-    
+
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-    
+
     def __str__(self):
         customer_name = self.customer.company_name if self.customer.customer_type == 'corporate' else self.customer.full_name
         product_name = 'No Product'
@@ -129,7 +131,7 @@ class B2BDistribution(models.Model):
                 product_name = first_item.product.name
         receipt_id = self.warehouse_receipt.receipt_id if self.warehouse_receipt else 'N/A'
         return f"Distribution {receipt_id} - {customer_name} - {product_name} ({self.agency_weight} kg)"
-    
+
     def save(self, *args, **kwargs):
         super().save(*args, **kwargs)
         

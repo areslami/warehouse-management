@@ -15,18 +15,23 @@ import { useTranslations } from "next-intl";
 import { useCoreData } from "@/lib/core-data-context";
 import { CustomerModal } from "../customer-modal";
 import { WarehouseReceiptModal, WarehouseReceiptFormData } from "../warehouse/warehouse-receipt-modal";
+import { SalesProformaModal, SalesProformaFormData } from "../finance/salesproforma-modal";
 import { createCustomer } from "@/lib/api/core";
 import { createWarehouseReceipt, fetchWarehouseReceipts } from "@/lib/api/warehouse";
+import { fetchSalesProformas, createSalesProforma } from "@/lib/api/finance";
 import { WarehouseReceipt } from "@/lib/interfaces/warehouse";
+import { SalesProforma } from "@/lib/interfaces/finance";
 import { describeWarehouseReceipt, describeParty } from "@/lib/utils/label-utils";
 import { getPartyDisplayName } from "@/lib/utils/party-utils";
 import { PersianDatePicker } from "../../ui/persian-date-picker";
 
 export type B2BDistributionFormData = {
-  transfer_id?: string;
+  transfer_id: string;
   customer: number;
   warehouse_receipt: number;
+  sales_proforma: number;
   agency_weight: number;
+  unit_price: number;
   agency_date: string;
   description?: string;
 };
@@ -46,13 +51,17 @@ export function B2BDistributionModal({ trigger, onSubmit, onClose, initialData, 
   const { customers, refreshData: refreshCoreData } = useCoreData();
   const [showCustomerModal, setShowCustomerModal] = useState(false);
   const [showWarehouseReceiptModal, setShowWarehouseReceiptModal] = useState(false);
+  const [showSalesProformaModal, setShowSalesProformaModal] = useState(false);
   const [warehouseReceipts, setWarehouseReceipts] = useState<WarehouseReceipt[]>([]);
+  const [salesProformas, setSalesProformas] = useState<SalesProforma[]>([]);
+  const [proformaMaxWeight, setProformaMaxWeight] = useState<number | null>(null);
 
   useEffect(() => {
     if (customers.length === 0) {
       refreshCoreData('customers');
     }
     loadWarehouseReceipts();
+    loadSalesProformas();
   }, [customers.length, refreshCoreData]);
 
   const loadWarehouseReceipts = async () => {
@@ -66,13 +75,32 @@ export function B2BDistributionModal({ trigger, onSubmit, onClose, initialData, 
     }
   };
 
+  const loadSalesProformas = async () => {
+    try {
+      const proformas = await fetchSalesProformas();
+      setSalesProformas(proformas || []);
+    } catch (error) {
+      console.error('Failed to load sales proformas:', error);
+    }
+  };
+
 
 
   const b2bDistributionSchema = z.object({
-    transfer_id: z.string().optional(),
-    warehouse_receipt: z.number().min(1),
-    customer: z.number().min(1),
-    agency_weight: z.union([z.string(), z.number()]).optional(),
+    transfer_id: z.string().min(1, tval("transfer-id")),
+    warehouse_receipt: z.number().min(1, tval("warehouse-receipt")),
+    sales_proforma: z.number().min(1, tval("sales-proforma")),
+    customer: z.number().min(1, tval("customer")),
+    agency_weight: z.union([z.string(), z.number()])
+      .optional()
+      .refine((val) => {
+        if (!proformaMaxWeight) return true;
+        const numVal = typeof val === 'string' ? parseFloat(val) : val;
+        return !numVal || numVal <= proformaMaxWeight;
+      }, {
+        message: tval("agency-weight-exceeds-max"),
+      }),
+    unit_price: z.union([z.string(), z.number()]).optional(),
     agency_date: z.string().min(1, tval("agency-date")),
     description: z.string().optional(),
   });
@@ -84,8 +112,10 @@ export function B2BDistributionModal({ trigger, onSubmit, onClose, initialData, 
     defaultValues: {
       transfer_id: initialData?.transfer_id || "",
       warehouse_receipt: initialData?.warehouse_receipt || 0,
+      sales_proforma: initialData?.sales_proforma || 0,
       customer: initialData?.customer || 0,
       agency_weight: initialData?.agency_weight || 0,
+      unit_price: initialData?.unit_price || 0,
       agency_date: initialData?.agency_date || "",
       description: initialData?.description || "",
     },
@@ -143,6 +173,61 @@ export function B2BDistributionModal({ trigger, onSubmit, onClose, initialData, 
                   )}
                 />
 
+                <FormField
+                  control={form.control as any}
+                  name="sales_proforma"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>{t("sales-proforma")}</FormLabel>
+                      <FormControl>
+                        <SimpleCombobox
+                          value={field.value > 0 ? field.value.toString() : ""}
+                          onValueChange={(value) => {
+                            if (value) {
+                              const proformaId = Number(value);
+                              field.onChange(proformaId);
+
+                              // Set customer, max weight, and unit_price from proforma
+                              const selectedProforma = salesProformas.find(p => p.id === proformaId);
+                              if (selectedProforma) {
+                                // Auto-populate customer from proforma
+                                if (selectedProforma.customer) {
+                                  form.setValue('customer', selectedProforma.customer);
+                                }
+
+                                // Calculate and store total weight for display only
+                                if (selectedProforma.lines && selectedProforma.lines.length > 0) {
+                                  const totalWeight = selectedProforma.lines.reduce((sum, line) => sum + (line.weight || 0), 0);
+                                  setProformaMaxWeight(totalWeight);
+
+                                  // Auto-populate unit_price
+                                  const avgUnitPrice = selectedProforma.lines.length > 0
+                                    ? selectedProforma.lines.reduce((sum, line) => sum + (line.unit_price || 0), 0) / selectedProforma.lines.length
+                                    : 0;
+                                  form.setValue('unit_price', avgUnitPrice);
+                                }
+                              }
+                            } else {
+                              setProformaMaxWeight(null);
+                            }
+                          }}
+                          options={salesProformas.map(proforma => ({
+                            value: proforma.id.toString(),
+                            label: `${proforma.serial_number} - ${proforma.customer_name || proforma.customer}`,
+                            id: proforma.id,
+                            name: proforma.serial_number
+                          }))}
+                          placeholder={t("select-sales-proforma")}
+                          searchPlaceholder={tCommon("search_placeholders.search_proformas")}
+                          showCreateNew={true}
+                          createNewText={t("create-new-sales-proforma")}
+                          onCreateNew={() => setShowSalesProformaModal(true)}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
               </div>
 
               <div className="grid grid-cols-2 gap-4">
@@ -178,6 +263,23 @@ export function B2BDistributionModal({ trigger, onSubmit, onClose, initialData, 
                   )}
                 />
 
+                <FormField
+                  control={form.control as any}
+                  name="agency_date"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>{t("agency-date")}</FormLabel>
+                      <FormControl>
+                        <PersianDatePicker
+                          value={field.value}
+                          onChange={(value) => field.onChange(value)}
+                          placeholder={t("select-date")}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
               </div>
 
               <FormField
@@ -203,7 +305,7 @@ export function B2BDistributionModal({ trigger, onSubmit, onClose, initialData, 
                         placeholder={t("select-distributor")}
                         searchPlaceholder={tCommon("search_placeholders.search_distributors")}
                         showCreateNew={true}
-                        createNewText={t("create-new-distributor")}
+                        createNewText={tCommon("create_new.customer")}
                         onCreateNew={() => setShowCustomerModal(true)}
                       />
                     </FormControl>
@@ -218,7 +320,14 @@ export function B2BDistributionModal({ trigger, onSubmit, onClose, initialData, 
                   name="agency_weight"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>{t("agency-weight")}</FormLabel>
+                      <FormLabel>
+                        <span>{t("agency-weight")}</span>
+                        {proformaMaxWeight && (
+                          <span className="mr-2 text-sm font-normal text-muted-foreground">
+                            - نهایت {Number(proformaMaxWeight).toLocaleString('fa-IR')} کیلوگرم
+                          </span>
+                        )}
+                      </FormLabel>
                       <FormControl>
                         <NumberInput
                           value={field.value || 0}
@@ -232,15 +341,15 @@ export function B2BDistributionModal({ trigger, onSubmit, onClose, initialData, 
 
                 <FormField
                   control={form.control as any}
-                  name="agency_date"
+                  name="unit_price"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>{t("agency-date")}</FormLabel>
+                      <FormLabel>{t("unit-price")}</FormLabel>
                       <FormControl>
-                        <PersianDatePicker
-                          value={field.value}
+                        <NumberInput
+                          value={field.value || 0}
                           onChange={(value) => field.onChange(value)}
-                          placeholder={t("select-date")}
+                          disabled={true}
                         />
                       </FormControl>
                       <FormMessage />
@@ -308,6 +417,47 @@ export function B2BDistributionModal({ trigger, onSubmit, onClose, initialData, 
             }
           }}
           onClose={() => setShowCustomerModal(false)}
+        />
+      )}
+
+      {showSalesProformaModal && (
+        <SalesProformaModal
+          onSubmit={async (newProforma) => {
+            try {
+              const proformaData = {
+                ...newProforma,
+                payment_description: newProforma.payment_description || null
+              };
+              const created = await createSalesProforma(proformaData as any);
+              if (created) {
+                await loadSalesProformas();
+                form.setValue('sales_proforma', created.id);
+
+                // Auto-populate customer from the newly created proforma
+                if (created.customer) {
+                  form.setValue('customer', created.customer);
+                }
+
+                // Set max weight and unit_price from the newly created proforma
+                if (created.lines && created.lines.length > 0) {
+                  const totalWeight = created.lines.reduce((sum, line) => sum + (line.weight || 0), 0);
+                  setProformaMaxWeight(totalWeight);
+
+                  // Auto-populate unit_price
+                  const avgUnitPrice = created.lines.length > 0
+                    ? created.lines.reduce((sum, line) => sum + (line.unit_price || 0), 0) / created.lines.length
+                    : 0;
+                  form.setValue('unit_price', avgUnitPrice);
+                }
+
+                setShowSalesProformaModal(false);
+              }
+            } catch (error) {
+              console.error("Failed to create sales proforma:", error);
+              throw error;
+            }
+          }}
+          onClose={() => setShowSalesProformaModal(false)}
         />
       )}
 

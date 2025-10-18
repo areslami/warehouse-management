@@ -22,8 +22,8 @@ import { WarehouseReceiptModal } from "../warehouse/warehouse-receipt-modal";
 
 export type B2BOfferFormData = {
   offer_id: string;
-  warehouse_receipt?: number;
-  offer_weight?: number;
+  warehouse_receipt?: number | null;
+  offer_weight: number;
   unit_price: number;
   status: 'pending' | 'active' | 'sold' | 'expired';
   offer_type?: 'cash' | 'credit' | 'agreement' | 'other';
@@ -69,8 +69,8 @@ export function B2BOfferModal({ trigger, onSubmit, onClose, initialData }: B2BOf
 
   const b2bOfferSchema = z.object({
     offer_id: z.string().min(1, tval("offer-id")),
-    warehouse_receipt: z.number().optional(),
-    offer_weight: z.number().optional(),
+    warehouse_receipt: z.number().nullable().optional(),
+    offer_weight: z.number().positive(tval("offer-weight")),
     unit_price: z.number().positive(),
     status: z.enum(['pending', 'active', 'sold', 'expired']),
     offer_type: z.enum(['cash', 'credit', 'agreement', 'other']).optional(),
@@ -85,9 +85,9 @@ export function B2BOfferModal({ trigger, onSubmit, onClose, initialData }: B2BOf
     resolver: zodResolver(b2bOfferSchema) as any,
     defaultValues: {
       offer_id: initialData?.offer_id || "",
-      warehouse_receipt: initialData?.warehouse_receipt || 0,
-      offer_weight: initialData?.offer_weight || 0,
-      unit_price: initialData?.unit_price || 0,
+      warehouse_receipt: initialData?.warehouse_receipt || null,
+      offer_weight: initialData?.offer_weight || undefined,
+      unit_price: initialData?.unit_price || undefined,
       status: initialData?.status || 'pending',
       offer_type: initialData?.offer_type || 'cash',
       offer_date: initialData?.offer_date || "",
@@ -98,7 +98,12 @@ export function B2BOfferModal({ trigger, onSubmit, onClose, initialData }: B2BOf
 
   const handleSubmit = async (data: any) => {
     try {
-      await onSubmit?.(data);
+      // Clean the data - convert 0 or empty warehouse_receipt to null
+      const cleanedData = {
+        ...data,
+        warehouse_receipt: data.warehouse_receipt > 0 ? data.warehouse_receipt : null,
+      };
+      await onSubmit?.(cleanedData);
       if (trigger) {
         setOpen(false);
       } else {
@@ -203,16 +208,16 @@ export function B2BOfferModal({ trigger, onSubmit, onClose, initialData }: B2BOf
                     <FormLabel>{t("warehouse-receipt")}</FormLabel>
                     <FormControl>
                       <SimpleCombobox
-                        value={field.value > 0 ? field.value.toString() : ""}
+                        value={field.value && field.value > 0 ? field.value.toString() : ""}
                         onValueChange={(value) => {
-                          if (value && value !== "0") {
+                          if (value && value !== "0" && value !== "") {
                             field.onChange(Number(value));
                           } else {
-                            field.onChange(0);
+                            field.onChange(null);
                           }
                         }}
                         options={[
-                          { value: "0", label: t("no-receipt") },
+                          { value: "", label: t("no-receipt") },
                           ...warehouseReceipts.map(receipt => ({
                             value: receipt.id.toString(),
                             label: describeWarehouseReceipt(receipt),
@@ -241,7 +246,7 @@ export function B2BOfferModal({ trigger, onSubmit, onClose, initialData }: B2BOf
                       <FormLabel>{t("offer-weight")}</FormLabel>
                       <FormControl>
                         <NumberInput
-                          value={field.value || 0}
+                          value={field.value || undefined}
                           onChange={(value) => field.onChange(value)}
                         />
                       </FormControl>
@@ -258,7 +263,7 @@ export function B2BOfferModal({ trigger, onSubmit, onClose, initialData }: B2BOf
                       <FormLabel>{t("unit-price")}</FormLabel>
                       <FormControl>
                         <NumberInput
-                          value={field.value || 0}
+                          value={field.value || undefined}
                           onChange={(value) => field.onChange(value)}
                         />
                       </FormControl>
