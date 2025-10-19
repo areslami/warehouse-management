@@ -208,6 +208,9 @@ export function B2BSaleModal({ trigger, onSubmit, onClose, initialData }: B2BSal
                                                 onChange={(e) => {
                                                     setSaleType(e.target.value as "your_sale" | "distributor_sale");
                                                     form.setValue("is_distributor", true);
+                                                    form.setValue("offer", null);
+                                                    form.setValue("product", 0);
+                                                    form.setValue("unit_price", 0);
                                                 }}
                                                 className="mr-2"
                                             />
@@ -297,7 +300,7 @@ export function B2BSaleModal({ trigger, onSubmit, onClose, initialData }: B2BSal
                                                             field.onChange(Number(value));
                                                         }
                                                     }}
-                                                    disabled={!!selectedOffer}
+                                                    disabled={saleType === "your_sale" && !!selectedOffer}
                                                     options={products.map(product => ({
                                                         value: product.id.toString(),
                                                         label: describeProduct(product),
@@ -377,7 +380,7 @@ export function B2BSaleModal({ trigger, onSubmit, onClose, initialData }: B2BSal
                                                 <NumberInput
                                                     value={field.value || 0}
                                                     onChange={(value) => field.onChange(value)}
-                                                    disabled={!!selectedOffer}
+                                                    disabled={saleType === "your_sale" && !!selectedOffer}
                                                 />
                                             </FormControl>
                                             <FormMessage />
