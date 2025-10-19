@@ -139,19 +139,19 @@ class B2BSale(models.Model):
     purchase_id = models.CharField(max_length=100, unique=True)
     is_distributor = models.BooleanField(default=False)
     b2b_distribution = models.ForeignKey(B2BDistribution, on_delete=models.CASCADE, related_name='b2b_sales', null=True, blank=True)
-    cottage_code = models.CharField(max_length=50,null=False, blank=False)
-    offer = models.ForeignKey(B2BOffer, on_delete=models.CASCADE, related_name='b2b_sales', null=True)
+    offer = models.ForeignKey(B2BOffer, on_delete=models.CASCADE, related_name='b2b_sales', null=True, blank=True)
+    product = models.ForeignKey('core.Product', on_delete=models.CASCADE)
     weight = models.DecimalField(max_digits=20, decimal_places=0, default=0)
     unit_price = models.DecimalField(max_digits=20, decimal_places=0, default=0)
     total_price = models.DecimalField(max_digits=20, decimal_places=0, default=0)
-    sale_date = models.DateField(null=True) 
+    sale_date = models.DateField(null=True)
     customer = models.ForeignKey('core.Customer', on_delete=models.CASCADE)
     purchase_type = models.CharField(max_length=10, choices=TRANSACTION_TYPES, default='cash')
     description = models.TextField(blank=True)
     
     def __str__(self):
         customer_name = self.customer.company_name if self.customer.customer_type == 'corporate' else self.customer.full_name
-        product_name = self.offer.warehouse_receipt.product.name if self.offer else self.b2b_distribution.warehouse_receipt.product.name if self.b2b_distribution else 'No Product'
+        product_name = self.product.name if self.product else 'No Product'
         return f"Sale {self.purchase_id} - {customer_name} - {product_name} ({self.weight} kg)"
     
     def save(self, *args, **kwargs):

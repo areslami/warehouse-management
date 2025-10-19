@@ -46,6 +46,9 @@ export interface B2BAddress {
 export interface B2BSale {
   id: number;
   purchase_id: string;
+  is_distributor: boolean;
+  b2b_distribution?: number | null;
+  distribution_id?: string;
   offer: number | null;
   offer_id?: string;
   product: number;

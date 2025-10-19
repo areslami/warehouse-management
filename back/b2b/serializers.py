@@ -145,31 +145,13 @@ class B2BSaleSerializer(serializers.ModelSerializer):
         return None
 
     def get_product_name(self, obj):
-        try:
-            if obj.offer and obj.offer.warehouse_receipt:
-                first_item = obj.offer.warehouse_receipt.items.first()
-                if first_item and first_item.product:
-                    return first_item.product.name
-            if obj.b2b_distribution and obj.b2b_distribution.warehouse_receipt:
-                first_item = obj.b2b_distribution.warehouse_receipt.items.first()
-                if first_item and first_item.product:
-                    return first_item.product.name
-        except Exception:
-            pass
+        if obj.product:
+            return obj.product.name
         return None
 
     def get_product_id(self, obj):
-        try:
-            if obj.offer and obj.offer.warehouse_receipt:
-                first_item = obj.offer.warehouse_receipt.items.first()
-                if first_item and first_item.product:
-                    return first_item.product.id
-            if obj.b2b_distribution and obj.b2b_distribution.warehouse_receipt:
-                first_item = obj.b2b_distribution.warehouse_receipt.items.first()
-                if first_item and first_item.product:
-                    return first_item.product.id
-        except Exception:
-            pass
+        if obj.product:
+            return obj.product.id
         return None
 
 

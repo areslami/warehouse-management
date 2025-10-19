@@ -26,8 +26,9 @@ import { B2BDistributionModal } from "./b2b-distribution-modal";
 
 export type B2BSaleFormData = {
     purchase_id: string;
+    is_distributor: boolean;
     offer: number | null;
-    distribution: number | null;
+    b2b_distribution: number | null;
     weight: number;
     unit_price: number;
     sale_date: string;
@@ -88,8 +89,9 @@ export function B2BSaleModal({ trigger, onSubmit, onClose, initialData }: B2BSal
 
     const b2bSaleSchema = z.object({
         purchase_id: z.string().min(1, tval("purchase-id")),
+        is_distributor: z.boolean(),
         offer: z.number().nullable().optional(),
-        distribution: z.number().nullable().optional(),
+        b2b_distribution: z.number().nullable().optional(),
         weight: z.number().positive(tval("weight")),
         unit_price: z.number().positive(tval("unit-price")),
         sale_date: z.string().min(1, tval("sale-date")),
@@ -105,8 +107,9 @@ export function B2BSaleModal({ trigger, onSubmit, onClose, initialData }: B2BSal
         resolver: zodResolver(b2bSaleSchema) as any,
         defaultValues: {
             purchase_id: initialData?.purchase_id || "",
+            is_distributor: initialData?.is_distributor || false,
             offer: initialData?.offer || null,
-            distribution: initialData?.distribution || null,
+            b2b_distribution: initialData?.b2b_distribution || null,
             weight: initialData?.weight || 0,
             unit_price: initialData?.unit_price || 0,
             sale_date: initialData?.sale_date || new Date().toISOString().split('T')[0],
@@ -189,7 +192,10 @@ export function B2BSaleModal({ trigger, onSubmit, onClose, initialData }: B2BSal
                                                 type="radio"
                                                 value="your_sale"
                                                 checked={saleType === "your_sale"}
-                                                onChange={(e) => setSaleType(e.target.value as "your_sale" | "distributor_sale")}
+                                                onChange={(e) => {
+                                                    setSaleType(e.target.value as "your_sale" | "distributor_sale");
+                                                    form.setValue("is_distributor", false);
+                                                }}
                                                 className="mr-2"
                                             />
                                             {t("your_sale")}
@@ -199,7 +205,10 @@ export function B2BSaleModal({ trigger, onSubmit, onClose, initialData }: B2BSal
                                                 type="radio"
                                                 value="distributor_sale"
                                                 checked={saleType === "distributor_sale"}
-                                                onChange={(e) => setSaleType(e.target.value as "your_sale" | "distributor_sale")}
+                                                onChange={(e) => {
+                                                    setSaleType(e.target.value as "your_sale" | "distributor_sale");
+                                                    form.setValue("is_distributor", true);
+                                                }}
                                                 className="mr-2"
                                             />
                                             {t("distributor_sale")}
@@ -242,7 +251,7 @@ export function B2BSaleModal({ trigger, onSubmit, onClose, initialData }: B2BSal
                                     />)}
                                 {saleType === "distributor_sale" && (<FormField
                                     control={form.control as any}
-                                    name="distribution"
+                                    name="b2b_distribution"
                                     render={({ field }) => (
                                         <FormItem>
                                             <FormLabel>{t("distribution")}</FormLabel>
@@ -494,7 +503,7 @@ export function B2BSaleModal({ trigger, onSubmit, onClose, initialData }: B2BSal
                         const created = await createB2BDistribution(newDistribution);
                         if (created) {
                             await loadDistributions();
-                            form.setValue('distribution', created.id);
+                            form.setValue('b2b_distribution', created.id);
                             setShowDistribtuionModal(false);
                         }
                     }}
