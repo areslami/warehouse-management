@@ -1424,16 +1424,14 @@ export default function B2BPage() {
                     {tCommon('buttons.excel_export')}
                   </Button>
                 )}
-                {false && ( // Hidden for now - can be reverted later
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => setShowAddressUploadModal(true)}
-                  >
-                    <Upload className="w-4 h-4 mr-1" />
-                    {t("import_excel")}
-                  </Button>
-                )}
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => setShowAddressUploadModal(true)}
+                >
+                  <Upload className="w-4 h-4 mr-1" />
+                  {t("import_excel")}
+                </Button>
                 <Button
                   size="sm"
                   className="bg-[#f6d265] hover:bg-[#f5c842] text-black"

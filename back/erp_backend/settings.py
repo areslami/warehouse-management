@@ -90,8 +90,8 @@ WSGI_APPLICATION = "erp_backend.wsgi.application"
 DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.postgresql",
-        "NAME": 'shams-erp' ,
-        "USER":'pguser' ,
+        "NAME": 'shams-erp',
+        "USER": 'pguser',
         "PASSWORD": '1234',
         "HOST": 'localhost',
         "PORT": '5432',
@@ -149,7 +149,8 @@ CSRF_TRUSTED_ORIGINS = [
 ]
 CORS_ORIGIN_ALLOW_ALL = True
 # ALLOWED_HOSTS = ["*"]
-ALLOWED_HOSTS = ["127.0.0.1", "localhost", "192.168.*", "10.*",'192.168.142.69']
+ALLOWED_HOSTS = ["127.0.0.1", "localhost", "192.168.*",
+                 "10.*", '192.168.142.69', '192.168.142.192']
 
 # Django REST Framework settings
 REST_FRAMEWORK = {
