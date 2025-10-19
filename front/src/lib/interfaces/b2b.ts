@@ -12,6 +12,8 @@ export interface B2BOffer {
   offer_exp_date: string;
   cottage_number?: string;
   description?: string;
+  product_id?: number;
+  product_name?: string;
   created_at?: string;
   updated_at?: string;
 }

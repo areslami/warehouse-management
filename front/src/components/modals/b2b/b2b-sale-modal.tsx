@@ -125,9 +125,9 @@ export function B2BSaleModal({ trigger, onSubmit, onClose, initialData }: B2BSal
     useEffect(() => {
         if (selectedOffer && selectedOffer !== 0 && offers.length > 0) {
             const offer = offers.find(o => o.id === selectedOffer);
-            if (offer) {
-                form.setValue('product', offer.product);
-                form.setValue('unit_price', offer.unit_price);
+            if (offer && offer.product_id) {
+                form.setValue('product', offer.product_id, { shouldValidate: false, shouldDirty: true, shouldTouch: true });
+                form.setValue('unit_price', Number(offer.unit_price), { shouldValidate: false, shouldDirty: true, shouldTouch: true });
             }
         }
     }, [selectedOffer, offers, form]);
@@ -292,28 +292,29 @@ export function B2BSaleModal({ trigger, onSubmit, onClose, initialData }: B2BSal
                                     render={({ field }) => (
                                         <FormItem>
                                             <FormLabel>{t("product")}</FormLabel>
-                                            <FormControl>
-                                                <SimpleCombobox
-                                                    value={field.value > 0 ? field.value.toString() : ""}
-                                                    onValueChange={(value) => {
-                                                        if (value) {
-                                                            field.onChange(Number(value));
-                                                        }
-                                                    }}
-                                                    disabled={saleType === "your_sale" && !!selectedOffer}
-                                                    options={products.map(product => ({
-                                                        value: product.id.toString(),
-                                                        label: describeProduct(product),
-                                                        id: product.id,
-                                                        name: product.name
-                                                    }))}
-                                                    placeholder={t("select-product")}
-                                                    searchPlaceholder={tCommon("search_placeholders.search_products")}
-                                                    showCreateNew={true}
-                                                    createNewText={t("create-new-product")}
-                                                    onCreateNew={() => setShowProductModal(true)}
-                                                />
-                                            </FormControl>
+                                            <div className={saleType === "your_sale" && !!selectedOffer ? "pointer-events-none opacity-60" : ""}>
+                                                <FormControl>
+                                                    <SimpleCombobox
+                                                        value={field.value > 0 ? field.value.toString() : ""}
+                                                        onValueChange={(value) => {
+                                                            if (value) {
+                                                                field.onChange(Number(value));
+                                                            }
+                                                        }}
+                                                        options={products.map(product => ({
+                                                            value: product.id.toString(),
+                                                            label: describeProduct(product),
+                                                            id: product.id,
+                                                            name: product.name
+                                                        }))}
+                                                        placeholder={t("select-product")}
+                                                        searchPlaceholder={tCommon("search_placeholders.search_products")}
+                                                        showCreateNew={true}
+                                                        createNewText={t("create-new-product")}
+                                                        onCreateNew={() => setShowProductModal(true)}
+                                                    />
+                                                </FormControl>
+                                            </div>
                                             <FormMessage />
                                         </FormItem>
                                     )}
@@ -380,7 +381,8 @@ export function B2BSaleModal({ trigger, onSubmit, onClose, initialData }: B2BSal
                                                 <NumberInput
                                                     value={field.value || 0}
                                                     onChange={(value) => field.onChange(value)}
-                                                    disabled={saleType === "your_sale" && !!selectedOffer}
+                                                    readOnly={saleType === "your_sale" && !!selectedOffer}
+                                                    className={saleType === "your_sale" && !!selectedOffer ? "opacity-60 cursor-not-allowed" : ""}
                                                 />
                                             </FormControl>
                                             <FormMessage />
