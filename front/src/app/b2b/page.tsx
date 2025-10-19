@@ -830,7 +830,7 @@ export default function B2BPage() {
                         <TableCell className="truncate max-w-[150px]" title={offer.product_name || `${tCommon('product_labels.product_prefix')} ${offer.product}`}>
                           {offer.product_name || `${tCommon('product_labels.product_prefix')} ${offer.product}`}
                         </TableCell>
-                        <TableCell>{formatNumber(offer.offer_weight)} {tCommon('units.kg')}</TableCell>
+                        <TableCell>{formatNumber(offer.offer_weight)}</TableCell>
                         <TableCell className="truncate max-w-[100px]">{formatNumber(offer.unit_price)}</TableCell>
                         <TableCell className="truncate max-w-[120px]">{formatNumber(offer.total_price || 0)}</TableCell>
                         <TableCell className="truncate max-w-[120px]" title={offer.offer_id}>{offer.offer_id}</TableCell>
@@ -1338,7 +1338,7 @@ export default function B2BPage() {
                         <TableCell className="text-right truncate max-w-[150px]" title={sale.product_name || `${tCommon('product_labels.product_prefix')} ${sale.product}`}>
                           {sale.product_name || `${tCommon('product_labels.product_prefix')} ${sale.product}`}
                         </TableCell>
-                        <TableCell className="text-right">{formatNumber(sale.weight)} {tCommon('units.kg')}</TableCell>
+                        <TableCell className="text-right">{formatNumber(sale.weight)}</TableCell>
                         <TableCell className="text-right">{formatNumber(sale.unit_price)}</TableCell>
                         <TableCell className="text-right">{formatNumber(sale.total_price || (sale.weight && sale.unit_price ? Number(sale.weight) * Number(sale.unit_price) : 0))}</TableCell>
                         <TableCell className="text-right truncate max-w-[100px]" title={sale.purchase_id}>

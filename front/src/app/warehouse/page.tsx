@@ -389,7 +389,7 @@ export default function WarehousePage() {
                     </TableCell>
                     <TableCell>{new Date(receipt.date).toLocaleDateString('fa-IR')}</TableCell>
                     <TableCell>{warehouses.find(w => w.id === receipt.warehouse)?.name}</TableCell>
-                    <TableCell>{receipt.total_weight} {tCommon('units.kg')}</TableCell>
+                    <TableCell>{receipt.total_weight}</TableCell>
                     <TableCell>{receipt.receipt_id}</TableCell>
                     <TableCell>
                       <div className="flex gap-2 justify-center">
@@ -483,7 +483,7 @@ export default function WarehousePage() {
                     </TableCell>
                     <TableCell>{new Date(dispatch.issue_date).toLocaleDateString('fa-IR')}</TableCell>
                     <TableCell>{warehouses.find(w => w.id === dispatch.warehouse)?.name}</TableCell>
-                    <TableCell>{formatNumber(dispatch.total_weight)} {tCommon('units.kg')}</TableCell>
+                    <TableCell>{formatNumber(dispatch.total_weight)}</TableCell>
                     <TableCell>{dispatch.dispatch_id}</TableCell>
                     <TableCell>
                       <div className="flex gap-2 justify-center">
@@ -577,7 +577,7 @@ export default function WarehousePage() {
                     </TableCell>
                     <TableCell>{new Date(delivery.issue_date).toLocaleDateString('fa-IR')}</TableCell>
                     <TableCell>{warehouses.find(w => w.id === delivery.warehouse)?.name}</TableCell>
-                    <TableCell>{delivery.total_weight} {tCommon('units.kg')}</TableCell>
+                    <TableCell>{delivery.total_weight}</TableCell>
                     <TableCell>{delivery.delivery_id}</TableCell>
                     <TableCell>
                       <div className="flex gap-2 justify-center">
