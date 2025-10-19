@@ -55,6 +55,7 @@ export interface B2BSale {
   offer_id?: string;
   product: number;
   product_name?: string;
+  product_id?: number;
   customer: number;
   customer_id?: string;
   customer_name?: string;
@@ -64,6 +65,8 @@ export interface B2BSale {
   sale_date: string;
   purchase_type: "cash" | "credit" | "agreement" | "other";
   description?: string;
+  sales_proforma_id?: number;
+  sales_proforma_serial?: string;
 }
 
 export interface B2BDistribution {

@@ -134,6 +134,9 @@ export default function B2BPage() {
   const [editingDistribution, setEditingDistribution] = useState<B2BDistribution | null>(null);
   const [editingSale, setEditingSale] = useState<B2BSale | null>(null);
 
+  const [isOfferReadOnly, setIsOfferReadOnly] = useState(false);
+  const [isDistributionReadOnly, setIsDistributionReadOnly] = useState(false);
+
   const [sheetOpen, setSheetOpen] = useState(false);
   const [selectedItem, setSelectedItem] = useState<B2BOffer | B2BAddress | B2BDistribution | B2BSale | null>(null);
   const [selectedType, setSelectedType] = useState<'offer' | 'distribution' | 'address' | 'sale'>('offer');
@@ -1108,14 +1111,16 @@ export default function B2BPage() {
                     {tCommon('buttons.excel_export')}
                   </Button>
                 )}
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => setShowDistributionUploadModal(true)}
-                >
-                  <Upload className="w-4 h-4 mr-1" />
-                  {t("import_excel")}
-                </Button>
+                {false && ( // Hidden for now - can be reverted later
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => setShowDistributionUploadModal(true)}
+                  >
+                    <Upload className="w-4 h-4 mr-1" />
+                    {t("import_excel")}
+                  </Button>
+                )}
                 <Button
                   size="sm"
                   className="bg-[#f6d265] hover:bg-[#f5c842] text-black"
@@ -1298,6 +1303,7 @@ export default function B2BPage() {
                       </TableHead>
                       <TableHead className="text-right w-16">ردیف</TableHead>
                       <TableHead className="text-right">{t("sale_date")}</TableHead>
+                      <TableHead className="text-right">{t("sale_type")}</TableHead>
                       <TableHead className="text-right">{t("purchase_type")}</TableHead>
                       <TableHead className="text-right">{t("customer")}</TableHead>
                       <TableHead className="text-right">{t("product")}</TableHead>
@@ -1305,7 +1311,8 @@ export default function B2BPage() {
                       <TableHead className="text-right">{t("unit_price")}</TableHead>
                       <TableHead className="text-right">{t("total_price")}</TableHead>
                       <TableHead className="text-right">{t("purchase_id")}</TableHead>
-                      
+                      <TableHead className="text-right">{t("proforma_serial")}</TableHead>
+
                       <TableHead className="text-center w-24">{t("actions")}</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -1328,6 +1335,11 @@ export default function B2BPage() {
                         <TableCell className="text-right font-medium">{index + 1}</TableCell>
                         <TableCell className="text-right">{new Date(sale.sale_date).toLocaleDateString('fa-IR')}</TableCell>
                         <TableCell className="text-right">
+                          <span className={`px-2 py-1 rounded-full text-xs font-medium ${sale.is_distributor ? 'bg-purple-100 text-purple-800' : 'bg-blue-100 text-blue-800'}`}>
+                            {sale.is_distributor ? t('distributor_sale') : t('your_sale')}
+                          </span>
+                        </TableCell>
+                        <TableCell className="text-right">
                           <span className="px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
                             {getPaymentTypeLabel(sale.purchase_type)}
                           </span>
@@ -1344,7 +1356,10 @@ export default function B2BPage() {
                         <TableCell className="text-right truncate max-w-[100px]" title={sale.purchase_id}>
                           {sale.purchase_id}
                         </TableCell>
-                        
+                        <TableCell className="text-right truncate max-w-[120px]" title={sale.sales_proforma_serial || '-'}>
+                          {sale.sales_proforma_serial || '-'}
+                        </TableCell>
+
                         <TableCell className="text-center">
                           <div className="flex gap-2 justify-center">
                             <Button
@@ -1409,14 +1424,16 @@ export default function B2BPage() {
                     {tCommon('buttons.excel_export')}
                   </Button>
                 )}
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => setShowAddressUploadModal(true)}
-                >
-                  <Upload className="w-4 h-4 mr-1" />
-                  {t("import_excel")}
-                </Button>
+                {false && ( // Hidden for now - can be reverted later
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => setShowAddressUploadModal(true)}
+                  >
+                    <Upload className="w-4 h-4 mr-1" />
+                    {t("import_excel")}
+                  </Button>
+                )}
                 <Button
                   size="sm"
                   className="bg-[#f6d265] hover:bg-[#f5c842] text-black"
@@ -1707,6 +1724,7 @@ export default function B2BPage() {
       {showOfferModal && (
         <B2BOfferModal
           initialData={editingOffer || undefined}
+          readOnly={isOfferReadOnly}
           onSubmit={async (data) => {
             try {
               if (editingOffer) {
@@ -1719,6 +1737,7 @@ export default function B2BPage() {
               await loadData();
               setShowOfferModal(false);
               setEditingOffer(null);
+              setIsOfferReadOnly(false);
             } catch (error) {
               console.error(`Failed to ${editingOffer ? 'update' : 'create'} offer:`, error);
               handleApiErrorWithToast(error, `${editingOffer ? 'Update' : 'Create'} offer`);
@@ -1728,6 +1747,7 @@ export default function B2BPage() {
           onClose={() => {
             setShowOfferModal(false);
             setEditingOffer(null);
+            setIsOfferReadOnly(false);
           }}
         />
       )}
@@ -1738,6 +1758,7 @@ export default function B2BPage() {
             ...editingDistribution,
             b2b_offer: editingDistribution.b2b_offer ?? undefined
           } : undefined}
+          readOnly={isDistributionReadOnly}
           onSubmit={async (data) => {
             try {
               if (editingDistribution) {
@@ -1750,6 +1771,7 @@ export default function B2BPage() {
               await loadData();
               setShowDistributionModal(false);
               setEditingDistribution(null);
+              setIsDistributionReadOnly(false);
             } catch (error) {
               console.error(`Failed to ${editingDistribution ? 'update' : 'create'} distribution:`, error);
               handleApiErrorWithToast(error, `${editingDistribution ? 'Update' : 'Create'} distribution`);
@@ -1760,6 +1782,7 @@ export default function B2BPage() {
           onClose={() => {
             setShowDistributionModal(false);
             setEditingDistribution(null);
+            setIsDistributionReadOnly(false);
           }}
         />
       )}
@@ -1818,10 +1841,12 @@ export default function B2BPage() {
                       if (selectedType === 'offer') {
                         const fullOffer = await fetchB2BOfferById(selectedItem.id);
                         setEditingOffer(fullOffer);
+                        setIsOfferReadOnly(false);
                         setShowOfferModal(true);
                       } else if (selectedType === 'distribution') {
                         const fullDistribution = await fetchB2BDistributionById(selectedItem.id);
                         setEditingDistribution(fullDistribution);
+                        setIsDistributionReadOnly(false);
                         setShowDistributionModal(true);
                       } else if (selectedType === 'address') {
                         const fullAddress = await fetchB2BAddressById(selectedItem.id);
@@ -1882,7 +1907,7 @@ export default function B2BPage() {
                   const item = selectedItem as B2BOffer;
                   return (<>
                     <div><strong>{tCommon('detail_labels.offer_id')}</strong> {item.offer_id}</div>
-                    <div><strong>{tCommon('detail_labels.product')}</strong> {item.product_name || `${tCommon('product_labels.product_prefix')} ${item.product}`}</div>
+                    <div><strong>{tCommon('detail_labels.product')}</strong> {item.product_name || (item.product_id ? `${tCommon('product_labels.product_prefix')} ${item.product_id}` : '-')}</div>
                     <div><strong>{tCommon('detail_labels.warehouse_receipt')}</strong> {item.warehouse_receipt_id || item.warehouse_receipt}</div>
                     <div><strong>{tCommon('detail_labels.offer_weight')}</strong> {formatNumber(item.offer_weight)} {tCommon('units.kg')}</div>
                     <div><strong>{tCommon('detail_labels.unit_price')}</strong> {formatNumber(item.unit_price)} {tCommon('units.rial')}</div>
@@ -1960,13 +1985,95 @@ export default function B2BPage() {
                   return (
                     <>
                       <div><strong>{tCommon('detail_labels.purchase_id')}</strong> {item.purchase_id}</div>
-                      <div><strong>{tCommon('detail_labels.offer_id')}</strong> {item.offer_id || t("distributor-sale")}</div>
+                      <div>
+                        <strong>{t('sale_type')}:</strong>{' '}
+                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${item.is_distributor ? 'bg-purple-100 text-purple-800' : 'bg-blue-100 text-blue-800'}`}>
+                          {item.is_distributor ? t('distributor_sale') : t('your_sale')}
+                        </span>
+                      </div>
+                      {item.offer_id && (
+                        <div className="flex items-center gap-2">
+                          <strong>{tCommon('detail_labels.offer_id')}:</strong>
+                          <span>{item.offer_id}</span>
+                          {item.offer && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-6 w-6 p-0 text-[#f6d265] hover:text-[#f6d265]/80"
+                              onClick={async () => {
+                                try {
+                                  const offer = await fetchB2BOfferById(item.offer!);
+                                  setEditingOffer(offer);
+                                  setIsOfferReadOnly(true);
+                                  setShowOfferModal(true);
+                                } catch (error) {
+                                  console.error("Failed to fetch offer:", error);
+                                  handleApiErrorWithToast(error, "Fetch offer");
+                                }
+                              }}
+                            >
+                              <Info className="h-4 w-4" />
+                            </Button>
+                          )}
+                        </div>
+                      )}
+                      {item.is_distributor && item.distribution_id && (
+                        <div className="flex items-center gap-2">
+                          <strong>{t('transfer_id')}:</strong>
+                          <span>{item.distribution_id}</span>
+                          {item.b2b_distribution && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-6 w-6 p-0 text-[#f6d265] hover:text-[#f6d265]/80"
+                              onClick={async () => {
+                                try {
+                                  const distribution = await fetchB2BDistributionById(item.b2b_distribution!);
+                                  setEditingDistribution(distribution);
+                                  setIsDistributionReadOnly(true);
+                                  setShowDistributionModal(true);
+                                } catch (error) {
+                                  console.error("Failed to fetch distribution:", error);
+                                  handleApiErrorWithToast(error, "Fetch distribution");
+                                }
+                              }}
+                            >
+                              <Info className="h-4 w-4" />
+                            </Button>
+                          )}
+                        </div>
+                      )}
                       <div><strong>{tCommon('detail_labels.customer')}</strong> {item.customer_name || `${tCommon('customer_labels.customer_prefix')} ${item.customer}`}</div>
                       <div><strong>{tCommon('detail_labels.product')}</strong> {item.product_name || `${tCommon('product_labels.product_prefix')} ${item.product}`}</div>
-                      <div><strong>{tCommon('detail_labels.cottage_code')}</strong> {item.cottage_code || '-'}</div>
-                      <div><strong>{tCommon('detail_labels.weight')}</strong> {formatNumber(item.weight)} {tCommon('units.kg')}</div>
-                      <div><strong>{tCommon('detail_labels.unit_price')}</strong> {formatNumber(item.unit_price || 0)} {tCommon('units.rial')}</div>
-                      <div><strong>{tCommon('detail_labels.total_price')}</strong> {formatNumber(item.total_price || (item.weight && item.unit_price ? Number(item.weight) * Number(item.unit_price) : 0))} {tCommon('units.rial')}</div>
+                      <div><strong>وزن (کیلوگرم):</strong> {formatNumber(item.weight)}</div>
+                      <div><strong>{tCommon('detail_labels.unit_price')}</strong> {formatNumber(item.unit_price || 0)}</div>
+                      <div><strong>{tCommon('detail_labels.total_price')}</strong> {formatNumber(item.total_price || (item.weight && item.unit_price ? Number(item.weight) * Number(item.unit_price) : 0))}</div>
+                      {item.sales_proforma_serial && (
+                        <div className="flex items-center gap-2">
+                          <strong>{t('proforma_serial')}:</strong>
+                          <span>{item.sales_proforma_serial}</span>
+                          {item.sales_proforma_id && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-6 w-6 p-0 text-[#f6d265] hover:text-[#f6d265]/80"
+                              onClick={async () => {
+                                try {
+                                  const proforma = await fetchSalesProformaById(item.sales_proforma_id!);
+                                  setViewingProformaData(proforma);
+                                  setViewingProformaId(item.sales_proforma_id!);
+                                  setShowProformaModal(true);
+                                } catch (error) {
+                                  console.error("Failed to fetch proforma:", error);
+                                  handleApiErrorWithToast(error, "Fetch proforma");
+                                }
+                              }}
+                            >
+                              <Info className="h-4 w-4" />
+                            </Button>
+                          )}
+                        </div>
+                      )}
                       <div><strong>{tCommon('detail_labels.sale_date')}</strong> {new Date(item.sale_date).toLocaleDateString('fa-IR')}</div>
                       <div><strong>{tCommon('detail_labels.purchase_type')}</strong> {
                         item.purchase_type === 'cash' ? tCommon('payment_types.cash') :

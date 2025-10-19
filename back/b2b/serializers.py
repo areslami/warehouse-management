@@ -1,9 +1,12 @@
 from rest_framework import serializers
+from django.db import transaction
+from django.utils import timezone
 
 from b2b.models.base import B2BSale
 from .models import B2BOffer, B2BAddress, B2BDistribution
 from core.serializers import ProductSerializer, CustomerSerializer
 from warehouse.serializers import WarehouseSerializer
+from finance.models import SalesProforma, ProformaLine
 
 
 class B2BOfferSerializer(serializers.ModelSerializer):
@@ -131,11 +134,13 @@ class B2BSaleSerializer(serializers.ModelSerializer):
     customer_name = serializers.SerializerMethodField()
     product_name = serializers.SerializerMethodField()
     product_id = serializers.SerializerMethodField()
+    sales_proforma_id = serializers.IntegerField(source='sales_proforma.id', read_only=True)
+    sales_proforma_serial = serializers.CharField(source='sales_proforma.serial_number', read_only=True)
 
     class Meta:
         model = B2BSale
         fields = '__all__'
-        read_only_fields = ['total_price']
+        read_only_fields = ['total_price', 'sales_proforma']
 
     def get_customer_name(self, obj):
         if obj.customer:
@@ -153,6 +158,82 @@ class B2BSaleSerializer(serializers.ModelSerializer):
         if obj.product:
             return obj.product.id
         return None
+
+    def _generate_unique_serial_number(self):
+        """Generate a unique 5-digit serial number for sales proforma"""
+        # Start from 10000 to ensure 5 digits
+        latest_proforma = SalesProforma.objects.filter(
+            serial_number__regex=r'^\d{5}$'
+        ).order_by('-serial_number').first()
+
+        if latest_proforma and latest_proforma.serial_number.isdigit():
+            try:
+                next_number = int(latest_proforma.serial_number) + 1
+                # If we exceed 5 digits, wrap around to 10000
+                if next_number > 99999:
+                    next_number = 10000
+            except (ValueError, AttributeError):
+                next_number = 10000
+        else:
+            next_number = 10000
+
+        # Ensure uniqueness by checking if it already exists
+        serial_number = str(next_number).zfill(5)
+        attempts = 0
+        while SalesProforma.objects.filter(serial_number=serial_number).exists() and attempts < 90000:
+            next_number += 1
+            if next_number > 99999:
+                next_number = 10000
+            serial_number = str(next_number).zfill(5)
+            attempts += 1
+
+        return serial_number
+
+    @transaction.atomic
+    def create(self, validated_data):
+        is_distributor = validated_data.get('is_distributor', False)
+
+        # Create the B2B sale
+        sale = B2BSale.objects.create(**validated_data)
+
+        # If this is a "your sale" (not distributor), create a sales proforma
+        if not is_distributor:
+            try:
+                # Generate unique serial number
+                serial_number = self._generate_unique_serial_number()
+
+                # Create the sales proforma
+                sales_proforma = SalesProforma.objects.create(
+                    serial_number=serial_number,
+                    date=timezone.now(),
+                    customer=sale.customer,
+                    payment_type=validated_data.get('purchase_type', 'cash'),
+                    payment_description=validated_data.get('description', ''),
+                    subtotal=sale.total_price,
+                    tax=0,
+                    discount=0,
+                    final_price=sale.total_price
+                )
+
+                # Create a proforma line with the sale details
+                ProformaLine.objects.create(
+                    proforma=sales_proforma,
+                    product=sale.product,
+                    weight=sale.weight,
+                    unit_price=sale.unit_price
+                )
+
+                # Link the sale to the proforma
+                sale.sales_proforma = sales_proforma
+                sale.save(update_fields=['sales_proforma'])
+
+            except Exception as e:
+                # If proforma creation fails, the transaction will rollback
+                raise serializers.ValidationError({
+                    'sales_proforma': f'Failed to create sales proforma: {str(e)}'
+                })
+
+        return sale
 
 
 class B2BDistributionSerializer(serializers.ModelSerializer):

@@ -7,6 +7,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "../../ui/dialog";
 import { Button } from "../../ui/button";
+import { Edit2 } from "lucide-react";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "../../ui/form";
 import { Input } from "../../ui/input";
 import { SimpleCombobox } from "../../ui/simple-combobox";
@@ -15,7 +16,7 @@ import { useTranslations } from "next-intl";
 import { useCoreData } from "@/lib/core-data-context";
 import { CustomerModal } from "../customer-modal";
 import { WarehouseReceiptModal, WarehouseReceiptFormData } from "../warehouse/warehouse-receipt-modal";
-import { SalesProformaModal, SalesProformaFormData } from "../finance/salesproforma-modal";
+import { SalesProformaModal } from "../finance/salesproforma-modal";
 import { createCustomer } from "@/lib/api/core";
 import { createWarehouseReceipt, fetchWarehouseReceipts } from "@/lib/api/warehouse";
 import { fetchSalesProformas, createSalesProforma } from "@/lib/api/finance";
@@ -42,13 +43,15 @@ interface B2BDistributionModalProps {
   onClose?: () => void;
   initialData?: Partial<B2BDistributionFormData>;
   onOfferCreated?: () => void;
+  readOnly?: boolean;
 }
 
-export function B2BDistributionModal({ trigger, onSubmit, onClose, initialData, }: B2BDistributionModalProps) {
+export function B2BDistributionModal({ trigger, onSubmit, onClose, initialData, readOnly = false }: B2BDistributionModalProps) {
   const tval = useTranslations("modals.b2bDistribution.validation");
   const t = useTranslations("modals.b2bDistribution");
   const tCommon = useTranslations("common");
   const { customers, refreshData: refreshCoreData } = useCoreData();
+  const [isEditMode, setIsEditMode] = useState(!readOnly);
   const [showCustomerModal, setShowCustomerModal] = useState(false);
   const [showWarehouseReceiptModal, setShowWarehouseReceiptModal] = useState(false);
   const [showSalesProformaModal, setShowSalesProformaModal] = useState(false);
@@ -152,12 +155,24 @@ export function B2BDistributionModal({ trigger, onSubmit, onClose, initialData, 
           </DialogTrigger>
         )}
         <DialogContent dir="rtl" className="min-w-[70%] max-h-[90vh] overflow-y-auto scrollbar-hide p-0 my-0 mx-auto [&>button]:hidden">
-          <DialogHeader className="px-3.5 py-4.5 justify-start" style={{ backgroundColor: "#f6d265" }}>
+          <DialogHeader className="px-3.5 py-4.5 justify-start relative" style={{ backgroundColor: "#f6d265" }}>
             <DialogTitle className="font-bold text-white text-right">{t("title")}</DialogTitle>
+            {readOnly && !isEditMode && (
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="absolute left-4 top-1/2 -translate-y-1/2 text-white hover:bg-white/20"
+                onClick={() => setIsEditMode(true)}
+              >
+                <Edit2 className="h-4 w-4" />
+              </Button>
+            )}
           </DialogHeader>
 
           <Form {...form}>
             <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6 py-4 px-12">
+              <fieldset disabled={!isEditMode} className="space-y-6">
               <div className="grid grid-cols-2 gap-4">
                 <FormField
                   control={form.control as any}
@@ -371,13 +386,16 @@ export function B2BDistributionModal({ trigger, onSubmit, onClose, initialData, 
                   </FormItem>
                 )}
               />
+              </fieldset>
 
-              <div className="flex justify-end space-x-2">
-                <Button type="button" variant="outline" onClick={handleClose}>
-                  {t("cancel")}
-                </Button>
-                <Button type="submit" className="hover:bg-[#f6d265]">{t("save")}</Button>
-              </div>
+              {isEditMode && (
+                <div className="flex justify-end space-x-2">
+                  <Button type="button" variant="outline" onClick={handleClose}>
+                    {t("cancel")}
+                  </Button>
+                  <Button type="submit" className="hover:bg-[#f6d265]">{t("save")}</Button>
+                </div>
+              )}
             </form>
           </Form>
         </DialogContent>

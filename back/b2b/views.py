@@ -78,7 +78,7 @@ class B2BSaleViewSet(viewsets.ModelViewSet):
     
     def get_queryset(self):
         queryset = super().get_queryset()
-        return queryset.select_related('offer', 'b2b_distribution', 'customer')
+        return queryset.select_related('offer', 'b2b_distribution', 'customer', 'product', 'sales_proforma')
     
     @action(detail=False, methods=['get'])
     def total_sales(self, request):

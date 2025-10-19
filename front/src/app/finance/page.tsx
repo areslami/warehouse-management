@@ -26,7 +26,7 @@ import { formatNumber } from "@/lib/utils/number-format";
 export default function FinancePage() {
   const t = useTranslations("pages.finance");
   const tCommon = useTranslations("common");
-  const { customers, suppliers, products } = useCoreData();
+  const { customers, suppliers, products, salesProformas: coreDataSalesProformas, purchaseProformas: coreDataPurchaseProformas } = useCoreData();
   const { openModal } = useModal();
 
   const [salesProformas, setSalesProformas] = useState<SalesProforma[]>([]);
@@ -60,9 +60,22 @@ export default function FinancePage() {
     } catch (error) {
       console.error("Failed to load finance data:", error);
       handleApiErrorWithToast(error, "Loading finance data");
-      
+
     }
   }, []);
+
+  // Sync with core context data whenever it updates
+  useEffect(() => {
+    if (coreDataSalesProformas.length > 0) {
+      setSalesProformas(coreDataSalesProformas);
+    }
+  }, [coreDataSalesProformas]);
+
+  useEffect(() => {
+    if (coreDataPurchaseProformas.length > 0) {
+      setPurchaseProformas(coreDataPurchaseProformas);
+    }
+  }, [coreDataPurchaseProformas]);
 
   useEffect(() => {
     loadData();

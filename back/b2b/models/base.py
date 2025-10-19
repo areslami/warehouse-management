@@ -140,6 +140,7 @@ class B2BSale(models.Model):
     is_distributor = models.BooleanField(default=False)
     b2b_distribution = models.ForeignKey(B2BDistribution, on_delete=models.CASCADE, related_name='b2b_sales', null=True, blank=True)
     offer = models.ForeignKey(B2BOffer, on_delete=models.CASCADE, related_name='b2b_sales', null=True, blank=True)
+    sales_proforma = models.ForeignKey('finance.SalesProforma', on_delete=models.SET_NULL, related_name='b2b_sales', null=True, blank=True)
     product = models.ForeignKey('core.Product', on_delete=models.CASCADE)
     weight = models.DecimalField(max_digits=20, decimal_places=0, default=0)
     unit_price = models.DecimalField(max_digits=20, decimal_places=0, default=0)

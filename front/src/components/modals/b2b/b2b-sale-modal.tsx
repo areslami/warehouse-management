@@ -135,7 +135,14 @@ export function B2BSaleModal({ trigger, onSubmit, onClose, initialData }: B2BSal
 
     const handleSubmit = async (data: B2BSaleFormData) => {
         try {
-            await onSubmit?.(data);
+            const result = await onSubmit?.(data);
+
+            // If this is a "your sale", refresh sales proformas in core data
+            // The backend automatically creates a sales proforma, so we need to refresh to see it
+            if (!data.is_distributor) {
+                await refreshCoreData('salesProformas');
+            }
+
             if (trigger) {
                 setOpen(false);
             } else {
@@ -144,6 +151,7 @@ export function B2BSaleModal({ trigger, onSubmit, onClose, initialData }: B2BSal
             form.reset();
         } catch (error) {
             console.error("Error submitting sale:", error);
+            throw error;
         }
     };
 
@@ -453,7 +461,9 @@ export function B2BSaleModal({ trigger, onSubmit, onClose, initialData }: B2BSal
                                 <Button type="button" variant="outline" onClick={handleClose}>
                                     {t("cancel")}
                                 </Button>
-                                <Button type="submit" className="hover:bg-[#f6d265]">{t("save")}</Button>
+                                <Button type="submit" className="hover:bg-[#f6d265]">
+                                    {saleType === "your_sale" ? t("save-and-create-proforma") : t("save")}
+                                </Button>
                             </div>
                         </form>
                     </Form>
