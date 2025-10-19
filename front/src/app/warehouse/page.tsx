@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
-import { Plus, Edit2, Trash2, Package, FileText, Truck, Search } from "lucide-react";
+import { Plus, Edit2, Trash2, Package, FileText, Truck, Search, Eye } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { handleApiErrorWithToast } from "@/lib/api/error-toast-handler";
@@ -348,10 +348,10 @@ export default function WarehousePage() {
                 </Button>
               </div>
             </div>
-            <Table>
+            <Table dir="rtl">
               <TableHeader>
                 <TableRow>
-                  <TableHead className="w-12">
+                  <TableHead className="text-center w-12">
                     <input
                       type="checkbox"
                       checked={filteredReceipts.length > 0 && selectedReceipts.length === filteredReceipts.length}
@@ -364,17 +364,18 @@ export default function WarehousePage() {
                       }}
                     />
                   </TableHead>
-                  <TableHead>{t("receipts.table.date")}</TableHead>
-                  <TableHead>{t("receipts.table.warehouse")}</TableHead>
-                  <TableHead>{t("receipts.table.total_weight")}</TableHead>
-                  <TableHead>{t("receipts.table.receipt_id")}</TableHead>
-                  <TableHead className="text-center">{t("receipts.table.operations")}</TableHead>
+                  <TableHead className="text-right w-16">ردیف</TableHead>
+                  <TableHead className="text-right">{t("receipts.table.receipt_id")}</TableHead>
+                  <TableHead className="text-right">{t("receipts.table.total_weight")}</TableHead>
+                  <TableHead className="text-right">{t("receipts.table.warehouse")}</TableHead>
+                  <TableHead className="text-right">{t("receipts.table.date")}</TableHead>
+                  <TableHead className="text-center w-24">{t("receipts.table.operations")}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredReceipts.map((receipt) => (
-                  <TableRow key={receipt.id} className="cursor-pointer hover:bg-gray-50" onClick={() => handleRowClick(receipt, 'receipt')}>
-                    <TableCell onClick={(e) => e.stopPropagation()}>
+                {filteredReceipts.map((receipt, index) => (
+                  <TableRow key={receipt.id} className="hover:bg-gray-50">
+                    <TableCell className="text-center">
                       <input
                         type="checkbox"
                         checked={selectedReceipts.includes(receipt.id)}
@@ -387,14 +388,19 @@ export default function WarehousePage() {
                         }}
                       />
                     </TableCell>
-                    <TableCell>{new Date(receipt.date).toLocaleDateString('fa-IR')}</TableCell>
-                    <TableCell>{warehouses.find(w => w.id === receipt.warehouse)?.name}</TableCell>
-                    <TableCell>{receipt.total_weight}</TableCell>
-                    <TableCell>{receipt.receipt_id}</TableCell>
+                    <TableCell className="text-right font-medium">{index + 1}</TableCell>
+                    <TableCell className="text-right">{receipt.receipt_id}</TableCell>
+                    <TableCell className="text-right">{receipt.total_weight}</TableCell>
+                    <TableCell className="text-right">{warehouses.find(w => w.id === receipt.warehouse)?.name}</TableCell>
+                    <TableCell className="text-right">{new Date(receipt.date).toLocaleDateString('fa-IR')}</TableCell>
                     <TableCell>
                       <div className="flex gap-2 justify-center">
-                        <Button size="sm" variant="ghost" onClick={async (e) => {
-                          e.stopPropagation();
+                        <Button size="sm" variant="ghost" onClick={() => {
+                          handleRowClick(receipt, 'receipt');
+                        }}>
+                          <Eye className="w-4 h-4 text-blue-600" />
+                        </Button>
+                        <Button size="sm" variant="ghost" onClick={async () => {
                           try {
                             const fullReceipt = await fetchWarehouseReceiptById(receipt.id);
                             setEditingReceipt(fullReceipt);
@@ -402,13 +408,12 @@ export default function WarehousePage() {
                           } catch (error) {
                             console.error("Failed to fetch receipt details:", error);
                             handleApiErrorWithToast(error, "Fetching receipt details");
-                            
+
                           }
                         }}>
-                          <Edit2 className="w-4 h-4" />
+                          <Edit2 className="w-4 h-4 text-gray-600" />
                         </Button>
-                        <Button size="sm" variant="ghost" onClick={(e) => {
-                          e.stopPropagation();
+                        <Button size="sm" variant="ghost" onClick={() => {
                           handleDeleteReceipt(receipt.id);
                         }}>
                           <Trash2 className="w-4 h-4 text-red-500" />
@@ -442,10 +447,10 @@ export default function WarehousePage() {
                 </Button>
               </div>
             </div>
-            <Table>
+            <Table dir="rtl">
               <TableHeader>
                 <TableRow>
-                  <TableHead className="w-12">
+                  <TableHead className="text-center w-12">
                     <input
                       type="checkbox"
                       checked={filteredDispatches.length > 0 && selectedDispatches.length === filteredDispatches.length}
@@ -458,17 +463,18 @@ export default function WarehousePage() {
                       }}
                     />
                   </TableHead>
-                  <TableHead>{t("issues.table.issue_date")}</TableHead>
-                  <TableHead>{t("issues.table.warehouse")}</TableHead>
-                  <TableHead>{t("issues.table.total_weight")}</TableHead>
-                  <TableHead>{t("issues.table.dispatch_id")}</TableHead>
-                  <TableHead className="text-center">{t("issues.table.operations")}</TableHead>
+                  <TableHead className="text-right w-16">ردیف</TableHead>
+                  <TableHead className="text-right">{t("issues.table.dispatch_id")}</TableHead>
+                  <TableHead className="text-right">{t("issues.table.total_weight")}</TableHead>
+                  <TableHead className="text-right">{t("issues.table.warehouse")}</TableHead>
+                  <TableHead className="text-right">{t("issues.table.issue_date")}</TableHead>
+                  <TableHead className="text-center w-24">{t("issues.table.operations")}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredDispatches.map((dispatch) => (
-                  <TableRow key={dispatch.id} className="cursor-pointer hover:bg-gray-50" onClick={() => handleRowClick(dispatch, 'dispatch')}>
-                    <TableCell onClick={(e) => e.stopPropagation()}>
+                {filteredDispatches.map((dispatch, index) => (
+                  <TableRow key={dispatch.id} className="hover:bg-gray-50">
+                    <TableCell className="text-center">
                       <input
                         type="checkbox"
                         checked={selectedDispatches.includes(dispatch.id)}
@@ -481,14 +487,19 @@ export default function WarehousePage() {
                         }}
                       />
                     </TableCell>
-                    <TableCell>{new Date(dispatch.issue_date).toLocaleDateString('fa-IR')}</TableCell>
-                    <TableCell>{warehouses.find(w => w.id === dispatch.warehouse)?.name}</TableCell>
-                    <TableCell>{formatNumber(dispatch.total_weight)}</TableCell>
-                    <TableCell>{dispatch.dispatch_id}</TableCell>
+                    <TableCell className="text-right font-medium">{index + 1}</TableCell>
+                    <TableCell className="text-right">{dispatch.dispatch_id}</TableCell>
+                    <TableCell className="text-right">{formatNumber(dispatch.total_weight)}</TableCell>
+                    <TableCell className="text-right">{warehouses.find(w => w.id === dispatch.warehouse)?.name}</TableCell>
+                    <TableCell className="text-right">{new Date(dispatch.issue_date).toLocaleDateString('fa-IR')}</TableCell>
                     <TableCell>
                       <div className="flex gap-2 justify-center">
-                        <Button size="sm" variant="ghost" onClick={async (e) => {
-                          e.stopPropagation();
+                        <Button size="sm" variant="ghost" onClick={() => {
+                          handleRowClick(dispatch, 'dispatch');
+                        }}>
+                          <Eye className="w-4 h-4 text-blue-600" />
+                        </Button>
+                        <Button size="sm" variant="ghost" onClick={async () => {
                           try {
                             const fullDispatch = await fetchDispatchIssueById(dispatch.id);
                             setEditingDispatch(fullDispatch);
@@ -496,13 +507,12 @@ export default function WarehousePage() {
                           } catch (error) {
                             console.error("Failed to fetch dispatch details:", error);
                             handleApiErrorWithToast(error, "Fetching dispatch details");
-                            
+
                           }
                         }}>
-                          <Edit2 className="w-4 h-4" />
+                          <Edit2 className="w-4 h-4 text-gray-600" />
                         </Button>
-                        <Button size="sm" variant="ghost" onClick={(e) => {
-                          e.stopPropagation();
+                        <Button size="sm" variant="ghost" onClick={() => {
                           handleDeleteDispatch(dispatch.id);
                         }}>
                           <Trash2 className="w-4 h-4 text-red-500" />
@@ -536,10 +546,10 @@ export default function WarehousePage() {
                 </Button>
               </div>
             </div>
-            <Table>
+            <Table dir="rtl">
               <TableHeader>
                 <TableRow>
-                  <TableHead className="w-12">
+                  <TableHead className="w-12 text-center">
                     <input
                       type="checkbox"
                       checked={filteredDeliveries.length > 0 && selectedDeliveries.length === filteredDeliveries.length}
@@ -552,17 +562,18 @@ export default function WarehousePage() {
                       }}
                     />
                   </TableHead>
-                  <TableHead>{t("deliveries.table.issue_date")}</TableHead>
-                  <TableHead>{t("deliveries.table.warehouse")}</TableHead>
-                  <TableHead>{t("deliveries.table.total_weight")}</TableHead>
-                  <TableHead>{t("deliveries.table.delivery_id")}</TableHead>
-                  <TableHead className="text-center">{t("deliveries.table.operations")}</TableHead>
+                  <TableHead className="text-right w-16">ردیف</TableHead>
+                  <TableHead className="text-right">{t("deliveries.table.delivery_id")}</TableHead>
+                  <TableHead className="text-right">{t("deliveries.table.total_weight")}</TableHead>
+                  <TableHead className="text-right">{t("deliveries.table.warehouse")}</TableHead>
+                  <TableHead className="text-right">{t("deliveries.table.issue_date")}</TableHead>
+                  <TableHead className="text-center w-24">{t("deliveries.table.operations")}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredDeliveries.map((delivery) => (
-                  <TableRow key={delivery.id} className="cursor-pointer hover:bg-gray-50" onClick={() => handleRowClick(delivery, 'delivery')}>
-                    <TableCell onClick={(e) => e.stopPropagation()}>
+                {filteredDeliveries.map((delivery, index) => (
+                  <TableRow key={delivery.id} className="hover:bg-gray-50">
+                    <TableCell className="text-center">
                       <input
                         type="checkbox"
                         checked={selectedDeliveries.includes(delivery.id)}
@@ -575,14 +586,19 @@ export default function WarehousePage() {
                         }}
                       />
                     </TableCell>
-                    <TableCell>{new Date(delivery.issue_date).toLocaleDateString('fa-IR')}</TableCell>
-                    <TableCell>{warehouses.find(w => w.id === delivery.warehouse)?.name}</TableCell>
-                    <TableCell>{delivery.total_weight}</TableCell>
-                    <TableCell>{delivery.delivery_id}</TableCell>
+                    <TableCell className="text-right font-medium">{index + 1}</TableCell>
+                    <TableCell className="text-right">{delivery.delivery_id}</TableCell>
+                    <TableCell className="text-right">{delivery.total_weight}</TableCell>
+                    <TableCell className="text-right">{warehouses.find(w => w.id === delivery.warehouse)?.name}</TableCell>
+                    <TableCell className="text-right">{new Date(delivery.issue_date).toLocaleDateString('fa-IR')}</TableCell>
                     <TableCell>
                       <div className="flex gap-2 justify-center">
-                        <Button size="sm" variant="ghost" onClick={async (e) => {
-                          e.stopPropagation();
+                        <Button size="sm" variant="ghost" onClick={() => {
+                          handleRowClick(delivery, 'delivery');
+                        }}>
+                          <Eye className="w-4 h-4 text-blue-600" />
+                        </Button>
+                        <Button size="sm" variant="ghost" onClick={async () => {
                           try {
                             const fullDelivery = await fetchDeliveryFulfillmentById(delivery.id);
                             setEditingDelivery(fullDelivery);
@@ -590,13 +606,12 @@ export default function WarehousePage() {
                           } catch (error) {
                             console.error("Failed to fetch delivery details:", error);
                             handleApiErrorWithToast(error, "Fetching delivery details");
-                            
+
                           }
                         }}>
-                          <Edit2 className="w-4 h-4" />
+                          <Edit2 className="w-4 h-4 text-gray-600" />
                         </Button>
-                        <Button size="sm" variant="ghost" onClick={(e) => {
-                          e.stopPropagation();
+                        <Button size="sm" variant="ghost" onClick={() => {
                           handleDeleteDelivery(delivery.id);
                         }}>
                           <Trash2 className="w-4 h-4 text-red-500" />

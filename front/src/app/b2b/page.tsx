@@ -774,8 +774,7 @@ export default function B2BPage() {
                 <Table dir="rtl">
                   <TableHeader>
                     <TableRow>
-                      <TableHead className="text-right w-16">ردیف</TableHead>
-                      <TableHead className="w-12">
+                      <TableHead className="w-12 text-center">
                         <input
                           type="checkbox"
                           checked={filteredOffers.length > 0 && selectedOffers.length === filteredOffers.length}
@@ -788,6 +787,7 @@ export default function B2BPage() {
                           }}
                         />
                       </TableHead>
+                      <TableHead className="text-right w-16">ردیف</TableHead>
                       <TableHead className="text-right">{t("offer_date")}</TableHead>
                       <TableHead className="text-right">{t("expiry_date")}</TableHead>
                       <TableHead className="text-right">{t("status")}</TableHead>
@@ -803,8 +803,7 @@ export default function B2BPage() {
                   <TableBody>
                     {filteredOffers.map((offer, index) => (
                       <TableRow key={offer.id} className="hover:bg-gray-50">
-                        <TableCell className="text-right font-medium">{index + 1}</TableCell>
-                        <TableCell onClick={(e) => e.stopPropagation()}>
+                        <TableCell className="text-center" onClick={(e) => e.stopPropagation()}>
                           <input
                             type="checkbox"
                             checked={selectedOffers.includes(offer.id)}
@@ -817,6 +816,7 @@ export default function B2BPage() {
                             }}
                           />
                         </TableCell>
+                        <TableCell className="text-right font-medium">{index + 1}</TableCell>
                         <TableCell>{new Date(offer.offer_date).toLocaleDateString('fa-IR')}</TableCell>
                         <TableCell>{new Date(offer.offer_exp_date).toLocaleDateString('fa-IR')}</TableCell>
                         <TableCell>
@@ -982,7 +982,7 @@ export default function B2BPage() {
                 <Table dir="rtl">
                   <TableHeader>
                     <TableRow>
-                      <TableHead className="w-12">
+                      <TableHead className="w-12 text-center">
                         <input
                           type="checkbox"
                           checked={filteredDistributions.length > 0 && selectedDistributions.length === filteredDistributions.length}
@@ -1011,7 +1011,7 @@ export default function B2BPage() {
                   <TableBody>
                     {filteredDistributions.map((distribution, index) => (
                       <TableRow key={distribution.id} className="hover:bg-gray-50">
-                        <TableCell onClick={(e) => e.stopPropagation()}>
+                        <TableCell className="text-center" onClick={(e) => e.stopPropagation()}>
                           <input
                             type="checkbox"
                             checked={selectedDistributions.includes(distribution.id)}
@@ -1283,7 +1283,7 @@ export default function B2BPage() {
                 <Table dir="rtl">
                   <TableHeader>
                     <TableRow>
-                      <TableHead className="w-12">
+                      <TableHead className="w-12 text-center">
                         <input
                           type="checkbox"
                           checked={filteredSales.length > 0 && selectedSales.length === filteredSales.length}
@@ -1312,7 +1312,7 @@ export default function B2BPage() {
                   <TableBody>
                     {filteredSales.map((sale, index) => (
                       <TableRow key={sale.id} className="hover:bg-gray-50">
-                        <TableCell onClick={(e) => e.stopPropagation()}>
+                        <TableCell className="text-center" onClick={(e) => e.stopPropagation()}>
                           <input
                             type="checkbox"
                             checked={selectedSales.includes(sale.id)}
@@ -1589,7 +1589,7 @@ export default function B2BPage() {
                 <Table dir="rtl">
                   <TableHeader>
                     <TableRow>
-                      <TableHead className="w-12">
+                      <TableHead className="w-12 text-center">
                         <input
                           type="checkbox"
                           checked={filteredAddresses.length > 0 && selectedAddresses.length === filteredAddresses.length}
@@ -1618,7 +1618,7 @@ export default function B2BPage() {
                   <TableBody>
                     {filteredAddresses.map((address, index) => (
                       <TableRow key={address.id} className="hover:bg-gray-50">
-                        <TableCell onClick={(e) => e.stopPropagation()}>
+                        <TableCell className="text-center" onClick={(e) => e.stopPropagation()}>
                           <input
                             type="checkbox"
                             checked={selectedAddresses.includes(address.id)}

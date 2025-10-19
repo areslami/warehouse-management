@@ -244,10 +244,10 @@ export default function FinancePage() {
                 </Button>
               </div>
             </div>
-            <Table>
+            <Table dir="rtl">
               <TableHeader>
                 <TableRow>
-                  <TableHead className="w-12">
+                  <TableHead className="w-12 text-center">
                     <input
                       type="checkbox"
                       checked={filteredSalesProformas.length > 0 && selectedSales.length === filteredSalesProformas.length}
@@ -261,18 +261,18 @@ export default function FinancePage() {
                     />
                   </TableHead>
                   <TableHead className="text-right w-16">ردیف</TableHead>
-                  <TableHead>{t("sales.customer")}</TableHead>
-                  <TableHead>{t("sales.date")}</TableHead>
-                  <TableHead>{t("sales.total_amount")}</TableHead>
-                  <TableHead>{t("sales.payment_type")}</TableHead>
-                  <TableHead>{t("sales.serial_number")}</TableHead>
-                  <TableHead className="text-center">{t("sales.operations")}</TableHead>
+                  <TableHead className="text-right">{t("sales.serial_number")}</TableHead>
+                  <TableHead className="text-right">{t("sales.payment_type")}</TableHead>
+                  <TableHead className="text-right">{t("sales.total_amount")}</TableHead>
+                  <TableHead className="text-right">{t("sales.date")}</TableHead>
+                  <TableHead className="text-right">{t("sales.customer")}</TableHead>
+                  <TableHead className="text-center w-24">{t("sales.operations")}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {filteredSalesProformas.map((proforma, index) => (
                   <TableRow key={proforma.id} className="hover:bg-gray-50">
-                    <TableCell onClick={(e) => e.stopPropagation()}>
+                    <TableCell className="text-center" onClick={(e) => e.stopPropagation()}>
                       <input
                         type="checkbox"
                         checked={selectedSales.includes(proforma.id)}
@@ -286,15 +286,15 @@ export default function FinancePage() {
                       />
                     </TableCell>
                     <TableCell className="text-right font-medium">{index + 1}</TableCell>
-                    <TableCell>{getPartyDisplayName(customers.find(c => c.id === proforma.customer))}</TableCell>
-                    <TableCell>{new Date(proforma.date).toLocaleDateString('fa-IR')}</TableCell>
-                    <TableCell>{formatNumber(calculateTotal(proforma.lines))} {tCommon('units.rial')}</TableCell>
-                    <TableCell>
+                    <TableCell className="text-right">{proforma.serial_number}</TableCell>
+                    <TableCell className="text-right">
                       {proforma.payment_type === 'cash' && tCommon('payment_types.cash')}
                       {proforma.payment_type === 'credit' && tCommon('payment_types.credit')}
                       {proforma.payment_type === 'other' && tCommon('payment_types.other')}
                     </TableCell>
-                    <TableCell>{proforma.serial_number}</TableCell>
+                    <TableCell className="text-right">{formatNumber(calculateTotal(proforma.lines))} {tCommon('units.rial')}</TableCell>
+                    <TableCell className="text-right">{new Date(proforma.date).toLocaleDateString('fa-IR')}</TableCell>
+                    <TableCell className="text-right">{getPartyDisplayName(customers.find(c => c.id === proforma.customer))}</TableCell>
                     <TableCell>
                       <div className="flex gap-2 justify-center">
                         <Button size="sm" variant="ghost" onClick={(e) => {
@@ -375,10 +375,10 @@ export default function FinancePage() {
                 </Button>
               </div>
             </div>
-            <Table>
+            <Table dir="rtl">
               <TableHeader>
                 <TableRow>
-                  <TableHead className="w-12">
+                  <TableHead className="w-12 text-center">
                     <input
                       type="checkbox"
                       checked={filteredPurchaseProformas.length > 0 && selectedPurchases.length === filteredPurchaseProformas.length}
@@ -392,17 +392,17 @@ export default function FinancePage() {
                     />
                   </TableHead>
                   <TableHead className="text-right w-16">ردیف</TableHead>
-                  <TableHead>{t("purchase.supplier")}</TableHead>
-                  <TableHead>{t("purchase.date")}</TableHead>
-                  <TableHead>{t("purchase.total_amount")}</TableHead>
-                  <TableHead>{t("purchase.serial_number")}</TableHead>
-                  <TableHead className="text-center">{t("purchase.operations")}</TableHead>
+                  <TableHead className="text-right">{t("purchase.serial_number")}</TableHead>
+                  <TableHead className="text-right">{t("purchase.total_amount")}</TableHead>
+                  <TableHead className="text-right">{t("purchase.date")}</TableHead>
+                  <TableHead className="text-right">{t("purchase.supplier")}</TableHead>
+                  <TableHead className="text-center w-24">{t("purchase.operations")}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {filteredPurchaseProformas.map((proforma, index) => (
                   <TableRow key={proforma.id} className="hover:bg-gray-50">
-                    <TableCell onClick={(e) => e.stopPropagation()}>
+                    <TableCell className="text-center" onClick={(e) => e.stopPropagation()}>
                       <input
                         type="checkbox"
                         checked={selectedPurchases.includes(proforma.id)}
@@ -416,10 +416,10 @@ export default function FinancePage() {
                       />
                     </TableCell>
                     <TableCell className="text-right font-medium">{index + 1}</TableCell>
-                    <TableCell>{getPartyDisplayName(suppliers.find(s => s.id === proforma.supplier))}</TableCell>
-                    <TableCell>{new Date(proforma.date).toLocaleDateString('fa-IR')}</TableCell>
-                    <TableCell>{formatNumber(calculateTotal(proforma.lines))} {tCommon('units.rial')}</TableCell>
-                    <TableCell>{proforma.serial_number}</TableCell>
+                    <TableCell className="text-right">{proforma.serial_number}</TableCell>
+                    <TableCell className="text-right">{formatNumber(calculateTotal(proforma.lines))} {tCommon('units.rial')}</TableCell>
+                    <TableCell className="text-right">{new Date(proforma.date).toLocaleDateString('fa-IR')}</TableCell>
+                    <TableCell className="text-right">{getPartyDisplayName(suppliers.find(s => s.id === proforma.supplier))}</TableCell>
                     <TableCell>
                       <div className="flex gap-2 justify-center">
                         <Button size="sm" variant="ghost" onClick={(e) => {
