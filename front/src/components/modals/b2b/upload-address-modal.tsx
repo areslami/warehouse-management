@@ -263,16 +263,16 @@ export default function UploadAddressModal({ isOpen, onClose, onSuccess }: Uploa
     <>
 
       <Dialog open={isOpen && !showPreview} onOpenChange={handleClose}>
-        <DialogContent className="max-w-lg" dir="rtl">
+        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto" dir="rtl">
           <DialogHeader>
             <DialogTitle>{t("title")}</DialogTitle>
           </DialogHeader>
 
           {uploadStep === "select" && (
-            <div className="space-y-4">
-              <div className="space-y-3">
+            <div className="space-y-4 pb-2">
+              <div className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium mb-1">{t("sale_type")}</label>
+                  <label className="block text-sm font-medium mb-2">{t("sale_type")}</label>
                   <div className="flex gap-4">
                     <label className="flex items-center">
                       <input
@@ -296,46 +296,49 @@ export default function UploadAddressModal({ isOpen, onClose, onSuccess }: Uploa
                     </label>
                   </div>
                 </div>
-                {addressType === "your_address" && (
-                  <div>
-                    <label className="block text-sm font-medium mb-1">{tDist("b2b_offer")}</label>
-                    <SimpleCombobox
-                      options={offers.map((o: any) => ({
-                        value: String(o.id),
-                        label: describeOffer(o as any),
-                        id: o.id,
-                        name: o.offer_id,
-                      }))}
-                      value={selectedOffer ? String(selectedOffer as any) : ""}
-                      onValueChange={(v) => setSelectedOffer(v ? Number(v) : "")}
-                      placeholder={tDist("select_offer")}
-                      searchPlaceholder={tDist("select_offer")}
-                      showCreateNew={true}
-                      createNewText={tDist("create_new_offer")}
-                      onCreateNew={() => setShowOfferModal(true)}
-                    />
-                  </div>
-                )}
-                {addressType === "distributor_address" && (
-                  <div>
-                    <label className="block text-sm font-medium mb-1">{tDist("distribution")}</label>
-                    <SimpleCombobox
-                      options={distributions.map((d: any) => ({
-                        value: String(d.id),
-                        label: describeDistribution(d as any),
-                        id: d.id,
-                        name: d.product_name,
-                      }))}
-                      value={selectedDistribution ? String(selectedDistribution as any) : ""}
-                      onValueChange={(v) => setSelectedDistribution(v ? Number(v) : "")}
-                      placeholder={tDist("select_distribution")}
-                      searchPlaceholder={tDist("select_distribution")}
-                      showCreateNew={true}
-                      createNewText={tDist("create_new_distribution")}
-                      onCreateNew={() => setShowDistributionModal(true)}
-                    />
-                  </div>
-                )}
+
+                <div className="min-h-[80px]">
+                  {addressType === "your_address" && (
+                    <div className="w-full">
+                      <label className="block text-sm font-medium mb-2">{tDist("b2b_offer")}</label>
+                      <SimpleCombobox
+                        options={offers.map((o: any) => ({
+                          value: String(o.id),
+                          label: describeOffer(o as any),
+                          id: o.id,
+                          name: o.offer_id,
+                        }))}
+                        value={selectedOffer ? String(selectedOffer as any) : ""}
+                        onValueChange={(v) => setSelectedOffer(v ? Number(v) : "")}
+                        placeholder={tDist("select_offer")}
+                        searchPlaceholder={tDist("select_offer")}
+                        showCreateNew={true}
+                        createNewText={tDist("create_new_offer")}
+                        onCreateNew={() => setShowOfferModal(true)}
+                      />
+                    </div>
+                  )}
+                  {addressType === "distributor_address" && (
+                    <div className="w-full">
+                      <label className="block text-sm font-medium mb-2">{tDist("distribution")}</label>
+                      <SimpleCombobox
+                        options={distributions.map((d: any) => ({
+                          value: String(d.id),
+                          label: describeDistribution(d as any),
+                          id: d.id,
+                          name: d.product_name,
+                        }))}
+                        value={selectedDistribution ? String(selectedDistribution as any) : ""}
+                        onValueChange={(v) => setSelectedDistribution(v ? Number(v) : "")}
+                        placeholder={tDist("select_distribution")}
+                        searchPlaceholder={tDist("select_distribution")}
+                        showCreateNew={true}
+                        createNewText={tDist("create_new_distribution")}
+                        onCreateNew={() => setShowDistributionModal(true)}
+                      />
+                    </div>
+                  )}
+                </div>
               </div>
               <div className="flex items-center justify-center w-full">
                 <label className="flex flex-col items-center justify-center w-full h-48 border-2 border-gray-300 border-dashed rounded-lg cursor-pointer bg-gray-50 hover:bg-gray-100">
