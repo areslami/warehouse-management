@@ -121,6 +121,7 @@ export function B2BSaleModal({ trigger, onSubmit, onClose, initialData }: B2BSal
     });
 
     const selectedOffer = form.watch("offer");
+    const selectedDistribution = form.watch("b2b_distribution");
 
     useEffect(() => {
         if (selectedOffer && selectedOffer !== 0 && offers.length > 0) {
@@ -131,6 +132,16 @@ export function B2BSaleModal({ trigger, onSubmit, onClose, initialData }: B2BSal
             }
         }
     }, [selectedOffer, offers, form]);
+
+    useEffect(() => {
+        if (selectedDistribution && selectedDistribution !== 0 && distributions.length > 0) {
+            const distribution = distributions.find(d => d.id === selectedDistribution);
+            if (distribution && distribution.product_id) {
+                form.setValue('product', distribution.product_id, { shouldValidate: false, shouldDirty: true, shouldTouch: true });
+                form.setValue('unit_price', Number(distribution.unit_price), { shouldValidate: false, shouldDirty: true, shouldTouch: true });
+            }
+        }
+    }, [selectedDistribution, distributions, form]);
 
 
     const handleSubmit = async (data: B2BSaleFormData) => {
@@ -203,6 +214,9 @@ export function B2BSaleModal({ trigger, onSubmit, onClose, initialData }: B2BSal
                                                 onChange={(e) => {
                                                     setSaleType(e.target.value as "your_sale" | "distributor_sale");
                                                     form.setValue("is_distributor", false);
+                                                    form.setValue("b2b_distribution", null);
+                                                    form.setValue("product", 0);
+                                                    form.setValue("unit_price", 0);
                                                 }}
                                                 className="mr-2"
                                             />
@@ -300,7 +314,7 @@ export function B2BSaleModal({ trigger, onSubmit, onClose, initialData }: B2BSal
                                     render={({ field }) => (
                                         <FormItem>
                                             <FormLabel>{t("product")}</FormLabel>
-                                            <div className={saleType === "your_sale" && !!selectedOffer ? "pointer-events-none opacity-60" : ""}>
+                                            <div className={(saleType === "your_sale" && !!selectedOffer) || (saleType === "distributor_sale" && !!selectedDistribution) ? "pointer-events-none opacity-60" : ""}>
                                                 <FormControl>
                                                     <SimpleCombobox
                                                         value={field.value > 0 ? field.value.toString() : ""}
@@ -389,8 +403,8 @@ export function B2BSaleModal({ trigger, onSubmit, onClose, initialData }: B2BSal
                                                 <NumberInput
                                                     value={field.value || 0}
                                                     onChange={(value) => field.onChange(value)}
-                                                    readOnly={saleType === "your_sale" && !!selectedOffer}
-                                                    className={saleType === "your_sale" && !!selectedOffer ? "opacity-60 cursor-not-allowed" : ""}
+                                                    readOnly={(saleType === "your_sale" && !!selectedOffer) || (saleType === "distributor_sale" && !!selectedDistribution)}
+                                                    className={(saleType === "your_sale" && !!selectedOffer) || (saleType === "distributor_sale" && !!selectedDistribution) ? "opacity-60 cursor-not-allowed" : ""}
                                                 />
                                             </FormControl>
                                             <FormMessage />
