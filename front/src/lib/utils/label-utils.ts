@@ -3,7 +3,7 @@ import { formatNumber } from "@/lib/utils/number-format";
 import type { Product, Supplier, Customer, Receiver, ShippingCompany } from "@/lib/interfaces/core";
 import type { Warehouse, WarehouseReceipt } from "@/lib/interfaces/warehouse";
 import type { PurchaseProforma, SalesProforma } from "@/lib/interfaces/finance";
-import type { B2BOffer, B2BDistribution } from "@/lib/interfaces/b2b";
+import type { B2BOffer, B2BDistribution, B2BAddress } from "@/lib/interfaces/b2b";
 
 export function describeProduct(p: Product): string {
   const parts = [p.name];
@@ -74,4 +74,10 @@ export function describeDistribution(d: B2BDistribution): string {
   const date = toJalali(d.agency_date || "");
   const weight = d.agency_weight ? `${formatNumber(d.agency_weight)} kg` : "";
   return [d.transfer_id, d.customer_name, d.product_name, weight, date].filter(Boolean).join(" - ");
+}
+
+export function describeB2BAddress(a: B2BAddress): string {
+  const date = a.purchase_date ? toJalali(a.purchase_date) : "";
+  const weight = a.total_weight_purchased ? `${formatNumber(a.total_weight_purchased)} kg` : "";
+  return [a.allocation_id, a.customer_name, a.product_name, weight, date, a.city].filter(Boolean).join(" - ");
 }

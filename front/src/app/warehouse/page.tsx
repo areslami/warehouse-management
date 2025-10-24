@@ -565,7 +565,8 @@ export default function WarehousePage() {
                   <TableHead className="text-right w-16">ردیف</TableHead>
                   <TableHead className="text-right">{t("deliveries.table.delivery_id")}</TableHead>
                   <TableHead className="text-right">{t("deliveries.table.total_weight")}</TableHead>
-                  <TableHead className="text-right">{t("deliveries.table.warehouse")}</TableHead>
+                  <TableHead className="text-right">{t("deliveries.table.b2b_address")}</TableHead>
+                  <TableHead className="text-right">{t("deliveries.table.warehouse_receipt")}</TableHead>
                   <TableHead className="text-right">{t("deliveries.table.issue_date")}</TableHead>
                   <TableHead className="text-center w-24">{t("deliveries.table.operations")}</TableHead>
                 </TableRow>
@@ -589,7 +590,8 @@ export default function WarehousePage() {
                     <TableCell className="text-right font-medium">{index + 1}</TableCell>
                     <TableCell className="text-right">{delivery.delivery_id}</TableCell>
                     <TableCell className="text-right">{delivery.total_weight}</TableCell>
-                    <TableCell className="text-right">{warehouses.find(w => w.id === delivery.warehouse)?.name}</TableCell>
+                    <TableCell className="text-right">{delivery.b2b_address_purchase_id || '-'}</TableCell>
+                    <TableCell className="text-right">{delivery.warehouse_receipt_id || '-'}</TableCell>
                     <TableCell className="text-right">{new Date(delivery.issue_date).toLocaleDateString('fa-IR')}</TableCell>
                     <TableCell>
                       <div className="flex gap-2 justify-center">

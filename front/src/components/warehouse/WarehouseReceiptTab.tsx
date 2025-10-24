@@ -96,6 +96,7 @@ export function WarehouseReceiptTab({ selectedWarehouseId }: WarehouseReceiptTab
       if (detailedReceipt) {
         openModal(WarehouseReceiptModal, {
           initialData: {
+            id: detailedReceipt.id,
             receipt_id: detailedReceipt.receipt_id || "",
             receipt_type: detailedReceipt.receipt_type,
             date: detailedReceipt.date,
@@ -118,7 +119,7 @@ export function WarehouseReceiptTab({ selectedWarehouseId }: WarehouseReceiptTab
     } catch (error) {
       console.error("Failed to fetch receipt details:", error);
       handleApiErrorWithToast(error, "Fetching receipt details");
-      
+
     }
   };
 

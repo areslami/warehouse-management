@@ -141,35 +141,37 @@ class DispatchIssueSerializer(serializers.ModelSerializer):
 
 class DeliveryFulfillmentItemSerializer(serializers.ModelSerializer):
     product_name = serializers.CharField(source='product.name', read_only=True)
-    receiver_name = serializers.SerializerMethodField()
-    
+    customer_name = serializers.SerializerMethodField()
+
     class Meta:
         model = DeliveryFulfillmentItem
         fields = [
-            'id', 'shipment_id', 'shipment_price', 'product', 'product_name',
-            'weight', 'vehicle_type', 'receiver', 'receiver_name'
+            'id', 'product', 'product_name', 'weight', 'destination',
+            'receiver', 'customer', 'customer_name', 'fare'
         ]
-    
-    def get_receiver_name(self, obj):
-         
-        if obj.receiver.receiver_type == 'corporate':
-            return obj.receiver.company_name
-        return obj.receiver.full_name
+
+    def get_customer_name(self, obj):
+        if obj.customer:
+            if obj.customer.customer_type == 'corporate':
+                return obj.customer.company_name
+            return obj.customer.full_name
+        return None
 
 
 class DeliveryFulfillmentSerializer(serializers.ModelSerializer):
     items = DeliveryFulfillmentItemSerializer(many=True, required=False)
-    warehouse_name = serializers.CharField(source='warehouse.name', read_only=True)
+    b2b_address_purchase_id = serializers.CharField(source='b2b_address.purchase_id', read_only=True)
+    warehouse_receipt_id = serializers.CharField(source='warehouse_receipt.receipt_id', read_only=True)
     shipping_company_name = serializers.CharField(source='shipping_company.name', read_only=True)
-    sales_proforma_serial = serializers.CharField(source='sales_proforma.serial_number', read_only=True)
-    
+
     class Meta:
         model = DeliveryFulfillment
         fields = [
-            'id', 'delivery_id', 'issue_date', 'validity_date', 'warehouse',
-            'warehouse_name', 'sales_proforma', 'sales_proforma_serial',
+            'id', 'delivery_id', 'issue_date', 'b2b_address',
+            'b2b_address_purchase_id', 'warehouse_receipt', 'warehouse_receipt_id',
             'description', 'shipping_company', 'shipping_company_name',
-            'total_weight', 'items', 'created_at', 'updated_at'
+            'total_weight', 'driver_name', 'driver_phone', 'driver_license_plate',
+            'items', 'created_at', 'updated_at'
         ]
         read_only_fields = ['created_at', 'updated_at']
 

@@ -69,11 +69,11 @@ class DispatchIssueViewSet(viewsets.ModelViewSet):
 
 class DeliveryFulfillmentViewSet(viewsets.ModelViewSet):
     queryset = DeliveryFulfillment.objects.select_related(
-        'warehouse', 'sales_proforma', 'shipping_company'
-    ).prefetch_related('items__product', 'items__receiver').all()
+        'b2b_address', 'warehouse_receipt', 'shipping_company'
+    ).prefetch_related('items__product').all()
     serializer_class = DeliveryFulfillmentSerializer
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
-    filterset_fields = ['warehouse', 'shipping_company']
+    filterset_fields = ['b2b_address', 'warehouse_receipt', 'shipping_company']
     search_fields = ['delivery_id', 'description']
     ordering_fields = ['issue_date', 'created_at']
     ordering = ['-issue_date']

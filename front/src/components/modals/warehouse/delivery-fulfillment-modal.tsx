@@ -9,39 +9,45 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, Dialog
 import { Button } from "../../ui/button";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "../../ui/form";
 import { Input } from "../../ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../../ui/select";
-import { Plus, Trash2 } from "lucide-react";
+import { SimpleCombobox } from "../../ui/simple-combobox";
+import { Plus, Trash2, Info } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useCoreData } from "@/lib/core-data-context";
 import { useModal } from "@/lib/modal-context";
 import { PersianDatePicker } from "../../ui/persian-date-picker";
 import { getTodayGregorian } from "@/lib/utils/persian-date";
 import { getPartyDisplayName } from "@/lib/utils/party-utils";
-import { describeWarehouse, describeSalesProforma, describeShippingCompany, describeProduct, describeParty } from "@/lib/utils/label-utils";
-import { WarehouseFormData, WarehouseModal } from "./warehouse-modal";
+import { describeWarehouseReceipt, describeB2BAddress, describeShippingCompany, describeProduct, describeParty } from "@/lib/utils/label-utils";
 import { ProductFormData, ProductModal } from "../product-modal";
-import { ReceiverFormData, ReceiverModal } from "../receiver-modal";
 import { ShippingCompanyFormData, ShippingCompanyModal } from "../shipping-company-modal";
-import { SalesProformaFormData, SalesProformaModal } from "../finance/salesproforma-modal";
-import { createWarehouse } from "@/lib/api/warehouse";
-import { createProduct, createReceiver, createShippingCompany } from "@/lib/api/core";
-import { createSalesProforma } from "@/lib/api/finance";
+import { B2BAddressFormData, B2BAddressModal } from "../b2b/b2b-address-modal";
+import { createProduct, createShippingCompany } from "@/lib/api/core";
+import { fetchB2BAddresss, createB2BAddress, fetchB2BSales, fetchB2BDistributions, fetchB2BOffers, fetchB2BAddressById, fetchB2BDistributionById, fetchB2BOfferById } from "@/lib/api/b2b";
+import { fetchWarehouseReceipts, fetchWarehouseReceiptById } from "@/lib/api/warehouse";
+import { B2BDistribution, B2BOffer, B2BSale, B2BAddress } from "@/lib/interfaces/b2b";
+import { WarehouseReceipt } from "@/lib/interfaces/warehouse";
+import { describeDistribution, describeOffer } from "@/lib/utils/label-utils";
+import { B2BDistributionModal } from "../b2b/b2b-distribution-modal";
+import { B2BOfferModal } from "../b2b/b2b-offer-modal";
+import { WarehouseReceiptModal } from "./warehouse-receipt-modal";
 
 type DeliveryFulfillmentFormData = {
   delivery_id: string;
   issue_date: string;
-  validity_date: string;
-  warehouse: number;
-  sales_proforma: number;
+  b2b_address: number;
+  warehouse_receipt: number;
   description?: string;
   shipping_company: number;
+  driver_name: string;
+  driver_phone: string;
+  driver_license_plate: string;
   items: {
-    shipment_id: string;
-    shipment_price?: string | number;
     product: number;
-    weight?: string | number;
-    vehicle_type: "single" | 'double' | 'trailer';
-    receiver: number;
+    weight: string | number;
+    destination?: string;
+    receiver: string;
+    customer: number;
+    fare?: string | number;
   }[];
 };
 
@@ -55,64 +61,111 @@ interface DeliveryFulfillmentModalProps {
 export function DeliveryFulfillmentModal({ trigger, onSubmit, onClose, initialData }: DeliveryFulfillmentModalProps) {
   const tval = useTranslations("modals.deliveryFulfillment.validation");
   const t = useTranslations("modals.deliveryFulfillment");
+  const tCommon = useTranslations("common");
   const { data, refreshData } = useCoreData();
   const { openModal } = useModal();
+  const [b2bAddresses, setB2bAddresses] = useState<any[]>([]);
+  const [warehouseReceipts, setWarehouseReceipts] = useState<any[]>([]);
+  const [cottageCodeError, setCottageCodeError] = useState<string>("");
+  const [b2bSales, setB2bSales] = useState<B2BSale[]>([]);
+  const [b2bDistributions, setB2bDistributions] = useState<B2BDistribution[]>([]);
+  const [b2bOffers, setB2bOffers] = useState<B2BOffer[]>([]);
+  const [linkedDistribution, setLinkedDistribution] = useState<B2BDistribution | null>(null);
+  const [linkedOffer, setLinkedOffer] = useState<B2BOffer | null>(null);
+
+  // State for viewing modals
+  const [viewingAddress, setViewingAddress] = useState<B2BAddress | null>(null);
+  const [viewingReceipt, setViewingReceipt] = useState<WarehouseReceipt | null>(null);
+  const [viewingDistribution, setViewingDistribution] = useState<B2BDistribution | null>(null);
+  const [viewingOffer, setViewingOffer] = useState<B2BOffer | null>(null);
 
   useEffect(() => {
-    if (data.warehouses.length === 0) {
-      refreshData('warehouses');
-    }
     if (data.products.length === 0) {
       refreshData('products');
-    }
-    if (data.receivers.length === 0) {
-      refreshData('receivers');
     }
     if (data.shippingCompanies.length === 0) {
       refreshData('shippingCompanies');
     }
-    if (data.salesProformas.length === 0) {
-      refreshData('salesProformas');
+    if (data.customers.length === 0) {
+      refreshData('customers');
     }
   }, []);
+
   const getTodayDate = () => {
     if (typeof window === 'undefined') return '';
     return getTodayGregorian();
   };
 
   const deliveryItemSchema = z.object({
-    shipment_id: z.string().min(1, tval("shipment-id")),
-    shipment_price: z.union([z.string(), z.number()]).optional(),
     product: z.number().min(1, tval("product-required")),
-    weight: z.union([z.string(), z.number()]).optional(),
-    vehicle_type: z.enum(["single", "double", "trailer"]),
-    receiver: z.number().min(0),
+    weight: z.union([z.string(), z.number()]).refine((val) => {
+      const num = typeof val === 'string' ? parseFloat(val) : val;
+      return !isNaN(num) && num > 0;
+    }, { message: tval("weight") }),
+    destination: z.string().optional(),
+    receiver: z.string().min(1, tval("receiver")),
+    customer: z.number().min(1, tval("customer")),
+    fare: z.union([z.string(), z.number()]).refine((val) => {
+      if (val === undefined || val === null || val === '') return false;
+      const num = typeof val === 'string' ? parseFloat(val) : val;
+      return !isNaN(num) && num > 0;
+    }, { message: tval("fare") }),
   });
 
   const deliveryFulfillmentSchema = z.object({
     delivery_id: z.string().min(1, tval("delivery-id")),
     issue_date: z.string().min(1, tval("issue-date")),
-    validity_date: z.string().min(1, tval("validity-date")),
-    warehouse: z.number().min(0),
-    sales_proforma: z.number().min(0),
+    b2b_address: z.number().min(1, tval("b2b-address")),
+    warehouse_receipt: z.number().min(1, tval("warehouse-receipt")),
     description: z.string().optional(),
-    shipping_company: z.number().min(0),
+    shipping_company: z.number().min(1, tval("shipping-company")),
+    driver_name: z.string().min(1, tval("driver-name")),
+    driver_phone: z.string().min(1, tval("driver-phone")),
+    driver_license_plate: z.string().min(1, tval("driver-license-plate")),
     items: z.array(deliveryItemSchema).min(1, tval("items")),
   });
 
   const [open, setOpen] = useState(trigger ? false : true);
+
+  // Re-fetch B2B addresses, warehouse receipts, and B2B data whenever modal opens
+  useEffect(() => {
+    if (open) {
+      // Load B2B addresses
+      fetchB2BAddresss().then((addresses) => {
+        if (addresses) setB2bAddresses(addresses);
+      });
+      // Load warehouse receipts
+      fetchWarehouseReceipts().then((receipts) => {
+        if (receipts) setWarehouseReceipts(receipts);
+      });
+      // Load B2B sales
+      fetchB2BSales().then((sales) => {
+        if (sales) setB2bSales(sales);
+      });
+      // Load B2B distributions
+      fetchB2BDistributions().then((distributions) => {
+        if (distributions) setB2bDistributions(distributions);
+      });
+      // Load B2B offers
+      fetchB2BOffers().then((offers) => {
+        if (offers) setB2bOffers(offers);
+      });
+    }
+  }, [open]);
 
   const form = useForm<DeliveryFulfillmentFormData>({
     resolver: zodResolver(deliveryFulfillmentSchema) as any,
     defaultValues: {
       delivery_id: initialData?.delivery_id || "",
       issue_date: initialData?.issue_date || getTodayDate(),
-      validity_date: initialData?.validity_date || getTodayDate(),
-      warehouse: initialData?.warehouse || 0,
-      sales_proforma: initialData?.sales_proforma || 0,
+      b2b_address: initialData?.b2b_address || 0,
+      warehouse_receipt: initialData?.warehouse_receipt || 0,
       description: initialData?.description || "",
       shipping_company: initialData?.shipping_company || 0,
-      items: initialData?.items || [{ shipment_id: "", shipment_price: 0, product: 0, weight: 0, vehicle_type: "single", receiver: 0 }],
+      driver_name: initialData?.driver_name || "",
+      driver_phone: initialData?.driver_phone || "",
+      driver_license_plate: initialData?.driver_license_plate || "",
+      items: initialData?.items || [{ product: 0, weight: 0, destination: "", receiver: "", customer: 0, fare: 0 }],
     },
   });
 
@@ -121,7 +174,110 @@ export function DeliveryFulfillmentModal({ trigger, onSubmit, onClose, initialDa
     name: "items",
   });
 
+  // Watch b2b_address changes to auto-fill warehouse_receipt based on cottage_code
+  // and auto-fill customer field
+  const selectedB2BAddressId = form.watch("b2b_address");
+  const selectedWarehouseReceiptId = form.watch("warehouse_receipt");
+
+  useEffect(() => {
+    if (selectedB2BAddressId > 0 && b2bAddresses.length > 0 && warehouseReceipts.length > 0) {
+      const selectedAddress = b2bAddresses.find(addr => addr.id === selectedB2BAddressId);
+
+      if (selectedAddress && selectedAddress.cottage_code) {
+        // Find warehouse receipt with matching cottage_serial_number
+        const matchingReceipt = warehouseReceipts.find(
+          receipt => receipt.cottage_serial_number === selectedAddress.cottage_code
+        );
+
+        if (matchingReceipt) {
+          // Found matching receipt - auto-fill and clear error
+          form.setValue('warehouse_receipt', matchingReceipt.id);
+          setCottageCodeError("");
+        } else {
+          // No matching receipt found - set error and clear field
+          form.setValue('warehouse_receipt', 0);
+          setCottageCodeError("رسید انباری با این کد کوتاژ مطابقت ندارد");
+        }
+      } else {
+        // No cottage_code in selected address - clear fields and error
+        form.setValue('warehouse_receipt', 0);
+        setCottageCodeError("");
+      }
+
+      // Auto-fill customer from B2B address
+      if (selectedAddress && selectedAddress.customer) {
+        const items = form.getValues('items');
+        if (items && items.length > 0) {
+          items.forEach((_item, index) => {
+            form.setValue(`items.${index}.customer`, selectedAddress.customer, { shouldValidate: true });
+          });
+        }
+      }
+
+      // Find the corresponding B2B Sale and determine if we need to show distribution or offer
+      if (selectedAddress && selectedAddress.purchase_id && b2bSales.length > 0) {
+        const matchingSale = b2bSales.find(sale => sale.purchase_id === selectedAddress.purchase_id);
+
+        if (matchingSale) {
+          if (matchingSale.is_distributor && matchingSale.b2b_distribution) {
+            // Case 1: عاملیت توزیع - find and set the distribution
+            const distribution = b2bDistributions.find(d => d.id === matchingSale.b2b_distribution);
+            if (distribution) {
+              setLinkedDistribution(distribution);
+              setLinkedOffer(null);
+            }
+          } else if (!matchingSale.is_distributor && matchingSale.offer) {
+            // Case 2: فروش شما with offer - find and set the offer
+            const offer = b2bOffers.find(o => o.id === matchingSale.offer);
+            if (offer) {
+              setLinkedOffer(offer);
+              setLinkedDistribution(null);
+            }
+          } else {
+            // Case 3: فروش شما without offer - do nothing
+            setLinkedDistribution(null);
+            setLinkedOffer(null);
+          }
+        } else {
+          // No matching sale found - clear both
+          setLinkedDistribution(null);
+          setLinkedOffer(null);
+        }
+      } else {
+        // No address selected or no sales data - clear both
+        setLinkedDistribution(null);
+        setLinkedOffer(null);
+      }
+    }
+  }, [selectedB2BAddressId, b2bAddresses, warehouseReceipts, b2bSales, b2bDistributions, b2bOffers, form]);
+
+  // Auto-fill product from warehouse receipt items
+  useEffect(() => {
+    if (selectedWarehouseReceiptId > 0 && warehouseReceipts.length > 0) {
+      const selectedReceipt = warehouseReceipts.find(receipt => receipt.id === selectedWarehouseReceiptId);
+
+      if (selectedReceipt && selectedReceipt.items && selectedReceipt.items.length > 0) {
+        const items = form.getValues('items');
+
+        // Auto-fill product from the first warehouse receipt item
+        const firstProduct = selectedReceipt.items[0].product;
+        if (firstProduct) {
+          items.forEach((item, index) => {
+            if (item.product === 0) {
+              form.setValue(`items.${index}.product`, firstProduct);
+            }
+          });
+        }
+      }
+    }
+  }, [selectedWarehouseReceiptId, warehouseReceipts, form]);
+
   const handleSubmit = async (data: any) => {
+    // Prevent submission if there's a cottage code error
+    if (cottageCodeError) {
+      return;
+    }
+
     try {
       if (onSubmit) {
         await onSubmit(data);
@@ -163,7 +319,7 @@ export function DeliveryFulfillmentModal({ trigger, onSubmit, onClose, initialDa
 
           <Form {...form} >
             <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6 py-4 px-6">
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-2 gap-4 items-start">
                 <FormField
                   control={form.control as any}
                   name="delivery_id"
@@ -180,116 +336,117 @@ export function DeliveryFulfillmentModal({ trigger, onSubmit, onClose, initialDa
 
                 <FormField
                   control={form.control as any}
-                  name="warehouse"
+                  name="b2b_address"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>{t("warehouse")}</FormLabel>
+                      <FormLabel className="flex items-center gap-2">
+                        {t("b2b-address")}
+                        {field.value > 0 && (
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="h-5 w-5 p-0 hover:bg-transparent"
+                            onClick={async () => {
+                              try {
+                                const address = await fetchB2BAddressById(field.value);
+                                if (address) setViewingAddress(address);
+                              } catch (error) {
+                                console.error("Failed to fetch address:", error);
+                              }
+                            }}
+                          >
+                            <Info className="h-4 w-4 text-[#f6d265]" />
+                          </Button>
+                        )}
+                      </FormLabel>
                       <FormControl>
-                        <Select
+                        <SimpleCombobox
                           value={field.value > 0 ? field.value.toString() : ""}
                           onValueChange={(value) => {
-                            if (value === "new") {
-                              openModal(WarehouseModal, {
-                                onSubmit: async (newWarehouse: WarehouseFormData) => {
-                                  const created = await createWarehouse(newWarehouse);
-                                  if (created) {
-                                    await refreshData('warehouses');
-                                    form.setValue('warehouse', created.id);
-                                  }
-                                }
-                              });
-                            } else if (value) {
+                            if (value) {
                               field.onChange(Number(value));
                             }
                           }}
-                        >
-                          <SelectTrigger>
-                            <SelectValue placeholder={t("select-warehouse")} />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem
-                              value="new"
-                              className="font-semibold text-[#f6d265]"
-                              onPointerDown={(e) => e.preventDefault()}
-                            >
-                              <Plus className="inline-block w-4 h-4 mr-2" />
-                              {t("create-new-warehouse")}
-                            </SelectItem>
-                            {data.warehouses.length > 0 && (
-                              <div className="border-t my-1" />
-                            )}
-                            {data.warehouses.map((warehouse) => (
-                              <SelectItem key={warehouse.id} value={warehouse.id.toString()}>
-                                {describeWarehouse(warehouse)}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
+                          options={b2bAddresses.map((address) => ({
+                            value: address.id.toString(),
+                            label: describeB2BAddress(address),
+                            id: address.id
+                          }))}
+                          placeholder={t("select-b2b-address")}
+                          searchPlaceholder={tCommon("search_placeholders.search")}
+                          showCreateNew={true}
+                          createNewText={t("create-new-b2b-address")}
+                          onCreateNew={() => {
+                            openModal(B2BAddressModal, {
+                              onSubmit: async (newAddress: B2BAddressFormData) => {
+                                const created = await createB2BAddress(newAddress);
+                                if (created) {
+                                  const addresses = await fetchB2BAddresss();
+                                  if (addresses) setB2bAddresses(addresses);
+                                  form.setValue('b2b_address', created.id);
+                                }
+                              }
+                            });
+                          }}
+                        />
                       </FormControl>
                       <FormMessage />
+                      {cottageCodeError && (
+                        <p className="text-sm font-medium text-destructive mt-2">
+                          {cottageCodeError}
+                        </p>
+                      )}
                     </FormItem>
                   )}
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-2 gap-4 items-start">
                 <FormField
                   control={form.control as any}
-                  name="sales_proforma"
+                  name="warehouse_receipt"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>{t("sales-proforma")}</FormLabel>
+                      <FormLabel className="flex items-center gap-2">
+                        {t("warehouse-receipt")}
+                        {field.value > 0 && (
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="h-5 w-5 p-0 hover:bg-transparent"
+                            onClick={async () => {
+                              try {
+                                const receipt = await fetchWarehouseReceiptById(field.value);
+                                if (receipt) setViewingReceipt(receipt);
+                              } catch (error) {
+                                console.error("Failed to fetch receipt:", error);
+                              }
+                            }}
+                          >
+                            <Info className="h-4 w-4 text-[#f6d265]" />
+                          </Button>
+                        )}
+                      </FormLabel>
                       <FormControl>
-                        <Select
+                        <SimpleCombobox
                           value={field.value > 0 ? field.value.toString() : ""}
                           onValueChange={(value) => {
-                            if (value === "new") {
-                              openModal(SalesProformaModal, {
-                                onSubmit: async (newProforma: SalesProformaFormData) => {
-                                  const cleanProforma = {
-                                    ...newProforma,
-                                    tax: parseFloat(newProforma.tax) || 0,
-                                    discount: parseFloat(newProforma.discount) || 0,
-                                    lines: newProforma.lines.map(line => ({
-                                      ...line,
-                                      weight: parseFloat(line.weight) || 0,
-                                      unit_price: parseFloat(line.unit_price) || 0
-                                    }))
-                                  };
-                                  const created = await createSalesProforma(cleanProforma);
-                                  if (created) {
-                                    await refreshData('salesProformas');
-                                    form.setValue('sales_proforma', created.id);
-                                  }
-                                }
-                              });
-                            } else if (value) {
+                            if (value) {
                               field.onChange(Number(value));
                             }
                           }}
-                        >
-                          <SelectTrigger>
-                            <SelectValue placeholder={t("select-sales-proforma")} />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem
-                              value="new"
-                              className="font-semibold text-[#f6d265]"
-                              onPointerDown={(e) => e.preventDefault()}
-                            >
-                              <Plus className="inline-block w-4 h-4 mr-2" />
-                              {t("create-new-sales-proforma")}
-                            </SelectItem>
-                            {data.salesProformas.length > 0 && (
-                              <div className="border-t my-1" />
-                            )}
-                            {data.salesProformas.map((proforma) => (
-                              <SelectItem key={proforma.id} value={proforma.id.toString()}>
-                                {describeSalesProforma(proforma)}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
+                          options={warehouseReceipts.map((receipt) => ({
+                            value: receipt.id.toString(),
+                            label: describeWarehouseReceipt(receipt),
+                            id: receipt.id
+                          }))}
+                          placeholder={t("select-warehouse-receipt")}
+                          searchPlaceholder={tCommon("search_placeholders.search")}
+                          disabled={true}
+                          showCreateNew={false}
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -303,46 +460,35 @@ export function DeliveryFulfillmentModal({ trigger, onSubmit, onClose, initialDa
                     <FormItem>
                       <FormLabel>{t("shipping-company")}</FormLabel>
                       <FormControl>
-                        <Select
+                        <SimpleCombobox
                           value={field.value > 0 ? field.value.toString() : ""}
                           onValueChange={(value) => {
-                            if (value === "new") {
-                              openModal(ShippingCompanyModal, {
-                                onSubmit: async (newCompany: ShippingCompanyFormData) => {
-                                  const created = await createShippingCompany(newCompany);
-                                  if (created) {
-                                    await refreshData('shippingCompanies');
-                                    form.setValue('shipping_company', created.id);
-                                  }
-                                }
-                              });
-                            } else if (value) {
+                            if (value) {
                               field.onChange(Number(value));
                             }
                           }}
-                        >
-                          <SelectTrigger>
-                            <SelectValue placeholder={t("select-shipping-company")} />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem
-                              value="new"
-                              className="font-semibold text-[#f6d265]"
-                              onPointerDown={(e) => e.preventDefault()}
-                            >
-                              <Plus className="inline-block w-4 h-4 mr-2" />
-                              {t("create-new-shipping-company")}
-                            </SelectItem>
-                            {data.shippingCompanies.length > 0 && (
-                              <div className="border-t my-1" />
-                            )}
-                            {data.shippingCompanies.map((company) => (
-                              <SelectItem key={company.id} value={company.id.toString()}>
-                                {describeShippingCompany(company)}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
+                          options={data.shippingCompanies.map((company) => ({
+                            value: company.id.toString(),
+                            label: describeShippingCompany(company),
+                            id: company.id,
+                            name: company.name
+                          }))}
+                          placeholder={t("select-shipping-company")}
+                          searchPlaceholder={tCommon("search_placeholders.search")}
+                          showCreateNew={true}
+                          createNewText={t("create-new-shipping-company")}
+                          onCreateNew={() => {
+                            openModal(ShippingCompanyModal, {
+                              onSubmit: async (newCompany: ShippingCompanyFormData) => {
+                                const created = await createShippingCompany(newCompany);
+                                if (created) {
+                                  await refreshData('shippingCompanies');
+                                  form.setValue('shipping_company', created.id);
+                                }
+                              }
+                            });
+                          }}
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -350,7 +496,7 @@ export function DeliveryFulfillmentModal({ trigger, onSubmit, onClose, initialDa
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-2 gap-4 items-start">
                 <FormField
                   control={form.control as any}
                   name="issue_date"
@@ -362,6 +508,7 @@ export function DeliveryFulfillmentModal({ trigger, onSubmit, onClose, initialDa
                           value={field.value}
                           onChange={(value) => field.onChange(value)}
                           placeholder={t("select-date")}
+                          className="focus-visible:ring-offset-0 aria-[invalid=true]:border-input"
                         />
                       </FormControl>
                       <FormMessage />
@@ -369,23 +516,115 @@ export function DeliveryFulfillmentModal({ trigger, onSubmit, onClose, initialDa
                   )}
                 />
 
-                <FormField
-                  control={form.control as any}
-                  name="validity_date"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>{t("validity-date")}</FormLabel>
-                      <FormControl>
-                        <PersianDatePicker
-                          value={field.value}
-                          onChange={(value) => field.onChange(value)}
-                          placeholder={t("select-date")}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+                {/* Conditionally show distribution or offer field */}
+                {linkedDistribution && (
+                  <FormItem>
+                    <FormLabel className="flex items-center gap-2">
+                      عاملیت توزیع
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="h-5 w-5 p-0 hover:bg-transparent"
+                        onClick={async () => {
+                          try {
+                            const distribution = await fetchB2BDistributionById(linkedDistribution.id);
+                            if (distribution) setViewingDistribution(distribution);
+                          } catch (error) {
+                            console.error("Failed to fetch distribution:", error);
+                          }
+                        }}
+                      >
+                        <Info className="h-4 w-4 text-[#f6d265]" />
+                      </Button>
+                    </FormLabel>
+                    <FormControl>
+                      <Input
+                        value={describeDistribution(linkedDistribution)}
+                        disabled
+                        className="bg-gray-50"
+                      />
+                    </FormControl>
+                  </FormItem>
+                )}
+
+                {linkedOffer && (
+                  <FormItem>
+                    <FormLabel className="flex items-center gap-2">
+                      عرضه
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="h-5 w-5 p-0 hover:bg-transparent"
+                        onClick={async () => {
+                          try {
+                            const offer = await fetchB2BOfferById(linkedOffer.id);
+                            if (offer) setViewingOffer(offer);
+                          } catch (error) {
+                            console.error("Failed to fetch offer:", error);
+                          }
+                        }}
+                      >
+                        <Info className="h-4 w-4 text-[#f6d265]" />
+                      </Button>
+                    </FormLabel>
+                    <FormControl>
+                      <Input
+                        value={describeOffer(linkedOffer)}
+                        disabled
+                        className="bg-gray-50"
+                      />
+                    </FormControl>
+                  </FormItem>
+                )}
+              </div>
+
+              <div className="space-y-4">
+                <h3 className="text-lg font-medium">{t("driver-info")}</h3>
+                <div className="grid grid-cols-3 gap-4 p-4 border rounded-lg">
+                  <FormField
+                    control={form.control as any}
+                    name="driver_name"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>{t("driver-name")}</FormLabel>
+                        <FormControl>
+                          <Input {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control as any}
+                    name="driver_phone"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>{t("driver-phone")}</FormLabel>
+                        <FormControl>
+                          <Input {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control as any}
+                    name="driver_license_plate"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>{t("driver-license-plate")}</FormLabel>
+                        <FormControl>
+                          <Input {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
               </div>
 
               <FormField
@@ -409,7 +648,7 @@ export function DeliveryFulfillmentModal({ trigger, onSubmit, onClose, initialDa
                     type="button"
                     variant="outline"
                     size="sm"
-                    onClick={() => append({ shipment_id: "", shipment_price: 0, product: 0, weight: 0, vehicle_type: "single", receiver: 0 })}
+                    onClick={() => append({ product: 0, weight: 0, destination: "", receiver: "", customer: 0, fare: 0 })}
                   >
                     <Plus className="w-4 h-4 mr-2" />
                     {t("add-item")}
@@ -417,51 +656,36 @@ export function DeliveryFulfillmentModal({ trigger, onSubmit, onClose, initialDa
                 </div>
 
                 {fields.map((field, index) => (
-                  <div key={field.id} className="grid grid-cols-6 gap-4 p-4 border rounded-lg">
-                    <FormField
-                      control={form.control as any}
-                      name={`items.${index}.shipment_id`}
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>{t("shipment-id")}</FormLabel>
-                          <FormControl>
-                            <Input {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    <FormField
-                      control={form.control as any}
-                      name={`items.${index}.shipment_price`}
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>{t("shipment-price")}</FormLabel>
-                          <FormControl>
-                            <Input
-                              type="text"
-                              step="0.01"
-                              {...field}
-                              onChange={(value) => field.onChange(value)}
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    <FormField
-                      control={form.control as any}
-                      name={`items.${index}.product`}
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>{t("product")}</FormLabel>
-                          <FormControl>
-                            <Select
-                              value={field.value > 0 ? field.value.toString() : ""}
-                              onValueChange={(value) => {
-                                if (value === "new") {
+                  <div key={field.id} className="p-4 border rounded-lg">
+                    {/* Single grid with proper column spans */}
+                    <div className="grid grid-cols-7 gap-4 items-start">
+                      {/* Row 1: محصول, وزن, مشتری */}
+                      <FormField
+                        control={form.control as any}
+                        name={`items.${index}.product`}
+                        render={({ field }) => (
+                          <FormItem className="col-span-2">
+                            <FormLabel>{t("product")}</FormLabel>
+                            <FormControl>
+                              <SimpleCombobox
+                                value={field.value > 0 ? field.value.toString() : ""}
+                                onValueChange={(value) => {
+                                  if (value) {
+                                    field.onChange(Number(value));
+                                  }
+                                }}
+                                options={data.products.map((product) => ({
+                                  value: product.id.toString(),
+                                  label: describeProduct(product),
+                                  id: product.id,
+                                  name: product.name
+                                }))}
+                                placeholder={t("select-product")}
+                                searchPlaceholder={tCommon("search_placeholders.search_products")}
+                                disabled={selectedWarehouseReceiptId > 0}
+                                showCreateNew={true}
+                                createNewText={t("create-new-product")}
+                                onCreateNew={() => {
                                   const currentIndex = index;
                                   openModal(ProductModal, {
                                     onSubmit: async (newProduct: ProductFormData) => {
@@ -474,142 +698,123 @@ export function DeliveryFulfillmentModal({ trigger, onSubmit, onClose, initialDa
                                       }
                                     }
                                   });
-                                } else if (value) {
-                                  field.onChange(Number(value));
-                                }
-                              }}
-                            >
-                              <SelectTrigger>
-                                <SelectValue placeholder={t("select-product")} />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem
-                                  value="new"
-                                  className="font-semibold text-[#f6d265]"
-                                  onPointerDown={(e) => e.preventDefault()}
-                                >
-                                  <Plus className="inline-block w-4 h-4 mr-2" />
-                                  {t("create-new-product")}
-                                </SelectItem>
-                                {data.products.length > 0 && (
-                                  <div className="border-t my-1" />
-                                )}
-                                {data.products.map((product) => (
-                                  <SelectItem key={product.id} value={product.id.toString()}>
-                                    {describeProduct(product)}
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
+                                }}
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
 
-                    <FormField
-                      control={form.control as any}
-                      name={`items.${index}.weight`}
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>{t("weight")}</FormLabel>
-                          <FormControl>
-                            <Input
-                              type="text"
-                              step="0.00000001"
-                              {...field}
-                              onChange={(value) => field.onChange(value)}
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
+                      <FormField
+                        control={form.control as any}
+                        name={`items.${index}.weight`}
+                        render={({ field }) => (
+                          <FormItem className="col-span-2">
+                            <FormLabel>{t("weight")}</FormLabel>
+                            <FormControl>
+                              <Input
+                                type="text"
+                                step="0.00000001"
+                                {...field}
+                                onChange={(value) => field.onChange(value)}
+                                className="focus-visible:ring-offset-0 aria-[invalid=true]:border-input"
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
 
-                    <FormField
-                      control={form.control as any}
-                      name={`items.${index}.vehicle_type`}
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>{t("vehicle-type")}</FormLabel>
-                          <FormControl>
-                            <select {...field} className="w-full px-3 py-2 border rounded-md">
-                              <option value="single">{t("vehicle-single")}</option>
-                              <option value="double">{t("vehicle-double")}</option>
-                              <option value="trailer">{t("vehicle-trailer")}</option>
-                            </select>
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
+                      <FormField
+                        control={form.control as any}
+                        name={`items.${index}.customer`}
+                        render={({ field }) => (
+                          <FormItem className="col-span-2">
+                            <FormLabel>{t("customer")}</FormLabel>
+                            <FormControl>
+                              <SimpleCombobox
+                                value={field.value > 0 ? field.value.toString() : ""}
+                                onValueChange={(value) => {
+                                  if (value) {
+                                    field.onChange(Number(value));
+                                  }
+                                }}
+                                options={data.customers.map((customer) => ({
+                                  value: customer.id.toString(),
+                                  label: describeParty(customer),
+                                  id: customer.id,
+                                  name: getPartyDisplayName(customer)
+                                }))}
+                                placeholder={t("select-customer")}
+                                searchPlaceholder={tCommon("search_placeholders.search_customers")}
+                                disabled={selectedB2BAddressId > 0}
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
 
-                    <FormField
-                      control={form.control as any}
-                      name={`items.${index}.receiver`}
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>{t("receiver")}</FormLabel>
-                          <FormControl>
-                            <Select
-                              value={field.value > 0 ? field.value.toString() : ""}
-                              onValueChange={(value) => {
-                                if (value === "new") {
-                                  const currentIndex = index;
-                                  openModal(ReceiverModal, {
-                                    onSubmit: async (newReceiver: ReceiverFormData) => {
-                                      const created = await createReceiver(newReceiver);
-                                      if (created) {
-                                        await refreshData('receivers');
-                                        const items = form.getValues('items');
-                                        items[currentIndex].receiver = created.id;
-                                        form.setValue('items', items);
-                                      }
-                                    }
-                                  });
-                                } else if (value) {
-                                  field.onChange(Number(value));
-                                }
-                              }}
-                            >
-                              <SelectTrigger>
-                                <SelectValue placeholder={t("select-receiver")} />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem
-                                  value="new"
-                                  className="font-semibold text-[#f6d265]"
-                                  onPointerDown={(e) => e.preventDefault()}
-                                >
-                                  <Plus className="inline-block w-4 h-4 mr-2" />
-                                  {t("create-new-receiver")}
-                                </SelectItem>
-                                {data.receivers.length > 0 && (
-                                  <div className="border-t my-1" />
-                                )}
-                                {data.receivers.map((receiver) => (
-                                  <SelectItem key={receiver.id} value={receiver.id.toString()}>
-                                    {describeParty(receiver)}
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
+                      <div className="col-span-1 flex items-end justify-center row-span-2">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => remove(index)}
+                          disabled={fields.length === 1}
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </div>
 
-                    <div className="flex items-end">
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={() => remove(index)}
-                        disabled={fields.length === 1}
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </Button>
+                      {/* Row 2: مقصد, گیرنده, کرایه */}
+                      <FormField
+                        control={form.control as any}
+                        name={`items.${index}.destination`}
+                        render={({ field }) => (
+                          <FormItem className="col-span-2">
+                            <FormLabel>{t("destination")}</FormLabel>
+                            <FormControl>
+                              <Input {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      <FormField
+                        control={form.control as any}
+                        name={`items.${index}.receiver`}
+                        render={({ field }) => (
+                          <FormItem className="col-span-2">
+                            <FormLabel>{t("receiver")}</FormLabel>
+                            <FormControl>
+                              <Input {...field} className="focus-visible:ring-offset-0 aria-[invalid=true]:border-input" />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      <FormField
+                        control={form.control as any}
+                        name={`items.${index}.fare`}
+                        render={({ field }) => (
+                          <FormItem className="col-span-2">
+                            <FormLabel>{t("fare")}</FormLabel>
+                            <FormControl>
+                              <Input
+                                type="text"
+                                {...field}
+                                onChange={(value) => field.onChange(value)}
+                                className="focus-visible:ring-offset-0 aria-[invalid=true]:border-input"
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
                     </div>
                   </div>
                 ))}
@@ -625,6 +830,53 @@ export function DeliveryFulfillmentModal({ trigger, onSubmit, onClose, initialDa
           </Form>
         </DialogContent>
       </Dialog>
+
+      {/* Viewing B2B Address Modal */}
+      {viewingAddress && (
+        <B2BAddressModal
+          initialData={{
+            ...viewingAddress,
+            product: viewingAddress.product ?? 0,
+            customer: viewingAddress.customer ?? 0,
+            receiver: viewingAddress.receiver ?? undefined,
+            product_offer: viewingAddress.product_offer ?? undefined,
+          }}
+          readOnly={true}
+          onClose={() => setViewingAddress(null)}
+        />
+      )}
+
+      {/* Viewing Warehouse Receipt Modal */}
+      {viewingReceipt && (
+        <WarehouseReceiptModal
+          initialData={{
+            ...viewingReceipt,
+            receipt_id: viewingReceipt.receipt_id ?? undefined,
+            cottage_serial_number: viewingReceipt.cottage_serial_number ?? undefined,
+            proforma: viewingReceipt.proforma ?? undefined,
+          }}
+          readOnly={true}
+          onClose={() => setViewingReceipt(null)}
+        />
+      )}
+
+      {/* Viewing Distribution Modal */}
+      {viewingDistribution && (
+        <B2BDistributionModal
+          initialData={viewingDistribution}
+          readOnly={true}
+          onClose={() => setViewingDistribution(null)}
+        />
+      )}
+
+      {/* Viewing Offer Modal */}
+      {viewingOffer && (
+        <B2BOfferModal
+          initialData={viewingOffer}
+          readOnly={true}
+          onClose={() => setViewingOffer(null)}
+        />
+      )}
     </>
   );
 }

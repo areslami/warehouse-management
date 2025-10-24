@@ -7,6 +7,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "../../ui/dialog";
 import { Button } from "../../ui/button";
+import { Edit2 } from "lucide-react";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "../../ui/form";
 import { Input } from "../../ui/input";
 import { SimpleCombobox } from "../../ui/simple-combobox";
@@ -47,9 +48,10 @@ interface B2BAddressModalProps {
   onSubmit?: (data: B2BAddressFormData) => Promise<void>;
   onClose?: () => void;
   initialData?: Partial<B2BAddressFormData>;
+  readOnly?: boolean;
 }
 
-export function B2BAddressModal({ trigger, onSubmit, onClose, initialData }: B2BAddressModalProps) {
+export function B2BAddressModal({ trigger, onSubmit, onClose, initialData, readOnly = false }: B2BAddressModalProps) {
   const tval = useTranslations("modals.b2bAddress.validation");
   const t = useTranslations("modals.b2bAddress");
   const tCommon = useTranslations("common");
@@ -58,6 +60,7 @@ export function B2BAddressModal({ trigger, onSubmit, onClose, initialData }: B2B
   const [showProductModal, setShowProductModal] = useState(false);
   const [showCustomerModal, setShowCustomerModal] = useState(false);
   const [showReceiverModal, setShowReceiverModal] = useState(false);
+  const [isEditMode, setIsEditMode] = useState(!readOnly);
 
   useEffect(() => {
     if (products.length === 0) refreshCoreData('products');
@@ -149,12 +152,24 @@ export function B2BAddressModal({ trigger, onSubmit, onClose, initialData }: B2B
           </DialogTrigger>
         )}
         <DialogContent dir="rtl" className="min-w-[75%] max-h-[90vh] overflow-y-auto scrollbar-hide p-0 my-0 mx-auto [&>button]:hidden">
-          <DialogHeader className="px-3.5 py-4.5 justify-start" style={{ backgroundColor: "#f6d265" }}>
+          <DialogHeader className="px-3.5 py-4.5 justify-start relative" style={{ backgroundColor: "#f6d265" }}>
             <DialogTitle className="font-bold text-white text-right">{t("title")}</DialogTitle>
+            {readOnly && !isEditMode && (
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="absolute left-4 top-1/2 -translate-y-1/2 text-white hover:bg-white/20"
+                onClick={() => setIsEditMode(true)}
+              >
+                <Edit2 className="h-4 w-4" />
+              </Button>
+            )}
           </DialogHeader>
 
           <Form {...form}>
             <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6 py-4 px-12">
+              <fieldset disabled={!isEditMode} className="space-y-6">
               {/* Row 1: IDs */}
               <div className="grid grid-cols-3 gap-4">
                 <FormField
@@ -493,13 +508,16 @@ export function B2BAddressModal({ trigger, onSubmit, onClose, initialData }: B2B
                   </FormItem>
                 )}
               />
+              </fieldset>
 
-              <div className="flex justify-end space-x-2">
-                <Button type="button" variant="outline" onClick={handleClose}>
-                  {t("cancel")}
-                </Button>
-                <Button type="submit" className="hover:bg-[#f6d265]">{t("save")}</Button>
-              </div>
+              {isEditMode && (
+                <div className="flex justify-end space-x-2">
+                  <Button type="button" variant="outline" onClick={handleClose}>
+                    {t("cancel")}
+                  </Button>
+                  <Button type="submit" className="hover:bg-[#f6d265]">{t("save")}</Button>
+                </div>
+              )}
             </form>
           </Form>
         </DialogContent>

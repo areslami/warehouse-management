@@ -11,7 +11,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Input } from "../../ui/input";
 import { SimpleCombobox } from "../../ui/simple-combobox";
 import { NumberInput } from "../../ui/number-input";
-import { Plus, Trash2 } from "lucide-react";
+import { Plus, Trash2, Edit2 } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useCoreData } from "@/lib/core-data-context";
 import { useModal } from "@/lib/modal-context";
@@ -22,11 +22,12 @@ import { describeWarehouse, describePurchaseProforma, describeProduct } from "@/
 import { WarehouseFormData, WarehouseModal } from "./warehouse-modal";
 import { ProductFormData, ProductModal } from "../product-modal";
 import { PurchaseProformaFormData, PurchaseProformaModal } from "../finance/purchaseproforma-modal";
-import { createWarehouse } from "@/lib/api/warehouse";
+import { createWarehouse, fetchWarehouseReceipts } from "@/lib/api/warehouse";
 import { createProduct } from "@/lib/api/core";
 import { createPurchaseProforma } from "@/lib/api/finance";
 
 export type WarehouseReceiptFormData = {
+  id?: number;
   receipt_id?: string;
   receipt_type: "import_cottage" | "distribution_cottage" | "purchase";
   date: string;
@@ -45,14 +46,17 @@ interface WarehouseReceiptModalProps {
   onSubmit?: (data: WarehouseReceiptFormData) => void;
   onClose?: () => void;
   initialData?: Partial<WarehouseReceiptFormData>;
+  readOnly?: boolean;
 }
 
-export function WarehouseReceiptModal({ trigger, onSubmit, onClose, initialData }: WarehouseReceiptModalProps) {
+export function WarehouseReceiptModal({ trigger, onSubmit, onClose, initialData, readOnly = false }: WarehouseReceiptModalProps) {
   const tval = useTranslations("modals.warehouseReceipt.validation");
   const t = useTranslations("modals.warehouseReceipt");
   const tCommon = useTranslations("common");
   const { data, refreshData } = useCoreData();
   const { openModal } = useModal();
+  const [existingCottageNumbers, setExistingCottageNumbers] = useState<Set<string>>(new Set());
+  const [isEditMode, setIsEditMode] = useState(!readOnly);
 
 
   useEffect(() => {
@@ -68,6 +72,25 @@ export function WarehouseReceiptModal({ trigger, onSubmit, onClose, initialData 
     if (data.suppliers.length === 0) {
       refreshData('suppliers');
     }
+
+    // Load existing cottage serial numbers for validation
+    const loadExistingCottageNumbers = async () => {
+      try {
+        const receipts = await fetchWarehouseReceipts();
+        if (receipts) {
+          const cottageNumbers = new Set(
+            receipts
+              .map(r => r.cottage_serial_number)
+              .filter((num): num is string => num !== null && num !== undefined && num.trim() !== '')
+          );
+          setExistingCottageNumbers(cottageNumbers);
+        }
+      } catch (error) {
+        console.error('Failed to load existing cottage numbers:', error);
+      }
+    };
+
+    loadExistingCottageNumbers();
   }, []);
   const getTodayDate = () => {
     if (typeof window === 'undefined') return '';
@@ -80,12 +103,30 @@ export function WarehouseReceiptModal({ trigger, onSubmit, onClose, initialData 
   });
 
   const warehouseReceiptSchema = z.object({
+    id: z.number().optional(),
     receipt_id: z.string().optional(),
     receipt_type: z.enum(["import_cottage", "distribution_cottage", "purchase"]),
     date: z.string().min(1, tval("date")),
     warehouse: z.number().min(1, tval("warehouse")),
     description: z.string().optional(),
-    cottage_serial_number: z.string().optional(),
+    cottage_serial_number: z.string().optional().refine(
+      (value) => {
+        // Allow empty values
+        if (!value || value.trim() === '') return true;
+
+        // When editing, exclude the current record's cottage number from the check
+        const currentCottageNumber = initialData?.cottage_serial_number;
+        if (currentCottageNumber && value.trim() === currentCottageNumber.trim()) {
+          return true;
+        }
+
+        // Check if the cottage number already exists
+        return !existingCottageNumbers.has(value.trim());
+      },
+      {
+        message: tval("cottage-serial-exists"),
+      }
+    ),
     proforma: z.number().positive().optional(),
     items: z.array(receiptItemSchema).min(1, tval("items")),
   });
@@ -95,6 +136,7 @@ export function WarehouseReceiptModal({ trigger, onSubmit, onClose, initialData 
   const form = useForm<WarehouseReceiptFormData>({
     resolver: zodResolver(warehouseReceiptSchema) as any,
     defaultValues: {
+      id: initialData?.id,
       receipt_id: initialData?.receipt_id || "",
       receipt_type: initialData?.receipt_type || "purchase",
       date: initialData?.date || getTodayDate(),
@@ -116,8 +158,16 @@ export function WarehouseReceiptModal({ trigger, onSubmit, onClose, initialData 
   const handleSubmit = async (data: any) => {
 
     try {
+      // Convert empty cottage_serial_number to undefined to avoid unique constraint issues
+      // Remove id field as it's not needed in the submission payload
+      const { id, ...dataWithoutId } = data;
+      const submissionData = {
+        ...dataWithoutId,
+        cottage_serial_number: data.cottage_serial_number?.trim() || undefined,
+      };
+
       if (onSubmit) {
-        await onSubmit(data);
+        await onSubmit(submissionData);
       }
       if (trigger) {
         setOpen(false);
@@ -147,13 +197,25 @@ export function WarehouseReceiptModal({ trigger, onSubmit, onClose, initialData 
           </DialogTrigger>
         )}
         <DialogContent dir="rtl" className="min-w-[80%] max-h-[90vh] overflow-y-auto scrollbar-hide  p-0 my-0 mx-auto [&>button]:hidden">
-          <DialogHeader className="px-3.5 py-4.5  justify-start" style={{ backgroundColor: "#f6d265" }}>
+          <DialogHeader className="px-3.5 py-4.5  justify-start relative" style={{ backgroundColor: "#f6d265" }}>
             <DialogTitle className="font-bold text-white text-right">{t("title")}</DialogTitle>
             <DialogDescription className="sr-only">Create or edit warehouse receipt</DialogDescription>
+            {readOnly && !isEditMode && (
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="absolute left-4 top-1/2 -translate-y-1/2 text-white hover:bg-white/20"
+                onClick={() => setIsEditMode(true)}
+              >
+                <Edit2 className="h-4 w-4" />
+              </Button>
+            )}
           </DialogHeader>
 
           <Form {...form} >
             <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6 py-4 px-12">
+              <fieldset disabled={!isEditMode} className="space-y-6">
               <div className="grid grid-cols-2 gap-4">
                 <FormField
                   control={form.control as any}
@@ -431,13 +493,16 @@ export function WarehouseReceiptModal({ trigger, onSubmit, onClose, initialData 
                   </div>
                 ))}
               </div>
+              </fieldset>
 
-              <div className="flex justify-end space-x-2">
-                <Button type="button" variant="outline" onClick={handleClose}>
-                  {t("cancel")}
-                </Button>
-                <Button type="submit" className="hover:bg-[#f6d265]"> {t("save")}</Button>
-              </div>
+              {isEditMode && (
+                <div className="flex justify-end space-x-2">
+                  <Button type="button" variant="outline" onClick={handleClose}>
+                    {t("cancel")}
+                  </Button>
+                  <Button type="submit" className="hover:bg-[#f6d265]"> {t("save")}</Button>
+                </div>
+              )}
             </form>
           </Form>
         </DialogContent>

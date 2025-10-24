@@ -84,8 +84,8 @@ class B2BAddressListSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = B2BAddress
-        fields = ['id', 'purchase_id', 'allocation_id', 'cottage_code', 'product_name', 'customer_name',
-                  'receiver_name', 'distributor_name', 'total_weight_purchased', 'purchase_date', 'warehouse_name']
+        fields = ['id', 'purchase_id', 'allocation_id', 'cottage_code', 'product', 'product_name', 'customer', 'customer_name',
+                  'receiver', 'receiver_name', 'distributor_name', 'total_weight_purchased', 'purchase_date', 'warehouse_name']
 
     def get_product_name(self, obj):
         if obj.product:

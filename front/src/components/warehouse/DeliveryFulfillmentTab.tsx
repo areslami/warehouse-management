@@ -16,10 +16,7 @@ import {
 } from "@/lib/api/warehouse";
 import { useModal } from "@/lib/modal-context";
 import { DeliveryFulfillmentModal } from "@/components/modals/warehouse/delivery-fulfillment-modal";
-import {
-  filterByWarehouse,
-  searchFilter
-} from "@/lib/utils/warehouse-utils";
+import { searchFilter } from "@/lib/utils/warehouse-utils";
 import { formatNumber } from "@/lib/utils/number-format";
 import { Edit, Plus, Search, Trash2 } from "lucide-react";
 import { Input } from "../ui/input";
@@ -31,6 +28,7 @@ interface DeliveryFulfillmentTabProps {
 
 export function DeliveryFulfillmentTab({ selectedWarehouseId }: DeliveryFulfillmentTabProps) {
   const t = useTranslations("pages.warehouse.deliveries");
+  const tCommon = useTranslations("common");
   const { openModal } = useModal();
   const [deliveries, setDeliveries] = useState<DeliveryFulfillment[]>([]);
   const [loading, setLoading] = useState(false);
@@ -41,26 +39,25 @@ export function DeliveryFulfillmentTab({ selectedWarehouseId }: DeliveryFulfillm
     try {
       const fetchedDeliveries = await fetchDeliveryFulfillments();
       if (fetchedDeliveries) {
-        const filtered = filterByWarehouse(fetchedDeliveries, selectedWarehouseId);
-        setDeliveries(filtered);
+        setDeliveries(fetchedDeliveries);
       }
     } catch (error) {
       console.error('Failed to load deliveries:', error);
       handleApiErrorWithToast(error, "Loading delivery fulfillments");
-      
+
     } finally {
       setLoading(false);
     }
-  }, [selectedWarehouseId]);
+  }, []);
 
   useEffect(() => {
     loadDeliveries();
-  }, [selectedWarehouseId, loadDeliveries]);
+  }, [loadDeliveries]);
 
   const filteredDeliveries = searchFilter(
     deliveries,
     searchTerm,
-    ['delivery_id', 'warehouse_name', 'description']
+    ['delivery_id', 'b2b_address_purchase_id', 'warehouse_receipt_id', 'description']
   );
 
   const handleCreate = () => {
@@ -95,9 +92,8 @@ export function DeliveryFulfillmentTab({ selectedWarehouseId }: DeliveryFulfillm
           initialData: {
             delivery_id: detailedDelivery.delivery_id || "",
             issue_date: detailedDelivery.issue_date,
-            validity_date: detailedDelivery.validity_date,
-            warehouse: detailedDelivery.warehouse || 0,
-            sales_proforma: detailedDelivery.sales_proforma,
+            b2b_address: detailedDelivery.b2b_address || 0,
+            warehouse_receipt: detailedDelivery.warehouse_receipt || 0,
             description: detailedDelivery.description || "",
             shipping_company: detailedDelivery.shipping_company || 0,
             items: detailedDelivery.items?.map(item => ({
@@ -105,7 +101,7 @@ export function DeliveryFulfillmentTab({ selectedWarehouseId }: DeliveryFulfillm
               shipment_price: item.shipment_price || 0,
               product: item.product,
               weight: item.weight || 0,
-              vehicle_type: item.vehicle_type || "truck",
+              vehicle_type: item.vehicle_type || "single",
               receiver: item.receiver,
             })) || []
           },
@@ -186,9 +182,9 @@ export function DeliveryFulfillmentTab({ selectedWarehouseId }: DeliveryFulfillm
                 <TableHead className="text-right w-16">ردیف</TableHead>
                 <TableHead className="text-right">{t("table.id")}</TableHead>
                 <TableHead className="text-right">{t("table.delivery_id")}</TableHead>
-                <TableHead className="text-right">{t("table.warehouse")}</TableHead>
+                <TableHead className="text-right">{t("table.b2b_address")}</TableHead>
+                <TableHead className="text-right">{t("table.warehouse_receipt")}</TableHead>
                 <TableHead className="text-right">{t("table.issue_date")}</TableHead>
-                <TableHead className="text-right">{t("table.validity_date")}</TableHead>
                 <TableHead className="text-right">{t("table.total_weight")}</TableHead>
                 <TableHead className="text-right">{t("table.operations")}</TableHead>
               </TableRow>
@@ -199,9 +195,9 @@ export function DeliveryFulfillmentTab({ selectedWarehouseId }: DeliveryFulfillm
                   <TableCell className="text-right font-medium">{index + 1}</TableCell>
                   <TableCell>{delivery.id}</TableCell>
                   <TableCell>{delivery.delivery_id}</TableCell>
-                  <TableCell>{delivery.warehouse_name || '-'}</TableCell>
+                  <TableCell>{delivery.b2b_address_purchase_id || '-'}</TableCell>
+                  <TableCell>{delivery.warehouse_receipt_id || '-'}</TableCell>
                   <TableCell><PersianDateTableCell date={delivery.issue_date} /></TableCell>
-                  <TableCell><PersianDateTableCell date={delivery.validity_date} /></TableCell>
                   <TableCell>{formatNumber(delivery.total_weight)}</TableCell>
                   <TableCell>
                     <div className="flex gap-2">

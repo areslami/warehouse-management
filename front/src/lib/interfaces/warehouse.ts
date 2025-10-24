@@ -68,15 +68,17 @@ export interface DeliveryFulfillment {
   id: number;
   delivery_id: string;
   issue_date: string;
-  validity_date: string;
-  warehouse: number | null;
-  warehouse_name?: string;
-  sales_proforma: number | null;
-  sales_proforma_serial?: string;
+  b2b_address: number | null;
+  b2b_address_purchase_id?: string;
+  warehouse_receipt: number | null;
+  warehouse_receipt_id?: string;
   description?: string;
   shipping_company: number | null;
   shipping_company_name?: string;
   total_weight: number;
+  driver_name: string;
+  driver_phone: string;
+  driver_license_plate: string;
   created_at: string;
   updated_at: string;
   items: DeliveryFulfillmentItem[];
@@ -85,14 +87,14 @@ export interface DeliveryFulfillment {
 export interface DeliveryFulfillmentItem {
   id: number;
   delivery: number | null;
-  shipment_id: string;
-  shipment_price: number;
   product: number | null;
   product_name?: string;
   weight: number;
-  vehicle_type: "single" | "double" | "trailer";
-  receiver: number | null;
-  receiver_name?: string;
+  destination?: string;
+  receiver: string;
+  customer: number | null;
+  customer_name?: string;
+  fare: number;
 }
 export interface WarehouseReceiptCreate {
   receipt_id?: string;
@@ -125,18 +127,20 @@ export interface DispatchIssueCreate {
 export interface DeliveryFulfillmentCreate {
   delivery_id: string;
   issue_date: string;
-  validity_date: string;
-  warehouse: number;
-  sales_proforma: number;
+  b2b_address: number;
+  warehouse_receipt: number;
   description: string;
   shipping_company: number;
+  driver_name: string;
+  driver_phone: string;
+  driver_license_plate: string;
   total_weight: number;
   items: {
-    shipment_id: string;
-    shipment_price: number;
     product: number;
     weight: number;
-    vehicle_type: "single" | "double" | "trailer";
-    receiver: number;
+    destination?: string;
+    receiver: string;
+    customer: number;
+    fare: number;
   }[];
 }
