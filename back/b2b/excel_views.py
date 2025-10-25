@@ -17,21 +17,23 @@ import re
 import os
 from django.conf import settings
 
+
 @api_view(['POST'])
 def upload_excel_sales(request):
     if 'file' not in request.FILES:
         return Response({'error': 'No file provided'}, status=status.HTTP_400_BAD_REQUEST)
-    
+
     file = request.FILES['file']
     sale_type = request.POST.get('sale_type', 'distributor_sale')
-    
+
     try:
         if sale_type == 'your_sale':
             content = file.read()
             rows = parse_html_table(content)
-            print(f"Your sale HTML columns: {list(rows[0].keys()) if rows else 'No rows'}")
+            print(
+                f"Your sale HTML columns: {list(rows[0].keys()) if rows else 'No rows'}")
             processed_rows = [process_your_sale_row(row) for row in rows]
-            
+
             return Response({
                 'rows': processed_rows,
                 'count': len(processed_rows),
@@ -40,9 +42,10 @@ def upload_excel_sales(request):
         else:
             content = file.read()
             rows = parse_html_table(content)
-            print(f"Distributor sale HTML columns: {list(rows[0].keys()) if rows else 'No rows'}")
+            print(
+                f"Distributor sale HTML columns: {list(rows[0].keys()) if rows else 'No rows'}")
             processed_rows = [process_sale_row(row) for row in rows]
-            
+
             return Response({
                 'rows': processed_rows,
                 'count': len(processed_rows),
@@ -54,51 +57,55 @@ def upload_excel_sales(request):
         print(traceback.format_exc())
         return Response({'error': str(e), 'details': traceback.format_exc()}, status=status.HTTP_400_BAD_REQUEST)
 
+
 @api_view(['POST'])
 def upload_excel_addresses(request):
     if 'file' not in request.FILES:
         return Response({'error': 'No file provided'}, status=status.HTTP_400_BAD_REQUEST)
-    
+
     file = request.FILES['file']
-    address_type = request.POST.get('address_type','')
+    address_type = request.POST.get('address_type', '')
     try:
         df = pd.read_excel(io.BytesIO(file.read()))
         rows = df.fillna('').to_dict('records')
-        
+
         if address_type == "your_address":
-            offer_id = request.POST.get('offer_id',"")
-            result = [process_address_row(row,address_type,offer_id) for row in rows]
+            offer_id = request.POST.get('offer_id', "")
+            result = [process_address_row(
+                row, address_type, offer_id) for row in rows]
         else:
-            transfer_id = request.POST.get('transfer_id',"")
-            result = [process_address_row(row,address_type,transfer_id) for row in rows]
-            
-        number_of_customer_created = sum([c for _,c,_,_ in result])
-        number_of_receiver_created = sum([r for _,_,r,_ in result])
-        number_of_sales_created = sum([s for _,_,_,s in result])
-        processed_rows = [processed for processed,_,_,_ in result]
-        
+            transfer_id = request.POST.get('transfer_id', "")
+            result = [process_address_row(
+                row, address_type, transfer_id) for row in rows]
+
+        number_of_customer_created = sum([c for _, c, _, _ in result])
+        number_of_receiver_created = sum([r for _, _, r, _ in result])
+        number_of_sales_created = sum([s for _, _, _, s in result])
+        processed_rows = [processed for processed, _, _, _ in result]
+
         return Response({
             'rows': processed_rows,
             'count': len(processed_rows),
-            'number_of_customer_created':number_of_customer_created,
-            'number_of_receiver_created':number_of_receiver_created,
-            'number_of_sales_created':number_of_sales_created,
+            'number_of_customer_created': number_of_customer_created,
+            'number_of_receiver_created': number_of_receiver_created,
+            'number_of_sales_created': number_of_sales_created,
         })
     except Exception as e:
         import traceback
         print(f"Error in upload_excel_addresses: {str(e)}")
         print(traceback.format_exc())
-        return Response({'error': str(e), 'details': traceback.format_exc()}, status=status.HTTP_400_BAD_REQUEST)  
+        return Response({'error': str(e), 'details': traceback.format_exc()}, status=status.HTTP_400_BAD_REQUEST)
+
 
 @api_view(['POST'])
 def preview_sales(request):
     data = request.data
-    
+
     # Handle offer field properly - check if it has a valid id
     offer_id = None
     if data.get('offer') and isinstance(data.get('offer'), dict):
         offer_id = data.get('offer').get('id')
-    
+
     # Map Persian payment types to valid choices
     payment_method = data.get('payment_method', 'cash')
     if payment_method == 'توافقی':
@@ -109,7 +116,7 @@ def preview_sales(request):
         payment_method = 'credit'
     elif payment_method not in ['cash', 'credit', 'agreement', 'other']:
         payment_method = 'other'
-    
+
     # Map to B2BSale fields
     sale_data = {
         'purchase_id': data.get('purchase_id'),
@@ -124,7 +131,7 @@ def preview_sales(request):
         'cottage_code': data.get('cottage_code') or data.get('cottage_number') or '',
         'purchase_type': payment_method
     }
-    
+
     response_data = {
         'sale_data': sale_data,
         'unmapped_fields': data.get('unmapped', {}),
@@ -133,7 +140,7 @@ def preview_sales(request):
         'needs_product_creation': not bool(data.get('product')),
         'product_name': data.get('product_name'),
     }
-    
+
     return Response(response_data)
 
 
@@ -144,9 +151,9 @@ def preview_addresses(request):
     # Normalize payment method
     pm = data.get('payment_method')
     if isinstance(pm, str):
-      pm_str = pm.strip()
+        pm_str = pm.strip()
     else:
-      pm_str = ''
+        pm_str = ''
     if pm_str in ['cash', 'credit', 'agreement', 'other']:
         normalized_pm = pm_str
     else:
@@ -185,7 +192,7 @@ def preview_addresses(request):
     if offer_id:
         address_data['product_offer'] = offer_id
 
-    for k in ['customer_account_number','address_register_date','deposit_id','single','double','trailer','purchase_weight','waybilled_weight','non_waybilled_weight',"agreement_period_1","agreement_amount_1","agreement_period_2","agreement_amount_2","agreement_period_3","agreement_amount_3","description"]:
+    for k in ['customer_account_number', 'address_register_date', 'deposit_id', 'single', 'double', 'trailer', 'purchase_weight', 'waybilled_weight', 'non_waybilled_weight', "agreement_period_1", "agreement_amount_1", "agreement_period_2", "agreement_amount_2", "agreement_period_3", "agreement_amount_3", "description"]:
         if data.get(k) not in [None, '']:
             address_data[k] = data.get(k)
 
@@ -198,20 +205,20 @@ def preview_addresses(request):
         'needs_product_creation': not bool(data.get('product')),
         'product_name': data.get('product_name'),
     }
-    
+
     return Response(response_data)
 
 
 @api_view(['POST'])
 def create_sales_batch(request):
     sales = request.data.get('sales', [])
-    
+
     if not sales:
         return Response({'error': 'No sales provided'}, status=status.HTTP_400_BAD_REQUEST)
-    
+
     created = []
     errors = []
-    
+
     try:
         with transaction.atomic():
             for idx, sale_data in enumerate(sales):
@@ -226,15 +233,16 @@ def create_sales_batch(request):
                     payment_type = 'credit'
                 elif payment_type not in ['cash', 'credit', 'agreement', 'other']:
                     payment_type = 'other'
-                    
-                weight = int(sale_data.get('agency_weight', 0) or sale_data.get('weight', 0) or sale_data.get('total_weight_purchased', 0) or 0)
+
+                weight = int(sale_data.get('agency_weight', 0) or sale_data.get(
+                    'weight', 0) or sale_data.get('total_weight_purchased', 0) or 0)
                 unit_price = int(sale_data.get('unit_price', 0) or 0)
                 total_price = int(sale_data.get('total_price', 0) or 0)
-                
+
                 # Calculate total_price if not provided
                 if total_price == 0 and weight > 0 and unit_price > 0:
                     total_price = weight * unit_price
-                
+
                 cleaned_data = {
                     'purchase_id': sale_data.get('purchase_id'),
                     'offer': sale_data.get('b2b_offer'),
@@ -251,14 +259,15 @@ def create_sales_batch(request):
                     "agreement_amount_1": sale_data.get('agreement_amount_1', ''),
                     "agreement_period_2": sale_data.get('agreement_period_2', ''),
                     "agreement_amount_2": sale_data.get('agreement_amount_2', ''),
-                    "agreement_period_3": sale_data.get('agreement_period_3', ''),  
+                    "agreement_period_3": sale_data.get('agreement_period_3', ''),
                     "agreement_amount_3": sale_data.get('agreement_amount_3', ''),
                     "description": sale_data.get('description', ''),
                 }
-                
+
                 # Remove None values
-                cleaned_data = {k: v for k, v in cleaned_data.items() if v is not None}
-                
+                cleaned_data = {k: v for k,
+                                v in cleaned_data.items() if v is not None}
+
                 serializer = B2BSaleSerializer(data=cleaned_data)
                 if serializer.is_valid():
                     serializer.save()
@@ -272,16 +281,16 @@ def create_sales_batch(request):
                         'purchase_id': sale_data.get('purchase_id'),
                         'errors': serializer.errors
                     })
-            
+
             if errors:
                 raise ValueError("Validation errors occurred")
-    
+
     except ValueError:
         return Response({
             'success': False,
             'errors': errors
         }, status=status.HTTP_400_BAD_REQUEST)
-    
+
     return Response({
         'success': True,
         'created': created,
@@ -289,16 +298,15 @@ def create_sales_batch(request):
     })
 
 
-
 @api_view(['POST'])
 def create_addresses_batch(request):
     sales = request.data.get('sales', [])
     if not sales:
         return Response({'error': 'No sales provided'}, status=status.HTTP_400_BAD_REQUEST)
-    
+
     created = []
     errors = []
-    
+
     try:
         with transaction.atomic():
             for idx, dist_data in enumerate(sales):
@@ -311,7 +319,7 @@ def create_addresses_batch(request):
                         if key == 'product_offer' and (not value or value == 'null'):
                             continue
                         cleaned_data[key] = value
-                
+
                 pm = cleaned_data.get('payment_method', '')
                 if isinstance(pm, str):
                     pm_str = pm.strip()
@@ -334,16 +342,16 @@ def create_addresses_batch(request):
                         'allocation_id': dist_data.get('allocation_id'),
                         'errors': serializer.errors
                     })
-            
+
             if errors:
                 raise ValueError("Validation errors occurred")
-    
+
     except ValueError:
         return Response({
             'success': False,
             'errors': errors
         }, status=status.HTTP_400_BAD_REQUEST)
-    
+
     return Response({
         'success': True,
         'created': created,
@@ -386,22 +394,24 @@ def export_addresses_xlsx(request):
         'product', 'customer', 'receiver', 'product_offer__warehouse_receipt__warehouse'
     )
     headers = [
-        'کد','وزن کل خرید','تاریخ خرید','قیمت هر واحد','شماره پیگیری','استان','شهرستان','مبلغ پرداختی','شماره حساب خریدار',
-        'کد کوتاژ','عنوان کالا','توضیحات','شیوه پرداخت','شناسه عرضه','تاریخ ثبت آدرس','شناسه تخصیص','نام خریدار','شناسه ملی خریدار',
-        'کدپستی خریدار','آدرس خریدار','شناسه واریز','شماره همراه خریدار','شناسه یکتا خریدار','نوع کاربری خریدار','نام تحویل گیرنده',
-        'شناسه یکتای تحویل','تک','جفت','تریلی','آدرس تحویل','کد پستی تحویل','شماره هماهنگی تحویل','کد ملی تحویل','وزن سفارش',
-        'بازه 1 پرداخت توافقی (روز)','بازه 2 پرداخت توافقی (روز)','بازه 3 پرداخت توافقی (روز)',
-        'مبلغ بازه 1 توافقی-ریال','مبلغ بازه 2 توافقی-ریال','مبلغ بازه 3 توافقی-ریال',
-        'وزن بارنامه شده','وزن بارنامه نشده'
+        'کد', 'وزن کل خرید', 'تاریخ خرید', 'قیمت هر واحد', 'شماره پیگیری', 'استان', 'شهرستان', 'مبلغ پرداختی', 'شماره حساب خریدار',
+        'کد کوتاژ', 'عنوان کالا', 'توضیحات', 'شیوه پرداخت', 'شناسه عرضه', 'تاریخ ثبت آدرس', 'شناسه تخصیص', 'نام خریدار', 'شناسه ملی خریدار',
+        'کدپستی خریدار', 'آدرس خریدار', 'شناسه واریز', 'شماره همراه خریدار', 'شناسه یکتا خریدار', 'نوع کاربری خریدار', 'نام تحویل گیرنده',
+        'شناسه یکتای تحویل', 'تک', 'جفت', 'تریلی', 'آدرس تحویل', 'کد پستی تحویل', 'شماره هماهنگی تحویل', 'کد ملی تحویل', 'وزن سفارش',
+        'بازه 1 پرداخت توافقی (روز)', 'بازه 2 پرداخت توافقی (روز)', 'بازه 3 پرداخت توافقی (روز)',
+        'مبلغ بازه 1 توافقی-ریال', 'مبلغ بازه 2 توافقی-ریال', 'مبلغ بازه 3 توافقی-ریال',
+        'وزن بارنامه شده', 'وزن بارنامه نشده'
     ]
     rows = []
     for a in qs:
         customer = a.customer
         receiver = a.receiver
         offer = getattr(a, 'product_offer', None)
-        sale = B2BSale.objects.select_related('b2b_distribution__warehouse_receipt__warehouse').filter(purchase_id=a.purchase_id).first()
+        sale = B2BSale.objects.select_related(
+            'b2b_distribution__warehouse_receipt__warehouse').filter(purchase_id=a.purchase_id).first()
         _ = offer or sale  # reserved in case we expand mapping later
-        ag_p1, ag_d1, ag_p2, ag_d2, ag_p3, ag_d3 = _extract_agreements(getattr(a, 'credit_description', ''))
+        ag_p1, ag_d1, ag_p2, ag_d2, ag_p3, ag_d3 = _extract_agreements(
+            getattr(a, 'credit_description', ''))
         row = [
             a.purchase_id or '',
             int(a.total_weight_purchased or 0),
@@ -413,11 +423,12 @@ def export_addresses_xlsx(request):
             int(a.payment_amount or 0),
             (a.customer_account_number or ''),
             a.cottage_code or '',
-            (f"{a.product.code} / {a.product.name}"  if a.product else ''),
+            (f"{a.product.code} / {a.product.name}" if a.product else ''),
             getattr(a, 'credit_description', '') or '',
             _fa_payment_label(getattr(a, 'payment_method', '')),
             (offer.offer_id if offer else ''),
-            (jdatetime.date.fromgregorian(date=a.created_at.date()).strftime('%Y/%m/%d') if getattr(a, 'created_at', None) else ''),
+            (jdatetime.date.fromgregorian(date=a.created_at.date()).strftime(
+                '%Y/%m/%d') if getattr(a, 'created_at', None) else ''),
             a.allocation_id or '',
             (customer.company_name or customer.full_name) if customer else '',
             (customer.national_id or customer.personal_code or '') if customer else '',
@@ -426,7 +437,8 @@ def export_addresses_xlsx(request):
             (a.deposit_id or ''),
             (customer.phone or '') if customer else '',
             (customer.economic_code or '') if customer else '',
-            ('حقوقی' if (customer and customer.customer_type=='corporate') else ('حقیقی' if customer else '')),
+            ('حقوقی' if (customer and customer.customer_type ==
+             'corporate') else ('حقیقی' if customer else '')),
             (receiver.company_name or receiver.full_name) if receiver else '',
             (receiver.economic_code or '') if receiver else '',
             (a.single or ''), (a.double or ''), (a.trailer or ''),
@@ -453,11 +465,15 @@ def export_addresses_xlsx(request):
         try:
             # Resolve template path using Django BASE_DIR with fallbacks
             candidates = [
-                os.path.join(getattr(settings, 'BASE_DIR', ''), 'tmp', '2.xlsx'),
-                os.path.normpath(os.path.join(os.path.dirname(__file__), '../tmp/2.xlsx')),
-                os.path.join(getattr(settings, 'BASE_DIR', ''), 'back', 'tmp', '2.xlsx'),
+                os.path.join(getattr(settings, 'BASE_DIR', ''),
+                             'tmp', '2.xlsx'),
+                os.path.normpath(os.path.join(
+                    os.path.dirname(__file__), '../tmp/2.xlsx')),
+                os.path.join(getattr(settings, 'BASE_DIR', ''),
+                             'back', 'tmp', '2.xlsx'),
             ]
-            template_path = next((p for p in candidates if p and os.path.exists(p)), None)
+            template_path = next(
+                (p for p in candidates if p and os.path.exists(p)), None)
             from openpyxl import load_workbook
             if template_path and os.path.exists(template_path):
                 tmpl_wb = load_workbook(template_path)
@@ -479,11 +495,13 @@ def export_addresses_xlsx(request):
 
                 # Apply per-column header styles and column widths
                 num_cols = ws.max_column
-                t_first_header = tmpl_ws.cell(row=1, column=1) if tmpl_ws.max_column >= 1 else None
+                t_first_header = tmpl_ws.cell(
+                    row=1, column=1) if tmpl_ws.max_column >= 1 else None
                 for col_idx in range(1, num_cols + 1):
                     col_letter = get_column_letter(col_idx)
                     out_cell = ws.cell(row=1, column=col_idx)
-                    t_cell = tmpl_ws.cell(row=1, column=col_idx) if col_idx <= tmpl_ws.max_column else None
+                    t_cell = tmpl_ws.cell(
+                        row=1, column=col_idx) if col_idx <= tmpl_ws.max_column else None
                     if not t_cell:
                         t_cell = t_first_header
 
@@ -497,9 +515,11 @@ def export_addresses_xlsx(request):
                         except Exception:
                             pass
                         try:
-                            out_cell.alignment = t_cell.alignment or Alignment(horizontal='center', vertical='center')
+                            out_cell.alignment = t_cell.alignment or Alignment(
+                                horizontal='center', vertical='center')
                         except Exception:
-                            out_cell.alignment = Alignment(horizontal='center', vertical='center')
+                            out_cell.alignment = Alignment(
+                                horizontal='center', vertical='center')
                         try:
                             out_cell.border = t_cell.border or Border()
                         except Exception:
@@ -515,12 +535,14 @@ def export_addresses_xlsx(request):
 
                 # Data row baseline style sampled from template row 2
                 template_has_row2 = tmpl_ws.max_row >= 2
-                t_first_body = tmpl_ws.cell(row=2, column=1) if (tmpl_ws.max_row >= 2 and tmpl_ws.max_column >= 1) else None
+                t_first_body = tmpl_ws.cell(row=2, column=1) if (
+                    tmpl_ws.max_row >= 2 and tmpl_ws.max_column >= 1) else None
                 if template_has_row2:
                     max_r = ws.max_row
                     max_c = ws.max_column
                     for col_idx in range(1, max_c + 1):
-                        t_body_cell = tmpl_ws.cell(row=2, column=col_idx) if col_idx <= tmpl_ws.max_column else None
+                        t_body_cell = tmpl_ws.cell(
+                            row=2, column=col_idx) if col_idx <= tmpl_ws.max_column else None
                         if not t_body_cell:
                             t_body_cell = t_first_body
                         if not t_body_cell:
@@ -544,8 +566,10 @@ def export_addresses_xlsx(request):
 
                 # Ensure borders and fills even if template styles are partial
                 thin_side = Side(style='thin', color='FF000000')
-                thin_border = Border(left=thin_side, right=thin_side, top=thin_side, bottom=thin_side)
+                thin_border = Border(
+                    left=thin_side, right=thin_side, top=thin_side, bottom=thin_side)
                 # Derive header/body fills from template if present, otherwise set explicit colors
+
                 def _resolve_rgb(fill, default_rgb):
                     try:
                         if getattr(fill, 'patternType', None) == 'solid':
@@ -562,13 +586,18 @@ def export_addresses_xlsx(request):
                 default_header_rgb = 'FF7030A0'   # purple
                 default_body_rgb = 'FFF2F2F2'     # light gray
 
-                header_source = tmpl_ws.cell(row=1, column=1) if tmpl_ws and tmpl_ws.max_row >= 1 and tmpl_ws.max_column >= 1 else None
-                body_source = tmpl_ws.cell(row=2, column=1) if tmpl_ws and tmpl_ws.max_row >= 2 and tmpl_ws.max_column >= 1 else None
+                header_source = tmpl_ws.cell(
+                    row=1, column=1) if tmpl_ws and tmpl_ws.max_row >= 1 and tmpl_ws.max_column >= 1 else None
+                body_source = tmpl_ws.cell(
+                    row=2, column=1) if tmpl_ws and tmpl_ws.max_row >= 2 and tmpl_ws.max_column >= 1 else None
 
-                header_rgb = _resolve_rgb(getattr(header_source, 'fill', None), default_header_rgb) if header_source else default_header_rgb
-                body_rgb = _resolve_rgb(getattr(body_source, 'fill', None), default_body_rgb) if body_source else default_body_rgb
+                header_rgb = _resolve_rgb(getattr(
+                    header_source, 'fill', None), default_header_rgb) if header_source else default_header_rgb
+                body_rgb = _resolve_rgb(getattr(
+                    body_source, 'fill', None), default_body_rgb) if body_source else default_body_rgb
 
-                header_fill = PatternFill(fill_type='solid', fgColor=header_rgb)
+                header_fill = PatternFill(
+                    fill_type='solid', fgColor=header_rgb)
                 body_fill = PatternFill(fill_type='solid', fgColor=body_rgb)
 
                 # Apply to header row
@@ -578,7 +607,8 @@ def export_addresses_xlsx(request):
                     # Force white, bold header text while preserving font family/size if possible
                     try:
                         existing = c.font
-                        c.font = Font(name=getattr(existing, 'name', None), size=getattr(existing, 'size', None), bold=True, color='FFFFFFFF')
+                        c.font = Font(name=getattr(existing, 'name', None), size=getattr(
+                            existing, 'size', None), bold=True, color='FFFFFFFF')
                     except Exception:
                         c.font = Font(bold=True, color='FFFFFFFF')
                 # Apply to all data cells
@@ -589,14 +619,18 @@ def export_addresses_xlsx(request):
             else:
                 # No template found: keep a simple readable header
                 header_font = Font(bold=True, color='FFFFFFFF')
-                header_fill = PatternFill(fill_type='solid', fgColor='FF7030A0')  # purple
-                body_fill = PatternFill(fill_type='solid', fgColor='FFF2F2F2')    # light gray
+                header_fill = PatternFill(
+                    fill_type='solid', fgColor='FF7030A0')  # purple
+                body_fill = PatternFill(
+                    fill_type='solid', fgColor='FFF2F2F2')    # light gray
                 thin_side = Side(style='thin', color='FF000000')
-                thin_border = Border(left=thin_side, right=thin_side, top=thin_side, bottom=thin_side)
+                thin_border = Border(
+                    left=thin_side, right=thin_side, top=thin_side, bottom=thin_side)
                 for cell in ws[1]:
                     cell.font = header_font
                     cell.fill = header_fill
-                    cell.alignment = Alignment(horizontal='center', vertical='center')
+                    cell.alignment = Alignment(
+                        horizontal='center', vertical='center')
                     cell.border = thin_border
                 for row in ws.iter_rows(min_row=2, max_row=ws.max_row, min_col=1, max_col=ws.max_column):
                     for c in row:
@@ -608,22 +642,27 @@ def export_addresses_xlsx(request):
             header_fill = PatternFill(fill_type='solid', fgColor='FF7030A0')
             body_fill = PatternFill(fill_type='solid', fgColor='FFF2F2F2')
             thin_side = Side(style='thin', color='FF000000')
-            thin_border = Border(left=thin_side, right=thin_side, top=thin_side, bottom=thin_side)
+            thin_border = Border(
+                left=thin_side, right=thin_side, top=thin_side, bottom=thin_side)
             for cell in ws[1]:
                 cell.font = header_font
                 cell.fill = header_fill
-                cell.alignment = Alignment(horizontal='center', vertical='center')
+                cell.alignment = Alignment(
+                    horizontal='center', vertical='center')
                 cell.border = thin_border
             for row in ws.iter_rows(min_row=2, max_row=ws.max_row, min_col=1, max_col=ws.max_column):
                 for c in row:
                     c.fill = body_fill
                     c.border = thin_border
         for col_cells in ws.columns:
-            max_len = max((len(str(c.value)) if c.value is not None else 0) for c in col_cells[:100])
-            ws.column_dimensions[col_cells[0].column_letter].width = min(max(12, max_len + 2), 40)
+            max_len = max((len(str(c.value)) if c.value is not None else 0)
+                          for c in col_cells[:100])
+            ws.column_dimensions[col_cells[0].column_letter].width = min(
+                max(12, max_len + 2), 40)
         ws.freeze_panes = 'A2'
 
     output.seek(0)
-    resp = HttpResponse(output.getvalue(), content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+    resp = HttpResponse(output.getvalue(
+    ), content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
     resp['Content-Disposition'] = 'attachment; filename="b2b-addresses.xlsx"'
     return resp
