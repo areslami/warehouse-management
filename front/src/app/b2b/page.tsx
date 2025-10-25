@@ -1721,7 +1721,13 @@ export default function B2BPage() {
 
       {showOfferModal && (
         <B2BOfferModal
-          initialData={editingOffer || undefined}
+          isEditing={!!editingOffer && !isOfferReadOnly}
+          initialData={editingOffer ? {
+            ...editingOffer,
+            offer_weight: Number(editingOffer.offer_weight),
+            unit_price: Number(editingOffer.unit_price),
+            warehouse_receipt: editingOffer.warehouse_receipt ? Number(editingOffer.warehouse_receipt) : null,
+          } : undefined}
           readOnly={isOfferReadOnly}
           onSubmit={async (data) => {
             try {
@@ -1752,9 +1758,14 @@ export default function B2BPage() {
 
       {showDistributionModal && (
         <B2BDistributionModal
+          isEditing={!!editingDistribution && !isDistributionReadOnly}
           initialData={editingDistribution ? {
             ...editingDistribution,
-            b2b_offer: editingDistribution.b2b_offer ?? undefined
+            agency_weight: Number(editingDistribution.agency_weight),
+            unit_price: Number(editingDistribution.unit_price),
+            customer: Number(editingDistribution.customer),
+            warehouse_receipt: editingDistribution.warehouse_receipt ? Number(editingDistribution.warehouse_receipt) : 0,
+            sales_proforma: editingDistribution.sales_proforma ? Number(editingDistribution.sales_proforma) : 0,
           } : undefined}
           readOnly={isDistributionReadOnly}
           onSubmit={async (data) => {
@@ -1787,10 +1798,16 @@ export default function B2BPage() {
 
       {showAddressModal && (
         <B2BAddressModal
+          isEditing={!!editingAddress}
           initialData={editingAddress ? {
             ...editingAddress,
-            product: editingAddress.product ?? undefined,
-            customer: editingAddress.customer ?? undefined,
+            product: editingAddress.product ? Number(editingAddress.product) : 0,
+            customer: editingAddress.customer ? Number(editingAddress.customer) : 0,
+            receiver: editingAddress.receiver ? Number(editingAddress.receiver) : 0,
+            total_weight_purchased: Number(editingAddress.total_weight_purchased),
+            unit_price: Number(editingAddress.unit_price),
+            payment_amount: Number(editingAddress.payment_amount),
+            product_offer: editingAddress.product_offer ? Number(editingAddress.product_offer) : undefined,
             purchase_date: editingAddress.purchase_date || ''
           } : undefined}
           onSubmit={async (data) => {
@@ -2111,7 +2128,16 @@ export default function B2BPage() {
 
       {showSaleModal && (
         <B2BSaleModal
-          initialData={editingSale || undefined}
+          isEditing={!!editingSale}
+          initialData={editingSale ? {
+            ...editingSale,
+            weight: Number(editingSale.weight),
+            unit_price: Number(editingSale.unit_price),
+            product: Number(editingSale.product),
+            customer: Number(editingSale.customer),
+            offer: editingSale.offer ? Number(editingSale.offer) : null,
+            b2b_distribution: editingSale.b2b_distribution ? Number(editingSale.b2b_distribution) : null,
+          } : undefined}
           onSubmit={async (data) => {
             try {
               if (editingSale) {

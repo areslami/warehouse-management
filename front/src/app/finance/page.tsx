@@ -319,9 +319,19 @@ export default function FinancePage() {
                         <Button size="sm" variant="ghost" onClick={(e) => {
                           e.stopPropagation();
                           openModal(SalesProformaModal, {
+                            isEditing: true,
                             initialData: {
                               ...proforma,
-                              payment_description: proforma.payment_description || undefined
+                              customer: Number(proforma.customer),
+                              tax: String(proforma.tax),
+                              discount: String(proforma.discount),
+                              payment_description: proforma.payment_description || undefined,
+                              lines: proforma.lines?.map(line => ({
+                                ...line,
+                                product: Number(line.product),
+                                weight: String(line.weight),
+                                unit_price: String(line.unit_price),
+                              })) || [],
                             },
                             onSubmit: async (data) => {
                               try {
@@ -444,7 +454,19 @@ export default function FinancePage() {
                         <Button size="sm" variant="ghost" onClick={(e) => {
                           e.stopPropagation();
                           openModal(PurchaseProformaModal, {
-                            initialData: proforma,
+                            isEditing: true,
+                            initialData: {
+                              ...proforma,
+                              supplier: Number(proforma.supplier),
+                              tax: Number(proforma.tax),
+                              discount: Number(proforma.discount),
+                              lines: proforma.lines?.map(line => ({
+                                ...line,
+                                product: Number(line.product),
+                                weight: Number(line.weight),
+                                unit_price: Number(line.unit_price),
+                              })) || [],
+                            },
                             onSubmit: async (data) => {
                               try {
                                 await updatePurchaseProforma(proforma.id, data);
@@ -494,9 +516,19 @@ export default function FinancePage() {
                     if (selectedType === 'sales') {
                       const proforma = selectedItem as SalesProforma;
                       openModal(SalesProformaModal, {
+                        isEditing: true,
                         initialData: {
                           ...proforma,
-                          payment_description: proforma.payment_description || undefined
+                          customer: Number(proforma.customer),
+                          tax: String(proforma.tax),
+                          discount: String(proforma.discount),
+                          payment_description: proforma.payment_description || undefined,
+                          lines: proforma.lines?.map(line => ({
+                            ...line,
+                            product: Number(line.product),
+                            weight: String(line.weight),
+                            unit_price: String(line.unit_price),
+                          })) || [],
                         },
                         onSubmit: async (data) => {
                           try {
@@ -517,7 +549,19 @@ export default function FinancePage() {
                     } else {
                       const proforma = selectedItem as PurchaseProforma;
                       openModal(PurchaseProformaModal, {
-                        initialData: proforma,
+                        isEditing: true,
+                        initialData: {
+                          ...proforma,
+                          supplier: Number(proforma.supplier),
+                          tax: Number(proforma.tax),
+                          discount: Number(proforma.discount),
+                          lines: proforma.lines?.map(line => ({
+                            ...line,
+                            product: Number(line.product),
+                            weight: Number(line.weight),
+                            unit_price: Number(line.unit_price),
+                          })) || [],
+                        },
                         onSubmit: async (data) => {
                           try {
                             await updatePurchaseProforma(proforma.id, data);

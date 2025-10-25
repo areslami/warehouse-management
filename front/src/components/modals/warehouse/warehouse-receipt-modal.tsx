@@ -47,9 +47,10 @@ interface WarehouseReceiptModalProps {
   onClose?: () => void;
   initialData?: Partial<WarehouseReceiptFormData>;
   readOnly?: boolean;
+  isEditing?: boolean;
 }
 
-export function WarehouseReceiptModal({ trigger, onSubmit, onClose, initialData, readOnly = false }: WarehouseReceiptModalProps) {
+export function WarehouseReceiptModal({ trigger, onSubmit, onClose, initialData, readOnly = false, isEditing }: WarehouseReceiptModalProps) {
   const tval = useTranslations("modals.warehouseReceipt.validation");
   const t = useTranslations("modals.warehouseReceipt");
   const tCommon = useTranslations("common");
@@ -224,7 +225,13 @@ export function WarehouseReceiptModal({ trigger, onSubmit, onClose, initialData,
                     <FormItem>
                       <FormLabel>{t("receipt-id")}</FormLabel>
                       <FormControl>
-                        <Input {...field} />
+                        <Input
+                          {...field}
+                          readOnly={isEditing}
+                          className={isEditing ? "bg-gray-100 cursor-not-allowed" : ""}
+                          autoFocus={false}
+                          tabIndex={isEditing ? -1 : undefined}
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>

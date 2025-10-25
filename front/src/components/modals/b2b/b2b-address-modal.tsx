@@ -49,9 +49,10 @@ interface B2BAddressModalProps {
   onClose?: () => void;
   initialData?: Partial<B2BAddressFormData>;
   readOnly?: boolean;
+  isEditing?: boolean;
 }
 
-export function B2BAddressModal({ trigger, onSubmit, onClose, initialData, readOnly = false }: B2BAddressModalProps) {
+export function B2BAddressModal({ trigger, onSubmit, onClose, initialData, readOnly = false, isEditing }: B2BAddressModalProps) {
   const tval = useTranslations("modals.b2bAddress.validation");
   const t = useTranslations("modals.b2bAddress");
   const tCommon = useTranslations("common");
@@ -174,12 +175,18 @@ export function B2BAddressModal({ trigger, onSubmit, onClose, initialData, readO
               <div className="grid grid-cols-3 gap-4">
                 <FormField
                   control={form.control as any}
-                  name="purchase_id"
+                  name="allocation_id"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>{t("purchase-id")}</FormLabel>
+                      <FormLabel>{t("allocation-id")}</FormLabel>
                       <FormControl>
-                        <Input {...field} />
+                        <Input
+                          {...field}
+                          readOnly={isEditing}
+                          className={isEditing ? "bg-gray-100 cursor-not-allowed" : ""}
+                          autoFocus={false}
+                          tabIndex={isEditing ? -1 : undefined}
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -188,10 +195,10 @@ export function B2BAddressModal({ trigger, onSubmit, onClose, initialData, readO
 
                 <FormField
                   control={form.control as any}
-                  name="allocation_id"
+                  name="purchase_id"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>{t("allocation-id")}</FormLabel>
+                      <FormLabel>{t("purchase-id")}</FormLabel>
                       <FormControl>
                         <Input {...field} />
                       </FormControl>

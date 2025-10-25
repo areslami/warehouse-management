@@ -43,9 +43,10 @@ interface B2BSaleModalProps {
     onSubmit?: (data: B2BSaleFormData) => Promise<void>;
     onClose?: () => void;
     initialData?: Partial<B2BSaleFormData>;
+    isEditing?: boolean;
 }
 
-export function B2BSaleModal({ trigger, onSubmit, onClose, initialData }: B2BSaleModalProps) {
+export function B2BSaleModal({ trigger, onSubmit, onClose, initialData, isEditing }: B2BSaleModalProps) {
     const tval = useTranslations("modals.b2bSale.validation");
     const t = useTranslations("modals.b2bSale");
     const tCommon = useTranslations("common");
@@ -56,7 +57,9 @@ export function B2BSaleModal({ trigger, onSubmit, onClose, initialData }: B2BSal
     const [showCustomerModal, setShowCustomerModal] = useState(false);
     const [showOfferModal, setShowOfferModal] = useState(false);
     const [ShowDistribtuionModal, setShowDistribtuionModal] = useState(false);
-    const [saleType, setSaleType] = useState<"your_sale" | "distributor_sale">("your_sale");
+    const [saleType, setSaleType] = useState<"your_sale" | "distributor_sale">(
+        initialData?.is_distributor ? "distributor_sale" : "your_sale"
+    );
 
     useEffect(() => {
         if (products.length === 0) {
@@ -197,7 +200,13 @@ export function B2BSaleModal({ trigger, onSubmit, onClose, initialData }: B2BSal
                                         <FormItem>
                                             <FormLabel>{t("purchase-id")}</FormLabel>
                                             <FormControl>
-                                                <Input {...field} />
+                                                <Input
+                                                    {...field}
+                                                    readOnly={isEditing}
+                                                    className={isEditing ? "bg-gray-100 cursor-not-allowed" : ""}
+                                                    autoFocus={false}
+                                                    tabIndex={isEditing ? -1 : undefined}
+                                                />
                                             </FormControl>
                                             <FormMessage />
                                         </FormItem>
@@ -215,8 +224,6 @@ export function B2BSaleModal({ trigger, onSubmit, onClose, initialData }: B2BSal
                                                     setSaleType(e.target.value as "your_sale" | "distributor_sale");
                                                     form.setValue("is_distributor", false);
                                                     form.setValue("b2b_distribution", null);
-                                                    form.setValue("product", 0);
-                                                    form.setValue("unit_price", 0);
                                                 }}
                                                 className="mr-2"
                                             />
@@ -231,8 +238,6 @@ export function B2BSaleModal({ trigger, onSubmit, onClose, initialData }: B2BSal
                                                     setSaleType(e.target.value as "your_sale" | "distributor_sale");
                                                     form.setValue("is_distributor", true);
                                                     form.setValue("offer", null);
-                                                    form.setValue("product", 0);
-                                                    form.setValue("unit_price", 0);
                                                 }}
                                                 className="mr-2"
                                             />

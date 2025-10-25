@@ -56,9 +56,10 @@ interface DeliveryFulfillmentModalProps {
   onSubmit?: (data: any) => void;
   onClose?: () => void;
   initialData?: any;
+  isEditing?: boolean;
 }
 
-export function DeliveryFulfillmentModal({ trigger, onSubmit, onClose, initialData }: DeliveryFulfillmentModalProps) {
+export function DeliveryFulfillmentModal({ trigger, onSubmit, onClose, initialData, isEditing }: DeliveryFulfillmentModalProps) {
   const tval = useTranslations("modals.deliveryFulfillment.validation");
   const t = useTranslations("modals.deliveryFulfillment");
   const tCommon = useTranslations("common");
@@ -327,7 +328,13 @@ export function DeliveryFulfillmentModal({ trigger, onSubmit, onClose, initialDa
                     <FormItem>
                       <FormLabel>{t("delivery-id")}</FormLabel>
                       <FormControl>
-                        <Input {...field} />
+                        <Input
+                          {...field}
+                          readOnly={isEditing}
+                          className={isEditing ? "bg-gray-100 cursor-not-allowed" : ""}
+                          autoFocus={false}
+                          tabIndex={isEditing ? -1 : undefined}
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>

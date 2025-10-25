@@ -49,9 +49,10 @@ interface DispatchIssueModalProps {
   onSubmit?: (data: DispatchIssueFormData) => void;
   onClose?: () => void;
   initialData?: Partial<DispatchIssueFormData>;
+  isEditing?: boolean;
 }
 
-export function DispatchIssueModal({ trigger, onSubmit, onClose, initialData }: DispatchIssueModalProps) {
+export function DispatchIssueModal({ trigger, onSubmit, onClose, initialData, isEditing }: DispatchIssueModalProps) {
   const tval = useTranslations("modals.dispatchIssue.validation");
   const t = useTranslations("modals.dispatchIssue");
   const { data, refreshData } = useCoreData();
@@ -170,7 +171,13 @@ export function DispatchIssueModal({ trigger, onSubmit, onClose, initialData }: 
                     <FormItem>
                       <FormLabel>{t("dispatch-id")}</FormLabel>
                       <FormControl>
-                        <Input {...field} />
+                        <Input
+                          {...field}
+                          readOnly={isEditing}
+                          className={isEditing ? "bg-gray-100 cursor-not-allowed" : ""}
+                          autoFocus={false}
+                          tabIndex={isEditing ? -1 : undefined}
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>

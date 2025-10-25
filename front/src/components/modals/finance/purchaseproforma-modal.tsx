@@ -40,9 +40,10 @@ interface PurchaseProformaModalProps {
   onSubmit?: (data: PurchaseProformaFormData) => void;
   onClose?: () => void;
   initialData?: Partial<PurchaseProformaFormData>;
+  isEditing?: boolean;
 }
 
-export function PurchaseProformaModal({ trigger, onSubmit, onClose, initialData }: PurchaseProformaModalProps) {
+export function PurchaseProformaModal({ trigger, onSubmit, onClose, initialData, isEditing }: PurchaseProformaModalProps) {
   const tval = useTranslations("modals.purchaseProforma.validation");
   const t = useTranslations("modals.purchaseProforma");
   const { data, refreshData } = useCoreData();
@@ -147,7 +148,13 @@ export function PurchaseProformaModal({ trigger, onSubmit, onClose, initialData 
                     <FormItem>
                       <FormLabel>{t('serialnumber')}</FormLabel>
                       <FormControl>
-                        <Input {...field} />
+                        <Input
+                          {...field}
+                          readOnly={isEditing}
+                          className={isEditing ? "bg-gray-100 cursor-not-allowed" : ""}
+                          autoFocus={false}
+                          tabIndex={isEditing ? -1 : undefined}
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>

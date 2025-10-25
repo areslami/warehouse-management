@@ -44,9 +44,10 @@ interface B2BDistributionModalProps {
   initialData?: Partial<B2BDistributionFormData>;
   onOfferCreated?: () => void;
   readOnly?: boolean;
+  isEditing?: boolean;
 }
 
-export function B2BDistributionModal({ trigger, onSubmit, onClose, initialData, readOnly = false }: B2BDistributionModalProps) {
+export function B2BDistributionModal({ trigger, onSubmit, onClose, initialData, readOnly = false, isEditing }: B2BDistributionModalProps) {
   const tval = useTranslations("modals.b2bDistribution.validation");
   const t = useTranslations("modals.b2bDistribution");
   const tCommon = useTranslations("common");
@@ -181,7 +182,14 @@ export function B2BDistributionModal({ trigger, onSubmit, onClose, initialData, 
                     <FormItem>
                       <FormLabel>{t("transfer-id")}</FormLabel>
                       <FormControl>
-                        <Input {...field} placeholder={t("enter-transfer-id")} />
+                        <Input
+                          {...field}
+                          placeholder={t("enter-transfer-id")}
+                          readOnly={isEditing}
+                          className={isEditing ? "bg-gray-100 cursor-not-allowed" : ""}
+                          autoFocus={false}
+                          tabIndex={isEditing ? -1 : undefined}
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>

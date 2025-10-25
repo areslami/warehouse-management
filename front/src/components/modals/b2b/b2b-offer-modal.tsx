@@ -39,9 +39,10 @@ interface B2BOfferModalProps {
   onClose?: () => void;
   initialData?: Partial<B2BOfferFormData>;
   readOnly?: boolean;
+  isEditing?: boolean;
 }
 
-export function B2BOfferModal({ trigger, onSubmit, onClose, initialData, readOnly = false }: B2BOfferModalProps) {
+export function B2BOfferModal({ trigger, onSubmit, onClose, initialData, readOnly = false, isEditing }: B2BOfferModalProps) {
   const tval = useTranslations("modals.b2bOffer.validation");
   const t = useTranslations("modals.b2bOffer");
   const tCommon = useTranslations("common");
@@ -161,7 +162,13 @@ export function B2BOfferModal({ trigger, onSubmit, onClose, initialData, readOnl
                     <FormItem>
                       <FormLabel>{t("offer-id")}</FormLabel>
                       <FormControl>
-                        <Input {...field} />
+                        <Input
+                          {...field}
+                          readOnly={isEditing}
+                          className={isEditing ? "bg-gray-100 cursor-not-allowed" : ""}
+                          autoFocus={false}
+                          tabIndex={isEditing ? -1 : undefined}
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>

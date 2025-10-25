@@ -43,9 +43,10 @@ interface SalesProformaModalProps {
   onClose?: () => void;
   initialData?: Partial<SalesProformaFormData>;
   readOnly?: boolean;
+  isEditing?: boolean;
 }
 
-export function SalesProformaModal({ trigger, onSubmit, onClose, initialData, readOnly = false }: SalesProformaModalProps) {
+export function SalesProformaModal({ trigger, onSubmit, onClose, initialData, readOnly = false, isEditing }: SalesProformaModalProps) {
   const tval = useTranslations("modals.salesProforma.validation");
   const t = useTranslations("modals.salesProforma");
   const { data, refreshData } = useCoreData();
@@ -167,7 +168,14 @@ export function SalesProformaModal({ trigger, onSubmit, onClose, initialData, re
                     <FormItem>
                       <FormLabel>{t('serialnumber')}</FormLabel>
                       <FormControl>
-                        <Input {...field} disabled={!isEditMode} />
+                        <Input
+                          {...field}
+                          disabled={!isEditMode}
+                          readOnly={isEditing}
+                          className={isEditing ? "bg-gray-100 cursor-not-allowed" : ""}
+                          autoFocus={false}
+                          tabIndex={isEditing ? -1 : undefined}
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>

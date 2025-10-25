@@ -947,11 +947,18 @@ export default function WarehousePage() {
 
       {showReceiptModal && (
         <WarehouseReceiptModal
+          isEditing={!!editingReceipt}
           initialData={editingReceipt ? {
             ...editingReceipt,
             receipt_id: editingReceipt.receipt_id || undefined,
             cottage_serial_number: editingReceipt.cottage_serial_number || undefined,
-            proforma: editingReceipt.proforma || undefined
+            warehouse: editingReceipt.warehouse ? Number(editingReceipt.warehouse) : 0,
+            proforma: editingReceipt.proforma ? Number(editingReceipt.proforma) : undefined,
+            items: editingReceipt.items?.map(item => ({
+              ...item,
+              product: item.product ? Number(item.product) : 0,
+              weight: Number(item.weight),
+            })) || [],
           } : undefined}
           onSubmit={async (data) => {
             try {
@@ -989,7 +996,19 @@ export default function WarehousePage() {
 
       {showDispatchModal && (
         <DispatchIssueModal
-          initialData={editingDispatch || undefined}
+          isEditing={!!editingDispatch}
+          initialData={editingDispatch ? {
+            ...editingDispatch,
+            warehouse: editingDispatch.warehouse ? Number(editingDispatch.warehouse) : 0,
+            sales_proforma: editingDispatch.sales_proforma ? Number(editingDispatch.sales_proforma) : 0,
+            shipping_company: editingDispatch.shipping_company ? Number(editingDispatch.shipping_company) : 0,
+            items: editingDispatch.items?.map(item => ({
+              ...item,
+              product: item.product ? Number(item.product) : 0,
+              weight: item.weight ? Number(item.weight) : 0,
+              receiver: item.receiver ? Number(item.receiver) : 0,
+            })) || [],
+          } : undefined}
           onSubmit={async (data) => {
             try {
               // Calculate total weight from items
@@ -1025,7 +1044,20 @@ export default function WarehousePage() {
 
       {showDeliveryModal && (
         <DeliveryFulfillmentModal
-          initialData={editingDelivery || undefined}
+          isEditing={!!editingDelivery}
+          initialData={editingDelivery ? {
+            ...editingDelivery,
+            b2b_address: editingDelivery.b2b_address ? Number(editingDelivery.b2b_address) : 0,
+            warehouse_receipt: editingDelivery.warehouse_receipt ? Number(editingDelivery.warehouse_receipt) : 0,
+            shipping_company: editingDelivery.shipping_company ? Number(editingDelivery.shipping_company) : 0,
+            items: editingDelivery.items?.map(item => ({
+              ...item,
+              product: item.product ? Number(item.product) : 0,
+              weight: Number(item.weight),
+              customer: item.customer ? Number(item.customer) : 0,
+              fare: Number(item.fare),
+            })) || [],
+          } : undefined}
           onSubmit={async (data) => {
             try {
               // Calculate total weight from items
