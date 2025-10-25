@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
-import { Plus, Edit2, Trash2, Package, FileText, Truck, Search, Eye } from "lucide-react";
+import { Plus, Edit2, Trash2, Package, FileText, Truck, Search, Eye, Info } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { handleApiErrorWithToast } from "@/lib/api/error-toast-handler";
@@ -17,6 +17,9 @@ import { WarehouseReceiptModal } from "@/components/modals/warehouse/warehouse-r
 import { DispatchIssueModal } from "@/components/modals/warehouse/dispatch-issue-modal";
 import { DeliveryFulfillmentModal } from "@/components/modals/warehouse/delivery-fulfillment-modal";
 import { WarehouseModal } from "@/components/modals/warehouse/warehouse-modal";
+import { B2BAddressModal } from "@/components/modals/b2b/b2b-address-modal";
+import { B2BDistributionModal } from "@/components/modals/b2b/b2b-distribution-modal";
+import { B2BOfferModal } from "@/components/modals/b2b/b2b-offer-modal";
 import { useCoreData } from "@/lib/core-data-context";
 import {
   fetchWarehouseReceipts, fetchWarehouseReceiptById, createWarehouseReceipt, updateWarehouseReceipt, deleteWarehouseReceipt,
@@ -25,6 +28,8 @@ import {
   createWarehouse, updateWarehouse, deleteWarehouse
 } from "@/lib/api/warehouse";
 import { Warehouse, WarehouseReceipt, DispatchIssue, DeliveryFulfillment } from "@/lib/interfaces/warehouse";
+import { B2BAddress, B2BDistribution, B2BOffer } from "@/lib/interfaces/b2b";
+import { fetchB2BAddressById, fetchB2BDistributionById, fetchB2BOfferById, fetchB2BSales } from "@/lib/api/b2b";
 import { formatNumber } from "@/lib/utils/number-format";
 
 export default function WarehousePage() {
@@ -53,6 +58,12 @@ export default function WarehousePage() {
   const [sheetOpen, setSheetOpen] = useState(false);
   const [selectedItem, setSelectedItem] = useState<WarehouseReceipt | DispatchIssue | DeliveryFulfillment | null>(null);
   const [selectedType, setSelectedType] = useState<'receipt' | 'dispatch' | 'delivery'>('receipt');
+
+  // State for viewing related entities in details sheet
+  const [viewingAddress, setViewingAddress] = useState<B2BAddress | null>(null);
+  const [viewingReceipt, setViewingReceipt] = useState<WarehouseReceipt | null>(null);
+  const [viewingDistribution, setViewingDistribution] = useState<B2BDistribution | null>(null);
+  const [viewingOffer, setViewingOffer] = useState<B2BOffer | null>(null);
 
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedWarehouse, setSelectedWarehouse] = useState<string>("all");
@@ -217,6 +228,79 @@ export default function WarehousePage() {
       return matchesSearch && matchesWarehouse;
     });
   }, [deliveries, searchTerm, selectedWarehouse]);
+
+  // Component to show B2B Distribution or Offer links
+  const DeliveryB2BLinks = ({ deliveryId, addressId, setViewingDistribution, setViewingOffer }: { deliveryId: number, addressId: number, setViewingDistribution: (d: B2BDistribution | null) => void, setViewingOffer: (o: B2BOffer | null) => void }) => {
+    const [linkedDistribution, setLinkedDistribution] = useState<B2BDistribution | null>(null);
+    const [linkedOffer, setLinkedOffer] = useState<B2BOffer | null>(null);
+
+    useEffect(() => {
+      const fetchB2BLinks = async () => {
+        try {
+          // Get the address to find its purchase_id
+          const address = await fetchB2BAddressById(addressId);
+          if (!address) return;
+
+          // Find sale matching the address purchase_id
+          const sales = await fetchB2BSales();
+          if (sales) {
+            const matchingSale = sales.find(s => s.purchase_id === address.purchase_id);
+            if (matchingSale) {
+              if (matchingSale.b2b_distribution) {
+                // It's a distribution sale
+                const dist = await fetchB2BDistributionById(matchingSale.b2b_distribution);
+                if (dist) setLinkedDistribution(dist);
+              } else if (matchingSale.offer) {
+                // It's an offer sale
+                const offer = await fetchB2BOfferById(matchingSale.offer);
+                if (offer) setLinkedOffer(offer);
+              }
+            }
+          }
+        } catch (error) {
+          console.error("Failed to fetch B2B links:", error);
+        }
+      };
+      fetchB2BLinks();
+    }, [addressId]);
+
+    if (!linkedDistribution && !linkedOffer) return null;
+
+    return (
+      <div className="flex items-center gap-2">
+        {linkedDistribution && (
+          <>
+            <strong>عاملیت توزیع:</strong>
+            <span>{linkedDistribution.transfer_id || '-'}</span>
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              className="h-5 w-5 p-0 hover:bg-transparent"
+              onClick={() => setViewingDistribution(linkedDistribution)}
+            >
+              <Info className="h-4 w-4 text-[#f6d265]" />
+            </Button>
+          </>
+        )}
+        {linkedOffer && (
+          <>
+            <strong>عرضه:</strong>
+            <span>{linkedOffer.offer_id || '-'}</span>
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              className="h-5 w-5 p-0 hover:bg-transparent"
+              onClick={() => setViewingOffer(linkedOffer)}
+            >
+              <Info className="h-4 w-4 text-[#f6d265]" />
+            </Button>
+          </>
+        )}
+      </div>
+    );
+  };
 
   return (
     <div className="flex-1 p-6 min-h-screen bg-gray-50" dir="rtl">
@@ -546,7 +630,7 @@ export default function WarehousePage() {
                 </Button>
               </div>
             </div>
-            <Table dir="rtl">
+            <Table dir="rtl" className="min-w-[1400px]">
               <TableHeader>
                 <TableRow>
                   <TableHead className="w-12 text-center">
@@ -564,64 +648,79 @@ export default function WarehousePage() {
                   </TableHead>
                   <TableHead className="text-right w-16">ردیف</TableHead>
                   <TableHead className="text-right">{t("deliveries.table.delivery_id")}</TableHead>
-                  <TableHead className="text-right">{t("deliveries.table.total_weight")}</TableHead>
                   <TableHead className="text-right">{t("deliveries.table.b2b_address")}</TableHead>
                   <TableHead className="text-right">{t("deliveries.table.warehouse_receipt")}</TableHead>
                   <TableHead className="text-right">{t("deliveries.table.issue_date")}</TableHead>
+                  <TableHead className="text-right">{t("deliveries.table.total_weight")}</TableHead>
+                  <TableHead className="text-right">{t("deliveries.table.product")}</TableHead>
+                  <TableHead className="text-right">{t("deliveries.table.customer")}</TableHead>
+                  <TableHead className="text-right">{t("deliveries.table.shipping_company")}</TableHead>
+                  <TableHead className="text-right">{t("deliveries.table.driver_phone")}</TableHead>
+                  <TableHead className="text-right">{t("deliveries.table.fare")}</TableHead>
                   <TableHead className="text-center w-24">{t("deliveries.table.operations")}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredDeliveries.map((delivery, index) => (
-                  <TableRow key={delivery.id} className="hover:bg-gray-50">
-                    <TableCell className="text-center">
-                      <input
-                        type="checkbox"
-                        checked={selectedDeliveries.includes(delivery.id)}
-                        onChange={(e) => {
-                          if (e.target.checked) {
-                            setSelectedDeliveries([...selectedDeliveries, delivery.id]);
-                          } else {
-                            setSelectedDeliveries(selectedDeliveries.filter(id => id !== delivery.id));
-                          }
-                        }}
-                      />
-                    </TableCell>
-                    <TableCell className="text-right font-medium">{index + 1}</TableCell>
-                    <TableCell className="text-right">{delivery.delivery_id}</TableCell>
-                    <TableCell className="text-right">{delivery.total_weight}</TableCell>
-                    <TableCell className="text-right">{delivery.b2b_address_purchase_id || '-'}</TableCell>
-                    <TableCell className="text-right">{delivery.warehouse_receipt_id || '-'}</TableCell>
-                    <TableCell className="text-right">{new Date(delivery.issue_date).toLocaleDateString('fa-IR')}</TableCell>
-                    <TableCell>
-                      <div className="flex gap-2 justify-center">
-                        <Button size="sm" variant="ghost" onClick={() => {
-                          handleRowClick(delivery, 'delivery');
-                        }}>
-                          <Eye className="w-4 h-4 text-blue-600" />
-                        </Button>
-                        <Button size="sm" variant="ghost" onClick={async () => {
-                          try {
-                            const fullDelivery = await fetchDeliveryFulfillmentById(delivery.id);
-                            setEditingDelivery(fullDelivery);
-                            setShowDeliveryModal(true);
-                          } catch (error) {
-                            console.error("Failed to fetch delivery details:", error);
-                            handleApiErrorWithToast(error, "Fetching delivery details");
+                {filteredDeliveries.map((delivery, index) => {
+                  const firstItem = delivery.items?.[0];
+                  const totalFare = delivery.items?.reduce((sum, item) => sum + (item.fare || 0), 0) || 0;
 
-                          }
-                        }}>
-                          <Edit2 className="w-4 h-4 text-gray-600" />
-                        </Button>
-                        <Button size="sm" variant="ghost" onClick={() => {
-                          handleDeleteDelivery(delivery.id);
-                        }}>
-                          <Trash2 className="w-4 h-4 text-red-500" />
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
+                  return (
+                    <TableRow key={delivery.id} className="hover:bg-gray-50">
+                      <TableCell className="text-center">
+                        <input
+                          type="checkbox"
+                          checked={selectedDeliveries.includes(delivery.id)}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              setSelectedDeliveries([...selectedDeliveries, delivery.id]);
+                            } else {
+                              setSelectedDeliveries(selectedDeliveries.filter(id => id !== delivery.id));
+                            }
+                          }}
+                        />
+                      </TableCell>
+                      <TableCell className="text-right font-medium">{index + 1}</TableCell>
+                      <TableCell className="text-right">{delivery.delivery_id}</TableCell>
+                      <TableCell className="text-right">{delivery.b2b_address_purchase_id || '-'}</TableCell>
+                      <TableCell className="text-right">{delivery.warehouse_receipt_id || '-'}</TableCell>
+                      <TableCell className="text-right">{new Date(delivery.issue_date).toLocaleDateString('fa-IR')}</TableCell>
+                      <TableCell className="text-right">{formatNumber(delivery.total_weight)}</TableCell>
+                      <TableCell className="text-right">{firstItem?.product_name || '-'}</TableCell>
+                      <TableCell className="text-right">{firstItem?.customer_name || '-'}</TableCell>
+                      <TableCell className="text-right">{delivery.shipping_company_name || '-'}</TableCell>
+                      <TableCell className="text-right">{delivery.driver_phone || '-'}</TableCell>
+                      <TableCell className="text-right">{formatNumber(totalFare)}</TableCell>
+                      <TableCell>
+                        <div className="flex gap-2 justify-center">
+                          <Button size="sm" variant="ghost" onClick={() => {
+                            handleRowClick(delivery, 'delivery');
+                          }}>
+                            <Eye className="w-4 h-4 text-blue-600" />
+                          </Button>
+                          <Button size="sm" variant="ghost" onClick={async () => {
+                            try {
+                              const fullDelivery = await fetchDeliveryFulfillmentById(delivery.id);
+                              setEditingDelivery(fullDelivery);
+                              setShowDeliveryModal(true);
+                            } catch (error) {
+                              console.error("Failed to fetch delivery details:", error);
+                              handleApiErrorWithToast(error, "Fetching delivery details");
+
+                            }
+                          }}>
+                            <Edit2 className="w-4 h-4 text-gray-600" />
+                          </Button>
+                          <Button size="sm" variant="ghost" onClick={() => {
+                            handleDeleteDelivery(delivery.id);
+                          }}>
+                            <Trash2 className="w-4 h-4 text-red-500" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
               </TableBody>
             </Table>
           </div>
@@ -739,19 +838,107 @@ export default function WarehousePage() {
                     {selectedItem.description && <div><strong>{tCommon('detail_labels.description')}</strong> {selectedItem.description}</div>}
                   </>
                 )}
-                {selectedType === 'delivery' && (
-                  <>
-                    <div><strong>{tCommon('detail_labels.delivery_id')}</strong> {(selectedItem as DeliveryFulfillment).delivery_id}</div>
-                    <div><strong>{tCommon('detail_labels.issue_date')}</strong> {new Date((selectedItem as DeliveryFulfillment).issue_date).toLocaleDateString('fa-IR')}</div>
-                    <div><strong>{tCommon('detail_labels.validity_date')}</strong> {new Date((selectedItem as DeliveryFulfillment).validity_date).toLocaleDateString('fa-IR')}</div>
-                    <div><strong>{tCommon('detail_labels.warehouse')}</strong> {warehouses.find(w => w.id === selectedItem.warehouse)?.name}</div>
-                    <div><strong>{tCommon('detail_labels.shipping_company')}</strong> {(selectedItem as DeliveryFulfillment).shipping_company_name || (selectedItem as DeliveryFulfillment).shipping_company}</div>
-                    <div><strong>{tCommon('detail_labels.sales_proforma')}</strong> {(selectedItem as DeliveryFulfillment).sales_proforma_serial || (selectedItem as DeliveryFulfillment).sales_proforma}</div>
-                    <div><strong>{tCommon('detail_labels.total_weight')}</strong> {selectedItem.total_weight} {tCommon('units.kg')}</div>
-                    <div><strong>{tCommon('detail_labels.item_count')}</strong> {(selectedItem as DeliveryFulfillment).items?.length || 0}</div>
-                    {selectedItem.description && <div><strong>{tCommon('detail_labels.description')}</strong> {selectedItem.description}</div>}
-                  </>
-                )}
+                {selectedType === 'delivery' && (() => {
+                  const delivery = selectedItem as DeliveryFulfillment;
+                  return (
+                    <>
+                      <div>
+                        <strong>شناسه تحویل:</strong> {delivery.delivery_id}
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <strong>آدرس بازارگاه:</strong>
+                        <span>{delivery.b2b_address_purchase_id || '-'}</span>
+                        {delivery.b2b_address && (
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="h-5 w-5 p-0 hover:bg-transparent"
+                            onClick={async () => {
+                              try {
+                                const address = await fetchB2BAddressById(delivery.b2b_address!);
+                                if (address) setViewingAddress(address);
+                              } catch (error) {
+                                console.error("Failed to fetch address:", error);
+                              }
+                            }}
+                          >
+                            <Info className="h-4 w-4 text-[#f6d265]" />
+                          </Button>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <strong>رسید انبار:</strong>
+                        <span>{delivery.warehouse_receipt_id || '-'}</span>
+                        {delivery.warehouse_receipt && (
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="h-5 w-5 p-0 hover:bg-transparent"
+                            onClick={async () => {
+                              try {
+                                const receipt = await fetchWarehouseReceiptById(delivery.warehouse_receipt!);
+                                if (receipt) setViewingReceipt(receipt);
+                              } catch (error) {
+                                console.error("Failed to fetch receipt:", error);
+                              }
+                            }}
+                          >
+                            <Info className="h-4 w-4 text-[#f6d265]" />
+                          </Button>
+                        )}
+                      </div>
+                      <div>
+                        <strong>شرکت حمل:</strong> {delivery.shipping_company_name || '-'}
+                      </div>
+                      <div>
+                        <strong>تاریخ صدور:</strong> {new Date(delivery.issue_date).toLocaleDateString('fa-IR')}
+                      </div>
+
+                      {/* Show Distribution or Offer if exists */}
+                      {delivery.b2b_address && (
+                        <DeliveryB2BLinks deliveryId={delivery.id} addressId={delivery.b2b_address} setViewingDistribution={setViewingDistribution} setViewingOffer={setViewingOffer} />
+                      )}
+
+                      {/* Driver Information */}
+                      <div className="mt-4 pt-4 border-t border-gray-200">
+                        <strong className="block mb-2">اطلاعات راننده:</strong>
+                        <div className="mr-4 space-y-1">
+                          <div><strong>نام:</strong> {delivery.driver_name || '-'}</div>
+                          <div><strong>شماره تلفن:</strong> {delivery.driver_phone || '-'}</div>
+                          <div><strong>شماره پلاک:</strong> {delivery.driver_license_plate || '-'}</div>
+                        </div>
+                      </div>
+
+                      {/* Description */}
+                      {delivery.description && (
+                        <div className="mt-2">
+                          <strong>توضیحات:</strong> {delivery.description}
+                        </div>
+                      )}
+
+                      {/* Items */}
+                      {delivery.items && delivery.items.length > 0 && (
+                        <div className="mt-4 pt-4 border-t border-gray-200">
+                          <strong className="block mb-2">اقلام:</strong>
+                          <div className="space-y-3">
+                            {delivery.items.map((item, idx) => (
+                              <div key={idx} className="bg-white p-3 rounded border mr-4">
+                                <div><strong>محصول:</strong> {item.product_name || '-'}</div>
+                                <div><strong>وزن (کیلوگرم):</strong> {formatNumber(item.weight)}</div>
+                                <div><strong>مشتری:</strong> {item.customer_name || '-'}</div>
+                                <div><strong>مقصد:</strong> {item.destination || '-'}</div>
+                                <div><strong>گیرنده:</strong> {item.receiver || '-'}</div>
+                                <div><strong>کرایه (ریال):</strong> {formatNumber(item.fare || 0)}</div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </>
+                  );
+                })()}
               </div>
             </>
           )}
@@ -901,6 +1088,52 @@ export default function WarehousePage() {
             setShowWarehouseModal(false);
             setEditingWarehouse(null);
           }}
+        />
+      )}
+
+      {/* Read-only modals for viewing related entities from delivery details */}
+      {viewingAddress && (
+        <B2BAddressModal
+          initialData={{
+            ...viewingAddress,
+            product: viewingAddress.product ?? 0,
+            customer: viewingAddress.customer ?? 0,
+            purchase_date: viewingAddress.purchase_date ?? undefined,
+            receiver: viewingAddress.receiver ?? undefined,
+            product_offer: viewingAddress.product_offer ?? undefined,
+          }}
+          readOnly={true}
+          onClose={() => setViewingAddress(null)}
+        />
+      )}
+
+      {viewingReceipt && (
+        <WarehouseReceiptModal
+          initialData={{
+            ...viewingReceipt,
+            warehouse: viewingReceipt.warehouse ?? undefined,
+            receipt_id: viewingReceipt.receipt_id ?? undefined,
+            cottage_serial_number: viewingReceipt.cottage_serial_number ?? undefined,
+            proforma: viewingReceipt.proforma ?? undefined,
+          }}
+          readOnly={true}
+          onClose={() => setViewingReceipt(null)}
+        />
+      )}
+
+      {viewingDistribution && (
+        <B2BDistributionModal
+          initialData={viewingDistribution}
+          readOnly={true}
+          onClose={() => setViewingDistribution(null)}
+        />
+      )}
+
+      {viewingOffer && (
+        <B2BOfferModal
+          initialData={viewingOffer}
+          readOnly={true}
+          onClose={() => setViewingOffer(null)}
         />
       )}
     </div>

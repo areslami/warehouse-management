@@ -96,13 +96,16 @@ export function DeliveryFulfillmentTab({ selectedWarehouseId }: DeliveryFulfillm
             warehouse_receipt: detailedDelivery.warehouse_receipt || 0,
             description: detailedDelivery.description || "",
             shipping_company: detailedDelivery.shipping_company || 0,
+            driver_name: detailedDelivery.driver_name || "",
+            driver_phone: detailedDelivery.driver_phone || "",
+            driver_license_plate: detailedDelivery.driver_license_plate || "",
             items: detailedDelivery.items?.map(item => ({
-              shipment_id: item.shipment_id || "",
-              shipment_price: item.shipment_price || 0,
               product: item.product,
               weight: item.weight || 0,
-              vehicle_type: item.vehicle_type || "single",
+              destination: item.destination || "",
               receiver: item.receiver,
+              customer: item.customer,
+              fare: item.fare || 0,
             })) || []
           },
           onSubmit: async (data) => {
@@ -121,7 +124,7 @@ export function DeliveryFulfillmentTab({ selectedWarehouseId }: DeliveryFulfillm
             } catch (error) {
               console.error("Failed to update delivery fulfillment:", error);
               handleApiErrorWithToast(error, "Updating delivery fulfillment");
-              
+
             }
           }
         });
@@ -129,7 +132,7 @@ export function DeliveryFulfillmentTab({ selectedWarehouseId }: DeliveryFulfillm
     } catch (error) {
       console.error("Failed to fetch delivery details:", error);
       handleApiErrorWithToast(error, "Fetching delivery details");
-      
+
     }
   };
 
@@ -176,50 +179,63 @@ export function DeliveryFulfillmentTab({ selectedWarehouseId }: DeliveryFulfillm
         <div>{t("loading")}</div>
       ) : (
         <div className="overflow-x-auto">
-          <Table className="w-full min-w-[800px]">
+          <Table className="w-full min-w-[1400px]">
             <TableHeader>
               <TableRow>
                 <TableHead className="text-right w-16">ردیف</TableHead>
-                <TableHead className="text-right">{t("table.id")}</TableHead>
                 <TableHead className="text-right">{t("table.delivery_id")}</TableHead>
                 <TableHead className="text-right">{t("table.b2b_address")}</TableHead>
                 <TableHead className="text-right">{t("table.warehouse_receipt")}</TableHead>
                 <TableHead className="text-right">{t("table.issue_date")}</TableHead>
                 <TableHead className="text-right">{t("table.total_weight")}</TableHead>
+                <TableHead className="text-right">{t("table.product")}</TableHead>
+                <TableHead className="text-right">{t("table.customer")}</TableHead>
+                <TableHead className="text-right">{t("table.shipping_company")}</TableHead>
+                <TableHead className="text-right">{t("table.driver_phone")}</TableHead>
+                <TableHead className="text-right">{t("table.fare")}</TableHead>
                 <TableHead className="text-right">{t("table.operations")}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredDeliveries.map((delivery, index) => (
-                <TableRowComponent key={delivery.id}>
-                  <TableCell className="text-right font-medium">{index + 1}</TableCell>
-                  <TableCell>{delivery.id}</TableCell>
-                  <TableCell>{delivery.delivery_id}</TableCell>
-                  <TableCell>{delivery.b2b_address_purchase_id || '-'}</TableCell>
-                  <TableCell>{delivery.warehouse_receipt_id || '-'}</TableCell>
-                  <TableCell><PersianDateTableCell date={delivery.issue_date} /></TableCell>
-                  <TableCell>{formatNumber(delivery.total_weight)}</TableCell>
-                  <TableCell>
-                    <div className="flex gap-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleEdit(delivery)}
-                      >
-                        <Edit className="h-3 w-3" />
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="text-red-600 hover:bg-red-50"
-                        onClick={() => handleDelete(delivery)}
-                      >
-                        <Trash2 className="h-3 w-3" />
-                      </Button>
-                    </div>
-                  </TableCell>
-                </TableRowComponent>
-              ))}
+              {filteredDeliveries.map((delivery, index) => {
+                const firstItem = delivery.items?.[0];
+                const totalFare = delivery.items?.reduce((sum, item) => sum + (item.fare || 0), 0) || 0;
+
+                return (
+                  <TableRowComponent key={delivery.id}>
+                    <TableCell className="text-right font-medium">{index + 1}</TableCell>
+                    <TableCell>{delivery.delivery_id}</TableCell>
+                    <TableCell>{delivery.b2b_address_purchase_id || '-'}</TableCell>
+                    <TableCell>{delivery.warehouse_receipt_id || '-'}</TableCell>
+                    <TableCell><PersianDateTableCell date={delivery.issue_date} /></TableCell>
+                    <TableCell>{formatNumber(delivery.total_weight)}</TableCell>
+                    <TableCell>{firstItem?.product_name || '-'}</TableCell>
+                    <TableCell>{firstItem?.customer_name || '-'}</TableCell>
+                    <TableCell>{delivery.shipping_company_name || '-'}</TableCell>
+                    <TableCell>{delivery.driver_phone || '-'}</TableCell>
+                    <TableCell>{formatNumber(totalFare)}</TableCell>
+                    <TableCell>
+                      <div className="flex gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleEdit(delivery)}
+                        >
+                          <Edit className="h-3 w-3" />
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="text-red-600 hover:bg-red-50"
+                          onClick={() => handleDelete(delivery)}
+                        >
+                          <Trash2 className="h-3 w-3" />
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRowComponent>
+                );
+              })}
             </TableBody>
           </Table>
         </div>
