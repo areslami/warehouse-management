@@ -128,6 +128,28 @@ export function DeliveryFulfillmentModal({ trigger, onSubmit, onClose, initialDa
 
   const [open, setOpen] = useState(trigger ? false : true);
 
+  // Initialize linked offer/distribution when editing
+  useEffect(() => {
+    if (open && isEditing && initialData) {
+      // If editing and delivery has offer, load it
+      if (initialData.offer && b2bOffers.length > 0) {
+        const offer = b2bOffers.find(o => o.id === initialData.offer);
+        if (offer) {
+          setLinkedOffer(offer);
+          setLinkedDistribution(null);
+        }
+      }
+      // If editing and delivery has distribution, load it
+      else if (initialData.distribution && b2bDistributions.length > 0) {
+        const distribution = b2bDistributions.find(d => d.id === initialData.distribution);
+        if (distribution) {
+          setLinkedDistribution(distribution);
+          setLinkedOffer(null);
+        }
+      }
+    }
+  }, [open, isEditing, initialData, b2bOffers, b2bDistributions]);
+
   // Re-fetch B2B addresses, warehouse receipts, and B2B data whenever modal opens
   useEffect(() => {
     if (open) {
@@ -216,41 +238,62 @@ export function DeliveryFulfillmentModal({ trigger, onSubmit, onClose, initialDa
       }
 
       // Find the corresponding B2B Sale and determine if we need to show distribution or offer
-      if (selectedAddress && selectedAddress.purchase_id && b2bSales.length > 0) {
-        const matchingSale = b2bSales.find(sale => sale.purchase_id === selectedAddress.purchase_id);
+      // BUT: Skip this if we're editing and already have offer/distribution initialized from initialData
+      const isEditingWithExistingData = isEditing && initialData &&
+        (initialData.offer || initialData.distribution) &&
+        selectedB2BAddressId === initialData.b2b_address;
 
-        if (matchingSale) {
-          if (matchingSale.is_distributor && matchingSale.b2b_distribution) {
-            // Case 1: عاملیت توزیع - find and set the distribution
-            const distribution = b2bDistributions.find(d => d.id === matchingSale.b2b_distribution);
-            if (distribution) {
-              setLinkedDistribution(distribution);
-              setLinkedOffer(null);
+      if (selectedAddress && !isEditingWithExistingData) {
+        let foundOffer = false;
+        let foundDistribution = false;
+
+        // Method 1: Try to find via B2BSale (most complete information)
+        if (selectedAddress.purchase_id && b2bSales.length > 0) {
+          const matchingSale = b2bSales.find(sale => sale.purchase_id === selectedAddress.purchase_id);
+
+          if (matchingSale) {
+            if (matchingSale.is_distributor && matchingSale.b2b_distribution) {
+              // Case 1: عاملیت توزیع - find and set the distribution
+              const distribution = b2bDistributions.find(d => d.id === matchingSale.b2b_distribution);
+              if (distribution) {
+                setLinkedDistribution(distribution);
+                setLinkedOffer(null);
+                foundDistribution = true;
+              }
+            } else if (!matchingSale.is_distributor && matchingSale.offer) {
+              // Case 2: فروش شما with offer - find and set the offer
+              const offer = b2bOffers.find(o => o.id === matchingSale.offer);
+              if (offer) {
+                setLinkedOffer(offer);
+                setLinkedDistribution(null);
+                foundOffer = true;
+              }
             }
-          } else if (!matchingSale.is_distributor && matchingSale.offer) {
-            // Case 2: فروش شما with offer - find and set the offer
-            const offer = b2bOffers.find(o => o.id === matchingSale.offer);
-            if (offer) {
-              setLinkedOffer(offer);
-              setLinkedDistribution(null);
-            }
-          } else {
-            // Case 3: فروش شما without offer - do nothing
-            setLinkedDistribution(null);
-            setLinkedOffer(null);
           }
-        } else {
-          // No matching sale found - clear both
+        }
+
+        // Method 2: If no B2BSale found, try using product_offer directly from B2BAddress
+        if (!foundOffer && !foundDistribution && selectedAddress.product_offer && b2bOffers.length > 0) {
+          const offer = b2bOffers.find(o => o.id === selectedAddress.product_offer);
+          if (offer) {
+            setLinkedOffer(offer);
+            setLinkedDistribution(null);
+            foundOffer = true;
+          }
+        }
+
+        // If nothing found, clear both
+        if (!foundOffer && !foundDistribution) {
           setLinkedDistribution(null);
           setLinkedOffer(null);
         }
-      } else {
-        // No address selected or no sales data - clear both
+      } else if (!selectedAddress) {
+        // No address selected - clear both
         setLinkedDistribution(null);
         setLinkedOffer(null);
       }
     }
-  }, [selectedB2BAddressId, b2bAddresses, warehouseReceipts, b2bSales, b2bDistributions, b2bOffers, form]);
+  }, [selectedB2BAddressId, b2bAddresses, warehouseReceipts, b2bSales, b2bDistributions, b2bOffers, form, isEditing, initialData]);
 
   // Auto-fill product from warehouse receipt items
   useEffect(() => {

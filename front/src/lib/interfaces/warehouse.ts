@@ -67,11 +67,17 @@ export interface DispatchIssueItem {
 export interface DeliveryFulfillment {
   id: number;
   delivery_id: string;
+  waybill_serial?: string;
   issue_date: string;
   b2b_address: number | null;
   b2b_address_purchase_id?: string;
   warehouse_receipt: number | null;
   warehouse_receipt_id?: string;
+  warehouse?: number | null;
+  offer?: number | null;
+  offer_id_display?: string;
+  distribution?: number | null;
+  distribution_id_display?: string;
   description?: string;
   shipping_company: number | null;
   shipping_company_name?: string;

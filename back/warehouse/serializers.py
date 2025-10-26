@@ -162,13 +162,17 @@ class DeliveryFulfillmentSerializer(serializers.ModelSerializer):
     items = DeliveryFulfillmentItemSerializer(many=True, required=False)
     b2b_address_purchase_id = serializers.CharField(source='b2b_address.purchase_id', read_only=True)
     warehouse_receipt_id = serializers.CharField(source='warehouse_receipt.receipt_id', read_only=True)
+    warehouse = serializers.IntegerField(source='warehouse_receipt.warehouse.id', read_only=True)
     shipping_company_name = serializers.CharField(source='shipping_company.name', read_only=True)
+    offer_id_display = serializers.CharField(source='offer.offer_id', read_only=True)
+    distribution_id_display = serializers.CharField(source='distribution.transfer_id', read_only=True)
 
     class Meta:
         model = DeliveryFulfillment
         fields = [
-            'id', 'delivery_id', 'issue_date', 'b2b_address',
-            'b2b_address_purchase_id', 'warehouse_receipt', 'warehouse_receipt_id',
+            'id', 'delivery_id', 'waybill_serial', 'issue_date', 'b2b_address',
+            'b2b_address_purchase_id', 'warehouse_receipt', 'warehouse_receipt_id', 'warehouse',
+            'offer', 'offer_id_display', 'distribution', 'distribution_id_display',
             'description', 'shipping_company', 'shipping_company_name',
             'total_weight', 'driver_name', 'driver_phone', 'driver_license_plate',
             'items', 'created_at', 'updated_at'

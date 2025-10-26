@@ -73,10 +73,12 @@ class DispatchIssueItem(models.Model):
 class DeliveryFulfillment(models.Model):
 
     delivery_id = models.CharField(max_length=50, unique=True, null=False)
+    waybill_serial = models.CharField(max_length=100, blank=True, null=True)
     issue_date = models.DateTimeField()
     b2b_address = models.ForeignKey('b2b.B2BAddress', on_delete=models.SET_NULL, null=True)
     warehouse_receipt = models.ForeignKey(WarehouseReceipt, on_delete=models.SET_NULL, null=True)
-
+    offer = models.ForeignKey('b2b.B2BOffer', on_delete=models.SET_NULL, null=True, blank=True)
+    distribution = models.ForeignKey('b2b.B2BDistribution', on_delete=models.SET_NULL, null=True, blank=True)
 
     description = models.TextField(blank=True,)
     shipping_company = models.ForeignKey(ShippingCompany, on_delete=models.SET_NULL,null=True,)

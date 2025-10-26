@@ -18,9 +18,10 @@ import { useModal } from "@/lib/modal-context";
 import { DeliveryFulfillmentModal } from "@/components/modals/warehouse/delivery-fulfillment-modal";
 import { searchFilter } from "@/lib/utils/warehouse-utils";
 import { formatNumber } from "@/lib/utils/number-format";
-import { Edit, Plus, Search, Trash2 } from "lucide-react";
+import { Edit, Plus, Search, Trash2, Upload } from "lucide-react";
 import { Input } from "../ui/input";
 import { Button } from "../ui/button";
+import UploadDeliveryModal from "../modals/warehouse/upload-delivery-modal";
 
 interface DeliveryFulfillmentTabProps {
   selectedWarehouseId?: number;
@@ -33,6 +34,7 @@ export function DeliveryFulfillmentTab({ selectedWarehouseId }: DeliveryFulfillm
   const [deliveries, setDeliveries] = useState<DeliveryFulfillment[]>([]);
   const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
+  const [showUploadModal, setShowUploadModal] = useState(false);
 
   const loadDeliveries = useCallback(async () => {
     setLoading(true);
@@ -166,6 +168,14 @@ export function DeliveryFulfillmentTab({ selectedWarehouseId }: DeliveryFulfillm
             />
           </div>
           <Button
+            size="sm"
+            variant="outline"
+            onClick={() => setShowUploadModal(true)}
+          >
+            <Upload className="w-4 h-4 mr-1" />
+            {t("import_excel")}
+          </Button>
+          <Button
             className="bg-[#f6d265] hover:bg-[#f5c842] text-white"
             onClick={handleCreate}
           >
@@ -239,6 +249,17 @@ export function DeliveryFulfillmentTab({ selectedWarehouseId }: DeliveryFulfillm
             </TableBody>
           </Table>
         </div>
+      )}
+
+      {showUploadModal && (
+        <UploadDeliveryModal
+          isOpen={showUploadModal}
+          onClose={() => setShowUploadModal(false)}
+          onSuccess={() => {
+            loadDeliveries();
+            setShowUploadModal(false);
+          }}
+        />
       )}
     </div>
   );

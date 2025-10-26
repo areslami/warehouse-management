@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
-import { Plus, Edit2, Trash2, Package, FileText, Truck, Search, Eye, Info } from "lucide-react";
+import { Plus, Edit2, Trash2, Package, FileText, Truck, Search, Eye, Info, Upload } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { handleApiErrorWithToast } from "@/lib/api/error-toast-handler";
@@ -17,6 +17,7 @@ import { WarehouseReceiptModal } from "@/components/modals/warehouse/warehouse-r
 import { DispatchIssueModal } from "@/components/modals/warehouse/dispatch-issue-modal";
 import { DeliveryFulfillmentModal } from "@/components/modals/warehouse/delivery-fulfillment-modal";
 import { WarehouseModal } from "@/components/modals/warehouse/warehouse-modal";
+import UploadDeliveryModal from "@/components/modals/warehouse/upload-delivery-modal";
 import { B2BAddressModal } from "@/components/modals/b2b/b2b-address-modal";
 import { B2BDistributionModal } from "@/components/modals/b2b/b2b-distribution-modal";
 import { B2BOfferModal } from "@/components/modals/b2b/b2b-offer-modal";
@@ -41,6 +42,7 @@ export default function WarehousePage() {
   const [receipts, setReceipts] = useState<WarehouseReceipt[]>([]);
   const [dispatches, setDispatches] = useState<DispatchIssue[]>([]);
   const [deliveries, setDeliveries] = useState<DeliveryFulfillment[]>([]);
+  const [deliveriesKey, setDeliveriesKey] = useState(0);
   const [selectedReceipts, setSelectedReceipts] = useState<number[]>([]);
   const [selectedDispatches, setSelectedDispatches] = useState<number[]>([]);
   const [selectedDeliveries, setSelectedDeliveries] = useState<number[]>([]);
@@ -49,6 +51,7 @@ export default function WarehousePage() {
   const [showDispatchModal, setShowDispatchModal] = useState(false);
   const [showDeliveryModal, setShowDeliveryModal] = useState(false);
   const [showWarehouseModal, setShowWarehouseModal] = useState(false);
+  const [showUploadDeliveryModal, setShowUploadDeliveryModal] = useState(false);
 
   const [editingReceipt, setEditingReceipt] = useState<WarehouseReceipt | null>(null);
   const [editingDispatch, setEditingDispatch] = useState<DispatchIssue | null>(null);
@@ -230,39 +233,30 @@ export default function WarehousePage() {
   }, [deliveries, searchTerm, selectedWarehouse]);
 
   // Component to show B2B Distribution or Offer links
-  const DeliveryB2BLinks = ({ deliveryId, addressId, setViewingDistribution, setViewingOffer }: { deliveryId: number, addressId: number, setViewingDistribution: (d: B2BDistribution | null) => void, setViewingOffer: (o: B2BOffer | null) => void }) => {
+  const DeliveryB2BLinks = ({ deliveryId, offerId, distributionId, setViewingDistribution, setViewingOffer }: { deliveryId: number, offerId?: number | null, distributionId?: number | null, setViewingDistribution: (d: B2BDistribution | null) => void, setViewingOffer: (o: B2BOffer | null) => void }) => {
     const [linkedDistribution, setLinkedDistribution] = useState<B2BDistribution | null>(null);
     const [linkedOffer, setLinkedOffer] = useState<B2BOffer | null>(null);
 
     useEffect(() => {
       const fetchB2BLinks = async () => {
         try {
-          // Get the address to find its purchase_id
-          const address = await fetchB2BAddressById(addressId);
-          if (!address) return;
+          // Fetch distribution if we have a distribution ID
+          if (distributionId) {
+            const dist = await fetchB2BDistributionById(distributionId);
+            if (dist) setLinkedDistribution(dist);
+          }
 
-          // Find sale matching the address purchase_id
-          const sales = await fetchB2BSales();
-          if (sales) {
-            const matchingSale = sales.find(s => s.purchase_id === address.purchase_id);
-            if (matchingSale) {
-              if (matchingSale.b2b_distribution) {
-                // It's a distribution sale
-                const dist = await fetchB2BDistributionById(matchingSale.b2b_distribution);
-                if (dist) setLinkedDistribution(dist);
-              } else if (matchingSale.offer) {
-                // It's an offer sale
-                const offer = await fetchB2BOfferById(matchingSale.offer);
-                if (offer) setLinkedOffer(offer);
-              }
-            }
+          // Fetch offer if we have an offer ID
+          if (offerId) {
+            const offer = await fetchB2BOfferById(offerId);
+            if (offer) setLinkedOffer(offer);
           }
         } catch (error) {
           console.error("Failed to fetch B2B links:", error);
         }
       };
       fetchB2BLinks();
-    }, [addressId]);
+    }, [offerId, distributionId]);
 
     if (!linkedDistribution && !linkedOffer) return null;
 
@@ -621,6 +615,14 @@ export default function WarehousePage() {
                     {t("deliveries.delete")} ({selectedDeliveries.length})
                   </Button>
                 )}
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => setShowUploadDeliveryModal(true)}
+                >
+                  <Upload className="w-4 h-4 mr-1" />
+                  {t("deliveries.import_excel")}
+                </Button>
                 <Button className="bg-[#f6d265] hover:bg-[#f5c842] text-black" onClick={() => {
                   setEditingDelivery(null);
                   setShowDeliveryModal(true);
@@ -660,7 +662,7 @@ export default function WarehousePage() {
                   <TableHead className="text-center w-24">{t("deliveries.table.operations")}</TableHead>
                 </TableRow>
               </TableHeader>
-              <TableBody>
+              <TableBody key={deliveriesKey}>
                 {filteredDeliveries.map((delivery, index) => {
                   const firstItem = delivery.items?.[0];
                   const totalFare = delivery.items?.reduce((sum, item) => sum + (item.fare || 0), 0) || 0;
@@ -897,8 +899,8 @@ export default function WarehousePage() {
                       </div>
 
                       {/* Show Distribution or Offer if exists */}
-                      {delivery.b2b_address && (
-                        <DeliveryB2BLinks deliveryId={delivery.id} addressId={delivery.b2b_address} setViewingDistribution={setViewingDistribution} setViewingOffer={setViewingOffer} />
+                      {(delivery.offer || delivery.distribution) && (
+                        <DeliveryB2BLinks deliveryId={delivery.id} offerId={delivery.offer} distributionId={delivery.distribution} setViewingDistribution={setViewingDistribution} setViewingOffer={setViewingOffer} />
                       )}
 
                       {/* Driver Information */}
@@ -1166,6 +1168,28 @@ export default function WarehousePage() {
           initialData={viewingOffer}
           readOnly={true}
           onClose={() => setViewingOffer(null)}
+        />
+      )}
+
+      {showUploadDeliveryModal && (
+        <UploadDeliveryModal
+          isOpen={showUploadDeliveryModal}
+          onClose={() => setShowUploadDeliveryModal(false)}
+          onSuccess={async () => {
+            // Refresh deliveries data immediately
+            try {
+              const deliveriesData = await fetchDeliveryFulfillments();
+              setDeliveries(deliveriesData || []);
+              setDeliveriesKey(prev => prev + 1); // Force re-render
+              // Also refresh full data in background
+              loadData();
+            } catch (error) {
+              console.error("Failed to refresh deliveries:", error);
+              // Fallback to full refresh
+              await loadData();
+            }
+            // DON'T close modal - let user decide when to close
+          }}
         />
       )}
     </div>
