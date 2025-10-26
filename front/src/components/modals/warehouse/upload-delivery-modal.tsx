@@ -4,7 +4,8 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Check, FileSpreadsheet, Upload, X } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Check, FileSpreadsheet, Upload, X, Save, Trash } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useEffect, useState, useRef } from "react";
 import { toast } from "sonner";
@@ -12,6 +13,12 @@ import { formatNumber } from "@/lib/utils/number-format";
 import { SimpleCombobox } from "@/components/ui/simple-combobox";
 import { useCoreData } from "@/lib/core-data-context";
 import { ShippingCompanyModal } from "@/components/modals/shipping-company-modal";
+import {
+  fetchDeliveryColumnMappings,
+  createDeliveryColumnMapping,
+  deleteDeliveryColumnMapping
+} from "@/lib/api/warehouse";
+import type { DeliveryColumnMapping } from "@/lib/interfaces/warehouse";
 
 interface UploadDeliveryModalProps {
   isOpen: boolean;
@@ -50,6 +57,13 @@ export default function UploadDeliveryModal({ isOpen, onClose, onSuccess }: Uplo
   const [excelColumns, setExcelColumns] = useState<string[]>([]);
   const [columnMappings, setColumnMappings] = useState<Record<string, string>>({});
 
+  // Saved mappings state
+  const [savedMappings, setSavedMappings] = useState<DeliveryColumnMapping[]>([]);
+  const [selectedMappingId, setSelectedMappingId] = useState<number | "">("");
+  const [savingMapping, setSavingMapping] = useState(false);
+  const [showSaveMappingInput, setShowSaveMappingInput] = useState(false);
+  const [newMappingName, setNewMappingName] = useState("");
+
   // Batch creation result
   const [batchResult, setBatchResult] = useState<{ count: number; error_count: number; errors?: any[] } | null>(null);
 
@@ -68,6 +82,19 @@ export default function UploadDeliveryModal({ isOpen, onClose, onSuccess }: Uplo
     };
   }, [isOpen]);
 
+  // Load saved mappings when shipping company changes
+  useEffect(() => {
+    if (selectedShippingCompany && typeof selectedShippingCompany === 'number') {
+      fetchDeliveryColumnMappings(selectedShippingCompany).then(mappings => {
+        if (mappings) {
+          setSavedMappings(mappings);
+        }
+      });
+    } else {
+      setSavedMappings([]);
+    }
+  }, [selectedShippingCompany]);
+
   const resetState = () => {
     setFile(null);
     setRows([]);
@@ -78,6 +105,10 @@ export default function UploadDeliveryModal({ isOpen, onClose, onSuccess }: Uplo
     setExcelColumns([]);
     setColumnMappings({});
     setBatchResult(null);
+    setSavedMappings([]);
+    setSelectedMappingId("");
+    setShowSaveMappingInput(false);
+    setNewMappingName("");
   };
 
   const handleCreateShippingCompany = async (data: any) => {
@@ -147,6 +178,77 @@ export default function UploadDeliveryModal({ isOpen, onClose, onSuccess }: Uplo
       setUploadStep("select");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleSaveMapping = async () => {
+    if (!newMappingName.trim()) {
+      toast.error("لطفا نام تطبیق ستون‌ها را وارد کنید");
+      return;
+    }
+
+    if (typeof selectedShippingCompany !== 'number') {
+      toast.error("لطفا شرکت حمل را انتخاب کنید");
+      return;
+    }
+
+    try {
+      setSavingMapping(true);
+      const created = await createDeliveryColumnMapping({
+        name: newMappingName.trim(),
+        shipping_company: selectedShippingCompany,
+        column_mappings: columnMappings
+      });
+
+      if (created) {
+        toast.success("تطبیق ستون‌ها با موفقیت ذخیره شد");
+        // Refresh the saved mappings list
+        const updated = await fetchDeliveryColumnMappings(selectedShippingCompany);
+        if (updated) {
+          setSavedMappings(updated);
+        }
+        setShowSaveMappingInput(false);
+        setNewMappingName("");
+        setSelectedMappingId(created.id);
+      }
+    } catch (error) {
+      toast.error("خطا در ذخیره تطبیق ستون‌ها");
+    } finally {
+      setSavingMapping(false);
+    }
+  };
+
+  const handleLoadMapping = (mappingId: number) => {
+    const mapping = savedMappings.find(m => m.id === mappingId);
+    if (mapping) {
+      setColumnMappings(mapping.column_mappings);
+      setSelectedMappingId(mappingId);
+      toast.success("تطبیق ستون‌ها بارگذاری شد");
+    }
+  };
+
+  const handleDeleteMapping = async (mappingId: number) => {
+    if (!confirm("آیا از حذف این تطبیق اطمینان دارید؟")) {
+      return;
+    }
+
+    try {
+      await deleteDeliveryColumnMapping(mappingId);
+      toast.success("تطبیق ستون‌ها حذف شد");
+
+      // Refresh the saved mappings list
+      if (typeof selectedShippingCompany === 'number') {
+        const updated = await fetchDeliveryColumnMappings(selectedShippingCompany);
+        if (updated) {
+          setSavedMappings(updated);
+        }
+      }
+
+      if (selectedMappingId === mappingId) {
+        setSelectedMappingId("");
+      }
+    } catch (error) {
+      toast.error("خطا در حذف تطبیق ستون‌ها");
     }
   };
 
@@ -304,6 +406,94 @@ export default function UploadDeliveryModal({ isOpen, onClose, onSuccess }: Uplo
                 <p className="text-xs text-blue-600 mt-2">
                   تعداد ستون‌های یافت شده: {excelColumns.length}
                 </p>
+              </div>
+
+              {/* Saved mappings section */}
+              {savedMappings.length > 0 && (
+                <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-4">
+                  <label className="block text-sm font-medium mb-2">بارگذاری تطبیق ذخیره شده:</label>
+                  <div className="flex gap-2">
+                    <Select
+                      value={selectedMappingId ? String(selectedMappingId) : ""}
+                      onValueChange={(value) => {
+                        if (value) {
+                          handleLoadMapping(Number(value));
+                        }
+                      }}
+                    >
+                      <SelectTrigger className="flex-1">
+                        <SelectValue placeholder="انتخاب تطبیق ذخیره شده..." />
+                      </SelectTrigger>
+                      <SelectContent dir="rtl">
+                        {savedMappings.map(mapping => (
+                          <SelectItem key={mapping.id} value={String(mapping.id)}>
+                            {mapping.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    {selectedMappingId && (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleDeleteMapping(selectedMappingId as number)}
+                        className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                      >
+                        <Trash className="w-4 h-4" />
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Save mapping section */}
+              <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 mb-4">
+                {!showSaveMappingInput ? (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setShowSaveMappingInput(true)}
+                    className="w-full"
+                  >
+                    <Save className="w-4 h-4 ml-2" />
+                    ذخیره تطبیق فعلی
+                  </Button>
+                ) : (
+                  <div className="space-y-2">
+                    <label className="block text-sm font-medium">نام تطبیق:</label>
+                    <div className="flex gap-2">
+                      <Input
+                        value={newMappingName}
+                        onChange={(e) => setNewMappingName(e.target.value)}
+                        placeholder="نام تطبیق را وارد کنید..."
+                        className="flex-1"
+                      />
+                      <Button
+                        type="button"
+                        size="sm"
+                        onClick={handleSaveMapping}
+                        disabled={savingMapping || !newMappingName.trim()}
+                        className="bg-[#f6d265] hover:bg-[#f5c842] text-black"
+                      >
+                        <Save className="w-4 h-4 ml-1" />
+                        ذخیره
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          setShowSaveMappingInput(false);
+                          setNewMappingName("");
+                        }}
+                      >
+                        لغو
+                      </Button>
+                    </div>
+                  </div>
+                )}
               </div>
 
               <div className="grid grid-cols-2 gap-4 mb-4 font-semibold text-sm">

@@ -150,3 +150,13 @@ export interface DeliveryFulfillmentCreate {
     fare: number;
   }[];
 }
+
+export interface DeliveryColumnMapping {
+  id: number;
+  name: string;
+  shipping_company: number;
+  shipping_company_name?: string;
+  column_mappings: Record<string, string>;
+  created_at: string;
+  updated_at: string;
+}

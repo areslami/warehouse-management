@@ -6,11 +6,13 @@ import pandas as pd
 import io
 
 from .models import (
-    Warehouse, ShippingCompany, WarehouseReceipt, DispatchIssue, DeliveryFulfillment
+    Warehouse, ShippingCompany, WarehouseReceipt, DispatchIssue, DeliveryFulfillment,
+    DeliveryColumnMapping
 )
 from .serializers import (
     WarehouseSerializer, ShippingCompanySerializer, WarehouseReceiptSerializer,
-    WarehouseReceiptListSerializer, DispatchIssueSerializer, DeliveryFulfillmentSerializer
+    WarehouseReceiptListSerializer, DispatchIssueSerializer, DeliveryFulfillmentSerializer,
+    DeliveryColumnMappingSerializer
 )
 from .excel_utils import process_delivery_row, create_delivery_from_data
 
@@ -80,6 +82,16 @@ class DeliveryFulfillmentViewSet(viewsets.ModelViewSet):
     search_fields = ['delivery_id', 'description']
     ordering_fields = ['issue_date', 'created_at']
     ordering = ['-issue_date']
+
+
+class DeliveryColumnMappingViewSet(viewsets.ModelViewSet):
+    queryset = DeliveryColumnMapping.objects.select_related('shipping_company').all()
+    serializer_class = DeliveryColumnMappingSerializer
+    filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
+    filterset_fields = ['shipping_company']
+    search_fields = ['name']
+    ordering_fields = ['name', 'created_at']
+    ordering = ['shipping_company', 'name']
 
 
 @api_view(['POST'])

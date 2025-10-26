@@ -1,7 +1,8 @@
 from rest_framework import serializers
 from .models import (
     Warehouse, ShippingCompany, WarehouseReceipt, WarehouseReceiptItem,
-    DispatchIssue, DispatchIssueItem, DeliveryFulfillment, DeliveryFulfillmentItem
+    DispatchIssue, DispatchIssueItem, DeliveryFulfillment, DeliveryFulfillmentItem,
+    DeliveryColumnMapping
 )
 
 
@@ -217,3 +218,12 @@ class WarehouseReceiptListSerializer(serializers.ModelSerializer):
     class Meta:
         model = WarehouseReceipt
         fields = '__all__'
+
+
+class DeliveryColumnMappingSerializer(serializers.ModelSerializer):
+    shipping_company_name = serializers.CharField(source='shipping_company.name', read_only=True)
+
+    class Meta:
+        model = DeliveryColumnMapping
+        fields = ['id', 'name', 'shipping_company', 'shipping_company_name', 'column_mappings', 'created_at', 'updated_at']
+        read_only_fields = ['created_at', 'updated_at']

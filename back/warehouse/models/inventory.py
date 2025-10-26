@@ -106,3 +106,20 @@ class DeliveryFulfillmentItem(models.Model):
     customer = models.ForeignKey('core.Customer', on_delete=models.SET_NULL,null=True)
     fare = models.DecimalField(max_digits=20, decimal_places=0,default=0)
 
+
+class DeliveryColumnMapping(models.Model):
+    """Saved column mappings for delivery Excel imports, bound to shipping companies"""
+    name = models.CharField(max_length=100)
+    shipping_company = models.ForeignKey(ShippingCompany, on_delete=models.CASCADE, related_name='column_mappings')
+    column_mappings = models.JSONField(help_text="JSON object mapping field keys to Excel column names")
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        unique_together = ['name', 'shipping_company']
+        ordering = ['shipping_company', 'name']
+
+    def __str__(self):
+        company_name = self.shipping_company.name if self.shipping_company else 'No Company'
+        return f"{self.name} ({company_name})"
+

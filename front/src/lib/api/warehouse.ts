@@ -6,6 +6,7 @@ import type {
   WarehouseReceiptCreate,
   DispatchIssueCreate,
   DeliveryFulfillmentCreate,
+  DeliveryColumnMapping,
 } from "./../interfaces/warehouse";
 
 import { getCoreContext } from "../core-data-context";
@@ -145,3 +146,40 @@ export const updateDeliveryFulfillment = (
 
 export const deleteDeliveryFulfillment = (id: number) =>
   apiFetch(`${API_BASE_URL()}deliveries/${id}/`, { method: "DELETE" });
+
+// --------------- DeliveryColumnMapping  ---------------
+export const fetchDeliveryColumnMappings = (shippingCompanyId?: number) => {
+  const url = shippingCompanyId
+    ? `${API_BASE_URL()}delivery-column-mappings/?shipping_company=${shippingCompanyId}`
+    : `${API_BASE_URL()}delivery-column-mappings/`;
+  return apiFetch<DeliveryColumnMapping[]>(url);
+};
+
+export const fetchDeliveryColumnMappingById = (id: number) =>
+  apiFetch<DeliveryColumnMapping>(`${API_BASE_URL()}delivery-column-mappings/${id}/`);
+
+export const createDeliveryColumnMapping = (data: {
+  name: string;
+  shipping_company: number;
+  column_mappings: Record<string, string>;
+}) =>
+  apiFetch<DeliveryColumnMapping>(`${API_BASE_URL()}delivery-column-mappings/`, {
+    method: "POST",
+    body: data,
+  });
+
+export const updateDeliveryColumnMapping = (
+  id: number,
+  data: Partial<{
+    name: string;
+    shipping_company: number;
+    column_mappings: Record<string, string>;
+  }>
+) =>
+  apiFetch<DeliveryColumnMapping>(`${API_BASE_URL()}delivery-column-mappings/${id}/`, {
+    method: "PATCH",
+    body: data,
+  });
+
+export const deleteDeliveryColumnMapping = (id: number) =>
+  apiFetch(`${API_BASE_URL()}delivery-column-mappings/${id}/`, { method: "DELETE" });
