@@ -280,7 +280,7 @@ export function SalesProformaModal({ trigger, onSubmit, onClose, initialData, re
                 name="payment_description"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>{t("payment_desc")}</FormLabel>
+                    <FormLabel>{t("payment_desc")} <span className="text-gray-400 text-sm">{t("optional")}</span></FormLabel>
                     <FormControl>
                       <Input {...field} />
                     </FormControl>
@@ -406,7 +406,7 @@ export function SalesProformaModal({ trigger, onSubmit, onClose, initialData, re
                       name={`lines.${index}.weight`}
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>{t("weight")}</FormLabel>
+                          <FormLabel>{t("weight")} <span className="text-gray-400 text-sm">{t("optional")}</span></FormLabel>
                           <FormControl>
                             <Input
                               type="text"
@@ -425,7 +425,7 @@ export function SalesProformaModal({ trigger, onSubmit, onClose, initialData, re
                       name={`lines.${index}.unit_price`}
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>{t('unit_price')}</FormLabel>
+                          <FormLabel>{t('unit_price')} <span className="text-gray-400 text-sm">{t("optional")}</span></FormLabel>
                           <FormControl>
                             <Input
                               type="text"

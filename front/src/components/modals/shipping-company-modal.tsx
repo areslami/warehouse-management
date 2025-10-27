@@ -136,7 +136,7 @@ export function ShippingCompanyModal({ trigger, onSubmit, onClose, initialData }
               name="address"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>{t("address")}</FormLabel>
+                  <FormLabel>{t("address")} <span className="text-gray-400 text-sm">{t("optional")}</span></FormLabel>
                   <FormControl>
                     <Input {...field} />
                   </FormControl>
@@ -150,7 +150,7 @@ export function ShippingCompanyModal({ trigger, onSubmit, onClose, initialData }
               name="description"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>{t("description")}</FormLabel>
+                  <FormLabel>{t("description")} <span className="text-gray-400 text-sm">{t("optional")}</span></FormLabel>
                   <FormControl>
                     <Input {...field} />
                   </FormControl>

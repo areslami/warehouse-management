@@ -317,6 +317,7 @@
       "actions": "عملیات",
       "no_proformas": "هیچ پیش‌فاکتوری یافت نشد",
       "confirm_delete": "آیا از حذف این پیش‌فاکتور اطمینان دارید؟",
+      "optional": "(اختیاری)",
       "validation": {
         "product-required": "محصول الزامی است",
         "weight": "وزن باید بزرگتر از 0 باشد",
@@ -360,6 +361,7 @@
       "actions": "عملیات",
       "no_proformas": "هیچ پیش‌فاکتوری یافت نشد",
       "confirm_delete": "آیا از حذف این پیش‌فاکتور اطمینان دارید؟",
+      "optional": "(اختیاری)",
       "validation": {
         "product-required": "محصول الزامی است",
         "weight": "وزن باید بزرگتر از 0 باشد",
@@ -405,6 +407,7 @@
       "select-date": "انتخاب تاریخ",
       "save": "ذخیره",
       "cancel": "لغو",
+      "optional": "(اختیاری)",
       "validation": {
         "product-required": "محصول الزامی است",
         "weight": "وزن باید بزرگتر از 0 باشد",
@@ -446,6 +449,7 @@
       "select-date": "انتخاب تاریخ",
       "save": "ذخیره",
       "cancel": "لغو",
+      "optional": "(اختیاری)",
       "validation": {
         "product-required": "محصول الزامی است",
         "weight": "وزن باید بزرگتر از 0 باشد",
@@ -493,6 +497,7 @@
       "select-date": "انتخاب تاریخ",
       "save": "ذخیره",
       "cancel": "لغو",
+      "optional": "(اختیاری)",
       "validation": {
         "product-required": "محصول الزامی است",
         "weight": "وزن باید بزرگتر از 0 باشد",
@@ -525,6 +530,7 @@
       "description": "توضیحات",
       "save": "ذخیره",
       "cancel": "لغو",
+      "optional": "(اختیاری)",
       "validation": {
         "name": "نام محصول الزامی است",
         "code": "کد محصول الزامی است",
@@ -550,6 +556,7 @@
       "postal-code": "کد پستی",
       "save": "ذخیره",
       "cancel": "لغو",
+      "optional": "(اختیاری)",
       "validation": {
         "economic-code": "کد اقتصادی الزامی است",
         "phone": "شماره تلفن الزامی است",
@@ -579,6 +586,7 @@
       "postal-code": "کد پستی",
       "save": "ذخیره",
       "cancel": "لغو",
+      "optional": "(اختیاری)",
       "validation": {
         "economic-code": "کد اقتصادی الزامی است",
         "phone": "شماره تلفن الزامی است",
@@ -609,6 +617,7 @@
       "postal-code": "کد پستی",
       "save": "ذخیره",
       "cancel": "لغو",
+      "optional": "(اختیاری)",
       "validation": {
         "system-id": "شناسه سیستم الزامی است",
         "unique-id": "شناسه یکتا الزامی است",
@@ -629,6 +638,7 @@
       "description": "توضیحات",
       "save": "ذخیره",
       "cancel": "لغو",
+      "optional": "(اختیاری)",
       "validation": {
         "name": "نام شرکت الزامی است",
         "contact-person": "نام شخص تماس الزامی است",
@@ -646,6 +656,7 @@
       "description": "توضیحات",
       "save": "ذخیره",
       "cancel": "لغو",
+      "optional": "(اختیاری)",
       "validation": {
         "name": "نام انبار الزامی است",
         "address": "آدرس انبار الزامی است",
@@ -1099,6 +1110,7 @@
       "delivery_id_field": "شناسه تحویل (شناسه بارنامه)",
       "waybill_serial_field": "سریال بارنامه",
       "allocation_id_field": "شناسه تخصیص",
+      "sale_id_field": "شناسه خرید",
       "issue_date_field": "تاریخ صدور",
       "driver_name_field": "نام راننده",
       "driver_phone_field": "تلفن همراه راننده",

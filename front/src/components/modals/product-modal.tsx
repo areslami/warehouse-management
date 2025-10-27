@@ -169,7 +169,7 @@ export function ProductModal({ trigger, onSubmit, onClose, initialData }: Produc
                 name="description"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>{t("description")}</FormLabel>
+                    <FormLabel>{t("description")} <span className="text-gray-400 text-sm">{t("optional")}</span></FormLabel>
                     <FormControl>
                       <Input {...field} />
                     </FormControl>

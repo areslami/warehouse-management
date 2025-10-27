@@ -258,7 +258,7 @@ export function CustomerModal({ trigger, onSubmit, onClose, initialData }: Custo
                 name="description"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>{t("description")} (اختیاری)</FormLabel>
+                    <FormLabel>{t("description")} <span className="text-gray-400 text-sm">{t("optional")}</span></FormLabel>
                     <FormControl>
                       <Input {...field} />
                     </FormControl>
@@ -272,7 +272,7 @@ export function CustomerModal({ trigger, onSubmit, onClose, initialData }: Custo
                 name="tags"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>{t("tags")} (اختیاری)</FormLabel>
+                    <FormLabel>{t("tags")} <span className="text-gray-400 text-sm">{t("optional")}</span></FormLabel>
                     <FormControl>
                       <Input {...field} />
                     </FormControl>

@@ -256,7 +256,7 @@ export function ReceiverModal({ trigger, onSubmit, onClose, initialData }: Recei
               name="description"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>{t("description")} (اختیاری)</FormLabel>
+                  <FormLabel>{t("description")} <span className="text-gray-400 text-sm">{t("optional")}</span></FormLabel>
                   <FormControl>
                     <Input {...field} />
                   </FormControl>

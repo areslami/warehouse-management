@@ -223,7 +223,7 @@ export function WarehouseReceiptModal({ trigger, onSubmit, onClose, initialData,
                   name="receipt_id"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>{t("receipt-id")}</FormLabel>
+                      <FormLabel>{t("receipt-id")} <span className="text-gray-400 text-sm">{t("optional")}</span></FormLabel>
                       <FormControl>
                         <Input
                           {...field}
@@ -326,7 +326,7 @@ export function WarehouseReceiptModal({ trigger, onSubmit, onClose, initialData,
                     name="cottage_serial_number"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>{t("cottage-serial")}</FormLabel>
+                        <FormLabel>{t("cottage-serial")} <span className="text-gray-400 text-sm">{t("optional")}</span></FormLabel>
                         <FormControl>
                           <Input {...field} />
                         </FormControl>
@@ -341,7 +341,7 @@ export function WarehouseReceiptModal({ trigger, onSubmit, onClose, initialData,
                   name="proforma"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>{t("proforma")}</FormLabel>
+                      <FormLabel>{t("proforma")} <span className="text-gray-400 text-sm">{t("optional")}</span></FormLabel>
                       <FormControl>
                         <SimpleCombobox
                           value={field.value !== undefined && field.value !== null && field.value > 0 ? field.value.toString() : "none"}
@@ -399,7 +399,7 @@ export function WarehouseReceiptModal({ trigger, onSubmit, onClose, initialData,
                 name="description"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>{t("description")}</FormLabel>
+                    <FormLabel>{t("description")} <span className="text-gray-400 text-sm">{t("optional")}</span></FormLabel>
                     <FormControl>
                       <Input {...field} />
                     </FormControl>
@@ -474,7 +474,7 @@ export function WarehouseReceiptModal({ trigger, onSubmit, onClose, initialData,
                       name={`items.${index}.weight`}
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>{t("weight")}</FormLabel>
+                          <FormLabel>{t("weight")} <span className="text-gray-400 text-sm">{t("optional")}</span></FormLabel>
                           <FormControl>
                             <NumberInput
                               value={typeof field.value === 'string' ? parseInt(field.value) || 0 : field.value || 0}

@@ -30,7 +30,7 @@ import {
 } from "@/lib/api/warehouse";
 import { Warehouse, WarehouseReceipt, DispatchIssue, DeliveryFulfillment } from "@/lib/interfaces/warehouse";
 import { B2BAddress, B2BDistribution, B2BOffer } from "@/lib/interfaces/b2b";
-import { fetchB2BAddressById, fetchB2BDistributionById, fetchB2BOfferById, fetchB2BSales } from "@/lib/api/b2b";
+import { fetchB2BAddressById, fetchB2BDistributionById, fetchB2BOfferById } from "@/lib/api/b2b";
 import { formatNumber } from "@/lib/utils/number-format";
 
 export default function WarehousePage() {
@@ -233,7 +233,7 @@ export default function WarehousePage() {
   }, [deliveries, searchTerm, selectedWarehouse]);
 
   // Component to show B2B Distribution or Offer links
-  const DeliveryB2BLinks = ({ deliveryId, offerId, distributionId, setViewingDistribution, setViewingOffer }: { deliveryId: number, offerId?: number | null, distributionId?: number | null, setViewingDistribution: (d: B2BDistribution | null) => void, setViewingOffer: (o: B2BOffer | null) => void }) => {
+  const DeliveryB2BLinks = ({ offerId, distributionId, setViewingDistribution, setViewingOffer }: { offerId?: number | null, distributionId?: number | null, setViewingDistribution: (d: B2BDistribution | null) => void, setViewingOffer: (o: B2BOffer | null) => void }) => {
     const [linkedDistribution, setLinkedDistribution] = useState<B2BDistribution | null>(null);
     const [linkedOffer, setLinkedOffer] = useState<B2BOffer | null>(null);
 
@@ -432,6 +432,7 @@ export default function WarehousePage() {
                   <TableHead className="text-center w-12">
                     <input
                       type="checkbox"
+                      aria-label="انتخاب همه رسیدها"
                       checked={filteredReceipts.length > 0 && selectedReceipts.length === filteredReceipts.length}
                       onChange={(e) => {
                         if (e.target.checked) {
@@ -456,6 +457,7 @@ export default function WarehousePage() {
                     <TableCell className="text-center">
                       <input
                         type="checkbox"
+                        aria-label={`انتخاب رسید ${receipt.receipt_id}`}
                         checked={selectedReceipts.includes(receipt.id)}
                         onChange={(e) => {
                           if (e.target.checked) {
@@ -531,6 +533,7 @@ export default function WarehousePage() {
                   <TableHead className="text-center w-12">
                     <input
                       type="checkbox"
+                      aria-label="انتخاب همه حواله‌ها"
                       checked={filteredDispatches.length > 0 && selectedDispatches.length === filteredDispatches.length}
                       onChange={(e) => {
                         if (e.target.checked) {
@@ -555,6 +558,7 @@ export default function WarehousePage() {
                     <TableCell className="text-center">
                       <input
                         type="checkbox"
+                        aria-label={`انتخاب حواله ${dispatch.dispatch_id}`}
                         checked={selectedDispatches.includes(dispatch.id)}
                         onChange={(e) => {
                           if (e.target.checked) {
@@ -638,6 +642,7 @@ export default function WarehousePage() {
                   <TableHead className="w-12 text-center">
                     <input
                       type="checkbox"
+                      aria-label="انتخاب همه تحویل‌ها"
                       checked={filteredDeliveries.length > 0 && selectedDeliveries.length === filteredDeliveries.length}
                       onChange={(e) => {
                         if (e.target.checked) {
@@ -672,6 +677,7 @@ export default function WarehousePage() {
                       <TableCell className="text-center">
                         <input
                           type="checkbox"
+                          aria-label={`انتخاب تحویل ${delivery.delivery_id}`}
                           checked={selectedDeliveries.includes(delivery.id)}
                           onChange={(e) => {
                             if (e.target.checked) {
@@ -900,7 +906,7 @@ export default function WarehousePage() {
 
                       {/* Show Distribution or Offer if exists */}
                       {(delivery.offer || delivery.distribution) && (
-                        <DeliveryB2BLinks deliveryId={delivery.id} offerId={delivery.offer} distributionId={delivery.distribution} setViewingDistribution={setViewingDistribution} setViewingOffer={setViewingOffer} />
+                        <DeliveryB2BLinks offerId={delivery.offer} distributionId={delivery.distribution} setViewingDistribution={setViewingDistribution} setViewingOffer={setViewingOffer} />
                       )}
 
                       {/* Driver Information */}
@@ -957,9 +963,8 @@ export default function WarehousePage() {
             warehouse: editingReceipt.warehouse ? Number(editingReceipt.warehouse) : 0,
             proforma: editingReceipt.proforma ? Number(editingReceipt.proforma) : undefined,
             items: editingReceipt.items?.map(item => ({
-              ...item,
               product: item.product ? Number(item.product) : 0,
-              weight: Number(item.weight),
+              weight: typeof item.weight === 'string' ? parseFloat(item.weight) : Number(item.weight),
             })) || [],
           } : undefined}
           onSubmit={async (data) => {
@@ -971,6 +976,10 @@ export default function WarehousePage() {
                 description: data.description?.trim() || undefined,
                 cottage_serial_number: data.cottage_serial_number?.trim() || undefined,
                 proforma: data.proforma && data.proforma > 0 ? data.proforma : undefined,
+                items: data.items.map(item => ({
+                  product: item.product,
+                  weight: typeof item.weight === 'string' ? parseFloat(item.weight) : item.weight,
+                })),
               };
 
               if (editingReceipt) {
@@ -1005,18 +1014,23 @@ export default function WarehousePage() {
             sales_proforma: editingDispatch.sales_proforma ? Number(editingDispatch.sales_proforma) : 0,
             shipping_company: editingDispatch.shipping_company ? Number(editingDispatch.shipping_company) : 0,
             items: editingDispatch.items?.map(item => ({
-              ...item,
               product: item.product ? Number(item.product) : 0,
-              weight: item.weight ? Number(item.weight) : 0,
+              weight: typeof item.weight === 'string' ? parseFloat(item.weight) : (item.weight ?? 0),
+              vehicle_type: item.vehicle_type,
               receiver: item.receiver ? Number(item.receiver) : 0,
             })) || [],
           } : undefined}
           onSubmit={async (data) => {
             try {
-              // Calculate total weight from items
-              const totalWeight = data.items.reduce((sum, item) => sum + item.weight, 0);
+              // Convert weights to numbers and calculate total weight
+              const itemsWithNumericWeights = data.items.map(item => ({
+                ...item,
+                weight: typeof item.weight === 'string' ? parseFloat(item.weight) : (item.weight ?? 0),
+              }));
+              const totalWeight = itemsWithNumericWeights.reduce((sum, item) => sum + item.weight, 0);
               const submitData = {
                 ...data,
+                items: itemsWithNumericWeights,
                 total_weight: totalWeight,
                 description: data.description || ""
               };
@@ -1063,7 +1077,7 @@ export default function WarehousePage() {
           onSubmit={async (data) => {
             try {
               // Calculate total weight from items
-              const totalWeight = data.items.reduce((sum, item) => sum + item.weight, 0);
+              const totalWeight = data.items.reduce((sum: number, item: { weight: number }) => sum + item.weight, 0);
               const submitData = {
                 ...data,
                 total_weight: totalWeight,

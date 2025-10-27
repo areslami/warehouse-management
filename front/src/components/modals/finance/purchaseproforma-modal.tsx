@@ -350,7 +350,7 @@ export function PurchaseProformaModal({ trigger, onSubmit, onClose, initialData,
                       name={`lines.${index}.weight`}
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>{t("weight")}</FormLabel>
+                          <FormLabel>{t("weight")} <span className="text-gray-400 text-sm">{t("optional")}</span></FormLabel>
                           <FormControl>
                             <Input
                               type="text"
@@ -369,7 +369,7 @@ export function PurchaseProformaModal({ trigger, onSubmit, onClose, initialData,
                       name={`lines.${index}.unit_price`}
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>{t('unit_price')}</FormLabel>
+                          <FormLabel>{t('unit_price')} <span className="text-gray-400 text-sm">{t("optional")}</span></FormLabel>
                           <FormControl>
                             <Input
                               type="text"

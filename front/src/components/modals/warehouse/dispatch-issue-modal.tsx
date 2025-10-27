@@ -399,7 +399,7 @@ export function DispatchIssueModal({ trigger, onSubmit, onClose, initialData, is
                 name="description"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>{t("description")}</FormLabel>
+                    <FormLabel>{t("description")} <span className="text-gray-400 text-sm">{t("optional")}</span></FormLabel>
                     <FormControl>
                       <Input {...field} />
                     </FormControl>
@@ -485,7 +485,7 @@ export function DispatchIssueModal({ trigger, onSubmit, onClose, initialData, is
                       name={`items.${index}.weight`}
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>{t("weight")}</FormLabel>
+                          <FormLabel>{t("weight")} <span className="text-gray-400 text-sm">{t("optional")}</span></FormLabel>
                           <FormControl>
                             <NumberInput
                               value={field.value || 0}

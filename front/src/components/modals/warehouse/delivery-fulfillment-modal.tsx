@@ -682,7 +682,7 @@ export function DeliveryFulfillmentModal({ trigger, onSubmit, onClose, initialDa
                 name="description"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>{t("description")}</FormLabel>
+                    <FormLabel>{t("description")} <span className="text-gray-400 text-sm">{t("optional")}</span></FormLabel>
                     <FormControl>
                       <Input {...field} />
                     </FormControl>
@@ -824,7 +824,7 @@ export function DeliveryFulfillmentModal({ trigger, onSubmit, onClose, initialDa
                         name={`items.${index}.destination`}
                         render={({ field }) => (
                           <FormItem className="col-span-2">
-                            <FormLabel>{t("destination")}</FormLabel>
+                            <FormLabel>{t("destination")} <span className="text-gray-400 text-sm">{t("optional")}</span></FormLabel>
                             <FormControl>
                               <Input {...field} />
                             </FormControl>

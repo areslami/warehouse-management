@@ -31,6 +31,7 @@ const REQUIRED_FIELDS = [
   { key: "delivery_id", label: "delivery_id_field", required: true },
   { key: "waybill_serial", label: "waybill_serial_field", required: false },
   { key: "allocation_id", label: "allocation_id_field", required: true },
+  { key: "sale_id", label: "sale_id_field", required: false },
   { key: "issue_date", label: "issue_date_field", required: true },
   { key: "driver_name", label: "driver_name_field", required: true },
   { key: "driver_phone", label: "driver_phone_field", required: true },

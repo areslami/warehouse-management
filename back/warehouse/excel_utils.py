@@ -156,6 +156,7 @@ def process_delivery_row(row, column_mappings, shipping_company_id):
     destination = str(mapped.get('destination', '')).strip() if mapped.get('destination') else None
     receiver_name = str(mapped.get('receiver', '')).strip()
     fare = clean_number(mapped.get('fare'))
+    sale_id = str(mapped.get('sale_id', '')).strip() if mapped.get('sale_id') else None
 
     # Check if delivery_id already exists
     if delivery_id and DeliveryFulfillment.objects.filter(delivery_id=delivery_id).exists():
@@ -174,6 +175,24 @@ def process_delivery_row(row, column_mappings, shipping_company_id):
             'allocation_id': allocation_id,
             'row_data': mapped
         }
+
+    # Validate sale_id if provided
+    if sale_id:
+        if not b2b_address.purchase_id:
+            return {
+                'error': f'آدرس B2B با شناسه تخصیص "{allocation_id}" فاقد شناسه خرید است.',
+                'allocation_id': allocation_id,
+                'sale_id': sale_id,
+                'row_data': mapped
+            }
+        if b2b_address.purchase_id != sale_id:
+            return {
+                'error': f'شناسه خرید "{sale_id}" با شناسه خرید آدرس B2B "{b2b_address.purchase_id}" مطابقت ندارد. (شناسه تخصیص: {allocation_id})',
+                'allocation_id': allocation_id,
+                'sale_id': sale_id,
+                'b2b_purchase_id': b2b_address.purchase_id,
+                'row_data': mapped
+            }
 
     # Get related entities
     warehouse_receipt = get_warehouse_receipt_from_b2b_address(b2b_address)
