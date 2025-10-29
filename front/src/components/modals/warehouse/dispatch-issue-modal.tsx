@@ -24,7 +24,7 @@ import { ProductFormData, ProductModal } from "../product-modal";
 import { ReceiverFormData, ReceiverModal } from "../receiver-modal";
 import { ShippingCompanyFormData, ShippingCompanyModal } from "../shipping-company-modal";
 import { SalesProformaFormData, SalesProformaModal } from "../finance/salesproforma-modal";
-import { createWarehouse } from "@/lib/api/warehouse";
+import { createWarehouse, fetchNextDispatchId } from "@/lib/api/warehouse";
 import { createProduct, createReceiver, createShippingCompany } from "@/lib/api/core";
 import { createSalesProforma } from "@/lib/api/finance";
 
@@ -75,7 +75,21 @@ export function DispatchIssueModal({ trigger, onSubmit, onClose, initialData, is
     if (data.salesProformas.length === 0) {
       refreshData('salesProformas');
     }
-  }, []);
+
+    // Fetch next dispatch ID only when creating new (not editing)
+    if (!isEditing && !initialData?.dispatch_id) {
+      loadNextDispatchId();
+    }
+  }, [isEditing, initialData?.dispatch_id]);
+
+  const loadNextDispatchId = async () => {
+    try {
+      const nextId = await fetchNextDispatchId();
+      form.setValue('dispatch_id', nextId);
+    } catch (error) {
+      console.error('Failed to load next dispatch ID:', error);
+    }
+  };
 
   const getTodayDate = () => {
     if (typeof window === 'undefined') return '';

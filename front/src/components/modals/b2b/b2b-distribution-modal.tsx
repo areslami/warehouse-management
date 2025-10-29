@@ -20,6 +20,7 @@ import { SalesProformaModal } from "../finance/salesproforma-modal";
 import { createCustomer } from "@/lib/api/core";
 import { createWarehouseReceipt, fetchWarehouseReceipts } from "@/lib/api/warehouse";
 import { fetchSalesProformas, createSalesProforma } from "@/lib/api/finance";
+import { fetchNextDistributionId } from "@/lib/api/b2b";
 import { WarehouseReceipt } from "@/lib/interfaces/warehouse";
 import { SalesProforma } from "@/lib/interfaces/finance";
 import { describeWarehouseReceipt, describeParty } from "@/lib/utils/label-utils";
@@ -66,7 +67,21 @@ export function B2BDistributionModal({ trigger, onSubmit, onClose, initialData, 
     }
     loadWarehouseReceipts();
     loadSalesProformas();
-  }, [customers.length, refreshCoreData]);
+
+    // Fetch next distribution ID only when creating new (not editing)
+    if (!isEditing && !initialData?.transfer_id) {
+      loadNextDistributionId();
+    }
+  }, [customers.length, refreshCoreData, isEditing, initialData?.transfer_id]);
+
+  const loadNextDistributionId = async () => {
+    try {
+      const nextId = await fetchNextDistributionId();
+      form.setValue('transfer_id', nextId);
+    } catch (error) {
+      console.error('Failed to load next distribution ID:', error);
+    }
+  };
 
   const loadWarehouseReceipts = async () => {
     try {
@@ -185,10 +200,6 @@ export function B2BDistributionModal({ trigger, onSubmit, onClose, initialData, 
                         <Input
                           {...field}
                           placeholder={t("enter-transfer-id")}
-                          readOnly={isEditing}
-                          className={isEditing ? "bg-gray-100 cursor-not-allowed" : ""}
-                          autoFocus={false}
-                          tabIndex={isEditing ? -1 : undefined}
                         />
                       </FormControl>
                       <FormMessage />

@@ -22,7 +22,7 @@ import { describeWarehouse, describePurchaseProforma, describeProduct } from "@/
 import { WarehouseFormData, WarehouseModal } from "./warehouse-modal";
 import { ProductFormData, ProductModal } from "../product-modal";
 import { PurchaseProformaFormData, PurchaseProformaModal } from "../finance/purchaseproforma-modal";
-import { createWarehouse, fetchWarehouseReceipts } from "@/lib/api/warehouse";
+import { createWarehouse, fetchWarehouseReceipts, fetchNextReceiptId } from "@/lib/api/warehouse";
 import { createProduct } from "@/lib/api/core";
 import { createPurchaseProforma } from "@/lib/api/finance";
 
@@ -92,7 +92,21 @@ export function WarehouseReceiptModal({ trigger, onSubmit, onClose, initialData,
     };
 
     loadExistingCottageNumbers();
-  }, []);
+
+    // Fetch next receipt ID only when creating new (not editing)
+    if (!isEditing && !initialData?.receipt_id) {
+      loadNextReceiptId();
+    }
+  }, [isEditing, initialData?.receipt_id]);
+
+  const loadNextReceiptId = async () => {
+    try {
+      const nextId = await fetchNextReceiptId();
+      form.setValue('receipt_id', nextId);
+    } catch (error) {
+      console.error('Failed to load next receipt ID:', error);
+    }
+  };
   const getTodayDate = () => {
     if (typeof window === 'undefined') return '';
     return getTodayGregorian();

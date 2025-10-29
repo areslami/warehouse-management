@@ -16,6 +16,13 @@ const API_BASE_URL = () => `${getApiBaseUrl()}finance/`;
 export const fetchPurchaseProformas = () =>
   apiFetch<PurchaseProforma[]>(`${API_BASE_URL()}purchase-proformas/`);
 
+export const fetchNextPurchaseProformaId = async (): Promise<string> => {
+  const response = await apiFetch<{ next_serial_number: string }>(
+    `${API_BASE_URL()}purchase-proformas/next-id/`
+  );
+  return response?.next_serial_number || "";
+};
+
 export const fetchPurchaseProformaById = (id: number) =>
   apiFetch<PurchaseProforma>(`${API_BASE_URL()}purchase-proformas/${id}/`);
 
@@ -82,6 +89,14 @@ export const fetchPurchaseProformasByDateRange = (
 // ------------------------ SalesProforma  ------------------------
 export const fetchSalesProformas = () =>
   apiFetch<SalesProforma[]>(`${API_BASE_URL()}sales-proformas/`);
+
+export const fetchNextSalesProformaId = async (): Promise<string> => {
+  const response = await apiFetch<{ next_serial_number: string }>(
+    `${API_BASE_URL()}sales-proformas/next-id/`
+  );
+  return response?.next_serial_number || "";
+};
+
 export const fetchSalesProformaById = (id: number) =>
   apiFetch<SalesProforma>(`${API_BASE_URL()}sales-proformas/${id}/`);
 export const createSalesProforma = async (data: SalesProformaCreate) => {

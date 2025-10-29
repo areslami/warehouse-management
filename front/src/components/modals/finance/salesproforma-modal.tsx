@@ -21,6 +21,7 @@ import { describeParty, describeProduct } from "@/lib/utils/label-utils";
 import { CustomerFormData, CustomerModal } from "../customer-modal";
 import { ProductFormData, ProductModal } from "../product-modal";
 import { createCustomer, createProduct } from "@/lib/api/core";
+import { fetchNextSalesProformaId } from "@/lib/api/finance";
 
 export type SalesProformaFormData = {
   serial_number: string;
@@ -60,7 +61,21 @@ export function SalesProformaModal({ trigger, onSubmit, onClose, initialData, re
     if (data.products.length === 0) {
       refreshData('products');
     }
-  }, []);
+
+    // Fetch next serial number only when creating new (not editing)
+    if (!isEditing && !initialData?.serial_number) {
+      loadNextSerialNumber();
+    }
+  }, [isEditing, initialData?.serial_number]);
+
+  const loadNextSerialNumber = async () => {
+    try {
+      const nextId = await fetchNextSalesProformaId();
+      form.setValue('serial_number', nextId);
+    } catch (error) {
+      console.error('Failed to load next serial number:', error);
+    }
+  };
   const getTodayDate = () => {
     if (typeof window === 'undefined') return '';
     return getTodayGregorian();

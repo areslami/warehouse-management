@@ -1,5 +1,5 @@
 from rest_framework import viewsets, filters, status
-from rest_framework.decorators import action
+from rest_framework.decorators import action, api_view
 from rest_framework.response import Response
 from django_filters.rest_framework import DjangoFilterBackend
 from django.db.models import Sum
@@ -9,9 +9,40 @@ from .models import B2BOffer, B2BAddress, B2BDistribution
 from .serializers import (
     B2BOfferSerializer, B2BOfferListSerializer,
     B2BAddressSerializer, B2BAddressListSerializer,
-    
     B2BDistributionSerializer, B2BDistributionListSerializer, B2BSaleSerializer
 )
+
+
+@api_view(['GET'])
+def get_next_transfer_id(request):
+    last_distribution = B2BDistribution.objects.order_by('-id').first()
+    if last_distribution and last_distribution.transfer_id:
+        try:
+            last_num = int(last_distribution.transfer_id.split('-')[-1])
+            new_num = last_num + 1
+        except (ValueError, IndexError):
+            new_num = 1
+    else:
+        new_num = 1
+    
+    next_id = f"DIST-{new_num}"
+    return Response({'next_transfer_id': next_id})
+
+
+@api_view(['GET'])
+def get_next_offer_id(request):
+    last_offer = B2BOffer.objects.order_by('-id').first()
+    if last_offer and last_offer.offer_id:
+        try:
+            last_num = int(last_offer.offer_id.split('-')[-1])
+            new_num = last_num + 1
+        except (ValueError, IndexError):
+            new_num = 1
+    else:
+        new_num = 1
+    
+    next_id = f"OFFER-{new_num}"
+    return Response({'next_offer_id': next_id})
 
 
 class B2BOfferViewSet(viewsets.ModelViewSet):
@@ -45,6 +76,12 @@ class B2BOfferViewSet(viewsets.ModelViewSet):
             serializer = B2BOfferListSerializer(offers, many=True)
             return Response(serializer.data)
         return Response({'error': 'Status parameter required'}, status=status.HTTP_400_BAD_REQUEST)
+    
+    @action(detail=False, methods=['get'], url_path='next-id')
+    def next_id(self, request):
+        """Get next available offer_id"""
+        next_id = B2BOffer.get_next_offer_id()
+        return Response({'next_offer_id': next_id})
 
 
 class B2BAddressViewSet(viewsets.ModelViewSet):
@@ -84,6 +121,12 @@ class B2BSaleViewSet(viewsets.ModelViewSet):
     def total_sales(self, request):
         total_sales = self.get_queryset().aggregate(total_amount=Sum('total_price'))
         return Response(total_sales)
+    
+    @action(detail=False, methods=['get'], url_path='next-id')
+    def next_id(self, request):
+        """Get next available purchase_id"""
+        next_id = B2BSale.get_next_sale_id()
+        return Response({'next_sale_id': next_id})
 
 
 class B2BDistributionViewSet(viewsets.ModelViewSet):
@@ -111,3 +154,10 @@ class B2BDistributionViewSet(viewsets.ModelViewSet):
             serializer = B2BDistributionSerializer(distributions, many=True)
             return Response(serializer.data)
         return Response({'error': 'Customer ID required'}, status=status.HTTP_400_BAD_REQUEST)
+
+
+    @action(detail=False, methods=['get'], url_path='next-id')
+    def next_id(self, request):
+        """Get next available purchase_id"""
+        next_id = B2BDistribution.get_next_dist_id()
+        return Response({'next_dist_id': next_id})

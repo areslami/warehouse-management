@@ -1,4 +1,5 @@
 from django.db import models
+from core.utils import get_next_sequential_id  
 
        
 class Proforma(models.Model):
@@ -12,19 +13,28 @@ class Proforma(models.Model):
     
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-    
+
     def __str__(self):
         return self.serial_number
-
     
 
 class PurchaseProforma(Proforma):
     supplier = models.ForeignKey('core.Supplier', on_delete=models.PROTECT)
     
+    @classmethod
+    def get_next_serial_number(cls):
+        return get_next_sequential_id(cls, 'serial_number', 'PP')
+    
+    def save(self, *args, **kwargs):
+        if not self.serial_number:
+            self.serial_number = self.get_next_serial_number()
+        
+        super().save(*args, **kwargs)
+    
     def __str__(self):
         supplier_name = self.supplier.company_name if self.supplier.supplier_type == 'corporate' else self.supplier.full_name
         return f"Purchase {self.serial_number} - {supplier_name} (${self.final_price})"
-    
+
 class SalesProforma(Proforma):
     PAYMENT_TYPES=[
         ('cash','cash'),
@@ -35,10 +45,19 @@ class SalesProforma(Proforma):
     payment_type = models.CharField(max_length=6,choices=PAYMENT_TYPES,null=False)
     payment_description =  models.CharField(max_length=200,null=True)
     
+    @classmethod
+    def get_next_serial_number(cls):
+        return get_next_sequential_id(cls, 'serial_number', 'SP')
+    
+    def save(self, *args, **kwargs):
+        if not self.serial_number:
+            self.serial_number = self.get_next_serial_number()
+        
+        super().save(*args, **kwargs)
+    
     def __str__(self):
         customer_name = self.customer.company_name if self.customer.customer_type == 'corporate' else self.customer.full_name
         return f"Sales {self.serial_number} - {customer_name} (${self.final_price})"
-    
 
 
 

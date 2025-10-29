@@ -253,7 +253,7 @@ class B2BDistributionSerializer(serializers.ModelSerializer):
     class Meta:
         model = B2BDistribution
         fields = '__all__'
-        read_only_fields = ['created_at', 'updated_at']
+        read_only_fields = ['created_at', 'updated_at']  # Add transfer_id here
 
     def get_customer_name(self, obj):
         if obj.customer:
@@ -269,7 +269,6 @@ class B2BDistributionSerializer(serializers.ModelSerializer):
                 return customer.company_name
             return customer.full_name
         return None
-
 
 class B2BDistributionListSerializer(serializers.ModelSerializer):
     customer_name = serializers.SerializerMethodField()

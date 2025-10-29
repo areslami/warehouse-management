@@ -67,6 +67,13 @@ export const deleteWarehouse = async (id: number) => {
 export const fetchWarehouseReceipts = () =>
   apiFetch<WarehouseReceipt[]>(`${API_BASE_URL()}receipts/`);
 
+export const fetchNextReceiptId = async (): Promise<string> => {
+  const response = await apiFetch<{ next_receipt_id: string }>(
+    `${API_BASE_URL()}receipts/next-id/`
+  );
+  return response?.next_receipt_id || "";
+};
+
 export const fetchWarehouseReceiptById = (id: number) =>
   apiFetch<WarehouseReceipt>(`${API_BASE_URL()}receipts/${id}/`);
 
@@ -99,6 +106,13 @@ export const fetchWarehouseReceiptsByDateRange = (
 // --------------- DispatchIssue  ---------------
 export const fetchDispatchIssues = () =>
   apiFetch<DispatchIssue[]>(`${API_BASE_URL()}dispatches/`);
+
+export const fetchNextDispatchId = async (): Promise<string> => {
+  const response = await apiFetch<{ next_dispatch_id: string }>(
+    `${API_BASE_URL()}dispatches/next-id/`
+  );
+  return response?.next_dispatch_id || "";
+};
 
 export const fetchDispatchIssueById = (id: number) =>
   apiFetch<DispatchIssue>(`${API_BASE_URL()}dispatches/${id}/`);

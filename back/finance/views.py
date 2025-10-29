@@ -39,6 +39,12 @@ class PurchaseProformaViewSet(viewsets.ModelViewSet):
         proformas = self.get_queryset().filter(date__range=[start_date, end_date])
         serializer = self.get_serializer(proformas, many=True)
         return Response(serializer.data)
+    
+    @action(detail=False, methods=['get'], url_path='next-id')
+    def next_id(self, request):
+        """Get next available serial number for purchase proformas"""
+        next_serial = PurchaseProforma.get_next_serial_number()
+        return Response({'next_serial_number': next_serial})
 
 
 class SalesProformaViewSet(viewsets.ModelViewSet):
@@ -70,6 +76,13 @@ class SalesProformaViewSet(viewsets.ModelViewSet):
         proformas = self.get_queryset().filter(date__range=[start_date, end_date])
         serializer = self.get_serializer(proformas, many=True)
         return Response(serializer.data)
+    
+    @action(detail=False, methods=['get'], url_path='next-id')
+    def next_id(self, request):
+        """Get next available serial number for sales proformas"""
+        next_serial = SalesProforma.get_next_serial_number()
+        return Response({'next_serial_number': next_serial})
+
 
 
 class ProformaLineViewSet(viewsets.ModelViewSet):

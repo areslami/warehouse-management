@@ -40,6 +40,11 @@ export async function fetchB2BOffers(): Promise<B2BOffer[]> {
   return fetchWithAuth(`${API_BASE_URL()}offers/`);
 }
 
+export async function fetchNextOfferId(): Promise<string> {
+  const response = await fetchWithAuth(`${API_BASE_URL()}offers/next-id/`);
+  return response.next_offer_id;
+}
+
 export async function fetchB2BOfferById(id: number): Promise<B2BOffer> {
   return fetchWithAuth(`${API_BASE_URL()}offers/${id}/`);
 }
@@ -108,6 +113,11 @@ export async function fetchB2BDistributions(): Promise<B2BDistribution[]> {
   return fetchWithAuth(`${API_BASE_URL()}distributions/`);
 }
 
+export async function fetchNextDistributionId(): Promise<string> {
+  const response = await fetchWithAuth(`${API_BASE_URL()}distributions/next-id/`);
+  return response.next_transfer_id;
+}
+
 export async function fetchB2BDistributionById(
   id: number
 ): Promise<B2BDistribution> {
@@ -142,6 +152,12 @@ export async function deleteB2BDistribution(id: number): Promise<void> {
 export async function fetchB2BSales(): Promise<B2BSale[]> {
   return fetchWithAuth(`${API_BASE_URL()}sales/`);
 }
+
+export async function fetchNextSaleId(): Promise<string> {
+  const response = await fetchWithAuth(`${API_BASE_URL()}sales/next-id/`);
+  return response.next_sale_id;
+}
+
 export async function fetchB2BSaleById(id: number): Promise<B2BSale> {
   return fetchWithAuth(`${API_BASE_URL()}sales/${id}/`);
 }

@@ -16,6 +16,7 @@ import { NumberInput } from "../../ui/number-input";
 import { useTranslations } from "next-intl";
 import { useCoreData } from "@/lib/core-data-context";
 import { fetchWarehouseReceipts, createWarehouseReceipt } from "@/lib/api/warehouse";
+import { fetchNextOfferId } from "@/lib/api/b2b";
 import { WarehouseReceipt } from "@/lib/interfaces/warehouse";
 import { describeWarehouseReceipt } from "@/lib/utils/label-utils";
 import { PersianDatePicker } from "../../ui/persian-date-picker";
@@ -68,7 +69,21 @@ export function B2BOfferModal({ trigger, onSubmit, onClose, initialData, readOnl
 
   useEffect(() => {
     loadWarehouseReceipts();
-  }, [refreshCoreData]);
+
+    // Fetch next offer ID only when creating new (not editing)
+    if (!isEditing && !initialData?.offer_id) {
+      loadNextOfferId();
+    }
+  }, [refreshCoreData, isEditing, initialData?.offer_id]);
+
+  const loadNextOfferId = async () => {
+    try {
+      const nextId = await fetchNextOfferId();
+      form.setValue('offer_id', nextId);
+    } catch (error) {
+      console.error('Failed to load next offer ID:', error);
+    }
+  };
 
 
   const b2bOfferSchema = z.object({
@@ -164,10 +179,7 @@ export function B2BOfferModal({ trigger, onSubmit, onClose, initialData, readOnl
                       <FormControl>
                         <Input
                           {...field}
-                          readOnly={isEditing}
-                          className={isEditing ? "bg-gray-100 cursor-not-allowed" : ""}
-                          autoFocus={false}
-                          tabIndex={isEditing ? -1 : undefined}
+                          placeholder={t("offer-id")}
                         />
                       </FormControl>
                       <FormMessage />

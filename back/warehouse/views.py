@@ -53,6 +53,11 @@ class WarehouseReceiptViewSet(viewsets.ModelViewSet):
             serializer = WarehouseReceiptListSerializer(receipts, many=True)
             return Response(serializer.data)
         return Response({'error': 'start_date and end_date parameters are required'}, status=400)
+    
+    @action(detail=False, methods=['get'], url_path='next-id')
+    def next_id(self, request):
+        next_dispatch_id = WarehouseReceipt.get_next_receipt_id()
+        return Response({'next_receipt_id': next_dispatch_id})
 
 
 class DispatchIssueViewSet(viewsets.ModelViewSet):
@@ -65,6 +70,12 @@ class DispatchIssueViewSet(viewsets.ModelViewSet):
     search_fields = ['dispatch_id', 'description']
     ordering_fields = ['issue_date', 'created_at']
     ordering = ['-issue_date']
+
+    @action(detail=False, methods=['get'], url_path='next-id')
+    def next_id(self, request):
+        """Get next available dispatch_id"""
+        next_dispatch_id = DispatchIssue.get_next_dispatch_id()
+        return Response({'next_dispatch_id': next_dispatch_id})
 
 
 class DeliveryFulfillmentViewSet(viewsets.ModelViewSet):

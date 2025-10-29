@@ -1,9 +1,9 @@
 from django.db import models
 from core.models.base import STATUS_TYPES,TRANSACTION_TYPES
-
+from core.utils import get_next_sequential_id
 
 class B2BOffer(models.Model):
-    offer_id = models.CharField(max_length=100, unique=True, null=False)
+    offer_id = models.CharField(max_length=100, unique=True, null=False, blank=True)  # Add blank=True
     warehouse_receipt = models.ForeignKey(
         'warehouse.WarehouseReceipt',
         on_delete=models.SET_NULL,
@@ -28,6 +28,10 @@ class B2BOffer(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     
+    @classmethod
+    def get_next_offer_id(cls):
+        return get_next_sequential_id(cls, 'offer_id', 'DIST')
+    
     def __str__(self):
         cottage_info = ""
         product_name = 'No Product'
@@ -40,6 +44,9 @@ class B2BOffer(models.Model):
         return f"{self.offer_id}{cottage_info} - {product_name} ({self.offer_weight} kg) - {self.status}"
     
     def save(self, *args, **kwargs):
+        if not self.offer_id:
+            self.offer_id = self.get_next_offer_id()
+        
         if self.unit_price and self.offer_weight:
             self.total_price = self.unit_price * self.offer_weight
         
@@ -47,7 +54,6 @@ class B2BOffer(models.Model):
 
 
 class B2BAddress(models.Model):
-    
     purchase_id = models.CharField(max_length=100, unique=True, default='')
     allocation_id = models.CharField(max_length=100, blank=True, default='')
     cottage_code = models.CharField(max_length=50,null=False, blank=False)
@@ -107,7 +113,6 @@ class B2BAddress(models.Model):
 
  
 class B2BDistribution(models.Model):
-
     transfer_id = models.CharField(max_length=100, unique=True)
 
     warehouse_receipt = models.ForeignKey('warehouse.WarehouseReceipt', on_delete=models.PROTECT, limit_choices_to={'receipt_type': 'import_cottage'})
@@ -132,11 +137,18 @@ class B2BDistribution(models.Model):
         receipt_id = self.warehouse_receipt.receipt_id if self.warehouse_receipt else 'N/A'
         return f"Distribution {receipt_id} - {customer_name} - {product_name} ({self.agency_weight} kg)"
 
+    @classmethod
+    def get_next_dist_id(cls):
+        return get_next_sequential_id(cls, 'distribution_id', 'DIST')
+
+
     def save(self, *args, **kwargs):
+        if not self.transfer_id:
+            self.transfer_id = self.get_next_offer_id()
         super().save(*args, **kwargs)
         
 class B2BSale(models.Model):
-    purchase_id = models.CharField(max_length=100, unique=True)
+    purchase_id = models.CharField(max_length=100, unique=True, blank=True)
     is_distributor = models.BooleanField(default=False)
     b2b_distribution = models.ForeignKey(B2BDistribution, on_delete=models.CASCADE, related_name='b2b_sales', null=True, blank=True)
     offer = models.ForeignKey(B2BOffer, on_delete=models.CASCADE, related_name='b2b_sales', null=True, blank=True)
@@ -155,8 +167,18 @@ class B2BSale(models.Model):
         product_name = self.product.name if self.product else 'No Product'
         return f"Sale {self.purchase_id} - {customer_name} - {product_name} ({self.weight} kg)"
     
+
+    @classmethod
+    def get_next_sale_id(cls):
+        return get_next_sequential_id(cls, 'sale_id', 'SALE')
+
+
     def save(self, *args, **kwargs):
         if self.unit_price and self.weight:
             self.total_price = self.unit_price * self.weight
+        
+        if not self.purchase_id:
+            self.purchase_id = self.get_next_sale_id()
+
         super().save(*args, **kwargs)
    

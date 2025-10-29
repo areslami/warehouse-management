@@ -16,7 +16,7 @@ import { useCoreData } from "@/lib/core-data-context";
 import { ProductModal } from "../product-modal";
 import { CustomerModal } from "../customer-modal";
 import { createProduct, createCustomer } from "@/lib/api/core";
-import { fetchB2BOffers, createB2BOffer, createB2BDistribution, fetchB2BDistributions } from "@/lib/api/b2b";
+import { fetchB2BOffers, createB2BOffer, createB2BDistribution, fetchB2BDistributions, fetchNextSaleId } from "@/lib/api/b2b";
 import { B2BDistribution, B2BOffer } from "@/lib/interfaces/b2b";
 import { PersianDatePicker } from "../../ui/persian-date-picker";
 import { getPartyDisplayName } from "@/lib/utils/party-utils";
@@ -70,7 +70,12 @@ export function B2BSaleModal({ trigger, onSubmit, onClose, initialData, isEditin
         }
         loadOffers();
         loadDistributions();
-    }, [products.length, customers.length, refreshCoreData]);
+
+        // Fetch next sale ID only when creating new (not editing)
+        if (!isEditing && !initialData?.purchase_id) {
+            loadNextSaleId();
+        }
+    }, [products.length, customers.length, refreshCoreData, isEditing, initialData?.purchase_id]);
 
     const loadOffers = async () => {
         try {
@@ -86,6 +91,15 @@ export function B2BSaleModal({ trigger, onSubmit, onClose, initialData, isEditin
             setDistributions(offersData);
         } catch (error) {
             console.error('Error loading distribuitons:', error);
+        }
+    };
+
+    const loadNextSaleId = async () => {
+        try {
+            const nextId = await fetchNextSaleId();
+            form.setValue('purchase_id', nextId);
+        } catch (error) {
+            console.error('Failed to load next sale ID:', error);
         }
     };
 

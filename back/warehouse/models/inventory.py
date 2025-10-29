@@ -2,7 +2,7 @@ from django.db import models
 
 from core.models.base import VEICHLE_TYPES
 from .base import Warehouse,ShippingCompany
-    
+from core.utils import get_next_sequential_id    
     
     
 class WarehouseReceipt(models.Model):
@@ -31,6 +31,16 @@ class WarehouseReceipt(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     
+    
+    @classmethod
+    def get_next_receipt_id(cls):
+        """Generate next available dispatch_id"""
+        return get_next_sequential_id(cls, 'receipt_id', 'RI')
+    
+    def save(self, *args, **kwargs):
+        if not self.receipt_id:
+            self.receipt_id = self.get_next_receipt_id()
+
     def __str__(self):
         cottage_info = f" - {self.cottage_serial_number}" if self.cottage_serial_number else ""
         return f"{self.receipt_id or 'Receipt'} - {self.warehouse.name if self.warehouse else 'No Warehouse'}{cottage_info}"
@@ -57,13 +67,23 @@ class DispatchIssue(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     
+    @classmethod
+    def get_next_dispatch_id(cls):
+        """Generate next available dispatch_id"""
+        return get_next_sequential_id(cls, 'dispatch_id', 'DI')
+    
+    def save(self, *args, **kwargs):
+        if not self.dispatch_id:
+            self.dispatch_id = self.get_next_dispatch_id()
+        
+        super().save(*args, **kwargs)
+
     def __str__(self):
         customer_info = self.sales_proforma.customer if self.sales_proforma else 'No Customer'
         warehouse_info = self.warehouse.name if self.warehouse else 'No Warehouse'
         return f"{self.dispatch_id} - {customer_info} - {warehouse_info} ({self.total_weight} kg)"    
 
 class DispatchIssueItem(models.Model):
-
     dispatch = models.ForeignKey(DispatchIssue, related_name='items', on_delete=models.SET_NULL,null=True)
     product = models.ForeignKey('core.Product', on_delete=models.SET_NULL,null=True)
     weight = models.DecimalField(max_digits=20, decimal_places=0,default=0)
@@ -71,7 +91,6 @@ class DispatchIssueItem(models.Model):
     receiver = models.ForeignKey('core.Receiver', on_delete=models.SET_NULL,null=True)
     
 class DeliveryFulfillment(models.Model):
-
     delivery_id = models.CharField(max_length=50, unique=True, null=False)
     issue_date = models.DateTimeField()
     b2b_address = models.ForeignKey('b2b.B2BAddress', on_delete=models.SET_NULL, null=True)
