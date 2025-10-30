@@ -164,7 +164,7 @@
           "delivery_id": "شناسه بارنامه",
           "issue_date": "تاریخ صدور",
           "b2b_address": "شناسه تخصیص",
-          "warehouse_receipt": "شناسه رسید انبار",
+          "warehouse": "انبار",
           "total_weight": "وزن (کیلوگرم)",
           "product": "محصول",
           "receiver": "گیرنده",
