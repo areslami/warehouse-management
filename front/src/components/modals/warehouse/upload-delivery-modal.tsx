@@ -29,7 +29,7 @@ interface UploadDeliveryModalProps {
 // Required fields for delivery mapping
 const REQUIRED_FIELDS = [
   { key: "delivery_id", label: "delivery_id_field", required: true },
-  { key: "waybill_serial", label: "waybill_serial_field", required: false },
+  { key: "waybill_serial", label: "waybill_serial_field", required: true },
   { key: "allocation_id", label: "allocation_id_field", required: true },
   { key: "sale_id", label: "sale_id_field", required: false },
   { key: "issue_date", label: "issue_date_field", required: true },
@@ -222,6 +222,19 @@ export default function UploadDeliveryModal({ isOpen, onClose, onSuccess }: Uplo
   const handleLoadMapping = (mappingId: number) => {
     const mapping = savedMappings.find(m => m.id === mappingId);
     if (mapping) {
+      // Validate that all columns in the saved mapping exist in current Excel file
+      const savedColumns = Object.values(mapping.column_mappings);
+      const missingColumns = savedColumns.filter(col => !excelColumns.includes(col));
+
+      if (missingColumns.length > 0) {
+        toast.error(
+          `تطبیق ذخیره شده با فایل فعلی سازگار نیست. ستون‌های زیر در فایل یافت نشدند:\n${missingColumns.join(', ')}`,
+          { duration: 5000 }
+        );
+        setSelectedMappingId("");
+        return;
+      }
+
       setColumnMappings(mapping.column_mappings);
       setSelectedMappingId(mappingId);
       toast.success("تطبیق ستون‌ها بارگذاری شد");
@@ -407,6 +420,9 @@ export default function UploadDeliveryModal({ isOpen, onClose, onSuccess }: Uplo
                 <p className="text-xs text-blue-600 mt-2">
                   تعداد ستون‌های یافت شده: {excelColumns.length}
                 </p>
+                <p className="text-xs text-blue-600 mt-1">
+                  تعداد ردیف‌های یافت شده: {rows.length}
+                </p>
               </div>
 
               {/* Saved mappings section */}
@@ -417,7 +433,12 @@ export default function UploadDeliveryModal({ isOpen, onClose, onSuccess }: Uplo
                     <Select
                       value={selectedMappingId ? String(selectedMappingId) : ""}
                       onValueChange={(value) => {
-                        if (value) {
+                        if (value === "manual") {
+                          // Reset to manual selection
+                          setColumnMappings({});
+                          setSelectedMappingId("");
+                          toast.success("بازگشت به انتخاب دستی");
+                        } else if (value) {
                           handleLoadMapping(Number(value));
                         }
                       }}
@@ -426,6 +447,7 @@ export default function UploadDeliveryModal({ isOpen, onClose, onSuccess }: Uplo
                         <SelectValue placeholder="انتخاب تطبیق ذخیره شده..." />
                       </SelectTrigger>
                       <SelectContent dir="rtl">
+                        <SelectItem value="manual">انتخاب دستی</SelectItem>
                         {savedMappings.map(mapping => (
                           <SelectItem key={mapping.id} value={String(mapping.id)}>
                             {mapping.name}

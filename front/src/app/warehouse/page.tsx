@@ -636,7 +636,7 @@ export default function WarehousePage() {
                 </Button>
               </div>
             </div>
-            <Table dir="rtl" className="min-w-[1400px]">
+            <Table dir="rtl">
               <TableHeader>
                 <TableRow>
                   <TableHead className="w-12 text-center">
@@ -660,17 +660,13 @@ export default function WarehousePage() {
                   <TableHead className="text-right">{t("deliveries.table.issue_date")}</TableHead>
                   <TableHead className="text-right">{t("deliveries.table.total_weight")}</TableHead>
                   <TableHead className="text-right">{t("deliveries.table.product")}</TableHead>
-                  <TableHead className="text-right">{t("deliveries.table.customer")}</TableHead>
-                  <TableHead className="text-right">{t("deliveries.table.shipping_company")}</TableHead>
-                  <TableHead className="text-right">{t("deliveries.table.driver_phone")}</TableHead>
-                  <TableHead className="text-right">{t("deliveries.table.fare")}</TableHead>
+                  <TableHead className="text-right">{t("deliveries.table.receiver")}</TableHead>
                   <TableHead className="text-center w-24">{t("deliveries.table.operations")}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody key={deliveriesKey}>
                 {filteredDeliveries.map((delivery, index) => {
                   const firstItem = delivery.items?.[0];
-                  const totalFare = delivery.items?.reduce((sum, item) => sum + (item.fare || 0), 0) || 0;
 
                   return (
                     <TableRow key={delivery.id} className="hover:bg-gray-50">
@@ -695,10 +691,7 @@ export default function WarehousePage() {
                       <TableCell className="text-right">{new Date(delivery.issue_date).toLocaleDateString('fa-IR')}</TableCell>
                       <TableCell className="text-right">{formatNumber(delivery.total_weight)}</TableCell>
                       <TableCell className="text-right">{firstItem?.product_name || '-'}</TableCell>
-                      <TableCell className="text-right">{firstItem?.customer_name || '-'}</TableCell>
-                      <TableCell className="text-right">{delivery.shipping_company_name || '-'}</TableCell>
-                      <TableCell className="text-right">{delivery.driver_phone || '-'}</TableCell>
-                      <TableCell className="text-right">{formatNumber(totalFare)}</TableCell>
+                      <TableCell className="text-right">{firstItem?.receiver || '-'}</TableCell>
                       <TableCell>
                         <div className="flex gap-2 justify-center">
                           <Button size="sm" variant="ghost" onClick={() => {
@@ -851,8 +844,13 @@ export default function WarehousePage() {
                   return (
                     <>
                       <div>
-                        <strong>شناسه تحویل:</strong> {delivery.delivery_id}
+                        <strong>شناسه بارنامه:</strong> {delivery.delivery_id}
                       </div>
+                      {delivery.waybill_serial && (
+                        <div>
+                          <strong>سریال بارنامه:</strong> {delivery.waybill_serial}
+                        </div>
+                      )}
                       <div className="flex items-center gap-2">
                         <strong>آدرس بازارگاه:</strong>
                         <span>{delivery.b2b_address_purchase_id || '-'}</span>

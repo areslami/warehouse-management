@@ -93,9 +93,11 @@ export function DeliveryFulfillmentTab({ selectedWarehouseId }: DeliveryFulfillm
         openModal(DeliveryFulfillmentModal, {
           initialData: {
             delivery_id: detailedDelivery.delivery_id || "",
+            waybill_serial: detailedDelivery.waybill_serial || "",
             issue_date: detailedDelivery.issue_date,
             b2b_address: detailedDelivery.b2b_address || 0,
             warehouse_receipt: detailedDelivery.warehouse_receipt || 0,
+            warehouse: detailedDelivery.warehouse || 0,
             description: detailedDelivery.description || "",
             shipping_company: detailedDelivery.shipping_company || 0,
             driver_name: detailedDelivery.driver_name || "",
@@ -189,7 +191,7 @@ export function DeliveryFulfillmentTab({ selectedWarehouseId }: DeliveryFulfillm
         <div>{t("loading")}</div>
       ) : (
         <div className="overflow-x-auto">
-          <Table className="w-full min-w-[1400px]">
+          <Table className="w-full">
             <TableHeader>
               <TableRow>
                 <TableHead className="text-right w-16">ردیف</TableHead>
@@ -199,17 +201,13 @@ export function DeliveryFulfillmentTab({ selectedWarehouseId }: DeliveryFulfillm
                 <TableHead className="text-right">{t("table.issue_date")}</TableHead>
                 <TableHead className="text-right">{t("table.total_weight")}</TableHead>
                 <TableHead className="text-right">{t("table.product")}</TableHead>
-                <TableHead className="text-right">{t("table.customer")}</TableHead>
-                <TableHead className="text-right">{t("table.shipping_company")}</TableHead>
-                <TableHead className="text-right">{t("table.driver_phone")}</TableHead>
-                <TableHead className="text-right">{t("table.fare")}</TableHead>
+                <TableHead className="text-right">{t("table.receiver")}</TableHead>
                 <TableHead className="text-right">{t("table.operations")}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {filteredDeliveries.map((delivery, index) => {
                 const firstItem = delivery.items?.[0];
-                const totalFare = delivery.items?.reduce((sum, item) => sum + (item.fare || 0), 0) || 0;
 
                 return (
                   <TableRowComponent key={delivery.id}>
@@ -220,10 +218,7 @@ export function DeliveryFulfillmentTab({ selectedWarehouseId }: DeliveryFulfillm
                     <TableCell><PersianDateTableCell date={delivery.issue_date} /></TableCell>
                     <TableCell>{formatNumber(delivery.total_weight)}</TableCell>
                     <TableCell>{firstItem?.product_name || '-'}</TableCell>
-                    <TableCell>{firstItem?.customer_name || '-'}</TableCell>
-                    <TableCell>{delivery.shipping_company_name || '-'}</TableCell>
-                    <TableCell>{delivery.driver_phone || '-'}</TableCell>
-                    <TableCell>{formatNumber(totalFare)}</TableCell>
+                    <TableCell>{firstItem?.receiver || '-'}</TableCell>
                     <TableCell>
                       <div className="flex gap-2">
                         <Button

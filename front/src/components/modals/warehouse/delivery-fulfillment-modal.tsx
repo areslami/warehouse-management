@@ -33,9 +33,11 @@ import { WarehouseReceiptModal } from "./warehouse-receipt-modal";
 
 type DeliveryFulfillmentFormData = {
   delivery_id: string;
+  waybill_serial: string;
   issue_date: string;
   b2b_address: number;
   warehouse_receipt: number;
+  warehouse: number;
   description?: string;
   shipping_company: number;
   driver_name: string;
@@ -90,6 +92,9 @@ export function DeliveryFulfillmentModal({ trigger, onSubmit, onClose, initialDa
     if (data.customers.length === 0) {
       refreshData('customers');
     }
+    if (data.warehouses.length === 0) {
+      refreshData('warehouses');
+    }
   }, []);
 
   const getTodayDate = () => {
@@ -115,9 +120,11 @@ export function DeliveryFulfillmentModal({ trigger, onSubmit, onClose, initialDa
 
   const deliveryFulfillmentSchema = z.object({
     delivery_id: z.string().min(1, tval("delivery-id")),
+    waybill_serial: z.string().min(1, tval("waybill-serial")),
     issue_date: z.string().min(1, tval("issue-date")),
     b2b_address: z.number().min(1, tval("b2b-address")),
     warehouse_receipt: z.number().min(1, tval("warehouse-receipt")),
+    warehouse: z.number().min(1, tval("warehouse")),
     description: z.string().optional(),
     shipping_company: z.number().min(1, tval("shipping-company")),
     driver_name: z.string().min(1, tval("driver-name")),
@@ -180,9 +187,11 @@ export function DeliveryFulfillmentModal({ trigger, onSubmit, onClose, initialDa
     resolver: zodResolver(deliveryFulfillmentSchema) as any,
     defaultValues: {
       delivery_id: initialData?.delivery_id || "",
+      waybill_serial: initialData?.waybill_serial || "",
       issue_date: initialData?.issue_date || getTodayDate(),
       b2b_address: initialData?.b2b_address || 0,
       warehouse_receipt: initialData?.warehouse_receipt || 0,
+      warehouse: initialData?.warehouse || 0,
       description: initialData?.description || "",
       shipping_company: initialData?.shipping_company || 0,
       driver_name: initialData?.driver_name || "",
@@ -215,15 +224,21 @@ export function DeliveryFulfillmentModal({ trigger, onSubmit, onClose, initialDa
         if (matchingReceipt) {
           // Found matching receipt - auto-fill and clear error
           form.setValue('warehouse_receipt', matchingReceipt.id);
+          // Also auto-fill warehouse from the receipt
+          if (matchingReceipt.warehouse) {
+            form.setValue('warehouse', matchingReceipt.warehouse);
+          }
           setCottageCodeError("");
         } else {
-          // No matching receipt found - set error and clear field
+          // No matching receipt found - set error and clear fields
           form.setValue('warehouse_receipt', 0);
+          form.setValue('warehouse', 0);
           setCottageCodeError("رسید انباری با این کد کوتاژ مطابقت ندارد");
         }
       } else {
         // No cottage_code in selected address - clear fields and error
         form.setValue('warehouse_receipt', 0);
+        form.setValue('warehouse', 0);
         setCottageCodeError("");
       }
 
@@ -363,7 +378,7 @@ export function DeliveryFulfillmentModal({ trigger, onSubmit, onClose, initialDa
 
           <Form {...form} >
             <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6 py-4 px-6">
-              <div className="grid grid-cols-2 gap-4 items-start">
+              <div className="grid grid-cols-4 gap-4 items-start">
                 <FormField
                   control={form.control as any}
                   name="delivery_id"
@@ -386,9 +401,23 @@ export function DeliveryFulfillmentModal({ trigger, onSubmit, onClose, initialDa
 
                 <FormField
                   control={form.control as any}
-                  name="b2b_address"
+                  name="waybill_serial"
                   render={({ field }) => (
                     <FormItem>
+                      <FormLabel>{t("waybill-serial")}</FormLabel>
+                      <FormControl>
+                        <Input {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control as any}
+                  name="b2b_address"
+                  render={({ field }) => (
+                    <FormItem className="col-span-2">
                       <FormLabel className="flex items-center gap-2">
                         {t("b2b-address")}
                         {field.value > 0 && (
@@ -452,13 +481,13 @@ export function DeliveryFulfillmentModal({ trigger, onSubmit, onClose, initialDa
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-4 items-start">
+              <div className="grid grid-cols-4 gap-4 items-start">
                 <FormField
                   control={form.control as any}
                   name="warehouse_receipt"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="flex items-center gap-2">
+                      <FormLabel className="flex items-center gap-2 min-h-[24px]">
                         {t("warehouse-receipt")}
                         {field.value > 0 && (
                           <Button
@@ -505,10 +534,41 @@ export function DeliveryFulfillmentModal({ trigger, onSubmit, onClose, initialDa
 
                 <FormField
                   control={form.control as any}
-                  name="shipping_company"
+                  name="warehouse"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>{t("shipping-company")}</FormLabel>
+                      <FormLabel className="block min-h-[24px]">
+                        {t("warehouse")}
+                      </FormLabel>
+                      <FormControl>
+                        <SimpleCombobox
+                          value={field.value > 0 ? field.value.toString() : ""}
+                          onValueChange={(value) => {
+                            if (value) {
+                              field.onChange(Number(value));
+                            }
+                          }}
+                          options={data.warehouses.map((warehouse) => ({
+                            value: warehouse.id.toString(),
+                            label: warehouse.name,
+                            id: warehouse.id
+                          }))}
+                          placeholder={t("select-warehouse")}
+                          searchPlaceholder={tCommon("search_placeholders.search")}
+                          disabled={true}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control as any}
+                  name="shipping_company"
+                  render={({ field }) => (
+                    <FormItem className="col-span-2">
+                      <FormLabel className="block min-h-[24px]">{t("shipping-company")}</FormLabel>
                       <FormControl>
                         <SimpleCombobox
                           value={field.value > 0 ? field.value.toString() : ""}
