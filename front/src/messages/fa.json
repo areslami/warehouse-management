@@ -1292,6 +1292,7 @@
   "common": {
     "search": "جستجو...",
     "filter_warehouse": "فیلتر انبار",
+    "filters": "فیلترها",
     "all_warehouses": "همه انبارها",
     "initial_data_error": "خطا در بارگیری اطلاعات اولیه",
     "search_placeholders": {

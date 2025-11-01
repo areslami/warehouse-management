@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
-import { Plus, Edit2, Trash2, Package, FileText, Truck, Search, Eye, Info, Upload } from "lucide-react";
+import { Plus, Edit2, Trash2, Package, FileText, Truck, Search, Eye, Info, Upload, ChevronDown, ChevronUp } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { handleApiErrorWithToast } from "@/lib/api/error-toast-handler";
@@ -11,6 +11,9 @@ import { Button } from "@/components/ui/button";
 import { describeWarehouse } from "@/lib/utils/label-utils";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Collapsible, CollapsibleTrigger, CollapsibleContent } from "@/components/ui/collapsible";
+import { SearchableSelect } from "@/components/ui/searchable-select";
+import { PersianDatePicker } from "@/components/ui/persian-date-picker";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { WarehouseReceiptModal } from "@/components/modals/warehouse/warehouse-receipt-modal";
@@ -37,7 +40,7 @@ export default function WarehousePage() {
   const t = useTranslations("pages.warehouse");
   const tCommon = useTranslations("common");
   const tErrors = useTranslations("errors");
-  const { warehouses, refreshData: refreshCoreData } = useCoreData();
+  const { warehouses, refreshData: refreshCoreData, customers, products, shippingCompanies, purchaseProformas, salesProformas } = useCoreData();
 
   const [receipts, setReceipts] = useState<WarehouseReceipt[]>([]);
   const [dispatches, setDispatches] = useState<DispatchIssue[]>([]);
@@ -74,6 +77,49 @@ export default function WarehousePage() {
   const router = useRouter();
   const tabFromUrl = searchParams.get('tab') || 'receipts';
   const [activeTab, setActiveTab] = useState(tabFromUrl);
+
+  // Filter states
+  const [receiptsFiltersOpen, setReceiptsFiltersOpen] = useState(false);
+  const [dispatchesFiltersOpen, setDispatchesFiltersOpen] = useState(false);
+  const [deliveriesFiltersOpen, setDeliveriesFiltersOpen] = useState(false);
+
+  const [receiptFilters, setReceiptFilters] = useState({
+    receipt_id: "",
+    receipt_type: "",
+    date_from: "",
+    date_to: "",
+    weight_min: "",
+    weight_max: "",
+    proforma_id: "",
+    product: "",
+    cottage_serial: "",
+  });
+
+  const [dispatchFilters, setDispatchFilters] = useState({
+    dispatch_id: "",
+    sales_proforma_id: "",
+    product: "",
+    shipping_company: "",
+    weight_min: "",
+    weight_max: "",
+    issue_date_from: "",
+    issue_date_to: "",
+    validity_date_from: "",
+    validity_date_to: "",
+  });
+
+  const [deliveryFilters, setDeliveryFilters] = useState({
+    delivery_id: "",
+    allocation_id: "",
+    issue_date_from: "",
+    issue_date_to: "",
+    weight_min: "",
+    weight_max: "",
+    shipping_company: "",
+    customer: "",
+    product: "",
+    driver_phone: "",
+  });
 
   useEffect(() => {
     const newTab = searchParams.get('tab') || 'receipts';
@@ -206,31 +252,85 @@ export default function WarehousePage() {
   };
 
   const filteredReceipts = useMemo(() => {
-    return receipts.filter(receipt => {
-      const matchesSearch = (receipt.receipt_id || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-        new Date(receipt.date).toLocaleDateString('fa-IR').includes(searchTerm);
-      const matchesWarehouse = selectedWarehouse === "all" || receipt.warehouse === parseInt(selectedWarehouse);
-      return matchesSearch && matchesWarehouse;
+    return receipts.filter(r => {
+      if (receiptFilters.receipt_id && !(r.receipt_id || "").toLowerCase().includes(receiptFilters.receipt_id.toLowerCase())) return false;
+      if (receiptFilters.receipt_type && r.receipt_type !== receiptFilters.receipt_type) return false;
+      if (receiptFilters.proforma_id && r.proforma !== parseInt(receiptFilters.proforma_id)) return false;
+      if (receiptFilters.product && !r.items?.some(item => item.product === parseInt(receiptFilters.product))) return false;
+      if (receiptFilters.cottage_serial && !(r.cottage_serial_number || "").toLowerCase().includes(receiptFilters.cottage_serial.toLowerCase())) return false;
+
+      const df = receiptFilters.date_from ? new Date(receiptFilters.date_from).getTime() : 0;
+      const dt = receiptFilters.date_to ? new Date(receiptFilters.date_to).getTime() : 0;
+      const d = r.date ? new Date(r.date).getTime() : 0;
+      if (df && d < df) return false;
+      if (dt && d > dt) return false;
+
+      const wmin = receiptFilters.weight_min ? Number(receiptFilters.weight_min) : -Infinity;
+      const wmax = receiptFilters.weight_max ? Number(receiptFilters.weight_max) : Infinity;
+      if (r.total_weight < wmin || r.total_weight > wmax) return false;
+
+      const matchesWarehouse = selectedWarehouse === "all" || r.warehouse === parseInt(selectedWarehouse);
+      if (!matchesWarehouse) return false;
+
+      return true;
     });
-  }, [receipts, searchTerm, selectedWarehouse]);
+  }, [receipts, receiptFilters, selectedWarehouse]);
 
   const filteredDispatches = useMemo(() => {
-    return dispatches.filter(dispatch => {
-      const matchesSearch = (dispatch.dispatch_id || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-        new Date(dispatch.issue_date).toLocaleDateString('fa-IR').includes(searchTerm);
-      const matchesWarehouse = selectedWarehouse === "all" || dispatch.warehouse === parseInt(selectedWarehouse);
-      return matchesSearch && matchesWarehouse;
+    return dispatches.filter(d => {
+      if (dispatchFilters.dispatch_id && !d.dispatch_id.toLowerCase().includes(dispatchFilters.dispatch_id.toLowerCase())) return false;
+      if (dispatchFilters.sales_proforma_id && d.sales_proforma !== parseInt(dispatchFilters.sales_proforma_id)) return false;
+      if (dispatchFilters.product && !d.items?.some(item => item.product === parseInt(dispatchFilters.product))) return false;
+      if (dispatchFilters.shipping_company && d.shipping_company !== parseInt(dispatchFilters.shipping_company)) return false;
+
+      const idf = dispatchFilters.issue_date_from ? new Date(dispatchFilters.issue_date_from).getTime() : 0;
+      const idt = dispatchFilters.issue_date_to ? new Date(dispatchFilters.issue_date_to).getTime() : 0;
+      const id = d.issue_date ? new Date(d.issue_date).getTime() : 0;
+      if (idf && id < idf) return false;
+      if (idt && id > idt) return false;
+
+      const vdf = dispatchFilters.validity_date_from ? new Date(dispatchFilters.validity_date_from).getTime() : 0;
+      const vdt = dispatchFilters.validity_date_to ? new Date(dispatchFilters.validity_date_to).getTime() : 0;
+      const vd = d.validity_date ? new Date(d.validity_date).getTime() : 0;
+      if (vdf && vd < vdf) return false;
+      if (vdt && vd > vdt) return false;
+
+      const wmin = dispatchFilters.weight_min ? Number(dispatchFilters.weight_min) : -Infinity;
+      const wmax = dispatchFilters.weight_max ? Number(dispatchFilters.weight_max) : Infinity;
+      if (d.total_weight < wmin || d.total_weight > wmax) return false;
+
+      const matchesWarehouse = selectedWarehouse === "all" || d.warehouse === parseInt(selectedWarehouse);
+      if (!matchesWarehouse) return false;
+
+      return true;
     });
-  }, [dispatches, searchTerm, selectedWarehouse]);
+  }, [dispatches, dispatchFilters, selectedWarehouse]);
 
   const filteredDeliveries = useMemo(() => {
-    return deliveries.filter(delivery => {
-      const matchesSearch = (delivery.delivery_id || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-        new Date(delivery.issue_date).toLocaleDateString('fa-IR').includes(searchTerm);
-      const matchesWarehouse = selectedWarehouse === "all" || delivery.warehouse === parseInt(selectedWarehouse);
-      return matchesSearch && matchesWarehouse;
+    return deliveries.filter(d => {
+      if (deliveryFilters.delivery_id && !d.delivery_id.toLowerCase().includes(deliveryFilters.delivery_id.toLowerCase())) return false;
+      if (deliveryFilters.allocation_id && !(d.b2b_address_allocation_id || "").toLowerCase().includes(deliveryFilters.allocation_id.toLowerCase())) return false;
+      if (deliveryFilters.shipping_company && d.shipping_company !== parseInt(deliveryFilters.shipping_company)) return false;
+      if (deliveryFilters.customer && !d.items?.some(item => item.customer === parseInt(deliveryFilters.customer))) return false;
+      if (deliveryFilters.product && !d.items?.some(item => item.product === parseInt(deliveryFilters.product))) return false;
+      if (deliveryFilters.driver_phone && !d.driver_phone.toLowerCase().includes(deliveryFilters.driver_phone.toLowerCase())) return false;
+
+      const idf = deliveryFilters.issue_date_from ? new Date(deliveryFilters.issue_date_from).getTime() : 0;
+      const idt = deliveryFilters.issue_date_to ? new Date(deliveryFilters.issue_date_to).getTime() : 0;
+      const id = d.issue_date ? new Date(d.issue_date).getTime() : 0;
+      if (idf && id < idf) return false;
+      if (idt && id > idt) return false;
+
+      const wmin = deliveryFilters.weight_min ? Number(deliveryFilters.weight_min) : -Infinity;
+      const wmax = deliveryFilters.weight_max ? Number(deliveryFilters.weight_max) : Infinity;
+      if (d.total_weight < wmin || d.total_weight > wmax) return false;
+
+      const matchesWarehouse = selectedWarehouse === "all" || d.warehouse === parseInt(selectedWarehouse);
+      if (!matchesWarehouse) return false;
+
+      return true;
     });
-  }, [deliveries, searchTerm, selectedWarehouse]);
+  }, [deliveries, deliveryFilters, selectedWarehouse]);
 
   // Component to show B2B Distribution or Offer links
   const DeliveryB2BLinks = ({ offerId, distributionId, setViewingDistribution, setViewingOffer }: { offerId?: number | null, distributionId?: number | null, setViewingDistribution: (d: B2BDistribution | null) => void, setViewingOffer: (o: B2BOffer | null) => void }) => {
@@ -426,6 +526,108 @@ export default function WarehousePage() {
                 </Button>
               </div>
             </div>
+
+            <div className="p-4">
+              <Collapsible open={receiptsFiltersOpen} onOpenChange={setReceiptsFiltersOpen}>
+                <div className="flex justify-end mb-3">
+                  <CollapsibleTrigger asChild>
+                    <Button variant="outline" className="flex items-center gap-2">
+                      {tCommon('filters')}
+                      {receiptsFiltersOpen ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                    </Button>
+                  </CollapsibleTrigger>
+                </div>
+                <CollapsibleContent dir="rtl">
+                  <div className="bg-white border rounded-md p-4 space-y-4 mb-4">
+                    <div className="grid grid-cols-6 gap-4">
+                      <div>
+                        <div className="text-sm font-medium mb-1">{t("receipts.table.receipt_id")}</div>
+                        <Input value={receiptFilters.receipt_id} onChange={e => setReceiptFilters({ ...receiptFilters, receipt_id: e.target.value })} />
+                      </div>
+                      <div>
+                        <div className="text-sm font-medium mb-1">{t("receipts.table.receipt_type")}</div>
+                        <SearchableSelect
+                          options={[
+                            { value: '', label: 'همه انواع رسید' },
+                            { value: 'import_cottage', label: t("receipts.receipt_types.import_cottage") },
+                            { value: 'distribution_cottage', label: t("receipts.receipt_types.distribution_cottage") },
+                            { value: 'purchase', label: t("receipts.receipt_types.purchase") }
+                          ]}
+                          value={receiptFilters.receipt_type}
+                          onValueChange={(v) => setReceiptFilters({ ...receiptFilters, receipt_type: v })}
+                        />
+                      </div>
+                      <div>
+                        <div className="text-sm font-medium mb-1">شماره سریال کوتاژ</div>
+                        <Input
+                          value={receiptFilters.cottage_serial}
+                          onChange={e => setReceiptFilters({ ...receiptFilters, cottage_serial: e.target.value })}
+                          disabled={receiptFilters.receipt_type !== 'import_cottage' && receiptFilters.receipt_type !== 'distribution_cottage'}
+                          className={receiptFilters.receipt_type !== 'import_cottage' && receiptFilters.receipt_type !== 'distribution_cottage' ? 'bg-gray-100 cursor-not-allowed' : ''}
+                        />
+                      </div>
+                      <div>
+                        <div className="text-sm font-medium mb-1">پیش فاکتور</div>
+                        <SearchableSelect
+                          options={[
+                            { value: '', label: 'همه پیش فاکتورها' },
+                            ...purchaseProformas.map(p => ({
+                              value: p.id.toString(),
+                              label: p.serial_number
+                            }))
+                          ]}
+                          value={receiptFilters.proforma_id}
+                          onValueChange={(v) => setReceiptFilters({ ...receiptFilters, proforma_id: v })}
+                        />
+                      </div>
+                      <div>
+                        <div className="text-sm font-medium mb-1">محصول</div>
+                        <SearchableSelect
+                          options={[
+                            { value: '', label: 'همه محصولات' },
+                            ...products.map(p => ({
+                              value: p.id.toString(),
+                              label: p.name
+                            }))
+                          ]}
+                          value={receiptFilters.product}
+                          onValueChange={(v) => setReceiptFilters({ ...receiptFilters, product: v })}
+                        />
+                      </div>
+                      <div>
+                        <div className="text-sm font-medium mb-1">{t("receipts.table.total_weight")}</div>
+                        <div className="grid grid-cols-2 gap-2">
+                          <Input placeholder="حداقل" value={receiptFilters.weight_min} onChange={e => setReceiptFilters({ ...receiptFilters, weight_min: e.target.value })} />
+                          <Input placeholder="حداکثر" value={receiptFilters.weight_max} onChange={e => setReceiptFilters({ ...receiptFilters, weight_max: e.target.value })} />
+                        </div>
+                      </div>
+                      <div>
+                        <div className="text-sm font-medium mb-1">تاریخ از</div>
+                        <PersianDatePicker value={receiptFilters.date_from} onChange={(v) => setReceiptFilters({ ...receiptFilters, date_from: v })} placeholder="انتخاب تاریخ" />
+                      </div>
+                      <div>
+                        <div className="text-sm font-medium mb-1">تاریخ تا</div>
+                        <PersianDatePicker value={receiptFilters.date_to} onChange={(v) => setReceiptFilters({ ...receiptFilters, date_to: v })} placeholder="انتخاب تاریخ" />
+                      </div>
+                    </div>
+                  </div>
+                  <div className="flex justify-end mb-4">
+                    <Button className="bg-red-100 text-red-700 hover:bg-red-200" onClick={() => setReceiptFilters({
+                      receipt_id: "",
+                      receipt_type: "",
+                      date_from: "",
+                      date_to: "",
+                      weight_min: "",
+                      weight_max: "",
+                      proforma_id: "",
+                      product: "",
+                      cottage_serial: "",
+                    })}>ریست</Button>
+                  </div>
+                </CollapsibleContent>
+              </Collapsible>
+            </div>
+
             <Table dir="rtl">
               <TableHeader>
                 <TableRow>
@@ -527,6 +729,109 @@ export default function WarehousePage() {
                 </Button>
               </div>
             </div>
+
+            <div className="p-4">
+              <Collapsible open={dispatchesFiltersOpen} onOpenChange={setDispatchesFiltersOpen}>
+                <div className="flex justify-end mb-3">
+                  <CollapsibleTrigger asChild>
+                    <Button variant="outline" className="flex items-center gap-2">
+                      {tCommon('filters')}
+                      {dispatchesFiltersOpen ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                    </Button>
+                  </CollapsibleTrigger>
+                </div>
+                <CollapsibleContent dir="rtl">
+                  <div className="bg-white border rounded-md p-4 space-y-4 mb-4">
+                    <div className="grid grid-cols-6 gap-4">
+                      <div>
+                        <div className="text-sm font-medium mb-1">{t("issues.table.dispatch_id")}</div>
+                        <Input value={dispatchFilters.dispatch_id} onChange={e => setDispatchFilters({ ...dispatchFilters, dispatch_id: e.target.value })} />
+                      </div>
+                      <div>
+                        <div className="text-sm font-medium mb-1">پیش فاکتور فروش</div>
+                        <SearchableSelect
+                          options={[
+                            { value: '', label: 'همه پیش فاکتورها' },
+                            ...salesProformas.map(p => ({
+                              value: p.id.toString(),
+                              label: p.serial_number
+                            }))
+                          ]}
+                          value={dispatchFilters.sales_proforma_id}
+                          onValueChange={(v) => setDispatchFilters({ ...dispatchFilters, sales_proforma_id: v })}
+                        />
+                      </div>
+                      <div>
+                        <div className="text-sm font-medium mb-1">محصول</div>
+                        <SearchableSelect
+                          options={[
+                            { value: '', label: 'همه محصولات' },
+                            ...products.map(p => ({
+                              value: p.id.toString(),
+                              label: p.name
+                            }))
+                          ]}
+                          value={dispatchFilters.product}
+                          onValueChange={(v) => setDispatchFilters({ ...dispatchFilters, product: v })}
+                        />
+                      </div>
+                      <div>
+                        <div className="text-sm font-medium mb-1">شرکت حمل و نقل</div>
+                        <SearchableSelect
+                          options={[
+                            { value: '', label: 'همه شرکت‌ها' },
+                            ...shippingCompanies.map(s => ({
+                              value: s.id.toString(),
+                              label: s.name
+                            }))
+                          ]}
+                          value={dispatchFilters.shipping_company}
+                          onValueChange={(v) => setDispatchFilters({ ...dispatchFilters, shipping_company: v })}
+                        />
+                      </div>
+                      <div>
+                        <div className="text-sm font-medium mb-1">{t("issues.table.total_weight")}</div>
+                        <div className="grid grid-cols-2 gap-2">
+                          <Input placeholder="حداقل" value={dispatchFilters.weight_min} onChange={e => setDispatchFilters({ ...dispatchFilters, weight_min: e.target.value })} />
+                          <Input placeholder="حداکثر" value={dispatchFilters.weight_max} onChange={e => setDispatchFilters({ ...dispatchFilters, weight_max: e.target.value })} />
+                        </div>
+                      </div>
+                      <div>
+                        <div className="text-sm font-medium mb-1">تاریخ صدور از</div>
+                        <PersianDatePicker value={dispatchFilters.issue_date_from} onChange={(v) => setDispatchFilters({ ...dispatchFilters, issue_date_from: v })} placeholder="انتخاب تاریخ" />
+                      </div>
+                      <div>
+                        <div className="text-sm font-medium mb-1">تاریخ صدور تا</div>
+                        <PersianDatePicker value={dispatchFilters.issue_date_to} onChange={(v) => setDispatchFilters({ ...dispatchFilters, issue_date_to: v })} placeholder="انتخاب تاریخ" />
+                      </div>
+                      <div>
+                        <div className="text-sm font-medium mb-1">تاریخ اعتبار از</div>
+                        <PersianDatePicker value={dispatchFilters.validity_date_from} onChange={(v) => setDispatchFilters({ ...dispatchFilters, validity_date_from: v })} placeholder="انتخاب تاریخ" />
+                      </div>
+                      <div>
+                        <div className="text-sm font-medium mb-1">تاریخ اعتبار تا</div>
+                        <PersianDatePicker value={dispatchFilters.validity_date_to} onChange={(v) => setDispatchFilters({ ...dispatchFilters, validity_date_to: v })} placeholder="انتخاب تاریخ" />
+                      </div>
+                    </div>
+                  </div>
+                  <div className="flex justify-end mb-4">
+                    <Button className="bg-red-100 text-red-700 hover:bg-red-200" onClick={() => setDispatchFilters({
+                      dispatch_id: "",
+                      sales_proforma_id: "",
+                      product: "",
+                      shipping_company: "",
+                      weight_min: "",
+                      weight_max: "",
+                      issue_date_from: "",
+                      issue_date_to: "",
+                      validity_date_from: "",
+                      validity_date_to: "",
+                    })}>ریست</Button>
+                  </div>
+                </CollapsibleContent>
+              </Collapsible>
+            </div>
+
             <Table dir="rtl">
               <TableHeader>
                 <TableRow>
@@ -636,6 +941,109 @@ export default function WarehousePage() {
                 </Button>
               </div>
             </div>
+
+            <div className="p-4">
+              <Collapsible open={deliveriesFiltersOpen} onOpenChange={setDeliveriesFiltersOpen}>
+                <div className="flex justify-end mb-3">
+                  <CollapsibleTrigger asChild>
+                    <Button variant="outline" className="flex items-center gap-2">
+                      {tCommon('filters')}
+                      {deliveriesFiltersOpen ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                    </Button>
+                  </CollapsibleTrigger>
+                </div>
+                <CollapsibleContent dir="rtl">
+                  <div className="bg-white border rounded-md p-4 space-y-4 mb-4">
+                    <div className="grid grid-cols-6 gap-4">
+                      <div>
+                        <div className="text-sm font-medium mb-1">{t("deliveries.table.delivery_id")}</div>
+                        <Input value={deliveryFilters.delivery_id} onChange={e => setDeliveryFilters({ ...deliveryFilters, delivery_id: e.target.value })} />
+                      </div>
+                      <div>
+                        <div className="text-sm font-medium mb-1">شناسه تخصیص</div>
+                        <Input value={deliveryFilters.allocation_id} onChange={e => setDeliveryFilters({ ...deliveryFilters, allocation_id: e.target.value })} />
+                      </div>
+                      <div>
+                        <div className="text-sm font-medium mb-1">مشتری</div>
+                        <SearchableSelect
+                          options={[
+                            { value: '', label: 'همه مشتریان' },
+                            ...customers.map(c => ({
+                              value: c.id.toString(),
+                              label: c.company_name || c.full_name || ''
+                            }))
+                          ]}
+                          value={deliveryFilters.customer}
+                          onValueChange={(v) => setDeliveryFilters({ ...deliveryFilters, customer: v })}
+                        />
+                      </div>
+                      <div>
+                        <div className="text-sm font-medium mb-1">محصول</div>
+                        <SearchableSelect
+                          options={[
+                            { value: '', label: 'همه محصولات' },
+                            ...products.map(p => ({
+                              value: p.id.toString(),
+                              label: p.name
+                            }))
+                          ]}
+                          value={deliveryFilters.product}
+                          onValueChange={(v) => setDeliveryFilters({ ...deliveryFilters, product: v })}
+                        />
+                      </div>
+                      <div>
+                        <div className="text-sm font-medium mb-1">شرکت حمل و نقل</div>
+                        <SearchableSelect
+                          options={[
+                            { value: '', label: 'همه شرکت‌ها' },
+                            ...shippingCompanies.map(s => ({
+                              value: s.id.toString(),
+                              label: s.name
+                            }))
+                          ]}
+                          value={deliveryFilters.shipping_company}
+                          onValueChange={(v) => setDeliveryFilters({ ...deliveryFilters, shipping_company: v })}
+                        />
+                      </div>
+                      <div>
+                        <div className="text-sm font-medium mb-1">{t("deliveries.table.total_weight")}</div>
+                        <div className="grid grid-cols-2 gap-2">
+                          <Input placeholder="حداقل" value={deliveryFilters.weight_min} onChange={e => setDeliveryFilters({ ...deliveryFilters, weight_min: e.target.value })} />
+                          <Input placeholder="حداکثر" value={deliveryFilters.weight_max} onChange={e => setDeliveryFilters({ ...deliveryFilters, weight_max: e.target.value })} />
+                        </div>
+                      </div>
+                      <div>
+                        <div className="text-sm font-medium mb-1">تلفن راننده</div>
+                        <Input value={deliveryFilters.driver_phone} onChange={e => setDeliveryFilters({ ...deliveryFilters, driver_phone: e.target.value })} />
+                      </div>
+                      <div>
+                        <div className="text-sm font-medium mb-1">تاریخ صدور از</div>
+                        <PersianDatePicker value={deliveryFilters.issue_date_from} onChange={(v) => setDeliveryFilters({ ...deliveryFilters, issue_date_from: v })} placeholder="انتخاب تاریخ" />
+                      </div>
+                      <div>
+                        <div className="text-sm font-medium mb-1">تاریخ صدور تا</div>
+                        <PersianDatePicker value={deliveryFilters.issue_date_to} onChange={(v) => setDeliveryFilters({ ...deliveryFilters, issue_date_to: v })} placeholder="انتخاب تاریخ" />
+                      </div>
+                    </div>
+                  </div>
+                  <div className="flex justify-end mb-4">
+                    <Button className="bg-red-100 text-red-700 hover:bg-red-200" onClick={() => setDeliveryFilters({
+                      delivery_id: "",
+                      allocation_id: "",
+                      issue_date_from: "",
+                      issue_date_to: "",
+                      weight_min: "",
+                      weight_max: "",
+                      shipping_company: "",
+                      customer: "",
+                      product: "",
+                      driver_phone: "",
+                    })}>ریست</Button>
+                  </div>
+                </CollapsibleContent>
+              </Collapsible>
+            </div>
+
             <Table dir="rtl">
               <TableHeader>
                 <TableRow>

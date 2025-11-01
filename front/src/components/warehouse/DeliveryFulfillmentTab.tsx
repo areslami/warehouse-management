@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState, useMemo } from "react";
 import { useTranslations } from "next-intl";
 import { Table, TableBody, TableHead, TableHeader, TableRow, TableCell, TableRow as TableRowComponent } from "@/components/ui/table";
 import { handleApiErrorWithToast } from "@/lib/api/error-toast-handler";
@@ -16,12 +16,13 @@ import {
 } from "@/lib/api/warehouse";
 import { useModal } from "@/lib/modal-context";
 import { DeliveryFulfillmentModal } from "@/components/modals/warehouse/delivery-fulfillment-modal";
-import { searchFilter } from "@/lib/utils/warehouse-utils";
 import { formatNumber } from "@/lib/utils/number-format";
-import { Edit, Plus, Search, Trash2, Upload } from "lucide-react";
+import { Edit, Plus, Trash2, Upload, ChevronUp, ChevronDown } from "lucide-react";
 import { Input } from "../ui/input";
 import { Button } from "../ui/button";
 import UploadDeliveryModal from "../modals/warehouse/upload-delivery-modal";
+import { Collapsible, CollapsibleTrigger, CollapsibleContent } from "@/components/ui/collapsible";
+import { PersianDatePicker } from "@/components/ui/persian-date-picker";
 
 interface DeliveryFulfillmentTabProps {
   selectedWarehouseId?: number;
@@ -33,8 +34,22 @@ export function DeliveryFulfillmentTab({ selectedWarehouseId }: DeliveryFulfillm
   const { openModal } = useModal();
   const [deliveries, setDeliveries] = useState<DeliveryFulfillment[]>([]);
   const [loading, setLoading] = useState(false);
-  const [searchTerm, setSearchTerm] = useState("");
   const [showUploadModal, setShowUploadModal] = useState(false);
+  const [filtersOpen, setFiltersOpen] = useState(false);
+  const [filters, setFilters] = useState({
+    delivery_id: "",
+    waybill_serial: "",
+    b2b_address_purchase_id: "",
+    warehouse_receipt_id: "",
+    issue_date_from: "",
+    issue_date_to: "",
+    weight_min: "",
+    weight_max: "",
+    shipping_company_name: "",
+    driver_name: "",
+    driver_phone: "",
+    driver_license_plate: "",
+  });
 
   const loadDeliveries = useCallback(async () => {
     setLoading(true);
@@ -56,11 +71,30 @@ export function DeliveryFulfillmentTab({ selectedWarehouseId }: DeliveryFulfillm
     loadDeliveries();
   }, [loadDeliveries]);
 
-  const filteredDeliveries = searchFilter(
-    deliveries,
-    searchTerm,
-    ['delivery_id', 'b2b_address_purchase_id', 'warehouse_receipt_id', 'description']
-  );
+  const filteredDeliveries = useMemo(() => {
+    return deliveries.filter(d => {
+      if (filters.delivery_id && !d.delivery_id.toLowerCase().includes(filters.delivery_id.toLowerCase())) return false;
+      if (filters.waybill_serial && !(d.waybill_serial || "").toLowerCase().includes(filters.waybill_serial.toLowerCase())) return false;
+      if (filters.b2b_address_purchase_id && !(d.b2b_address_purchase_id || "").toLowerCase().includes(filters.b2b_address_purchase_id.toLowerCase())) return false;
+      if (filters.warehouse_receipt_id && !(d.warehouse_receipt_id || "").toLowerCase().includes(filters.warehouse_receipt_id.toLowerCase())) return false;
+      if (filters.shipping_company_name && !(d.shipping_company_name || "").toLowerCase().includes(filters.shipping_company_name.toLowerCase())) return false;
+      if (filters.driver_name && !d.driver_name.toLowerCase().includes(filters.driver_name.toLowerCase())) return false;
+      if (filters.driver_phone && !d.driver_phone.toLowerCase().includes(filters.driver_phone.toLowerCase())) return false;
+      if (filters.driver_license_plate && !d.driver_license_plate.toLowerCase().includes(filters.driver_license_plate.toLowerCase())) return false;
+
+      const idf = filters.issue_date_from ? new Date(filters.issue_date_from).getTime() : 0;
+      const idt = filters.issue_date_to ? new Date(filters.issue_date_to).getTime() : 0;
+      const id = d.issue_date ? new Date(d.issue_date).getTime() : 0;
+      if (idf && id < idf) return false;
+      if (idt && id > idt) return false;
+
+      const wmin = filters.weight_min ? Number(filters.weight_min) : -Infinity;
+      const wmax = filters.weight_max ? Number(filters.weight_max) : Infinity;
+      if (d.total_weight < wmin || d.total_weight > wmax) return false;
+
+      return true;
+    });
+  }, [deliveries, filters]);
 
   const handleCreate = () => {
     openModal(DeliveryFulfillmentModal, {
@@ -156,19 +190,9 @@ export function DeliveryFulfillmentTab({ selectedWarehouseId }: DeliveryFulfillm
 
   return (
     <div className="p-4 h-full" dir="rtl">
-
       <div className="flex justify-between items-center mb-4">
         <h3 className="text-lg font-semibold">{t("title")}</h3>
         <div className="flex gap-2 items-center">
-          <div className="relative">
-            <Search className="absolute right-3 top-2.5 h-4 w-4 text-gray-400" />
-            <Input
-              placeholder={t("search_placeholder")}
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pr-10 w-64"
-            />
-          </div>
           <Button
             size="sm"
             variant="outline"
@@ -186,6 +210,86 @@ export function DeliveryFulfillmentTab({ selectedWarehouseId }: DeliveryFulfillm
           </Button>
         </div>
       </div>
+
+      <Collapsible open={filtersOpen} onOpenChange={setFiltersOpen}>
+        <div className="flex justify-end mb-3">
+          <CollapsibleTrigger asChild>
+            <Button variant="outline" className="flex items-center gap-2">
+              {tCommon('filters')}
+              {filtersOpen ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+            </Button>
+          </CollapsibleTrigger>
+        </div>
+        <CollapsibleContent dir="rtl">
+          <div className="bg-white border rounded-md p-4 space-y-4 mb-4">
+            <div className="grid grid-cols-6 gap-4">
+              <div>
+                <div className="text-sm font-medium mb-1">{t("table.delivery_id")}</div>
+                <Input value={filters.delivery_id} onChange={e => setFilters({ ...filters, delivery_id: e.target.value })} />
+              </div>
+              <div>
+                <div className="text-sm font-medium mb-1">شماره بارنامه</div>
+                <Input value={filters.waybill_serial} onChange={e => setFilters({ ...filters, waybill_serial: e.target.value })} />
+              </div>
+              <div>
+                <div className="text-sm font-medium mb-1">شناسه خرید B2B</div>
+                <Input value={filters.b2b_address_purchase_id} onChange={e => setFilters({ ...filters, b2b_address_purchase_id: e.target.value })} />
+              </div>
+              <div>
+                <div className="text-sm font-medium mb-1">شناسه رسید انبار</div>
+                <Input value={filters.warehouse_receipt_id} onChange={e => setFilters({ ...filters, warehouse_receipt_id: e.target.value })} />
+              </div>
+              <div>
+                <div className="text-sm font-medium mb-1">تاریخ صدور از</div>
+                <PersianDatePicker value={filters.issue_date_from} onChange={(v) => setFilters({ ...filters, issue_date_from: v })} />
+              </div>
+              <div>
+                <div className="text-sm font-medium mb-1">تاریخ صدور تا</div>
+                <PersianDatePicker value={filters.issue_date_to} onChange={(v) => setFilters({ ...filters, issue_date_to: v })} />
+              </div>
+              <div>
+                <div className="text-sm font-medium mb-1">{t("table.total_weight")}</div>
+                <div className="grid grid-cols-2 gap-2">
+                  <Input placeholder="حداقل" value={filters.weight_min} onChange={e => setFilters({ ...filters, weight_min: e.target.value })} />
+                  <Input placeholder="حداکثر" value={filters.weight_max} onChange={e => setFilters({ ...filters, weight_max: e.target.value })} />
+                </div>
+              </div>
+              <div>
+                <div className="text-sm font-medium mb-1">شرکت حمل و نقل</div>
+                <Input value={filters.shipping_company_name} onChange={e => setFilters({ ...filters, shipping_company_name: e.target.value })} />
+              </div>
+              <div>
+                <div className="text-sm font-medium mb-1">نام راننده</div>
+                <Input value={filters.driver_name} onChange={e => setFilters({ ...filters, driver_name: e.target.value })} />
+              </div>
+              <div>
+                <div className="text-sm font-medium mb-1">تلفن راننده</div>
+                <Input value={filters.driver_phone} onChange={e => setFilters({ ...filters, driver_phone: e.target.value })} />
+              </div>
+              <div>
+                <div className="text-sm font-medium mb-1">پلاک راننده</div>
+                <Input value={filters.driver_license_plate} onChange={e => setFilters({ ...filters, driver_license_plate: e.target.value })} />
+              </div>
+            </div>
+          </div>
+          <div className="flex justify-end mb-4">
+            <Button className="bg-red-100 text-red-700 hover:bg-red-200" onClick={() => setFilters({
+              delivery_id: "",
+              waybill_serial: "",
+              b2b_address_purchase_id: "",
+              warehouse_receipt_id: "",
+              issue_date_from: "",
+              issue_date_to: "",
+              weight_min: "",
+              weight_max: "",
+              shipping_company_name: "",
+              driver_name: "",
+              driver_phone: "",
+              driver_license_plate: "",
+            })}>ریست</Button>
+          </div>
+        </CollapsibleContent>
+      </Collapsible>
 
       {loading ? (
         <div>{t("loading")}</div>

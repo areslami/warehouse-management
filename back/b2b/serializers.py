@@ -25,8 +25,8 @@ class B2BOfferListSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = B2BOffer
-        fields = ['id', 'offer_id', 'offer_weight', 'unit_price',
-                  'total_price', 'status', 'offer_date', 'offer_exp_date', 'product_name', 'product_id']
+        fields = ['id', 'offer_id', 'warehouse_receipt', 'offer_weight', 'unit_price',
+                  'total_price', 'offer_type', 'status', 'offer_date', 'offer_exp_date', 'product_name', 'product_id']
 
     def get_product_name(self, obj):
         try:
@@ -287,7 +287,7 @@ class B2BDistributionListSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = B2BDistribution
-        fields = ['id', 'transfer_id', 'customer_name', 'product_name', 'agency_weight', 'unit_price',
+        fields = ['id', 'transfer_id', 'warehouse_receipt', 'customer_name', 'product_name', 'agency_weight', 'unit_price',
                   'agency_date', 'warehouse_receipt_id', 'warehouse_name', 'product_id', 'sales_proforma', 'sales_proforma_serial', 'sales_proforma_customer_name']
 
     def get_customer_name(self, obj):

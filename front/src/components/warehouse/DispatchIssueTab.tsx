@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState, useMemo } from "react";
 import { useTranslations } from "next-intl";
 import { Table, TableBody, TableHead, TableHeader, TableRow, TableCell, TableRow as TableRowComponent } from "@/components/ui/table";
 import { handleApiErrorWithToast } from "@/lib/api/error-toast-handler";
@@ -18,12 +18,13 @@ import { useModal } from "@/lib/modal-context";
 import { DispatchIssueModal } from "@/components/modals/warehouse/dispatch-issue-modal";
 import {
   filterByWarehouse,
-  searchFilter
 } from "@/lib/utils/warehouse-utils";
 import { formatNumber } from "@/lib/utils/number-format";
 import { Button } from "../ui/button";
-import { Edit, Plus, Search, Trash2 } from "lucide-react";
+import { Edit, Plus, Trash2, ChevronUp, ChevronDown } from "lucide-react";
 import { Input } from "../ui/input";
+import { Collapsible, CollapsibleTrigger, CollapsibleContent } from "@/components/ui/collapsible";
+import { PersianDatePicker } from "@/components/ui/persian-date-picker";
 
 interface DispatchIssueTabProps {
   selectedWarehouseId?: number;
@@ -31,10 +32,23 @@ interface DispatchIssueTabProps {
 
 export function DispatchIssueTab({ selectedWarehouseId }: DispatchIssueTabProps) {
   const t = useTranslations("pages.warehouse.issues");
+  const tCommon = useTranslations("common");
   const { openModal } = useModal();
   const [dispatches, setDispatches] = useState<DispatchIssue[]>([]);
   const [loading, setLoading] = useState(false);
-  const [searchTerm, setSearchTerm] = useState("");
+  const [filtersOpen, setFiltersOpen] = useState(false);
+  const [filters, setFilters] = useState({
+    dispatch_id: "",
+    warehouse_name: "",
+    sales_proforma_serial: "",
+    issue_date_from: "",
+    issue_date_to: "",
+    validity_date_from: "",
+    validity_date_to: "",
+    weight_min: "",
+    weight_max: "",
+    shipping_company_name: "",
+  });
 
   const loadDispatches = useCallback(async () => {
     setLoading(true);
@@ -57,12 +71,32 @@ export function DispatchIssueTab({ selectedWarehouseId }: DispatchIssueTabProps)
     loadDispatches();
   }, [selectedWarehouseId, loadDispatches]);
 
-  // Filter dispatches based on search
-  const filteredDispatches = searchFilter(
-    dispatches,
-    searchTerm,
-    ['dispatch_id', 'warehouse_name', 'description']
-  );
+  const filteredDispatches = useMemo(() => {
+    return dispatches.filter(d => {
+      if (filters.dispatch_id && !d.dispatch_id.toLowerCase().includes(filters.dispatch_id.toLowerCase())) return false;
+      if (filters.warehouse_name && !(d.warehouse_name || "").toLowerCase().includes(filters.warehouse_name.toLowerCase())) return false;
+      if (filters.sales_proforma_serial && !(d.sales_proforma_serial || "").toLowerCase().includes(filters.sales_proforma_serial.toLowerCase())) return false;
+      if (filters.shipping_company_name && !(d.shipping_company_name || "").toLowerCase().includes(filters.shipping_company_name.toLowerCase())) return false;
+
+      const idf = filters.issue_date_from ? new Date(filters.issue_date_from).getTime() : 0;
+      const idt = filters.issue_date_to ? new Date(filters.issue_date_to).getTime() : 0;
+      const id = d.issue_date ? new Date(d.issue_date).getTime() : 0;
+      if (idf && id < idf) return false;
+      if (idt && id > idt) return false;
+
+      const vdf = filters.validity_date_from ? new Date(filters.validity_date_from).getTime() : 0;
+      const vdt = filters.validity_date_to ? new Date(filters.validity_date_to).getTime() : 0;
+      const vd = d.validity_date ? new Date(d.validity_date).getTime() : 0;
+      if (vdf && vd < vdf) return false;
+      if (vdt && vd > vdt) return false;
+
+      const wmin = filters.weight_min ? Number(filters.weight_min) : -Infinity;
+      const wmax = filters.weight_max ? Number(filters.weight_max) : Infinity;
+      if (d.total_weight < wmin || d.total_weight > wmax) return false;
+
+      return true;
+    });
+  }, [dispatches, filters]);
 
   const handleCreate = () => {
     openModal(DispatchIssueModal, {
@@ -141,19 +175,9 @@ export function DispatchIssueTab({ selectedWarehouseId }: DispatchIssueTabProps)
 
   return (
     <div className="p-4 h-full" dir="rtl">
-
       <div className="flex justify-between items-center mb-4">
         <h3 className="text-lg font-semibold">{t("title")}</h3>
         <div className="flex gap-2 items-center">
-          <div className="relative">
-            <Search className="absolute right-3 top-2.5 h-4 w-4 text-gray-400" />
-            <Input
-              placeholder={t("search_placeholder")}
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pr-10 w-64"
-            />
-          </div>
           <Button
             className="bg-[#f6d265] hover:bg-[#f5c842] text-white"
             onClick={handleCreate}
@@ -163,6 +187,76 @@ export function DispatchIssueTab({ selectedWarehouseId }: DispatchIssueTabProps)
           </Button>
         </div>
       </div>
+
+      <Collapsible open={filtersOpen} onOpenChange={setFiltersOpen}>
+        <div className="flex justify-end mb-3">
+          <CollapsibleTrigger asChild>
+            <Button variant="outline" className="flex items-center gap-2">
+              {tCommon('filters')}
+              {filtersOpen ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+            </Button>
+          </CollapsibleTrigger>
+        </div>
+        <CollapsibleContent dir="rtl">
+          <div className="bg-white border rounded-md p-4 space-y-4 mb-4">
+            <div className="grid grid-cols-6 gap-4">
+              <div>
+                <div className="text-sm font-medium mb-1">{t("table.dispatch_id")}</div>
+                <Input value={filters.dispatch_id} onChange={e => setFilters({ ...filters, dispatch_id: e.target.value })} />
+              </div>
+              <div>
+                <div className="text-sm font-medium mb-1">{t("table.warehouse")}</div>
+                <Input value={filters.warehouse_name} onChange={e => setFilters({ ...filters, warehouse_name: e.target.value })} />
+              </div>
+              <div>
+                <div className="text-sm font-medium mb-1">شماره پیش‌فاکتور فروش</div>
+                <Input value={filters.sales_proforma_serial} onChange={e => setFilters({ ...filters, sales_proforma_serial: e.target.value })} />
+              </div>
+              <div>
+                <div className="text-sm font-medium mb-1">تاریخ صدور از</div>
+                <PersianDatePicker value={filters.issue_date_from} onChange={(v) => setFilters({ ...filters, issue_date_from: v })} />
+              </div>
+              <div>
+                <div className="text-sm font-medium mb-1">تاریخ صدور تا</div>
+                <PersianDatePicker value={filters.issue_date_to} onChange={(v) => setFilters({ ...filters, issue_date_to: v })} />
+              </div>
+              <div>
+                <div className="text-sm font-medium mb-1">تاریخ اعتبار از</div>
+                <PersianDatePicker value={filters.validity_date_from} onChange={(v) => setFilters({ ...filters, validity_date_from: v })} />
+              </div>
+              <div>
+                <div className="text-sm font-medium mb-1">تاریخ اعتبار تا</div>
+                <PersianDatePicker value={filters.validity_date_to} onChange={(v) => setFilters({ ...filters, validity_date_to: v })} />
+              </div>
+              <div>
+                <div className="text-sm font-medium mb-1">{t("table.total_weight")}</div>
+                <div className="grid grid-cols-2 gap-2">
+                  <Input placeholder="حداقل" value={filters.weight_min} onChange={e => setFilters({ ...filters, weight_min: e.target.value })} />
+                  <Input placeholder="حداکثر" value={filters.weight_max} onChange={e => setFilters({ ...filters, weight_max: e.target.value })} />
+                </div>
+              </div>
+              <div>
+                <div className="text-sm font-medium mb-1">شرکت حمل و نقل</div>
+                <Input value={filters.shipping_company_name} onChange={e => setFilters({ ...filters, shipping_company_name: e.target.value })} />
+              </div>
+            </div>
+          </div>
+          <div className="flex justify-end mb-4">
+            <Button className="bg-red-100 text-red-700 hover:bg-red-200" onClick={() => setFilters({
+              dispatch_id: "",
+              warehouse_name: "",
+              sales_proforma_serial: "",
+              issue_date_from: "",
+              issue_date_to: "",
+              validity_date_from: "",
+              validity_date_to: "",
+              weight_min: "",
+              weight_max: "",
+              shipping_company_name: "",
+            })}>ریست</Button>
+          </div>
+        </CollapsibleContent>
+      </Collapsible>
 
       {loading ? (
         <div>{t("loading")}</div>

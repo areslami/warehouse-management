@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState, useMemo } from "react";
 import { useTranslations } from "next-intl";
 import { Table, TableBody, TableHead, TableHeader, TableRow, TableCell, TableRow as TableRowComponent } from "@/components/ui/table";
 import { handleApiErrorWithToast } from "@/lib/api/error-toast-handler";
@@ -18,12 +18,14 @@ import { toast } from "@/lib/toast-helper";
 import { WarehouseReceiptModal } from "@/components/modals/warehouse/warehouse-receipt-modal";
 import {
   filterByWarehouse,
-  searchFilter
 } from "@/lib/utils/warehouse-utils";
 import { formatNumber } from "@/lib/utils/number-format";
 import { Button } from "../ui/button";
-import { Edit, Plus, Search, Trash2 } from "lucide-react";
+import { Edit, Plus, Trash2, ChevronUp, ChevronDown } from "lucide-react";
 import { Input } from "../ui/input";
+import { Collapsible, CollapsibleTrigger, CollapsibleContent } from "@/components/ui/collapsible";
+import { SearchableSelect } from "@/components/ui/searchable-select";
+import { PersianDatePicker } from "@/components/ui/persian-date-picker";
 
 interface WarehouseReceiptTabProps {
   selectedWarehouseId?: number;
@@ -36,7 +38,18 @@ export function WarehouseReceiptTab({ selectedWarehouseId }: WarehouseReceiptTab
   const { openModal } = useModal();
   const [receipts, setReceipts] = useState<WarehouseReceiptType[]>([]);
   const [loading, setLoading] = useState(false);
-  const [searchTerm, setSearchTerm] = useState("");
+  const [filtersOpen, setFiltersOpen] = useState(false);
+  const [filters, setFilters] = useState({
+    receipt_id: "",
+    receipt_type: "",
+    warehouse_name: "",
+    date_from: "",
+    date_to: "",
+    weight_min: "",
+    weight_max: "",
+    cottage_serial_number: "",
+    proforma_serial: "",
+  });
 
   const loadReceipts = useCallback(async () => {
     setLoading(true);
@@ -59,11 +72,27 @@ export function WarehouseReceiptTab({ selectedWarehouseId }: WarehouseReceiptTab
     loadReceipts();
   }, [selectedWarehouseId, loadReceipts]);
 
-  const filteredReceipts = searchFilter(
-    receipts,
-    searchTerm,
-    ['receipt_id', 'receipt_type', 'warehouse_name', 'description']
-  );
+  const filteredReceipts = useMemo(() => {
+    return receipts.filter(r => {
+      if (filters.receipt_id && !(r.receipt_id || "").toLowerCase().includes(filters.receipt_id.toLowerCase())) return false;
+      if (filters.receipt_type && r.receipt_type !== filters.receipt_type) return false;
+      if (filters.warehouse_name && !(r.warehouse_name || "").toLowerCase().includes(filters.warehouse_name.toLowerCase())) return false;
+      if (filters.cottage_serial_number && !(r.cottage_serial_number || "").toLowerCase().includes(filters.cottage_serial_number.toLowerCase())) return false;
+      if (filters.proforma_serial && !(r.proforma_serial || "").toLowerCase().includes(filters.proforma_serial.toLowerCase())) return false;
+
+      const df = filters.date_from ? new Date(filters.date_from).getTime() : 0;
+      const dt = filters.date_to ? new Date(filters.date_to).getTime() : 0;
+      const d = r.date ? new Date(r.date).getTime() : 0;
+      if (df && d < df) return false;
+      if (dt && d > dt) return false;
+
+      const wmin = filters.weight_min ? Number(filters.weight_min) : -Infinity;
+      const wmax = filters.weight_max ? Number(filters.weight_max) : Infinity;
+      if (r.total_weight < wmin || r.total_weight > wmax) return false;
+
+      return true;
+    });
+  }, [receipts, filters]);
 
   const getReceiptTypeLabel = (type: string) => {
     const typeMap: Record<string, string> = {
@@ -139,19 +168,9 @@ export function WarehouseReceiptTab({ selectedWarehouseId }: WarehouseReceiptTab
 
   return (
     <div className="p-4 h-full" dir="rtl">
-
       <div className="flex justify-between items-center mb-4">
         <h3 className="text-lg font-semibold">{t("title")}</h3>
         <div className="flex gap-2 items-center">
-          <div className="relative">
-            <Search className="absolute right-3 top-2.5 h-4 w-4 text-gray-400" />
-            <Input
-              placeholder={t("search_placeholder")}
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pr-10 w-64"
-            />
-          </div>
           <Button
             className="bg-[#f6d265] hover:bg-[#f5c842] text-white"
             onClick={handleCreate}
@@ -161,6 +180,80 @@ export function WarehouseReceiptTab({ selectedWarehouseId }: WarehouseReceiptTab
           </Button>
         </div>
       </div>
+
+      <Collapsible open={filtersOpen} onOpenChange={setFiltersOpen}>
+        <div className="flex justify-end mb-3">
+          <CollapsibleTrigger asChild>
+            <Button variant="outline" className="flex items-center gap-2">
+              {tCommon('filters')}
+              {filtersOpen ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+            </Button>
+          </CollapsibleTrigger>
+        </div>
+        <CollapsibleContent dir="rtl">
+          <div className="bg-white border rounded-md p-4 space-y-4 mb-4">
+            <div className="grid grid-cols-6 gap-4">
+              <div>
+                <div className="text-sm font-medium mb-1">{t("table.receipt_id")}</div>
+                <Input value={filters.receipt_id} onChange={e => setFilters({ ...filters, receipt_id: e.target.value })} />
+              </div>
+              <div>
+                <div className="text-sm font-medium mb-1">{t("table.receipt_type")}</div>
+                <SearchableSelect
+                  options={[
+                    { value: '', label: 'همه انواع رسید' },
+                    { value: 'import_cottage', label: tReceipt('type-import') },
+                    { value: 'distribution_cottage', label: tReceipt('type-distribution') },
+                    { value: 'purchase', label: tReceipt('type-purchase') }
+                  ]}
+                  value={filters.receipt_type}
+                  onValueChange={(v) => setFilters({ ...filters, receipt_type: v })}
+                />
+              </div>
+              <div>
+                <div className="text-sm font-medium mb-1">{t("table.warehouse")}</div>
+                <Input value={filters.warehouse_name} onChange={e => setFilters({ ...filters, warehouse_name: e.target.value })} />
+              </div>
+              <div>
+                <div className="text-sm font-medium mb-1">تاریخ از</div>
+                <PersianDatePicker value={filters.date_from} onChange={(v) => setFilters({ ...filters, date_from: v })} />
+              </div>
+              <div>
+                <div className="text-sm font-medium mb-1">تاریخ تا</div>
+                <PersianDatePicker value={filters.date_to} onChange={(v) => setFilters({ ...filters, date_to: v })} />
+              </div>
+              <div>
+                <div className="text-sm font-medium mb-1">{t("table.total_weight")}</div>
+                <div className="grid grid-cols-2 gap-2">
+                  <Input placeholder="حداقل" value={filters.weight_min} onChange={e => setFilters({ ...filters, weight_min: e.target.value })} />
+                  <Input placeholder="حداکثر" value={filters.weight_max} onChange={e => setFilters({ ...filters, weight_max: e.target.value })} />
+                </div>
+              </div>
+              <div>
+                <div className="text-sm font-medium mb-1">شماره سریال کلبه</div>
+                <Input value={filters.cottage_serial_number} onChange={e => setFilters({ ...filters, cottage_serial_number: e.target.value })} />
+              </div>
+              <div>
+                <div className="text-sm font-medium mb-1">شماره پیش‌فاکتور</div>
+                <Input value={filters.proforma_serial} onChange={e => setFilters({ ...filters, proforma_serial: e.target.value })} />
+              </div>
+            </div>
+          </div>
+          <div className="flex justify-end mb-4">
+            <Button className="bg-red-100 text-red-700 hover:bg-red-200" onClick={() => setFilters({
+              receipt_id: "",
+              receipt_type: "",
+              warehouse_name: "",
+              date_from: "",
+              date_to: "",
+              weight_min: "",
+              weight_max: "",
+              cottage_serial_number: "",
+              proforma_serial: "",
+            })}>ریست</Button>
+          </div>
+        </CollapsibleContent>
+      </Collapsible>
 
 
       {loading ? (

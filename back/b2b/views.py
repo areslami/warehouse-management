@@ -101,7 +101,7 @@ class B2BDistributionViewSet(viewsets.ModelViewSet):
     
     def get_queryset(self):
         queryset = super().get_queryset()
-        return queryset.select_related('warehouse_receipt', 'customer')
+        return queryset.select_related('warehouse_receipt', 'warehouse_receipt__warehouse', 'customer', 'sales_proforma', 'sales_proforma__customer')
     
     @action(detail=False, methods=['get'])
     def by_customer(self, request):

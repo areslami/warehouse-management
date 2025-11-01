@@ -23,6 +23,8 @@ import { SalesProformaModal } from "@/components/modals/finance/salesproforma-mo
 import { B2BOffer, B2BAddress, B2BDistribution, B2BSale } from "@/lib/interfaces/b2b";
 import type { Product } from "@/lib/interfaces/core";
 import type { Customer } from "@/lib/interfaces/core";
+import type { WarehouseReceipt } from "@/lib/interfaces/warehouse";
+import type { SalesProforma } from "@/lib/interfaces/finance";
 import {
   fetchB2BOffers, fetchB2BOfferById, createB2BOffer, updateB2BOffer, deleteB2BOffer,
   fetchB2BAddresss, fetchB2BAddressById, createB2BAddress, updateB2BAddress, deleteB2BAddress,
@@ -30,7 +32,8 @@ import {
   fetchB2BSales, fetchB2BSaleById, createB2BSale, updateB2BSale, deleteB2BSale
 } from "@/lib/api/b2b";
 import { fetchCustomers, fetchReceivers, fetchProducts } from "@/lib/api/core";
-import { fetchSalesProformaById } from "@/lib/api/finance";
+import { fetchWarehouseReceipts } from "@/lib/api/warehouse";
+import { fetchSalesProformaById, fetchSalesProformas } from "@/lib/api/finance";
 import { handleApiErrorWithToast } from "@/lib/api/error-toast-handler";
 import { formatNumber } from "@/lib/utils/number-format";
 import UploadAddressModal from "@/components/modals/b2b/upload-address-modal";
@@ -48,6 +51,8 @@ export default function B2BPage() {
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [receivers, setReceivers] = useState<import("@/lib/interfaces/core").Receiver[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
+  const [warehouseReceipts, setWarehouseReceipts] = useState<WarehouseReceipt[]>([]);
+  const [salesProformas, setSalesProformas] = useState<SalesProforma[]>([]);
   const [selectedOffers, setSelectedOffers] = useState<number[]>([]);
   const [selectedAddresses, setSelectedAddresses] = useState<number[]>([]);
   const [selectedDistributions, setSelectedDistributions] = useState<number[]>([]);
@@ -60,6 +65,7 @@ export default function B2BPage() {
     purchase_id: "",
     offer_id: "",
     product_id: "",
+    customer: "",
     customer_name: "",
     purchase_type: "",
     date_from: "",
@@ -71,18 +77,19 @@ export default function B2BPage() {
     total_price_min: "",
     total_price_max: "",
     distribution_id: "",
-    export_type: "your_sale" as "your_sale" | "distributor_sale",
+    export_type: "" as "your_sale" | "distributor_sale" | "",
   });
   const [addressFilters, setAddressFilters] = useState({
     purchase_id: "",
     allocation_id: "",
     tracking_number: "",
     product_name: "",
+    customer: "",
     customer_name: "",
+    receiver: "",
     receiver_name: "",
     province: "",
     city: "",
-    payment_method: "",
     date_from: "",
     date_to: "",
     weight_min: "",
@@ -96,27 +103,31 @@ export default function B2BPage() {
     offer_id: "",
     status: "",
     offer_type: "",
-    offer_date_from: "",
-    offer_date_to: "",
-    offer_exp_date_from: "",
-    offer_exp_date_to: "",
-    warehouse_receipt_id: "",
+    product: "",
+    warehouse_receipt: "",
     offer_weight_min: "",
     offer_weight_max: "",
     unit_price_min: "",
     unit_price_max: "",
     total_price_min: "",
     total_price_max: "",
+    offer_date_from: "",
+    offer_date_to: "",
+    offer_exp_date_from: "",
+    offer_exp_date_to: "",
   });
   const [distributionFilters, setDistributionFilters] = useState({
     transfer_id: "",
-    warehouse_receipt_id: "",
+    warehouse_receipt: "",
     customer_name: "",
-    product_name: "",
-    date_from: "",
-    date_to: "",
+    product: "",
+    sales_proforma: "",
     weight_min: "",
     weight_max: "",
+    unit_price_min: "",
+    unit_price_max: "",
+    date_from: "",
+    date_to: "",
   });
 
   const [showOfferModal, setShowOfferModal] = useState(false);
@@ -158,7 +169,7 @@ export default function B2BPage() {
 
   const loadData = async () => {
     try {
-      const [offersData, addressesData, distributionsData, salesData, customersData, receiversData, productsData] = await Promise.all([
+      const [offersData, addressesData, distributionsData, salesData, customersData, receiversData, productsData, warehouseReceiptsData, salesProformasData] = await Promise.all([
         fetchB2BOffers(),
         fetchB2BAddresss(),
         fetchB2BDistributions(),
@@ -166,6 +177,8 @@ export default function B2BPage() {
         fetchCustomers(),
         fetchReceivers(),
         fetchProducts(),
+        fetchWarehouseReceipts(),
+        fetchSalesProformas(),
       ]);
       setOffers(offersData);
       setAddresses(addressesData);
@@ -174,6 +187,8 @@ export default function B2BPage() {
       setCustomers(customersData);
       setReceivers(receiversData);
       setProducts(productsData);
+      setWarehouseReceipts(warehouseReceiptsData);
+      setSalesProformas(salesProformasData);
     } catch (error) {
       console.error("Failed to load B2B data:", error);
       handleApiErrorWithToast(error, "Load B2B data");
@@ -403,7 +418,8 @@ export default function B2BPage() {
       if (offerFilters.offer_id && !o.offer_id?.toLowerCase().includes(offerFilters.offer_id.toLowerCase())) return false;
       if (offerFilters.status && o.status !== (offerFilters.status as any)) return false;
       if (offerFilters.offer_type && o.offer_type !== (offerFilters.offer_type as any)) return false;
-      if (offerFilters.warehouse_receipt_id && !(o.warehouse_receipt_id || "").toLowerCase().includes(offerFilters.warehouse_receipt_id.toLowerCase())) return false;
+      if (offerFilters.product && o.product_id !== parseInt(offerFilters.product)) return false;
+      if (offerFilters.warehouse_receipt && o.warehouse_receipt !== parseInt(offerFilters.warehouse_receipt)) return false;
       const od = o.offer_date ? new Date(o.offer_date).getTime() : 0;
       const of = offerFilters.offer_date_from ? new Date(offerFilters.offer_date_from).getTime() : 0;
       const ot = offerFilters.offer_date_to ? new Date(offerFilters.offer_date_to).getTime() : 0;
@@ -433,18 +449,27 @@ export default function B2BPage() {
   const filteredDistributions = useMemo(() => {
     return distributions.filter(d => {
       if (distributionFilters.transfer_id && !(d.transfer_id || "").toLowerCase().includes(distributionFilters.transfer_id.toLowerCase())) return false;
-      if (distributionFilters.warehouse_receipt_id && !(d.warehouse_receipt_id || "").toLowerCase().includes(distributionFilters.warehouse_receipt_id.toLowerCase())) return false;
+      if (distributionFilters.warehouse_receipt && d.warehouse_receipt !== parseInt(distributionFilters.warehouse_receipt)) return false;
       if (distributionFilters.customer_name && !(d.customer_name || "").toLowerCase().includes(distributionFilters.customer_name.toLowerCase())) return false;
-      if (distributionFilters.product_name && !(d.product_name || "").toLowerCase().includes(distributionFilters.product_name.toLowerCase())) return false;
+      if (distributionFilters.product && (d.product || d.product_id) !== parseInt(distributionFilters.product)) return false;
+      if (distributionFilters.sales_proforma && d.sales_proforma !== parseInt(distributionFilters.sales_proforma)) return false;
+
       const dd = d.agency_date ? new Date(d.agency_date).getTime() : 0;
       const df = distributionFilters.date_from ? new Date(distributionFilters.date_from).getTime() : 0;
       const dt = distributionFilters.date_to ? new Date(distributionFilters.date_to).getTime() : 0;
       if (df && dd < df) return false;
       if (dt && dd > dt) return false;
+
       const w = d.agency_weight || 0;
       const wmin = distributionFilters.weight_min ? Number(distributionFilters.weight_min) : -Infinity;
       const wmax = distributionFilters.weight_max ? Number(distributionFilters.weight_max) : Infinity;
       if (w < wmin || w > wmax) return false;
+
+      const up = d.unit_price || 0;
+      const upmin = distributionFilters.unit_price_min ? Number(distributionFilters.unit_price_min) : -Infinity;
+      const upmax = distributionFilters.unit_price_max ? Number(distributionFilters.unit_price_max) : Infinity;
+      if (up < upmin || up > upmax) return false;
+
       return true;
     });
   }, [distributions, distributionFilters]);
@@ -459,7 +484,6 @@ export default function B2BPage() {
       if (addressFilters.receiver_name && !(a.receiver_name || "").toLowerCase().includes(addressFilters.receiver_name.toLowerCase())) return false;
       if (addressFilters.province && !(a.province || "").toLowerCase().includes(addressFilters.province.toLowerCase())) return false;
       if (addressFilters.city && !(a.city || "").toLowerCase().includes(addressFilters.city.toLowerCase())) return false;
-      if (addressFilters.payment_method && (a.payment_method || "") !== addressFilters.payment_method) return false;
       const pd = a.purchase_date ? new Date(a.purchase_date as any).getTime() : 0;
       const pf = addressFilters.date_from ? new Date(addressFilters.date_from).getTime() : 0;
       const pt = addressFilters.date_to ? new Date(addressFilters.date_to).getTime() : 0;
@@ -489,6 +513,7 @@ export default function B2BPage() {
       if (salesFilters.customer_name && !(s.customer_name || "").toLowerCase().includes(salesFilters.customer_name.toLowerCase())) return false;
       if (salesFilters.distribution_id && !(s.distribution_id || "").toLowerCase().includes(salesFilters.distribution_id.toLowerCase())) return false;
       if (salesFilters.purchase_type && s.purchase_type !== (salesFilters.purchase_type as any)) return false;
+      if (salesFilters.export_type && ((salesFilters.export_type === 'distributor_sale' && !s.is_distributor) || (salesFilters.export_type === 'your_sale' && s.is_distributor))) return false;
       const sd = s.sale_date ? new Date(s.sale_date).getTime() : 0;
       const sf = salesFilters.date_from ? new Date(salesFilters.date_from).getTime() : 0;
       const st = salesFilters.date_to ? new Date(salesFilters.date_to).getTime() : 0;
@@ -691,13 +716,13 @@ export default function B2BPage() {
                   <div className="bg-gray-50 border rounded-md p-4 space-y-4 mb-4">
                     <div className="grid grid-cols-6 gap-4">
                     <div>
-                      <div className="text-sm font-medium mb-1">{tCommon('search_placeholders.search_offers')}</div>
+                      <div className="text-sm font-medium mb-1">شناسه عرضه</div>
                       <Input value={offerFilters.offer_id} onChange={e=>setOfferFilters({...offerFilters, offer_id:e.target.value})} />
                     </div>
                     <div>
                       <div className="text-sm font-medium mb-1">{t('status')}</div>
                       <SearchableSelect
-                        options={[{value:'',label:t('status')},{value:'active',label:tCommon('status.active')},{value:'pending',label:tCommon('status.pending')},{value:'sold',label:tCommon('status.sold')},{value:'expired',label:tCommon('status.expired')} ]}
+                        options={[{value:'',label:'همه وضعیت ها'},{value:'active',label:tCommon('status.active')},{value:'pending',label:tCommon('status.pending')},{value:'sold',label:tCommon('status.sold')},{value:'expired',label:tCommon('status.expired')} ]}
                         value={offerFilters.status}
                         onValueChange={(v)=>setOfferFilters({...offerFilters, status:v})}
                       />
@@ -705,30 +730,38 @@ export default function B2BPage() {
                     <div>
                       <div className="text-sm font-medium mb-1">{t('offer_type')}</div>
                     <SearchableSelect
-                      options={[{value:'',label:t('offer_type')},{value:'cash',label:tCommon('payment_types.cash')},{value:'credit',label:tCommon('payment_types.credit')},{value:'agreement',label:tCommon('payment_types.agreement')},{value:'other',label:tCommon('payment_types.other')}]} 
+                      options={[{value:'',label:'همه انواع عرضه'},{value:'cash',label:tCommon('payment_types.cash')},{value:'credit',label:tCommon('payment_types.credit')},{value:'agreement',label:tCommon('payment_types.agreement')},{value:'other',label:tCommon('payment_types.other')}]}
                       value={offerFilters.offer_type}
                       onValueChange={(v)=>setOfferFilters({...offerFilters, offer_type:v})}
                     />
                     </div>
                     <div>
-                      <div className="text-sm font-medium mb-1">{t('warehouse_receipt_id')}</div>
-                      <Input value={offerFilters.warehouse_receipt_id} onChange={e=>setOfferFilters({...offerFilters, warehouse_receipt_id:e.target.value})} />
+                      <div className="text-sm font-medium mb-1">محصول</div>
+                      <SearchableSelect
+                        options={[
+                          { value: '', label: 'همه محصولات' },
+                          ...products.map(p => ({
+                            value: p.id.toString(),
+                            label: p.name
+                          }))
+                        ]}
+                        value={offerFilters.product}
+                        onValueChange={(v)=>setOfferFilters({...offerFilters, product:v})}
+                      />
                     </div>
                     <div>
-                      <div className="text-sm font-medium mb-1">تاریخ عرضه از</div>
-                      <PersianDatePicker value={offerFilters.offer_date_from} onChange={(v)=>setOfferFilters({...offerFilters, offer_date_from:v})} />
-                    </div>
-                    <div>
-                      <div className="text-sm font-medium mb-1">تاریخ عرضه تا</div>
-                      <PersianDatePicker value={offerFilters.offer_date_to} onChange={(v)=>setOfferFilters({...offerFilters, offer_date_to:v})} />
-                    </div>
-                    <div>
-                      <div className="text-sm font-medium mb-1">تاریخ انقضا از</div>
-                      <PersianDatePicker value={offerFilters.offer_exp_date_from} onChange={(v)=>setOfferFilters({...offerFilters, offer_exp_date_from:v})} />
-                    </div>
-                    <div>
-                      <div className="text-sm font-medium mb-1">تاریخ انقضا تا</div>
-                      <PersianDatePicker value={offerFilters.offer_exp_date_to} onChange={(v)=>setOfferFilters({...offerFilters, offer_exp_date_to:v})} />
+                      <div className="text-sm font-medium mb-1">رسید انبار</div>
+                      <SearchableSelect
+                        options={[
+                          { value: '', label: 'همه رسیدها' },
+                          ...warehouseReceipts.map(r => ({
+                            value: r.id.toString(),
+                            label: r.receipt_id || r.id.toString()
+                          }))
+                        ]}
+                        value={offerFilters.warehouse_receipt}
+                        onValueChange={(v)=>setOfferFilters({...offerFilters, warehouse_receipt:v})}
+                      />
                     </div>
                     <div>
                       <div className="text-sm font-medium mb-1">{t('offer_weight')}</div>
@@ -751,23 +784,40 @@ export default function B2BPage() {
                         <Input placeholder="حداکثر" value={offerFilters.total_price_max} onChange={e=>setOfferFilters({...offerFilters, total_price_max:e.target.value})} />
                       </div>
                     </div>
+                    <div>
+                      <div className="text-sm font-medium mb-1">تاریخ عرضه از</div>
+                      <PersianDatePicker value={offerFilters.offer_date_from} onChange={(v)=>setOfferFilters({...offerFilters, offer_date_from:v})} placeholder="انتخاب تاریخ" />
+                    </div>
+                    <div>
+                      <div className="text-sm font-medium mb-1">تاریخ عرضه تا</div>
+                      <PersianDatePicker value={offerFilters.offer_date_to} onChange={(v)=>setOfferFilters({...offerFilters, offer_date_to:v})} placeholder="انتخاب تاریخ" />
+                    </div>
+                    <div>
+                      <div className="text-sm font-medium mb-1">تاریخ انقضا از</div>
+                      <PersianDatePicker value={offerFilters.offer_exp_date_from} onChange={(v)=>setOfferFilters({...offerFilters, offer_exp_date_from:v})} placeholder="انتخاب تاریخ" />
+                    </div>
+                    <div>
+                      <div className="text-sm font-medium mb-1">تاریخ انقضا تا</div>
+                      <PersianDatePicker value={offerFilters.offer_exp_date_to} onChange={(v)=>setOfferFilters({...offerFilters, offer_exp_date_to:v})} placeholder="انتخاب تاریخ" />
+                    </div>
                     </div>
                   </div>
                   <div className="flex justify-end"><Button className="bg-red-100 text-red-700 hover:bg-red-200" onClick={()=>setOfferFilters({
                     offer_id: "",
                     status: "",
                     offer_type: "",
-                    offer_date_from: "",
-                    offer_date_to: "",
-                    offer_exp_date_from: "",
-                    offer_exp_date_to: "",
-                    warehouse_receipt_id: "",
+                    product: "",
+                    warehouse_receipt: "",
                     offer_weight_min: "",
                     offer_weight_max: "",
                     unit_price_min: "",
                     unit_price_max: "",
                     total_price_min: "",
                     total_price_max: "",
+                    offer_date_from: "",
+                    offer_date_to: "",
+                    offer_exp_date_from: "",
+                    offer_exp_date_to: "",
                   })}>ریست</Button></div>
                 </CollapsibleContent>
               </Collapsible>
@@ -921,62 +971,116 @@ export default function B2BPage() {
                   </CollapsibleTrigger>
                 </div>
                 <CollapsibleContent dir="rtl">
-                  <div className="grid grid-cols-6 gap-4 mb-4">
-                    <Input placeholder={t('transfer_id')} value={distributionFilters.transfer_id} onChange={e=>setDistributionFilters({...distributionFilters, transfer_id:e.target.value})} />
-                    <Input placeholder={t('warehouse_receipt')} value={distributionFilters.warehouse_receipt_id} onChange={e=>setDistributionFilters({...distributionFilters, warehouse_receipt_id:e.target.value})} />
-                    <SimpleCombobox
-                      options={[
-                        { value: '', label: t('customer') },
-                        ...customers.map(c => ({
-                          value: c.id.toString(),
-                          label: (c.company_name || c.full_name || `#${c.id}`) + (c.economic_code ? ` - ${c.economic_code}` : ''),
-                          id: c.id,
-                          name: c.company_name || c.full_name || ''
-                        }))
-                      ]}
-                      value={''}
-                      onValueChange={(v) => {
-                        const selected = customers.find(c => c.id.toString() === v);
-                        setDistributionFilters({
-                          ...distributionFilters,
-                          customer_name: selected ? (selected.company_name || selected.full_name || '') : ''
-                        });
-                      }}
-                      placeholder={t('customer')}
-                      searchPlaceholder={t('customer')}
-                      showCreateNew={false}
-                    />
-                    <div>
-                      <div className="text-sm font-medium mb-1">{t('product')}</div>
-                      <Input value={distributionFilters.product_name} onChange={e=>setDistributionFilters({...distributionFilters, product_name:e.target.value})} />
-                    </div>
-                    <div>
-                      <div className="text-sm font-medium mb-1">تاریخ از</div>
-                      <PersianDatePicker value={distributionFilters.date_from} onChange={(v)=>setDistributionFilters({...distributionFilters, date_from:v})} />
-                    </div>
-                    <div>
-                      <div className="text-sm font-medium mb-1">تاریخ تا</div>
-                      <PersianDatePicker value={distributionFilters.date_to} onChange={(v)=>setDistributionFilters({...distributionFilters, date_to:v})} />
-                    </div>
-                    <div>
-                      <div className="text-sm font-medium mb-1">{t('agency_weight')} (حداقل)</div>
-                      <Input value={distributionFilters.weight_min} onChange={e=>setDistributionFilters({...distributionFilters, weight_min:e.target.value})} />
-                    </div>
-                    <div>
-                      <div className="text-sm font-medium mb-1">{t('agency_weight')} (حداکثر)</div>
-                      <Input value={distributionFilters.weight_max} onChange={e=>setDistributionFilters({...distributionFilters, weight_max:e.target.value})} />
+                  <div className="bg-gray-50 border rounded-md p-4 space-y-4 mb-4">
+                    <div className="grid grid-cols-6 gap-4">
+                      <div>
+                        <div className="text-sm font-medium mb-1">{t('transfer_id')}</div>
+                        <Input value={distributionFilters.transfer_id} onChange={e=>setDistributionFilters({...distributionFilters, transfer_id:e.target.value})} />
+                      </div>
+                      <div>
+                        <div className="text-sm font-medium mb-1">{t('warehouse_receipt')}</div>
+                        <SearchableSelect
+                          options={[
+                            { value: '', label: 'همه رسیدها' },
+                            ...warehouseReceipts.map(r => ({
+                              value: r.id.toString(),
+                              label: r.receipt_id || r.id.toString()
+                            }))
+                          ]}
+                          value={distributionFilters.warehouse_receipt}
+                          onValueChange={(v)=>setDistributionFilters({...distributionFilters, warehouse_receipt:v})}
+                        />
+                      </div>
+                      <div>
+                        <div className="text-sm font-medium mb-1">{t('customer')}</div>
+                        <SimpleCombobox
+                          options={[
+                            { value: '', label: 'همه مشتری ها' },
+                            ...customers.map(c => ({
+                              value: c.id.toString(),
+                              label: (c.company_name || c.full_name || `#${c.id}`) + (c.economic_code ? ` - ${c.economic_code}` : ''),
+                              id: c.id,
+                              name: c.company_name || c.full_name || ''
+                            }))
+                          ]}
+                          value={''}
+                          onValueChange={(v) => {
+                            const selected = customers.find(c => c.id.toString() === v);
+                            setDistributionFilters({
+                              ...distributionFilters,
+                              customer_name: selected ? (selected.company_name || selected.full_name || '') : ''
+                            });
+                          }}
+                          placeholder={t('customer')}
+                          searchPlaceholder={t('customer')}
+                          showCreateNew={false}
+                        />
+                      </div>
+                      <div>
+                        <div className="text-sm font-medium mb-1">{t('product')}</div>
+                        <SearchableSelect
+                          options={[
+                            { value: '', label: 'همه محصولات' },
+                            ...products.map(p => ({
+                              value: p.id.toString(),
+                              label: p.name
+                            }))
+                          ]}
+                          value={distributionFilters.product}
+                          onValueChange={(v)=>setDistributionFilters({...distributionFilters, product:v})}
+                        />
+                      </div>
+                      <div>
+                        <div className="text-sm font-medium mb-1">پیش فاکتور فروش</div>
+                        <SearchableSelect
+                          options={[
+                            { value: '', label: 'همه پیش فاکتورها' },
+                            ...salesProformas.map(p => ({
+                              value: p.id.toString(),
+                              label: p.serial_number
+                            }))
+                          ]}
+                          value={distributionFilters.sales_proforma}
+                          onValueChange={(v)=>setDistributionFilters({...distributionFilters, sales_proforma:v})}
+                        />
+                      </div>
+                      <div>
+                        <div className="text-sm font-medium mb-1">{t('agency_weight')}</div>
+                        <div className="grid grid-cols-2 gap-2">
+                          <Input placeholder="حداقل" value={distributionFilters.weight_min} onChange={e=>setDistributionFilters({...distributionFilters, weight_min:e.target.value})} />
+                          <Input placeholder="حداکثر" value={distributionFilters.weight_max} onChange={e=>setDistributionFilters({...distributionFilters, weight_max:e.target.value})} />
+                        </div>
+                      </div>
+                      <div>
+                        <div className="text-sm font-medium mb-1">قیمت واحد (ریال)</div>
+                        <div className="grid grid-cols-2 gap-2">
+                          <Input placeholder="حداقل" value={distributionFilters.unit_price_min} onChange={e=>setDistributionFilters({...distributionFilters, unit_price_min:e.target.value})} />
+                          <Input placeholder="حداکثر" value={distributionFilters.unit_price_max} onChange={e=>setDistributionFilters({...distributionFilters, unit_price_max:e.target.value})} />
+                        </div>
+                      </div>
+                      <div>
+                        <div className="text-sm font-medium mb-1">تاریخ عاملیت از</div>
+                        <PersianDatePicker value={distributionFilters.date_from} onChange={(v)=>setDistributionFilters({...distributionFilters, date_from:v})} placeholder="انتخاب تاریخ" />
+                      </div>
+                      <div>
+                        <div className="text-sm font-medium mb-1">تاریخ عاملیت تا</div>
+                        <PersianDatePicker value={distributionFilters.date_to} onChange={(v)=>setDistributionFilters({...distributionFilters, date_to:v})} placeholder="انتخاب تاریخ" />
+                      </div>
                     </div>
                   </div>
-                  <div className="flex justify-end"><Button variant="outline" className="border-destructive text-destructive hover:text-destructive" onClick={()=>setDistributionFilters({
+                  <div className="flex justify-end mb-4"><Button className="bg-red-100 text-red-700 hover:bg-red-200" onClick={()=>setDistributionFilters({
                     transfer_id: "",
-                    warehouse_receipt_id: "",
+                    warehouse_receipt: "",
                     customer_name: "",
-                    product_name: "",
-                    date_from: "",
-                    date_to: "",
+                    product: "",
+                    sales_proforma: "",
                     weight_min: "",
                     weight_max: "",
-                  })}>{t('reset')}</Button></div>
+                    unit_price_min: "",
+                    unit_price_max: "",
+                    date_from: "",
+                    date_to: "",
+                  })}>ریست</Button></div>
                 </CollapsibleContent>
               </Collapsible>
               {distributions.length === 0 ? (
@@ -1151,41 +1255,51 @@ export default function B2BPage() {
                       <Input value={salesFilters.purchase_id} onChange={e=>setSalesFilters({...salesFilters, purchase_id:e.target.value})} />
                     </div>
                     <div>
-                      <div className="text-sm font-medium mb-1">{tCommon('detail_labels.offer_id')}</div>
-                      <SimpleCombobox
-                        options={[
-                          { value: '', label: tCommon('detail_labels.offer_id') },
-                          ...offers.map(o => ({ value: o.offer_id || o.id.toString(), label: o.offer_id || `#${o.id}`, id: o.id, name: o.offer_id || '' }))
-                        ]}
-                        value={''}
-                        onValueChange={(v) => setSalesFilters({ ...salesFilters, offer_id: v })}
-                        placeholder={tCommon('detail_labels.offer_id')}
-                        searchPlaceholder={tCommon('detail_labels.offer_id')}
-                        showCreateNew={false}
+                      <div className="text-sm font-medium mb-1">نوع فروش</div>
+                      <SearchableSelect
+                        options={[{value:'',label:'همه انواع فروش'},{value:'your_sale',label:t('your_sale')},{value:'distributor_sale',label:t('distributor_sale')}]}
+                        value={salesFilters.export_type}
+                        onValueChange={(v)=>setSalesFilters({...salesFilters, export_type:v as any, offer_id: '', distribution_id: ''})}
                       />
                     </div>
                     <div>
-                      <div className="text-sm font-medium mb-1">{t('transfer_id')}</div>
+                      <div className="text-sm font-medium mb-1">عرضه</div>
                       <SimpleCombobox
                         options={[
-                          { value: '', label: t('transfer_id') },
+                          { value: '', label: 'همه عرضه ها' },
+                          ...offers.map(o => ({ value: o.offer_id || o.id.toString(), label: o.offer_id || `#${o.id}`, id: o.id, name: o.offer_id || '' }))
+                        ]}
+                        value={salesFilters.offer_id}
+                        onValueChange={(v) => setSalesFilters({ ...salesFilters, offer_id: v })}
+                        placeholder="عرضه"
+                        searchPlaceholder="عرضه"
+                        showCreateNew={false}
+                        disabled={salesFilters.export_type !== 'your_sale'}
+                      />
+                    </div>
+                    <div>
+                      <div className="text-sm font-medium mb-1">عاملیت توزیع</div>
+                      <SimpleCombobox
+                        options={[
+                          { value: '', label: 'همه عاملیت های توزیع' },
                           ...distributions.map(d => ({ value: d.transfer_id || d.id.toString(), label: d.transfer_id || `#${d.id}`, id: d.id, name: d.transfer_id || '' }))
                         ]}
-                        value={''}
+                        value={salesFilters.distribution_id}
                         onValueChange={(v) => setSalesFilters({ ...salesFilters, distribution_id: v })}
-                        placeholder={t('transfer_id')}
-                        searchPlaceholder={t('transfer_id')}
+                        placeholder="عاملیت توزیع"
+                        searchPlaceholder="عاملیت توزیع"
                         showCreateNew={false}
+                        disabled={salesFilters.export_type !== 'distributor_sale'}
                       />
                     </div>
                     <div>
                       <div className="text-sm font-medium mb-1">{t('product')}</div>
                       <SimpleCombobox
                         options={[
-                          { value: '', label: t('product') },
+                          { value: '', label: 'همه محصولات' },
                           ...products.map(p => ({ value: p.id.toString(), label: `${p.name} - ${p.code}`, id: p.id, name: p.name }))
                         ]}
-                        value={''}
+                        value={salesFilters.product_id}
                         onValueChange={(v) => setSalesFilters({ ...salesFilters, product_id: v })}
                         placeholder={t('product')}
                         searchPlaceholder={t('product')}
@@ -1196,7 +1310,7 @@ export default function B2BPage() {
                       <div className="text-sm font-medium mb-1">{t('customer')}</div>
                       <SimpleCombobox
                       options={[
-                        { value: '', label: t('customer') },
+                        { value: '', label: 'همه مشتری ها' },
                         ...customers.map(c => ({
                           value: c.id.toString(),
                           label: (c.company_name || c.full_name || `#${c.id}`) + (c.economic_code ? ` - ${c.economic_code}` : ''),
@@ -1204,11 +1318,12 @@ export default function B2BPage() {
                           name: c.company_name || c.full_name || ''
                         }))
                       ]}
-                      value={''}
+                      value={salesFilters.customer}
                       onValueChange={(v) => {
                         const selected = customers.find(c => c.id.toString() === v);
                         setSalesFilters({
                           ...salesFilters,
+                          customer: v,
                           customer_name: selected ? (selected.company_name || selected.full_name || '') : ''
                         });
                       }}
@@ -1218,12 +1333,12 @@ export default function B2BPage() {
                       />
                     </div>
                     <div>
-                      <div className="text-sm font-medium mb-1">تاریخ از</div>
-                      <PersianDatePicker value={salesFilters.date_from} onChange={(v)=>setSalesFilters({...salesFilters, date_from:v})} />
-                    </div>
-                    <div>
-                      <div className="text-sm font-medium mb-1">تاریخ تا</div>
-                      <PersianDatePicker value={salesFilters.date_to} onChange={(v)=>setSalesFilters({...salesFilters, date_to:v})} />
+                      <div className="text-sm font-medium mb-1">نوع پرداخت</div>
+                    <SearchableSelect
+                      options={[{value:'',label:'همه انواع پرداخت'},{value:'cash',label:tCommon('payment_types.cash')},{value:'credit',label:tCommon('payment_types.credit')},{value:'agreement',label:tCommon('payment_types.agreement')},{value:'other',label:tCommon('payment_types.other')} ]}
+                      value={salesFilters.purchase_type}
+                      onValueChange={(v)=>setSalesFilters({...salesFilters, purchase_type:v})}
+                    />
                     </div>
                     <div>
                       <div className="text-sm font-medium mb-1">{t('weight')}</div>
@@ -1247,26 +1362,19 @@ export default function B2BPage() {
                       </div>
                     </div>
                     <div>
-                      <div className="text-sm font-medium mb-1">{t('purchase_type')}</div>
-                    <SearchableSelect
-                      options={[{value:'',label:t('purchase_type')},{value:'cash',label:tCommon('payment_types.cash')},{value:'credit',label:tCommon('payment_types.credit')},{value:'agreement',label:tCommon('payment_types.agreement')},{value:'other',label:tCommon('payment_types.other')} ]}
-                      value={salesFilters.purchase_type}
-                      onValueChange={(v)=>setSalesFilters({...salesFilters, purchase_type:v})}
-                    />
+                      <div className="text-sm font-medium mb-1">تاریخ از</div>
+                      <PersianDatePicker value={salesFilters.date_from} onChange={(v)=>setSalesFilters({...salesFilters, date_from:v})} placeholder="انتخاب تاریخ" />
                     </div>
                     <div>
-                      <div className="text-sm font-medium mb-1">{t('export_type')}</div>
-                      <SearchableSelect
-                        options={[{value:'your_sale',label:t('your_sale')},{value:'distributor_sale',label:t('distributor_sale')}]} 
-                        value={salesFilters.export_type}
-                        onValueChange={(v)=>setSalesFilters({...salesFilters, export_type:v as any})}
-                      />
+                      <div className="text-sm font-medium mb-1">تاریخ تا</div>
+                      <PersianDatePicker value={salesFilters.date_to} onChange={(v)=>setSalesFilters({...salesFilters, date_to:v})} placeholder="انتخاب تاریخ" />
                     </div>
                   </div>
-                  <div className="flex justify-end"><Button variant="outline" className="border-destructive text-destructive hover:text-destructive" onClick={()=>setSalesFilters({
+                  <div className="flex justify-end mb-4"><Button className="bg-red-100 text-red-700 hover:bg-red-200" onClick={()=>setSalesFilters({
                     purchase_id: "",
                     offer_id: "",
                     product_id: "",
+                    customer: "",
                     customer_name: "",
                     distribution_id: "",
                     purchase_type: "",
@@ -1278,8 +1386,8 @@ export default function B2BPage() {
                     unit_price_max: "",
                     total_price_min: "",
                     total_price_max: "",
-                    export_type: "your_sale",
-                  })}>{t('reset')}</Button></div>
+                    export_type: "" as "your_sale" | "distributor_sale" | "",
+                  })}>ریست</Button></div>
                 </CollapsibleContent>
               </Collapsible>
               {sales.length === 0 ? (
@@ -1458,25 +1566,24 @@ export default function B2BPage() {
                 <CollapsibleContent dir="rtl">
                   <div className="grid grid-cols-6 gap-4 mb-4">
                     <div>
-                      <div className="text-sm font-medium mb-1">{t('purchase_id')}</div>
+                      <div className="text-sm font-medium mb-1">{t('allocation_id')}</div>
+                      <Input value={addressFilters.allocation_id} onChange={e=>setAddressFilters({...addressFilters, allocation_id:e.target.value})} />
+                    </div>
+                    <div>
+                      <div className="text-sm font-medium mb-1">فروش بازارگاه</div>
                       <SimpleCombobox
-                        options={[{ value: '', label: t('purchase_id') }, ...Array.from(new Set((sales || []).map(s => s.purchase_id).filter(Boolean))).map((id: string) => ({ value: id, label: id }))]}
+                        options={[{ value: '', label: 'همه فروش های بازارگاه' }, ...Array.from(new Set((sales || []).map(s => s.purchase_id).filter(Boolean))).map((id: string) => ({ value: id, label: id }))]}
                         value={addressFilters.purchase_id}
                         onValueChange={(v) => setAddressFilters({ ...addressFilters, purchase_id: v })}
-                        placeholder={t('purchase_id')}
-                        searchPlaceholder={t('purchase_id')}
+                        placeholder="فروش بازارگاه"
+                        searchPlaceholder="فروش بازارگاه"
                         showCreateNew={false}
                       />
                     </div>
                     <div>
-                      <div className="text-sm font-medium mb-1">{t('allocation_id')}</div>
-                      <Input value={addressFilters.allocation_id} onChange={e=>setAddressFilters({...addressFilters, allocation_id:e.target.value})} />
-                    </div>
-                    
-                    <div>
                       <div className="text-sm font-medium mb-1">{t('product')}</div>
                       <SimpleCombobox
-                        options={[{ value: '', label: t('product') }, ...Array.from(new Set((addresses || []).map(a => a.product_name).filter(Boolean))).map((name: string) => ({ value: name, label: name }))]}
+                        options={[{ value: '', label: 'همه محصولات' }, ...Array.from(new Set((addresses || []).map(a => a.product_name).filter(Boolean))).map((name: string) => ({ value: name, label: name }))]}
                         value={addressFilters.product_name}
                         onValueChange={(v) => setAddressFilters({ ...addressFilters, product_name: v })}
                         placeholder={t('product')}
@@ -1486,66 +1593,45 @@ export default function B2BPage() {
                     </div>
                     <div>
                       <div className="text-sm font-medium mb-1">{t('customer')}</div>
-                      <SimpleCombobox
-                      options={[
-                        { value: '', label: t('customer') },
-                        ...customers.map(c => ({
-                          value: c.id.toString(),
-                          label: (c.company_name || c.full_name || `#${c.id}`) + (c.economic_code ? ` - ${c.economic_code}` : ''),
-                          id: c.id,
-                          name: c.company_name || c.full_name || ''
-                        }))
-                      ]}
-                      value={''}
-                      onValueChange={(v) => {
-                        const selected = customers.find(c => c.id.toString() === v);
-                        setAddressFilters({
-                          ...addressFilters,
-                          customer_name: selected ? (selected.company_name || selected.full_name || '') : ''
-                        });
-                      }}
-                      placeholder={t('customer')}
-                      searchPlaceholder={t('customer')}
-                      showCreateNew={false}
+                      <SearchableSelect
+                        options={[
+                          { value: '', label: 'همه مشتری ها' },
+                          ...customers.map(c => ({
+                            value: c.id.toString(),
+                            label: c.company_name || c.full_name || `#${c.id}`
+                          }))
+                        ]}
+                        value={addressFilters.customer}
+                        onValueChange={(v) => {
+                          const selected = customers.find(c => c.id.toString() === v);
+                          setAddressFilters({
+                            ...addressFilters,
+                            customer: v,
+                            customer_name: selected ? (selected.company_name || selected.full_name || '') : ''
+                          });
+                        }}
                       />
                     </div>
                     <div>
                       <div className="text-sm font-medium mb-1">{t('receiver')}</div>
-                      <SimpleCombobox
+                      <SearchableSelect
                         options={[
-                          { value: '', label: t('receiver') },
+                          { value: '', label: 'همه گیرنده ها' },
                           ...receivers.map(r => ({
                             value: r.id.toString(),
-                            label: (r.company_name || r.full_name || `#${r.id}`) + (r.economic_code ? ` - ${r.economic_code}` : ''),
-                            id: r.id,
-                            name: r.company_name || r.full_name || ''
+                            label: r.company_name || r.full_name || `#${r.id}`
                           }))
                         ]}
-                        value={''}
+                        value={addressFilters.receiver}
                         onValueChange={(v) => {
                           const selected = receivers.find(r => r.id.toString() === v);
                           setAddressFilters({
                             ...addressFilters,
+                            receiver: v,
                             receiver_name: selected ? (selected.company_name || selected.full_name || '') : ''
                           });
                         }}
-                        placeholder={t('receiver')}
-                        searchPlaceholder={t('receiver')}
-                        showCreateNew={false}
                       />
-                    </div>
-                    <div className="col-span-6 border rounded p-3 space-y-2">
-                      <div className="text-sm font-medium">{t('date')}</div>
-                      <div className="grid grid-cols-6 gap-3">
-                        <div>
-                          <div className="text-xs mb-1">از تاریخ</div>
-                          <PersianDatePicker value={addressFilters.date_from} onChange={(v)=>setAddressFilters({...addressFilters, date_from:v})} />
-                        </div>
-                        <div>
-                          <div className="text-xs mb-1">تا تاریخ</div>
-                          <PersianDatePicker value={addressFilters.date_to} onChange={(v)=>setAddressFilters({...addressFilters, date_to:v})} />
-                        </div>
-                      </div>
                     </div>
                     <div>
                       <div className="text-sm font-medium mb-1">{t('weight')}</div>
@@ -1569,24 +1655,25 @@ export default function B2BPage() {
                       </div>
                     </div>
                     <div>
-                      <div className="text-sm font-medium mb-1">{t('payment_method')}</div>
-                    <SearchableSelect
-                      options={[{value:'',label:t('payment_method')},{value:'cash',label:tCommon('payment_types.cash')},{value:'credit',label:tCommon('payment_types.credit')},{value:'agreement',label:tCommon('payment_types.agreement')},{value:'other',label:tCommon('payment_types.other')} ]}
-                      value={addressFilters.payment_method}
-                      onValueChange={(v)=>setAddressFilters({...addressFilters, payment_method:v})}
-                    />
+                      <div className="text-sm font-medium mb-1">تاریخ از</div>
+                      <PersianDatePicker value={addressFilters.date_from} onChange={(v)=>setAddressFilters({...addressFilters, date_from:v})} placeholder="انتخاب تاریخ" />
+                    </div>
+                    <div>
+                      <div className="text-sm font-medium mb-1">تاریخ تا</div>
+                      <PersianDatePicker value={addressFilters.date_to} onChange={(v)=>setAddressFilters({...addressFilters, date_to:v})} placeholder="انتخاب تاریخ" />
                     </div>
                   </div>
-                  <div className="flex justify-end"><Button className="bg-red-100 text-red-700 hover:bg-red-200" onClick={()=>setAddressFilters({
+                  <div className="flex justify-end mb-4"><Button className="bg-red-100 text-red-700 hover:bg-red-200" onClick={()=>setAddressFilters({
                     purchase_id: "",
                     allocation_id: "",
                     tracking_number: "",
                     product_name: "",
+                    customer: "",
                     customer_name: "",
+                    receiver: "",
                     receiver_name: "",
                     province: "",
                     city: "",
-                    payment_method: "",
                     date_from: "",
                     date_to: "",
                     weight_min: "",
