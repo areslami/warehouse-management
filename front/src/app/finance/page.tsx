@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
-import { Plus, Edit2, Trash2, DollarSign, Receipt, Search, FileText, Clock, Eye } from "lucide-react";
+import { Plus, Edit2, Trash2, DollarSign, Receipt, Search, FileText, Clock, Eye, ChevronDown, ChevronUp } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { handleApiErrorWithToast } from "@/lib/api/error-toast-handler";
@@ -11,6 +11,10 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Collapsible, CollapsibleTrigger, CollapsibleContent } from "@/components/ui/collapsible";
+import { PersianDatePicker } from "@/components/ui/persian-date-picker";
+import { SearchableSelect } from "@/components/ui/searchable-select";
+import { SimpleCombobox } from "@/components/ui/simple-combobox";
 import { SalesProformaModal } from "@/components/modals/finance/salesproforma-modal";
 import { PurchaseProformaModal } from "@/components/modals/finance/purchaseproforma-modal";
 import { useCoreData } from "@/lib/core-data-context";
@@ -43,6 +47,29 @@ export default function FinancePage() {
   const router = useRouter();
   const tabFromUrl = searchParams.get('tab') || 'sales_proforma';
   const [activeTab, setActiveTab] = useState(tabFromUrl);
+
+  // Filter states
+  const [salesProformaFiltersOpen, setSalesProformaFiltersOpen] = useState(false);
+  const [purchaseProformaFiltersOpen, setPurchaseProformaFiltersOpen] = useState(false);
+  const [salesProformaFilters, setSalesProformaFilters] = useState({
+    serial_number: "",
+    customer: "",
+    payment_type: "",
+    date_from: "",
+    date_to: "",
+    product: "",
+    total_amount_min: "",
+    total_amount_max: "",
+  });
+  const [purchaseProformaFilters, setPurchaseProformaFilters] = useState({
+    serial_number: "",
+    supplier: "",
+    date_from: "",
+    date_to: "",
+    product: "",
+    total_amount_min: "",
+    total_amount_max: "",
+  });
 
   useEffect(() => {
     const newTab = searchParams.get('tab') || 'sales_proforma';
@@ -143,26 +170,81 @@ export default function FinancePage() {
     }
   };
 
-  const filteredSalesProformas = useMemo(() => {
-    return salesProformas.filter(proforma => {
-      const customerName = getPartyDisplayName(customers.find(c => c.id === proforma.customer));
-      return proforma.serial_number.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        customerName.toLowerCase().includes(searchTerm.toLowerCase());
-    });
-  }, [salesProformas, searchTerm, customers]);
-
-  const filteredPurchaseProformas = useMemo(() => {
-    return purchaseProformas.filter(proforma => {
-      const supplierName = getPartyDisplayName(suppliers.find(s => s.id === proforma.supplier));
-      return proforma.serial_number.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        supplierName.toLowerCase().includes(searchTerm.toLowerCase());
-    });
-  }, [purchaseProformas, searchTerm, suppliers]);
-
   const calculateTotal = (lines?: Array<{ weight: number; unit_price: number; tax?: number; discount?: number }>) => {
     if (!lines) return 0;
     return lines.reduce((sum, line) => sum + (line.weight * line.unit_price), 0);
   };
+
+  const filteredSalesProformas = useMemo(() => {
+    return salesProformas.filter(proforma => {
+      // Search term filter
+      const customerName = getPartyDisplayName(customers.find(c => c.id === proforma.customer));
+      const matchesSearch = proforma.serial_number.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        customerName.toLowerCase().includes(searchTerm.toLowerCase());
+      if (!matchesSearch) return false;
+
+      // Advanced filters
+      if (salesProformaFilters.serial_number && !proforma.serial_number.toLowerCase().includes(salesProformaFilters.serial_number.toLowerCase())) return false;
+      if (salesProformaFilters.customer && proforma.customer.toString() !== salesProformaFilters.customer) return false;
+      if (salesProformaFilters.payment_type && proforma.payment_type !== salesProformaFilters.payment_type) return false;
+
+      // Date filters
+      const proformaDate = proforma.date ? new Date(proforma.date).getTime() : 0;
+      const dateFrom = salesProformaFilters.date_from ? new Date(salesProformaFilters.date_from).getTime() : 0;
+      const dateTo = salesProformaFilters.date_to ? new Date(salesProformaFilters.date_to).getTime() : 0;
+      if (dateFrom && proformaDate < dateFrom) return false;
+      if (dateTo && proformaDate > dateTo) return false;
+
+      // Product filter (check if any line contains the product)
+      if (salesProformaFilters.product) {
+        const hasProduct = proforma.lines?.some(line => line.product.toString() === salesProformaFilters.product);
+        if (!hasProduct) return false;
+      }
+
+      // Total amount filter
+      const totalAmount = calculateTotal(proforma.lines);
+      const minAmount = salesProformaFilters.total_amount_min ? Number(salesProformaFilters.total_amount_min) : -Infinity;
+      const maxAmount = salesProformaFilters.total_amount_max ? Number(salesProformaFilters.total_amount_max) : Infinity;
+      if (totalAmount < minAmount || totalAmount > maxAmount) return false;
+
+      return true;
+    });
+  }, [salesProformas, searchTerm, customers, salesProformaFilters]);
+
+  const filteredPurchaseProformas = useMemo(() => {
+    return purchaseProformas.filter(proforma => {
+      // Search term filter
+      const supplierName = getPartyDisplayName(suppliers.find(s => s.id === proforma.supplier));
+      const matchesSearch = proforma.serial_number.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        supplierName.toLowerCase().includes(searchTerm.toLowerCase());
+      if (!matchesSearch) return false;
+
+      // Advanced filters
+      if (purchaseProformaFilters.serial_number && !proforma.serial_number.toLowerCase().includes(purchaseProformaFilters.serial_number.toLowerCase())) return false;
+      if (purchaseProformaFilters.supplier && proforma.supplier.toString() !== purchaseProformaFilters.supplier) return false;
+
+      // Date filters
+      const proformaDate = proforma.date ? new Date(proforma.date).getTime() : 0;
+      const dateFrom = purchaseProformaFilters.date_from ? new Date(purchaseProformaFilters.date_from).getTime() : 0;
+      const dateTo = purchaseProformaFilters.date_to ? new Date(purchaseProformaFilters.date_to).getTime() : 0;
+      if (dateFrom && proformaDate < dateFrom) return false;
+      if (dateTo && proformaDate > dateTo) return false;
+
+      // Product filter (check if any line contains the product)
+      if (purchaseProformaFilters.product) {
+        const hasProduct = proforma.lines?.some(line => line.product.toString() === purchaseProformaFilters.product);
+        if (!hasProduct) return false;
+      }
+
+      // Total amount filter
+      const totalAmount = calculateTotal(proforma.lines);
+      const minAmount = purchaseProformaFilters.total_amount_min ? Number(purchaseProformaFilters.total_amount_min) : -Infinity;
+      const maxAmount = purchaseProformaFilters.total_amount_max ? Number(purchaseProformaFilters.total_amount_max) : Infinity;
+      if (totalAmount < minAmount || totalAmount > maxAmount) return false;
+
+      return true;
+    });
+  }, [purchaseProformas, searchTerm, suppliers, purchaseProformaFilters]);
 
   return (
     <div className="flex-1 p-6 min-h-screen bg-gray-50" dir="rtl">
@@ -247,7 +329,7 @@ export default function FinancePage() {
                     } catch (error) {
                       console.error("Failed to create sales proforma:", error);
                       handleApiErrorWithToast(error, "Creating sales proforma");
-                      
+
                     }
                   }
                 });
@@ -256,6 +338,122 @@ export default function FinancePage() {
                   {t("sales.add_proforma")}
                 </Button>
               </div>
+            </div>
+            <div className="p-4">
+              <Collapsible open={salesProformaFiltersOpen} onOpenChange={setSalesProformaFiltersOpen}>
+                <div className="flex justify-end mb-3">
+                  <CollapsibleTrigger asChild>
+                    <Button variant="outline" className="flex items-center gap-2">
+                      فیلتر ها
+                      {salesProformaFiltersOpen ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                    </Button>
+                  </CollapsibleTrigger>
+                </div>
+                <CollapsibleContent dir="rtl">
+                  <div className="grid grid-cols-4 gap-4 mb-4">
+                    <div>
+                      <div className="text-sm font-medium mb-1">{t("sales.serial_number")}</div>
+                      <Input
+                        value={salesProformaFilters.serial_number}
+                        onChange={e => setSalesProformaFilters({...salesProformaFilters, serial_number: e.target.value})}
+                        placeholder="شماره سریال"
+                      />
+                    </div>
+                    <div>
+                      <div className="text-sm font-medium mb-1">{t("sales.customer")}</div>
+                      <SearchableSelect
+                        options={[
+                          { value: '', label: 'همه مشتری ها' },
+                          ...customers.map(c => ({
+                            value: c.id.toString(),
+                            label: c.company_name || c.full_name || `#${c.id}`
+                          }))
+                        ]}
+                        value={salesProformaFilters.customer}
+                        onValueChange={(v) => setSalesProformaFilters({...salesProformaFilters, customer: v})}
+                      />
+                    </div>
+                    <div>
+                      <div className="text-sm font-medium mb-1">{t("sales.payment_type")}</div>
+                      <SimpleCombobox
+                        options={[
+                          { value: '', label: 'همه انواع' },
+                          { value: 'cash', label: tCommon('payment_types.cash') },
+                          { value: 'credit', label: tCommon('payment_types.credit') },
+                          { value: 'other', label: tCommon('payment_types.other') }
+                        ]}
+                        value={salesProformaFilters.payment_type}
+                        onValueChange={(v) => setSalesProformaFilters({...salesProformaFilters, payment_type: v})}
+                        placeholder="نوع پرداخت"
+                        searchPlaceholder="نوع پرداخت"
+                        showCreateNew={false}
+                      />
+                    </div>
+                    <div>
+                      <div className="text-sm font-medium mb-1">محصول</div>
+                      <SearchableSelect
+                        options={[
+                          { value: '', label: 'همه محصولات' },
+                          ...products.map(p => ({
+                            value: p.id.toString(),
+                            label: p.name
+                          }))
+                        ]}
+                        value={salesProformaFilters.product}
+                        onValueChange={(v) => setSalesProformaFilters({...salesProformaFilters, product: v})}
+                      />
+                    </div>
+                    <div>
+                      <div className="text-sm font-medium mb-1">تاریخ از</div>
+                      <PersianDatePicker
+                        value={salesProformaFilters.date_from}
+                        onChange={(v) => setSalesProformaFilters({...salesProformaFilters, date_from: v})}
+                        placeholder="انتخاب تاریخ"
+                      />
+                    </div>
+                    <div>
+                      <div className="text-sm font-medium mb-1">تاریخ تا</div>
+                      <PersianDatePicker
+                        value={salesProformaFilters.date_to}
+                        onChange={(v) => setSalesProformaFilters({...salesProformaFilters, date_to: v})}
+                        placeholder="انتخاب تاریخ"
+                      />
+                    </div>
+                    <div>
+                      <div className="text-sm font-medium mb-1">مبلغ کل</div>
+                      <div className="grid grid-cols-2 gap-2">
+                        <Input
+                          placeholder="حداقل"
+                          value={salesProformaFilters.total_amount_min}
+                          onChange={e => setSalesProformaFilters({...salesProformaFilters, total_amount_min: e.target.value})}
+                        />
+                        <Input
+                          placeholder="حداکثر"
+                          value={salesProformaFilters.total_amount_max}
+                          onChange={e => setSalesProformaFilters({...salesProformaFilters, total_amount_max: e.target.value})}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                  <div className="flex justify-end mb-4">
+                    <Button
+                      className="bg-red-100 text-red-700 hover:bg-red-200"
+                      onClick={() => setSalesProformaFilters({
+                        serial_number: "",
+                        customer: "",
+                        payment_type: "",
+                        date_from: "",
+                        date_to: "",
+                        product: "",
+                        total_amount_min: "",
+                        total_amount_max: "",
+                      })}
+                    >
+                      ریست
+                    </Button>
+                  </div>
+                </CollapsibleContent>
+              </Collapsible>
             </div>
             <Table dir="rtl">
               <TableHeader>
@@ -388,7 +586,7 @@ export default function FinancePage() {
                     } catch (error) {
                       console.error("Failed to create purchase proforma:", error);
                       handleApiErrorWithToast(error, "Creating purchase proforma");
-                      
+
                     }
                   }
                 });
@@ -397,6 +595,105 @@ export default function FinancePage() {
                   {t("purchase.add_proforma")}
                 </Button>
               </div>
+            </div>
+            <div className="p-4">
+              <Collapsible open={purchaseProformaFiltersOpen} onOpenChange={setPurchaseProformaFiltersOpen}>
+                <div className="flex justify-end mb-3">
+                  <CollapsibleTrigger asChild>
+                    <Button variant="outline" className="flex items-center gap-2">
+                      فیلتر ها
+                      {purchaseProformaFiltersOpen ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                    </Button>
+                  </CollapsibleTrigger>
+                </div>
+                <CollapsibleContent dir="rtl">
+                  <div className="grid grid-cols-4 gap-4 mb-4">
+                    <div>
+                      <div className="text-sm font-medium mb-1">{t("purchase.serial_number")}</div>
+                      <Input
+                        value={purchaseProformaFilters.serial_number}
+                        onChange={e => setPurchaseProformaFilters({...purchaseProformaFilters, serial_number: e.target.value})}
+                        placeholder="شماره سریال"
+                      />
+                    </div>
+                    <div>
+                      <div className="text-sm font-medium mb-1">{t("purchase.supplier")}</div>
+                      <SearchableSelect
+                        options={[
+                          { value: '', label: 'همه تامین کنندگان' },
+                          ...suppliers.map(s => ({
+                            value: s.id.toString(),
+                            label: s.company_name || s.full_name || `#${s.id}`
+                          }))
+                        ]}
+                        value={purchaseProformaFilters.supplier}
+                        onValueChange={(v) => setPurchaseProformaFilters({...purchaseProformaFilters, supplier: v})}
+                      />
+                    </div>
+                    <div>
+                      <div className="text-sm font-medium mb-1">محصول</div>
+                      <SearchableSelect
+                        options={[
+                          { value: '', label: 'همه محصولات' },
+                          ...products.map(p => ({
+                            value: p.id.toString(),
+                            label: p.name
+                          }))
+                        ]}
+                        value={purchaseProformaFilters.product}
+                        onValueChange={(v) => setPurchaseProformaFilters({...purchaseProformaFilters, product: v})}
+                      />
+                    </div>
+                    <div>
+                      <div className="text-sm font-medium mb-1">تاریخ از</div>
+                      <PersianDatePicker
+                        value={purchaseProformaFilters.date_from}
+                        onChange={(v) => setPurchaseProformaFilters({...purchaseProformaFilters, date_from: v})}
+                        placeholder="انتخاب تاریخ"
+                      />
+                    </div>
+                    <div>
+                      <div className="text-sm font-medium mb-1">تاریخ تا</div>
+                      <PersianDatePicker
+                        value={purchaseProformaFilters.date_to}
+                        onChange={(v) => setPurchaseProformaFilters({...purchaseProformaFilters, date_to: v})}
+                        placeholder="انتخاب تاریخ"
+                      />
+                    </div>
+                    <div>
+                      <div className="text-sm font-medium mb-1">مبلغ کل</div>
+                      <div className="grid grid-cols-2 gap-2">
+                        <Input
+                          placeholder="حداقل"
+                          value={purchaseProformaFilters.total_amount_min}
+                          onChange={e => setPurchaseProformaFilters({...purchaseProformaFilters, total_amount_min: e.target.value})}
+                        />
+                        <Input
+                          placeholder="حداکثر"
+                          value={purchaseProformaFilters.total_amount_max}
+                          onChange={e => setPurchaseProformaFilters({...purchaseProformaFilters, total_amount_max: e.target.value})}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                  <div className="flex justify-end mb-4">
+                    <Button
+                      className="bg-red-100 text-red-700 hover:bg-red-200"
+                      onClick={() => setPurchaseProformaFilters({
+                        serial_number: "",
+                        supplier: "",
+                        date_from: "",
+                        date_to: "",
+                        product: "",
+                        total_amount_min: "",
+                        total_amount_max: "",
+                      })}
+                    >
+                      ریست
+                    </Button>
+                  </div>
+                </CollapsibleContent>
+              </Collapsible>
             </div>
             <Table dir="rtl">
               <TableHeader>
