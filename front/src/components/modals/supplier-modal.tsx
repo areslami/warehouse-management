@@ -36,12 +36,12 @@ export function SupplierModal({ trigger, onSubmit, onClose, initialData }: Suppl
 
   const supplierSchema = z.object({
     supplier_type: z.enum(["individual", "corporate"]),
-    company_name: z.string().optional(),
-    national_id: z.string().optional(),
-    full_name: z.string().optional(),
-    personal_code: z.string().optional(),
-    economic_code: z.string().min(1, tval("economic-code")),
-    phone: z.string().min(1, tval("phone")),
+    company_name: z.string().max(200, tval("company-name-max")).optional(),
+    national_id: z.string().max(11, tval("national-id-max")).optional(),
+    full_name: z.string().max(100, tval("full-name-max")).optional(),
+    personal_code: z.string().max(10, tval("personal-code-max")).optional(),
+    economic_code: z.string().min(1, tval("economic-code")).max(20, tval("economic-code-max")),
+    phone: z.string().min(1, tval("phone")).max(20, tval("phone-max")),
     address: z.string().min(1, tval("address")),
     postal_code: z.string().min(1, tval("postal-code")),
     description: z.string().optional(),

@@ -30,9 +30,9 @@ export function ShippingCompanyModal({ trigger, onSubmit, onClose, initialData }
   const t = useTranslations("modals.shippingCompany");
 
   const shippingCompanySchema = z.object({
-    name: z.string().min(1, tval("name")),
-    contact_person: z.string().min(1, tval("contact-person")),
-    phone: z.string().min(1, tval("phone")),
+    name: z.string().min(1, tval("name")).max(200, tval("name-max")),
+    contact_person: z.string().min(1, tval("contact-person")).max(100, tval("contact-person-max")),
+    phone: z.string().min(1, tval("phone")).max(20, tval("phone-max")),
     address: z.string().optional(),
     description: z.string().optional(),
   });

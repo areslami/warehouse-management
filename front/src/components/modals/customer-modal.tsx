@@ -37,16 +37,16 @@ export function CustomerModal({ trigger, onSubmit, onClose, initialData }: Custo
 
   const customerSchema = z.object({
     customer_type: z.enum(["individual", "corporate"]),
-    company_name: z.string().optional(),
-    national_id: z.string().optional(),
-    full_name: z.string().optional(),
-    personal_code: z.string().optional(),
-    economic_code: z.string().min(1, tval("economic-code")),
-    phone: z.string().min(1, tval("phone")),
+    company_name: z.string().max(200, tval("company-name-max")).optional(),
+    national_id: z.string().max(11, tval("national-id-max")).optional(),
+    full_name: z.string().max(100, tval("full-name-max")).optional(),
+    personal_code: z.string().max(10, tval("personal-code-max")).optional(),
+    economic_code: z.string().min(1, tval("economic-code")).max(20, tval("economic-code-max")),
+    phone: z.string().min(1, tval("phone")).max(20, tval("phone-max")),
     address: z.string().min(1, tval("address")),
-    postal_code: z.string().min(1, tval("postal-code")),
+    postal_code: z.string().min(1, tval("postal-code")).max(20, tval("postal-code-max")),
     description: z.string().optional(),
-    tags: z.string().optional(),
+    tags: z.string().max(200, tval("tags-max")).optional(),
   }).refine((data) => {
     if (data.customer_type === "corporate") {
       return data.company_name && data.company_name.length > 0 && data.national_id && data.national_id.length > 0;
