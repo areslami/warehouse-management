@@ -132,7 +132,7 @@ export function B2BAddressModal({ trigger, onSubmit, onClose, initialData, readO
       }
       form.reset();
     } catch (error) {
-      console.error("Error submitting sale:", error);
+      // Error is already handled and displayed by the API client
     }
   };
 

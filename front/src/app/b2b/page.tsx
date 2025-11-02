@@ -1898,22 +1898,16 @@ export default function B2BPage() {
             purchase_date: editingAddress.purchase_date || ''
           } : undefined}
           onSubmit={async (data) => {
-            try {
-              if (editingAddress) {
-                await updateB2BAddress(editingAddress.id, data);
-                toast.success(tErrors("success_update"));
-              } else {
-                await createB2BAddress(data);
-                toast.success(tErrors("success_create"));
-              }
-              await loadData();
-              setShowAddressModal(false);
-              setEditingAddress(null);
-            } catch (error) {
-              console.error(`Failed to ${editingAddress ? 'update' : 'create'} address:`, error);
-              handleApiErrorWithToast(error, `${editingAddress ? 'Update' : 'Create'} address`);
-
+            if (editingAddress) {
+              await updateB2BAddress(editingAddress.id, data);
+              toast.success(tErrors("success_update"));
+            } else {
+              await createB2BAddress(data);
+              toast.success(tErrors("success_create"));
             }
+            await loadData();
+            setShowAddressModal(false);
+            setEditingAddress(null);
           }}
           onClose={() => {
             setShowAddressModal(false);

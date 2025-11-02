@@ -18,7 +18,44 @@ async function fetchWithAuth(url: string, options?: RequestInit) {
   });
 
   if (!response.ok) {
-    throw new Error(`HTTP error! status: ${response.status}`);
+    // Try to parse error response body
+    let errorMessage = `HTTP error! status: ${response.status}`;
+    try {
+      const contentType = response.headers.get("content-type");
+      if (contentType && contentType.includes("application/json")) {
+        const errorData = await response.json();
+
+        // Django REST Framework returns errors in various formats
+        // Field-specific errors: { field_name: ["error message"] }
+        // Non-field errors: { non_field_errors: ["error message"] }
+        // Detail errors: { detail: "error message" }
+
+        if (typeof errorData === 'object') {
+          const messages: string[] = [];
+
+          for (const [_key, value] of Object.entries(errorData)) {
+            if (Array.isArray(value)) {
+              messages.push(...value);
+            } else if (typeof value === 'string') {
+              messages.push(value);
+            }
+          }
+
+          if (messages.length > 0) {
+            errorMessage = messages.join(' ');
+          }
+        }
+      }
+    } catch (parseError) {
+      // If parsing fails, use default error message
+    }
+
+    // Show toast notification
+    import('sonner').then(({ toast }) => {
+      toast.error(errorMessage);
+    });
+
+    throw new Error(errorMessage);
   }
 
   // Handle DELETE requests which might return 204 No Content
@@ -31,7 +68,7 @@ async function fetchWithAuth(url: string, options?: RequestInit) {
   if (contentType && contentType.includes("application/json")) {
     return response.json();
   }
-  
+
   return;
 }
 

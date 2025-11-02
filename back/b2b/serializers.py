@@ -1,4 +1,5 @@
 from rest_framework import serializers
+from rest_framework.validators import UniqueValidator
 from django.db import transaction
 from django.utils import timezone
 
@@ -58,6 +59,17 @@ class B2BAddressSerializer(serializers.ModelSerializer):
         model = B2BAddress
         fields = '__all__'
         read_only_fields = ['created_at', 'updated_at']
+
+    def validate_allocation_id(self, value):
+        # Check if we're updating an existing instance
+        if self.instance and self.instance.allocation_id == value:
+            return value
+
+        # Check if allocation_id already exists
+        if B2BAddress.objects.filter(allocation_id=value).exists():
+            raise serializers.ValidationError("آدرس بازارگاه با این شماره تخصیص قبلاً ثبت شده است.")
+
+        return value
 
     def get_product_name(self, obj):
         if obj.product:
