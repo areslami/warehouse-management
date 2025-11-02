@@ -64,8 +64,22 @@ export function PurchaseProformaModal({ trigger, onSubmit, onClose, initialData,
 
   const proformaLineSchema = z.object({
     product: z.number().min(1, tval("product-required")),
-    weight: z.union([z.string(), z.number()]).optional(),
-    unit_price: z.union([z.string(), z.number()]).optional(),
+    weight: z.union([z.string(), z.number()]).refine(
+      (val) => {
+        if (val === "" || val === null || val === undefined) return false;
+        const num = typeof val === 'string' ? parseFloat(val) : val;
+        return !isNaN(num) && num > 0;
+      },
+      { message: tval("weight-required") }
+    ),
+    unit_price: z.union([z.string(), z.number()]).refine(
+      (val) => {
+        if (val === "" || val === null || val === undefined) return false;
+        const num = typeof val === 'string' ? parseFloat(val) : val;
+        return !isNaN(num) && num > 0;
+      },
+      { message: tval("unit-price-required") }
+    ),
   });
 
   const purchaseProformaSchema = z.object({
@@ -81,7 +95,7 @@ export function PurchaseProformaModal({ trigger, onSubmit, onClose, initialData,
       const num = typeof val === 'string' ? parseFloat(val) : val;
       return isNaN(num) ? 0 : num;
     }).pipe(z.number().min(0)),
-    supplier: z.number().min(0),
+    supplier: z.number().min(1, tval('supplier')),
     lines: z.array(proformaLineSchema).min(1, tval('lines')),
   });
 
@@ -140,7 +154,7 @@ export function PurchaseProformaModal({ trigger, onSubmit, onClose, initialData,
 
           <Form {...form} >
             <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6 py-4 px-12">
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-2 gap-4 items-start">
                 <FormField
                   control={form.control as any}
                   name="serial_number"
@@ -156,7 +170,7 @@ export function PurchaseProformaModal({ trigger, onSubmit, onClose, initialData,
                           tabIndex={isEditing ? -1 : undefined}
                         />
                       </FormControl>
-                      <FormMessage />
+                      <FormMessage className="min-h-[1.25rem]" />
                     </FormItem>
                   )}
                 />
@@ -174,7 +188,7 @@ export function PurchaseProformaModal({ trigger, onSubmit, onClose, initialData,
                           placeholder={t("select-date")}
                         />
                       </FormControl>
-                      <FormMessage />
+                      <FormMessage className="min-h-[1.25rem]" />
                     </FormItem>
                   )}
                 />
@@ -233,7 +247,7 @@ export function PurchaseProformaModal({ trigger, onSubmit, onClose, initialData,
                 )}
               />
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-2 gap-4 items-start">
                 <FormField
                   control={form.control as any}
                   name="tax"
@@ -248,7 +262,7 @@ export function PurchaseProformaModal({ trigger, onSubmit, onClose, initialData,
                           onChange={(e) => field.onChange(e.target.value)}
                         />
                       </FormControl>
-                      <FormMessage />
+                      <FormMessage className="min-h-[1.25rem]" />
                     </FormItem>
                   )}
                 />
@@ -267,7 +281,7 @@ export function PurchaseProformaModal({ trigger, onSubmit, onClose, initialData,
                           onChange={(e) => field.onChange(e.target.value)}
                         />
                       </FormControl>
-                      <FormMessage />
+                      <FormMessage className="min-h-[1.25rem]" />
                     </FormItem>
                   )}
                 />
@@ -288,7 +302,7 @@ export function PurchaseProformaModal({ trigger, onSubmit, onClose, initialData,
                 </div>
 
                 {fields.map((field, index) => (
-                  <div key={field.id} className="grid grid-cols-4 gap-4 p-4 border rounded-lg">
+                  <div key={field.id} className="grid grid-cols-4 gap-4 p-4 border rounded-lg items-start">
                     <FormField
                       control={form.control as any}
                       name={`lines.${index}.product`}
@@ -340,7 +354,7 @@ export function PurchaseProformaModal({ trigger, onSubmit, onClose, initialData,
                               </SelectContent>
                             </Select>
                           </FormControl>
-                          <FormMessage />
+                          <FormMessage className="min-h-[1.25rem]" />
                         </FormItem>
                       )}
                     />
@@ -350,7 +364,7 @@ export function PurchaseProformaModal({ trigger, onSubmit, onClose, initialData,
                       name={`lines.${index}.weight`}
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>{t("weight")} <span className="text-gray-400 text-sm">{t("optional")}</span></FormLabel>
+                          <FormLabel>{t("weight")}</FormLabel>
                           <FormControl>
                             <Input
                               type="text"
@@ -359,7 +373,7 @@ export function PurchaseProformaModal({ trigger, onSubmit, onClose, initialData,
                               onChange={(value) => field.onChange(value)}
                             />
                           </FormControl>
-                          <FormMessage />
+                          <FormMessage className="min-h-[1.25rem]" />
                         </FormItem>
                       )}
                     />
@@ -369,7 +383,7 @@ export function PurchaseProformaModal({ trigger, onSubmit, onClose, initialData,
                       name={`lines.${index}.unit_price`}
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>{t('unit_price')} <span className="text-gray-400 text-sm">{t("optional")}</span></FormLabel>
+                          <FormLabel>{t('unit_price')}</FormLabel>
                           <FormControl>
                             <Input
                               type="text"
@@ -378,7 +392,7 @@ export function PurchaseProformaModal({ trigger, onSubmit, onClose, initialData,
                               onChange={(value) => field.onChange(value)}
                             />
                           </FormControl>
-                          <FormMessage />
+                          <FormMessage className="min-h-[1.25rem]" />
                         </FormItem>
                       )}
                     />

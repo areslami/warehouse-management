@@ -74,8 +74,8 @@ export function B2BOfferModal({ trigger, onSubmit, onClose, initialData, readOnl
   const b2bOfferSchema = z.object({
     offer_id: z.string().min(1, tval("offer-id")),
     warehouse_receipt: z.number().nullable().optional(),
-    offer_weight: z.number().positive(tval("offer-weight")),
-    unit_price: z.number().positive(),
+    offer_weight: z.number().min(0.01, tval("offer-weight")),
+    unit_price: z.number().min(0.01, tval("unit-price")),
     status: z.enum(['pending', 'active', 'sold', 'expired']),
     offer_type: z.enum(['cash', 'credit', 'agreement', 'other']).optional(),
     offer_date: z.string().min(1, tval("offer-date")),
@@ -90,8 +90,8 @@ export function B2BOfferModal({ trigger, onSubmit, onClose, initialData, readOnl
     defaultValues: {
       offer_id: initialData?.offer_id || "",
       warehouse_receipt: initialData?.warehouse_receipt || null,
-      offer_weight: initialData?.offer_weight || undefined,
-      unit_price: initialData?.unit_price || undefined,
+      offer_weight: initialData?.offer_weight || 0,
+      unit_price: initialData?.unit_price || 0,
       status: initialData?.status || 'pending',
       offer_type: initialData?.offer_type || 'cash',
       offer_date: initialData?.offer_date || "",
@@ -154,7 +154,7 @@ export function B2BOfferModal({ trigger, onSubmit, onClose, initialData, readOnl
           <Form {...form}>
             <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6 py-4 px-12">
               <fieldset disabled={!isEditMode} className="space-y-6">
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-2 gap-4 items-start">
                 <FormField
                   control={form.control as any}
                   name="offer_id"
@@ -170,7 +170,7 @@ export function B2BOfferModal({ trigger, onSubmit, onClose, initialData, readOnl
                           tabIndex={isEditing ? -1 : undefined}
                         />
                       </FormControl>
-                      <FormMessage />
+                      <FormMessage className="min-h-[1.25rem]" />
                     </FormItem>
                   )}
                 />
@@ -192,13 +192,13 @@ export function B2BOfferModal({ trigger, onSubmit, onClose, initialData, readOnl
                           <SelectItem value="expired">{t("status_options.expired")}</SelectItem>
                         </SelectContent>
                       </Select>
-                      <FormMessage />
+                      <FormMessage className="min-h-[1.25rem]" />
                     </FormItem>
                   )}
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-2 gap-4 items-start">
                 <FormField
                   control={form.control as any}
                   name="offer_type"
@@ -215,7 +215,7 @@ export function B2BOfferModal({ trigger, onSubmit, onClose, initialData, readOnl
                           <SelectItem value="agreement">{t("offer_type_options.agreement")}</SelectItem>
                         </SelectContent>
                       </Select>
-                      <FormMessage />
+                      <FormMessage className="min-h-[1.25rem]" />
                     </FormItem>
                   )}
                 />
@@ -254,12 +254,12 @@ export function B2BOfferModal({ trigger, onSubmit, onClose, initialData, readOnl
                         onCreateNew={() => setShowWarehouseReceiptModal(true)}
                       />
                     </FormControl>
-                    <FormMessage />
+                    <FormMessage className="min-h-[1.25rem]" />
                   </FormItem>
                 )}
               />
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-2 gap-4 items-start">
                 <FormField
                   control={form.control as any}
                   name="offer_weight"
@@ -272,7 +272,7 @@ export function B2BOfferModal({ trigger, onSubmit, onClose, initialData, readOnl
                           onChange={(value) => field.onChange(value)}
                         />
                       </FormControl>
-                      <FormMessage />
+                      <FormMessage className="min-h-[1.25rem]" />
                     </FormItem>
                   )}
                 />
@@ -289,13 +289,13 @@ export function B2BOfferModal({ trigger, onSubmit, onClose, initialData, readOnl
                           onChange={(value) => field.onChange(value)}
                         />
                       </FormControl>
-                      <FormMessage />
+                      <FormMessage className="min-h-[1.25rem]" />
                     </FormItem>
                   )}
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-2 gap-4 items-start">
                 <FormField
                   control={form.control as any}
                   name="offer_date"
@@ -309,7 +309,7 @@ export function B2BOfferModal({ trigger, onSubmit, onClose, initialData, readOnl
                           placeholder={t("select-date")}
                         />
                       </FormControl>
-                      <FormMessage />
+                      <FormMessage className="min-h-[1.25rem]" />
                     </FormItem>
                   )}
                 />
@@ -327,7 +327,7 @@ export function B2BOfferModal({ trigger, onSubmit, onClose, initialData, readOnl
                           placeholder={t("select-date")}
                         />
                       </FormControl>
-                      <FormMessage />
+                      <FormMessage className="min-h-[1.25rem]" />
                     </FormItem>
                   )}
                 />
@@ -342,7 +342,7 @@ export function B2BOfferModal({ trigger, onSubmit, onClose, initialData, readOnl
                     <FormControl>
                       <Input {...field} />
                     </FormControl>
-                    <FormMessage />
+                    <FormMessage className="min-h-[1.25rem]" />
                   </FormItem>
                 )}
               />

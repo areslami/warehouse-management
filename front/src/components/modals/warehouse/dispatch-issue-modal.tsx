@@ -84,7 +84,14 @@ export function DispatchIssueModal({ trigger, onSubmit, onClose, initialData, is
 
   const dispatchItemSchema = z.object({
     product: z.number().min(1, tval("product-required")),
-    weight: z.union([z.string(), z.number()]).optional(),
+    weight: z.union([z.string(), z.number()]).refine(
+      (val) => {
+        if (val === "" || val === null || val === undefined) return false;
+        const num = typeof val === 'string' ? parseFloat(val) : val;
+        return !isNaN(num) && num > 0;
+      },
+      { message: tval("weight-required") }
+    ),
     vehicle_type: z.enum(["single", "double", "trailer"]),
     receiver: z.number().min(0),
   });
@@ -163,7 +170,7 @@ export function DispatchIssueModal({ trigger, onSubmit, onClose, initialData, is
 
           <Form {...form} >
             <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6 py-4 px-12">
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-2 gap-4 items-start">
                 <FormField
                   control={form.control as any}
                   name="dispatch_id"
@@ -179,7 +186,7 @@ export function DispatchIssueModal({ trigger, onSubmit, onClose, initialData, is
                           tabIndex={isEditing ? -1 : undefined}
                         />
                       </FormControl>
-                      <FormMessage />
+                      <FormMessage className="min-h-[1.25rem]" />
                     </FormItem>
                   )}
                 />
@@ -232,13 +239,13 @@ export function DispatchIssueModal({ trigger, onSubmit, onClose, initialData, is
                           </SelectContent>
                         </Select>
                       </FormControl>
-                      <FormMessage />
+                      <FormMessage className="min-h-[1.25rem]" />
                     </FormItem>
                   )}
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-2 gap-4 items-start">
                 <FormField
                   control={form.control as any}
                   name="sales_proforma"
@@ -297,7 +304,7 @@ export function DispatchIssueModal({ trigger, onSubmit, onClose, initialData, is
                           </SelectContent>
                         </Select>
                       </FormControl>
-                      <FormMessage />
+                      <FormMessage className="min-h-[1.25rem]" />
                     </FormItem>
                   )}
                 />
@@ -350,13 +357,13 @@ export function DispatchIssueModal({ trigger, onSubmit, onClose, initialData, is
                           </SelectContent>
                         </Select>
                       </FormControl>
-                      <FormMessage />
+                      <FormMessage className="min-h-[1.25rem]" />
                     </FormItem>
                   )}
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-2 gap-4 items-start">
                 <FormField
                   control={form.control as any}
                   name="issue_date"
@@ -370,7 +377,7 @@ export function DispatchIssueModal({ trigger, onSubmit, onClose, initialData, is
                           placeholder={t("select-date")}
                         />
                       </FormControl>
-                      <FormMessage />
+                      <FormMessage className="min-h-[1.25rem]" />
                     </FormItem>
                   )}
                 />
@@ -388,7 +395,7 @@ export function DispatchIssueModal({ trigger, onSubmit, onClose, initialData, is
                           placeholder={t("select-date")}
                         />
                       </FormControl>
-                      <FormMessage />
+                      <FormMessage className="min-h-[1.25rem]" />
                     </FormItem>
                   )}
                 />
@@ -423,7 +430,7 @@ export function DispatchIssueModal({ trigger, onSubmit, onClose, initialData, is
                 </div>
 
                 {fields.map((field, index) => (
-                  <div key={field.id} className="grid grid-cols-5 gap-4 p-4 border rounded-lg">
+                  <div key={field.id} className="grid grid-cols-5 gap-4 p-4 border rounded-lg items-start">
                     <FormField
                       control={form.control as any}
                       name={`items.${index}.product`}
@@ -475,7 +482,7 @@ export function DispatchIssueModal({ trigger, onSubmit, onClose, initialData, is
                               </SelectContent>
                             </Select>
                           </FormControl>
-                          <FormMessage />
+                          <FormMessage className="min-h-[1.25rem]" />
                         </FormItem>
                       )}
                     />
@@ -485,14 +492,14 @@ export function DispatchIssueModal({ trigger, onSubmit, onClose, initialData, is
                       name={`items.${index}.weight`}
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>{t("weight")} <span className="text-gray-400 text-sm">{t("optional")}</span></FormLabel>
+                          <FormLabel>{t("weight")}</FormLabel>
                           <FormControl>
                             <NumberInput
                               value={field.value || 0}
                               onChange={(value) => field.onChange(value)}
                             />
                           </FormControl>
-                          <FormMessage />
+                          <FormMessage className="min-h-[1.25rem]" />
                         </FormItem>
                       )}
                     />
@@ -504,13 +511,16 @@ export function DispatchIssueModal({ trigger, onSubmit, onClose, initialData, is
                         <FormItem>
                           <FormLabel>{t("vehicle-type")}</FormLabel>
                           <FormControl>
-                            <select {...field} className="w-full px-3 py-2 border rounded-md">
+                            <select
+                              {...field}
+                              className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-base shadow-xs transition-[color,box-shadow] outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] disabled:cursor-not-allowed disabled:opacity-50 md:text-sm"
+                            >
                               <option value="single">{t("vehicle-single")}</option>
                               <option value="double">{t("vehicle-double")}</option>
                               <option value="trailer">{t("vehicle-trailer")}</option>
                             </select>
                           </FormControl>
-                          <FormMessage />
+                          <FormMessage className="min-h-[1.25rem]" />
                         </FormItem>
                       )}
                     />
@@ -566,7 +576,7 @@ export function DispatchIssueModal({ trigger, onSubmit, onClose, initialData, is
                               </SelectContent>
                             </Select>
                           </FormControl>
-                          <FormMessage />
+                          <FormMessage className="min-h-[1.25rem]" />
                         </FormItem>
                       )}
                     />

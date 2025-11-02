@@ -68,8 +68,22 @@ export function SalesProformaModal({ trigger, onSubmit, onClose, initialData, re
 
   const proformaLineSchema = z.object({
     product: z.number().min(1, tval("product-required")),
-    weight: z.union([z.string(), z.number()]).optional(),
-    unit_price: z.union([z.string(), z.number()]).optional(),
+    weight: z.union([z.string(), z.number()]).refine(
+      (val) => {
+        if (val === "" || val === null || val === undefined) return false;
+        const num = typeof val === 'string' ? parseFloat(val) : val;
+        return !isNaN(num) && num > 0;
+      },
+      { message: tval("weight-required") }
+    ),
+    unit_price: z.union([z.string(), z.number()]).refine(
+      (val) => {
+        if (val === "" || val === null || val === undefined) return false;
+        const num = typeof val === 'string' ? parseFloat(val) : val;
+        return !isNaN(num) && num > 0;
+      },
+      { message: tval("unit-price-required") }
+    ),
   });
 
   const salesProformaSchema = z.object({
@@ -87,7 +101,7 @@ export function SalesProformaModal({ trigger, onSubmit, onClose, initialData, re
     }).pipe(z.number().min(0)),
     payment_type: z.enum(["cash", "credit", "other"]),
     payment_description: z.string().optional(),
-    customer: z.number().min(0, tval('customer')),
+    customer: z.number().min(1, tval('customer')),
     lines: z.array(proformaLineSchema).min(1, tval('lines')),
   });
 
@@ -160,7 +174,7 @@ export function SalesProformaModal({ trigger, onSubmit, onClose, initialData, re
           <Form {...form} >
             <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6 py-4 px-12">
               <fieldset disabled={!isEditMode} className="space-y-6">
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-2 gap-4 items-start">
                 <FormField
                   control={form.control as any}
                   name="serial_number"
@@ -177,7 +191,7 @@ export function SalesProformaModal({ trigger, onSubmit, onClose, initialData, re
                           tabIndex={isEditing ? -1 : undefined}
                         />
                       </FormControl>
-                      <FormMessage />
+                      <FormMessage className="min-h-[1.25rem]" />
                     </FormItem>
                   )}
                 />
@@ -196,13 +210,13 @@ export function SalesProformaModal({ trigger, onSubmit, onClose, initialData, re
                           disabled={!isEditMode}
                         />
                       </FormControl>
-                      <FormMessage />
+                      <FormMessage className="min-h-[1.25rem]" />
                     </FormItem>
                   )}
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-2 gap-4 items-start">
                 <FormField
                   control={form.control as any}
                   name="customer"
@@ -251,7 +265,7 @@ export function SalesProformaModal({ trigger, onSubmit, onClose, initialData, re
                           </SelectContent>
                         </Select>
                       </FormControl>
-                      <FormMessage />
+                      <FormMessage className="min-h-[1.25rem]" />
                     </FormItem>
                   )}
                 />
@@ -263,13 +277,16 @@ export function SalesProformaModal({ trigger, onSubmit, onClose, initialData, re
                     <FormItem>
                       <FormLabel>{t('payment')}</FormLabel>
                       <FormControl>
-                        <select {...field} className="w-full px-3 py-2 border rounded-md">
+                        <select
+                          {...field}
+                          className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-base shadow-xs transition-[color,box-shadow] outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] disabled:cursor-not-allowed disabled:opacity-50 md:text-sm"
+                        >
                           <option value="cash">{t("payment_cash")}</option>
                           <option value="credit">{t("payment_credit")}</option>
                           <option value="other">{t("payment_other")}</option>
                         </select>
                       </FormControl>
-                      <FormMessage />
+                      <FormMessage className="min-h-[1.25rem]" />
                     </FormItem>
                   )}
                 />
@@ -284,12 +301,12 @@ export function SalesProformaModal({ trigger, onSubmit, onClose, initialData, re
                     <FormControl>
                       <Input {...field} />
                     </FormControl>
-                    <FormMessage />
+                    <FormMessage className="min-h-[1.25rem]" />
                   </FormItem>
                 )}
               />
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-2 gap-4 items-start">
                 <FormField
                   control={form.control as any}
                   name="tax"
@@ -304,7 +321,7 @@ export function SalesProformaModal({ trigger, onSubmit, onClose, initialData, re
                           onChange={(e) => field.onChange(e.target.value)}
                         />
                       </FormControl>
-                      <FormMessage />
+                      <FormMessage className="min-h-[1.25rem]" />
                     </FormItem>
                   )}
                 />
@@ -323,7 +340,7 @@ export function SalesProformaModal({ trigger, onSubmit, onClose, initialData, re
                           onChange={(e) => field.onChange(e.target.value)}
                         />
                       </FormControl>
-                      <FormMessage />
+                      <FormMessage className="min-h-[1.25rem]" />
                     </FormItem>
                   )}
                 />
@@ -344,7 +361,7 @@ export function SalesProformaModal({ trigger, onSubmit, onClose, initialData, re
                 </div>
 
                 {fields.map((field, index) => (
-                  <div key={field.id} className="grid grid-cols-4 gap-4 p-4 border rounded-lg">
+                  <div key={field.id} className="grid grid-cols-4 gap-4 p-4 border rounded-lg items-start">
                     <FormField
                       control={form.control as any}
                       name={`lines.${index}.product`}
@@ -396,7 +413,7 @@ export function SalesProformaModal({ trigger, onSubmit, onClose, initialData, re
                               </SelectContent>
                             </Select>
                           </FormControl>
-                          <FormMessage />
+                          <FormMessage className="min-h-[1.25rem]" />
                         </FormItem>
                       )}
                     />
@@ -406,7 +423,7 @@ export function SalesProformaModal({ trigger, onSubmit, onClose, initialData, re
                       name={`lines.${index}.weight`}
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>{t("weight")} <span className="text-gray-400 text-sm">{t("optional")}</span></FormLabel>
+                          <FormLabel>{t("weight")}</FormLabel>
                           <FormControl>
                             <Input
                               type="text"
@@ -415,7 +432,7 @@ export function SalesProformaModal({ trigger, onSubmit, onClose, initialData, re
                               onChange={(value) => field.onChange(value)}
                             />
                           </FormControl>
-                          <FormMessage />
+                          <FormMessage className="min-h-[1.25rem]" />
                         </FormItem>
                       )}
                     />
@@ -425,7 +442,7 @@ export function SalesProformaModal({ trigger, onSubmit, onClose, initialData, re
                       name={`lines.${index}.unit_price`}
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>{t('unit_price')} <span className="text-gray-400 text-sm">{t("optional")}</span></FormLabel>
+                          <FormLabel>{t('unit_price')}</FormLabel>
                           <FormControl>
                             <Input
                               type="text"
@@ -434,7 +451,7 @@ export function SalesProformaModal({ trigger, onSubmit, onClose, initialData, re
                               onChange={(value) => field.onChange(value)}
                             />
                           </FormControl>
-                          <FormMessage />
+                          <FormMessage className="min-h-[1.25rem]" />
                         </FormItem>
                       )}
                     />

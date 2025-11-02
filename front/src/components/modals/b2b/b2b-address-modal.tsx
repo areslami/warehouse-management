@@ -81,20 +81,27 @@ export function B2BAddressModal({ trigger, onSubmit, onClose, initialData, readO
 
   const b2bSaleSchema = z.object({
     purchase_id: z.string().min(1, tval("purchase-id")),
-    allocation_id: z.string().optional(),
-    cottage_code: z.string().optional(),
+    allocation_id: z.string().min(1, tval("allocation-id")),
+    cottage_code: z.string().min(1, tval("cottage-code")),
     product_offer: z.number().optional(),
     product: z.number().min(1, tval("product")),
     customer: z.number().min(1, tval("customer")),
     receiver: z.number().min(1, tval("customer")),
-    total_weight_purchased: z.union([z.string(), z.number()]).optional(),
+    total_weight_purchased: z.union([z.string(), z.number()]).refine(
+      (val) => {
+        if (val === "" || val === null || val === undefined) return false;
+        const num = typeof val === 'string' ? parseFloat(val) : val;
+        return !isNaN(num) && num > 0;
+      },
+      { message: tval("weight-required") }
+    ),
     purchase_date: z.string().min(1, tval("date")),
     unit_price: z.number().positive(),
-    payment_amount: z.number().min(0, tval("amount")),
+    payment_amount: z.number().min(0.01, tval("amount")),
     payment_method: z.string().min(1, tval("payment-method")),
-    province: z.string().optional(),
-    city: z.string().optional(),
-    tracking_number: z.string().optional(),
+    province: z.string().min(1, tval("province")),
+    city: z.string().min(1, tval("city")),
+    tracking_number: z.string().min(1, tval("tracking-number")),
     credit_description: z.string().optional(),
   });
 
@@ -188,7 +195,7 @@ export function B2BAddressModal({ trigger, onSubmit, onClose, initialData, readO
                           tabIndex={isEditing ? -1 : undefined}
                         />
                       </FormControl>
-                      <FormMessage />
+                      <FormMessage className="min-h-[1.25rem]" />
                     </FormItem>
                   )}
                 />
@@ -202,7 +209,7 @@ export function B2BAddressModal({ trigger, onSubmit, onClose, initialData, readO
                       <FormControl>
                         <Input {...field} />
                       </FormControl>
-                      <FormMessage />
+                      <FormMessage className="min-h-[1.25rem]" />
                     </FormItem>
                   )}
                 />
@@ -216,14 +223,14 @@ export function B2BAddressModal({ trigger, onSubmit, onClose, initialData, readO
                       <FormControl>
                         <Input {...field} />
                       </FormControl>
-                      <FormMessage />
+                      <FormMessage className="min-h-[1.25rem]" />
                     </FormItem>
                   )}
                 />
               </div>
 
               {/* Row 2: Product and Customer */}
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-2 gap-4 items-start">
                 <FormField
                   control={form.control as any}
                   name="product"
@@ -251,7 +258,7 @@ export function B2BAddressModal({ trigger, onSubmit, onClose, initialData, readO
                           onCreateNew={() => setShowProductModal(true)}
                         />
                       </FormControl>
-                      <FormMessage />
+                      <FormMessage className="min-h-[1.25rem]" />
                     </FormItem>
                   )}
                 />
@@ -283,14 +290,14 @@ export function B2BAddressModal({ trigger, onSubmit, onClose, initialData, readO
                           onCreateNew={() => setShowCustomerModal(true)}
                         />
                       </FormControl>
-                      <FormMessage />
+                      <FormMessage className="min-h-[1.25rem]" />
                     </FormItem>
                   )}
                 />
               </div>
 
               {/* Row 3: Receiver and Offer */}
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-2 gap-4 items-start">
                 <FormField
                   control={form.control as any}
                   name="receiver"
@@ -323,7 +330,7 @@ export function B2BAddressModal({ trigger, onSubmit, onClose, initialData, readO
                           onCreateNew={() => setShowReceiverModal(true)}
                         />
                       </FormControl>
-                      <FormMessage />
+                      <FormMessage className="min-h-[1.25rem]" />
                     </FormItem>
                   )}
                 />
@@ -353,7 +360,7 @@ export function B2BAddressModal({ trigger, onSubmit, onClose, initialData, readO
                           searchPlaceholder={tCommon("search_placeholders.search_offers")}
                         />
                       </FormControl>
-                      <FormMessage />
+                      <FormMessage className="min-h-[1.25rem]" />
                     </FormItem>
                   )}
                 />
@@ -373,7 +380,7 @@ export function B2BAddressModal({ trigger, onSubmit, onClose, initialData, readO
                           onChange={(value) => field.onChange(value)}
                         />
                       </FormControl>
-                      <FormMessage />
+                      <FormMessage className="min-h-[1.25rem]" />
                     </FormItem>
                   )}
                 />
@@ -390,7 +397,7 @@ export function B2BAddressModal({ trigger, onSubmit, onClose, initialData, readO
                           onChange={(value) => field.onChange(value)}
                         />
                       </FormControl>
-                      <FormMessage />
+                      <FormMessage className="min-h-[1.25rem]" />
                     </FormItem>
                   )}
                 />
@@ -407,14 +414,14 @@ export function B2BAddressModal({ trigger, onSubmit, onClose, initialData, readO
                           onChange={(value) => field.onChange(value)}
                         />
                       </FormControl>
-                      <FormMessage />
+                      <FormMessage className="min-h-[1.25rem]" />
                     </FormItem>
                   )}
                 />
               </div>
 
               {/* Row 5: Payment Method and Date */}
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-2 gap-4 items-start">
                 <FormField
                   control={form.control as any}
                   name="payment_method"
@@ -432,7 +439,7 @@ export function B2BAddressModal({ trigger, onSubmit, onClose, initialData, readO
                         placeholder={t("select-payment-method")}
                         searchPlaceholder={tCommon("search_placeholders.search_payment_methods")}
                       />
-                      <FormMessage />
+                      <FormMessage className="min-h-[1.25rem]" />
                     </FormItem>
                   )}
                 />
@@ -450,7 +457,7 @@ export function B2BAddressModal({ trigger, onSubmit, onClose, initialData, readO
                           placeholder={t("select-date")}
                         />
                       </FormControl>
-                      <FormMessage />
+                      <FormMessage className="min-h-[1.25rem]" />
                     </FormItem>
                   )}
                 />
@@ -467,7 +474,7 @@ export function B2BAddressModal({ trigger, onSubmit, onClose, initialData, readO
                       <FormControl>
                         <Input {...field} />
                       </FormControl>
-                      <FormMessage />
+                      <FormMessage className="min-h-[1.25rem]" />
                     </FormItem>
                   )}
                 />
@@ -481,7 +488,7 @@ export function B2BAddressModal({ trigger, onSubmit, onClose, initialData, readO
                       <FormControl>
                         <Input {...field} />
                       </FormControl>
-                      <FormMessage />
+                      <FormMessage className="min-h-[1.25rem]" />
                     </FormItem>
                   )}
                 />
@@ -495,7 +502,7 @@ export function B2BAddressModal({ trigger, onSubmit, onClose, initialData, readO
                       <FormControl>
                         <Input {...field} />
                       </FormControl>
-                      <FormMessage />
+                      <FormMessage className="min-h-[1.25rem]" />
                     </FormItem>
                   )}
                 />
@@ -511,7 +518,7 @@ export function B2BAddressModal({ trigger, onSubmit, onClose, initialData, readO
                     <FormControl>
                       <Input {...field} />
                     </FormControl>
-                    <FormMessage />
+                    <FormMessage className="min-h-[1.25rem]" />
                   </FormItem>
                 )}
               />
