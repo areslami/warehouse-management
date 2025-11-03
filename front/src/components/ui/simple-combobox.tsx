@@ -94,7 +94,7 @@ export function SimpleCombobox({
         variant="outline"
         role="combobox"
         aria-expanded={open}
-        className="w-[450px] text-ellipsis overflow-x-hidden justify-between"
+        className="w-[475px] justify-between"
         disabled={disabled}
         onClick={(e) => {
           e.preventDefault();
@@ -102,8 +102,9 @@ export function SimpleCombobox({
         }}
         type="button"
       >
+      <span className="truncate">
         {selectedOption ? selectedOption.label : placeholder}
-        
+      </span>        
         <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
       </Button>
 
