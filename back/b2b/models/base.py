@@ -6,11 +6,9 @@ class B2BOffer(models.Model):
     offer_id = models.CharField(max_length=100, unique=True, null=False)
     warehouse_receipt = models.ForeignKey(
         'warehouse.WarehouseReceipt',
-        on_delete=models.SET_NULL,
+        on_delete=models.CASCADE,
         limit_choices_to={'receipt_type__in': [
             'import_cottage', 'distribution_cottage']},
-        null=True,
-        blank=True
     )
 
     offer_date = models.DateTimeField()

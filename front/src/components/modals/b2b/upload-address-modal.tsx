@@ -263,7 +263,7 @@ export default function UploadAddressModal({ isOpen, onClose, onSuccess }: Uploa
     <>
 
       <Dialog open={isOpen && !showPreview} onOpenChange={handleClose}>
-        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto" dir="rtl">
+        <DialogContent className="max-w-lg overflow-hidden max-h-[90vh] overflow-y-auto " dir="rtl">
           <DialogHeader>
             <DialogTitle>{t("title")}</DialogTitle>
           </DialogHeader>
@@ -320,7 +320,7 @@ export default function UploadAddressModal({ isOpen, onClose, onSuccess }: Uploa
                   )}
                   {addressType === "distributor_address" && (
                     <div className="w-full">
-                      <label className="block text-sm font-medium mb-2">{tDist("distribution")}</label>
+                      <label className=" text-sm font-medium mb-2">{tDist("distribution")}</label>
                       <SimpleCombobox
                         options={distributions.map((d: any) => ({
                           value: String(d.id),
@@ -335,6 +335,7 @@ export default function UploadAddressModal({ isOpen, onClose, onSuccess }: Uploa
                         showCreateNew={true}
                         createNewText={tDist("create_new_distribution")}
                         onCreateNew={() => setShowDistributionModal(true)}
+                        className="w-full"
                       />
                     </div>
                   )}

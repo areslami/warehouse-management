@@ -23,7 +23,7 @@ import { WarehouseReceiptModal } from "../warehouse/warehouse-receipt-modal";
 
 export type B2BOfferFormData = {
   offer_id: string;
-  warehouse_receipt?: number | null;
+  warehouse_receipt: number;
   offer_weight: number;
   unit_price: number;
   status: 'pending' | 'active' | 'sold' | 'expired';
@@ -73,7 +73,7 @@ export function B2BOfferModal({ trigger, onSubmit, onClose, initialData, readOnl
 
   const b2bOfferSchema = z.object({
     offer_id: z.string().min(1, tval("offer-id")),
-    warehouse_receipt: z.number().nullable().optional(),
+    warehouse_receipt: z.number().min(1, tval("warehouse-receipt")),
     offer_weight: z.number().min(0.01, tval("offer-weight")),
     unit_price: z.number().min(0.01, tval("unit-price")),
     status: z.enum(['pending', 'active', 'sold', 'expired']),
@@ -89,7 +89,7 @@ export function B2BOfferModal({ trigger, onSubmit, onClose, initialData, readOnl
     resolver: zodResolver(b2bOfferSchema) as any,
     defaultValues: {
       offer_id: initialData?.offer_id || "",
-      warehouse_receipt: initialData?.warehouse_receipt || null,
+      warehouse_receipt: initialData?.warehouse_receipt || 0,
       offer_weight: initialData?.offer_weight || 0,
       unit_price: initialData?.unit_price || 0,
       status: initialData?.status || 'pending',
@@ -234,12 +234,10 @@ export function B2BOfferModal({ trigger, onSubmit, onClose, initialData, readOnl
                         onValueChange={(value) => {
                           if (value && value !== "0" && value !== "") {
                             field.onChange(Number(value));
-                          } else {
-                            field.onChange(null);
-                          }
+                          } 
                         }}
                         options={[
-                          { value: "", label: t("no-receipt") },
+
                           ...warehouseReceipts.map(receipt => ({
                             value: receipt.id.toString(),
                             label: describeWarehouseReceipt(receipt),
