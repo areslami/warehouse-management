@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { PersianDatePicker } from "@/components/ui/persian-date-picker";
 import { Collapsible, CollapsibleTrigger, CollapsibleContent } from "@/components/ui/collapsible";
 import { SearchableSelect } from "@/components/ui/searchable-select";
-import { SALE_DISTRIBUTOR_HEADERS, SALE_YOUR_HEADERS, ADDRESS_HEADERS } from "@/lib/excel-mappings";
+import { ADDRESS_HEADERS } from "@/lib/excel-mappings";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -560,63 +560,25 @@ export default function B2BPage() {
     return tCommon('payment_types.other');
   };
 
-  const exportHtmlTable = (headers: string[], rows: (string | number)[][], suggested: string) => {
-    const html = `\uFEFF<table><thead><tr>${headers.map(h=>`<th>${h}</th>`).join("")}</tr></thead><tbody>${rows.map(r=>`<tr>${r.map(c=>`<td>${c ?? ""}</td>`).join("")}</tr>`).join("")}</tbody></table>`
-    const blob = new Blob([html], { type: 'application/vnd.ms-excel;charset=utf-8;' })
+  const exportSelectedSales = async () => {
+    const ids = sales.filter(s => selectedSales.includes(s.id)).map(s => s.id)
+    if (ids.length === 0) return
+    const { getApiBaseUrl } = await import("@/lib/api/config");
+    const res = await fetch(`${getApiBaseUrl()}b2b/sales/export/`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ids })
+    })
+    if (!res.ok) { toast.error('Export failed'); return }
+    const blob = await res.blob()
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
-    const name = window.prompt('نام فایل', suggested) || suggested
     a.href = url
-    a.download = `${name}.xls`
+    a.download = `b2b-sales-${new Date().toISOString().slice(0, 16).replace(/[-:T]/g, '')}.xlsx`
     document.body.appendChild(a)
     a.click()
     document.body.removeChild(a)
     URL.revokeObjectURL(url)
-  }
-
-  const exportSelectedSales = () => {
-    const sel = sales.filter(s=>selectedSales.includes(s.id))
-    if (sel.length===0) return
-    if (salesFilters.export_type==='distributor_sale') {
-      const headers = SALE_DISTRIBUTOR_HEADERS
-      const rows = sel.map(s=>[
-        s.purchase_id||'',
-        s.offer_id||'',
-        s.weight||'',
-        s.sale_date||'',
-        s.total_price||'',
-        s.unit_price||'',
-        s.product_name||'',
-        s.customer_name||'',
-        s.purchase_type||'',
-        '', '', '', '', '', ''
-      ])
-      exportHtmlTable(headers, rows, `b2b-sales-distributor-${new Date().toISOString().slice(0,16).replace(/[-:T]/g,'')}`)
-    } else {
-      const headers = SALE_YOUR_HEADERS
-      const rows = sel.map(s=>[
-        s.purchase_id||'',
-        s.offer_id||'',
-        s.description||'',
-        s.weight||'',
-        '',
-        s.sale_date||'',
-        s.total_price||'',
-        s.unit_price||'',
-        '',
-        '',
-        '',
-        s.product_name||'',
-        '',
-        '',
-        '',
-        s.customer_name||'',
-        s.purchase_type||'',
-        s.offer_id||'',
-        '', '', '', '', '', ''
-      ])
-      exportHtmlTable(headers, rows, `b2b-sales-your-${new Date().toISOString().slice(0,16).replace(/[-:T]/g,'')}`)
-    }
   }
 
   const exportSelectedAddresses = async () => {
@@ -634,6 +596,48 @@ export default function B2BPage() {
     const a = document.createElement('a')
     a.href = url
     a.download = `b2b-addresses-${new Date().toISOString().slice(0,16).replace(/[-:T]/g,'')}.xlsx`
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    URL.revokeObjectURL(url)
+  }
+
+  const exportSelectedDistributions = async () => {
+    const ids = distributions.filter(d => selectedDistributions.includes(d.id)).map(d => d.id)
+    if (ids.length === 0) return
+    const { getApiBaseUrl } = await import("@/lib/api/config");
+    const res = await fetch(`${getApiBaseUrl()}b2b/distributions/export/`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ids })
+    })
+    if (!res.ok) { toast.error('Export failed'); return }
+    const blob = await res.blob()
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `b2b-distributions-${new Date().toISOString().slice(0, 16).replace(/[-:T]/g, '')}.xlsx`
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    URL.revokeObjectURL(url)
+  }
+
+  const exportSelectedOffers = async () => {
+    const ids = offers.filter(o => selectedOffers.includes(o.id)).map(o => o.id)
+    if (ids.length === 0) return
+    const { getApiBaseUrl } = await import("@/lib/api/config");
+    const res = await fetch(`${getApiBaseUrl()}b2b/offers/export/`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ids })
+    })
+    if (!res.ok) { toast.error('Export failed'); return }
+    const blob = await res.blob()
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `b2b-offers-${new Date().toISOString().slice(0, 16).replace(/[-:T]/g, '')}.xlsx`
     document.body.appendChild(a)
     a.click()
     document.body.removeChild(a)
@@ -684,10 +688,15 @@ export default function B2BPage() {
               <h2 className="text-xl font-semibold text-gray-700">{t("offers_title")}</h2>
               <div className="flex gap-2">
                 {selectedOffers.length > 0 && (
-                  <Button variant="destructive" size="sm" onClick={handleBulkDeleteOffers}>
-                    <Trash2 className="w-4 h-4 mr-1" />
-                    {t("delete")} ({selectedOffers.length})
-                  </Button>
+                  <>
+                    <Button variant="destructive" size="sm" onClick={handleBulkDeleteOffers}>
+                      <Trash2 className="w-4 h-4 mr-1" />
+                      {t("delete")} ({selectedOffers.length})
+                    </Button>
+                    <Button size="sm" className="bg-green-600 hover:bg-green-700 text-white" onClick={() => exportSelectedOffers()}>
+                      دانلود اکسل ({selectedOffers.length})
+                    </Button>
+                  </>
                 )}
                 <Button
                   size="sm"
@@ -942,10 +951,15 @@ export default function B2BPage() {
               <h2 className="text-xl font-semibold text-gray-700">{t("distributions_title")}</h2>
               <div className="flex gap-2">
                 {selectedDistributions.length > 0 && (
-                  <Button variant="destructive" size="sm" onClick={handleBulkDeleteDistributions}>
-                    <Trash2 className="w-4 h-4 mr-1" />
-                    {t("delete")} ({selectedDistributions.length})
-                  </Button>
+                  <>
+                    <Button variant="destructive" size="sm" onClick={handleBulkDeleteDistributions}>
+                      <Trash2 className="w-4 h-4 mr-1" />
+                      {t("delete")} ({selectedDistributions.length})
+                    </Button>
+                    <Button size="sm" className="bg-green-600 hover:bg-green-700 text-white" onClick={() => exportSelectedDistributions()}>
+                      دانلود اکسل ({selectedDistributions.length})
+                    </Button>
+                  </>
                 )}
                 <Button
                   size="sm"

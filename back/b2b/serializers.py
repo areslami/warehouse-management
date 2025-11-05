@@ -23,10 +23,12 @@ class B2BOfferSerializer(serializers.ModelSerializer):
 class B2BOfferListSerializer(serializers.ModelSerializer):
     product_name = serializers.SerializerMethodField()
     product_id = serializers.SerializerMethodField()
+    warehouse_receipt_id = serializers.CharField(
+        source='warehouse_receipt.receipt_id', read_only=True)
 
     class Meta:
         model = B2BOffer
-        fields = ['id', 'offer_id', 'warehouse_receipt', 'offer_weight', 'unit_price',
+        fields = ['id', 'offer_id', 'warehouse_receipt', 'warehouse_receipt_id', 'offer_weight', 'unit_price',
                   'total_price', 'offer_type', 'status', 'offer_date', 'offer_exp_date', 'product_name', 'product_id']
 
     def get_product_name(self, obj):

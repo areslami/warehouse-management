@@ -370,6 +370,19 @@ def _fa_payment_label(code: str) -> str:
     return 'سایر'
 
 
+def _fa_status_label(code: str) -> str:
+    m = (code or '').strip()
+    if m in ['active', 'فعال']:
+        return 'فعال'
+    if m in ['pending', 'در انتظار']:
+        return 'در انتظار'
+    if m in ['sold', 'فروخته شده']:
+        return 'فروخته شده'
+    if m in ['expired', 'منقضی', 'منقضی شده']:
+        return 'منقضی شده'
+    return m
+
+
 def _extract_agreements(desc: str):
     p1 = d1 = p2 = d2 = p3 = d3 = ''
     text = (desc or '').replace('\n', ' ')
@@ -665,4 +678,210 @@ def export_addresses_xlsx(request):
     resp = HttpResponse(output.getvalue(
     ), content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
     resp['Content-Disposition'] = 'attachment; filename="b2b-addresses.xlsx"'
+    return resp
+
+
+@api_view(['POST'])
+def export_offers_xlsx(request):
+    from .excel_config import EXCEL_FIELD_MAPPING_OFFER
+    ids = request.data.get('ids', [])
+    qs = B2BOffer.objects.filter(id__in=ids).select_related('warehouse_receipt')
+
+    headers = list(EXCEL_FIELD_MAPPING_OFFER.values())
+    rows = []
+
+    for offer in qs:
+        row = [
+            offer.offer_id or '',
+            offer.warehouse_receipt.receipt_id if offer.warehouse_receipt else '',
+            int(offer.offer_weight or 0),
+            int(offer.unit_price or 0),
+            _fa_status_label(offer.status or ''),
+            _fa_payment_label(offer.offer_type or ''),
+            offer.offer_date.strftime('%Y-%m-%d') if offer.offer_date else '',
+            offer.offer_exp_date.strftime('%Y-%m-%d') if offer.offer_exp_date else '',
+            offer.description or '',
+        ]
+        rows.append(row)
+
+    df = pd.DataFrame(rows, columns=headers)
+    output = BytesIO()
+    with pd.ExcelWriter(output, engine='openpyxl') as writer:
+        df.to_excel(writer, index=False, sheet_name='Offers')
+        ws = writer.book.active
+        ws.sheet_view.rightToLeft = True
+
+        from openpyxl.styles import Font, Alignment, PatternFill, Border, Side
+
+        # Golden yellow header for offers (matching UI color #f6d265)
+        header_fill = PatternFill(fill_type='solid', fgColor='FFF6D265')  # Golden yellow
+        body_fill = PatternFill(fill_type='solid', fgColor='FFF2F2F2')    # Light gray
+        thin_side = Side(style='thin', color='FF000000')
+        thin_border = Border(left=thin_side, right=thin_side, top=thin_side, bottom=thin_side)
+
+        # Style header row
+        for cell in ws[1]:
+            cell.fill = header_fill
+            cell.border = thin_border
+            cell.font = Font(bold=True, color='FF000000')  # Black text for better contrast
+            cell.alignment = Alignment(horizontal='center', vertical='center')
+
+        # Style data rows
+        for row in ws.iter_rows(min_row=2, max_row=ws.max_row, min_col=1, max_col=ws.max_column):
+            for c in row:
+                c.fill = body_fill
+                c.border = thin_border
+
+        # Auto-size columns
+        for col_cells in ws.columns:
+            max_len = max((len(str(c.value)) if c.value is not None else 0) for c in col_cells[:100])
+            ws.column_dimensions[col_cells[0].column_letter].width = min(max(12, max_len + 2), 40)
+
+        ws.freeze_panes = 'A2'
+
+    output.seek(0)
+    resp = HttpResponse(output.getvalue(), content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+    resp['Content-Disposition'] = 'attachment; filename="b2b-offers.xlsx"'
+    return resp
+
+
+@api_view(['POST'])
+def export_distributions_xlsx(request):
+    from .excel_config import EXCEL_FIELD_MAPPING_DISTRIBUTION
+    ids = request.data.get('ids', [])
+    qs = B2BDistribution.objects.filter(id__in=ids).select_related(
+        'warehouse_receipt', 'sales_proforma', 'customer'
+    )
+
+    headers = list(EXCEL_FIELD_MAPPING_DISTRIBUTION.values())
+    rows = []
+
+    for dist in qs:
+        customer_name = ''
+        if dist.customer:
+            customer_name = dist.customer.company_name if dist.customer.customer_type == 'corporate' else dist.customer.full_name
+
+        row = [
+            dist.transfer_id or '',
+            customer_name,
+            dist.warehouse_receipt.receipt_id if dist.warehouse_receipt else '',
+            dist.sales_proforma.serial_number if dist.sales_proforma else '',
+            int(dist.agency_weight or 0),
+            int(dist.unit_price or 0),
+            dist.agency_date.strftime('%Y-%m-%d') if dist.agency_date else '',
+            dist.description or '',
+        ]
+        rows.append(row)
+
+    df = pd.DataFrame(rows, columns=headers)
+    output = BytesIO()
+    with pd.ExcelWriter(output, engine='openpyxl') as writer:
+        df.to_excel(writer, index=False, sheet_name='Distributions')
+        ws = writer.book.active
+        ws.sheet_view.rightToLeft = True
+
+        from openpyxl.styles import Font, Alignment, PatternFill, Border, Side
+
+        # Teal header for distributions (complementary to golden yellow)
+        header_fill = PatternFill(fill_type='solid', fgColor='FF00B5AD')  # Teal
+        body_fill = PatternFill(fill_type='solid', fgColor='FFF2F2F2')    # Light gray
+        thin_side = Side(style='thin', color='FF000000')
+        thin_border = Border(left=thin_side, right=thin_side, top=thin_side, bottom=thin_side)
+
+        # Style header row
+        for cell in ws[1]:
+            cell.fill = header_fill
+            cell.border = thin_border
+            cell.font = Font(bold=True, color='FFFFFFFF')  # White text
+            cell.alignment = Alignment(horizontal='center', vertical='center')
+
+        # Style data rows
+        for row in ws.iter_rows(min_row=2, max_row=ws.max_row, min_col=1, max_col=ws.max_column):
+            for c in row:
+                c.fill = body_fill
+                c.border = thin_border
+
+        # Auto-size columns
+        for col_cells in ws.columns:
+            max_len = max((len(str(c.value)) if c.value is not None else 0) for c in col_cells[:100])
+            ws.column_dimensions[col_cells[0].column_letter].width = min(max(12, max_len + 2), 40)
+
+        ws.freeze_panes = 'A2'
+
+    output.seek(0)
+    resp = HttpResponse(output.getvalue(), content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+    resp['Content-Disposition'] = 'attachment; filename="b2b-distributions.xlsx"'
+    return resp
+
+
+@api_view(['POST'])
+def export_sales_xlsx(request):
+    from .excel_config import EXCEL_FIELD_MAPPING_SALE
+    ids = request.data.get('ids', [])
+    qs = B2BSale.objects.filter(id__in=ids).select_related(
+        'product', 'customer', 'offer', 'b2b_distribution'
+    )
+
+    headers = list(EXCEL_FIELD_MAPPING_SALE.values())
+    rows = []
+
+    for sale in qs:
+        customer_name = ''
+        if sale.customer:
+            customer_name = sale.customer.company_name if sale.customer.customer_type == 'corporate' else sale.customer.full_name
+
+        row = [
+            sale.purchase_id or '',
+            'بله' if sale.is_distributor else 'خیر',
+            sale.offer.offer_id if sale.offer else '',
+            sale.b2b_distribution.transfer_id if sale.b2b_distribution else '',
+            sale.product.name if sale.product else '',
+            customer_name,
+            int(sale.weight or 0),
+            int(sale.unit_price or 0),
+            int(sale.total_price or 0),
+            sale.sale_date.strftime('%Y-%m-%d') if sale.sale_date else '',
+            _fa_payment_label(sale.purchase_type or ''),
+            sale.description or '',
+        ]
+        rows.append(row)
+
+    df = pd.DataFrame(rows, columns=headers)
+    output = BytesIO()
+    with pd.ExcelWriter(output, engine='openpyxl') as writer:
+        df.to_excel(writer, index=False, sheet_name='Sales')
+        ws = writer.book.active
+        ws.sheet_view.rightToLeft = True
+
+        from openpyxl.styles import Font, Alignment, PatternFill, Border, Side
+
+        # Purple header for sales (triadic color harmony with yellow and teal)
+        header_fill = PatternFill(fill_type='solid', fgColor='FF9B59B6')  # Purple
+        body_fill = PatternFill(fill_type='solid', fgColor='FFF2F2F2')    # Light gray
+        thin_side = Side(style='thin', color='FF000000')
+        thin_border = Border(left=thin_side, right=thin_side, top=thin_side, bottom=thin_side)
+
+        # Style header row
+        for cell in ws[1]:
+            cell.fill = header_fill
+            cell.border = thin_border
+            cell.font = Font(bold=True, color='FFFFFFFF')  # White text
+            cell.alignment = Alignment(horizontal='center', vertical='center')
+
+        # Style data rows
+        for row in ws.iter_rows(min_row=2, max_row=ws.max_row, min_col=1, max_col=ws.max_column):
+            for c in row:
+                c.fill = body_fill
+                c.border = thin_border
+
+        # Auto-size columns
+        for col_cells in ws.columns:
+            max_len = max((len(str(c.value)) if c.value is not None else 0) for c in col_cells[:100])
+            ws.column_dimensions[col_cells[0].column_letter].width = min(max(12, max_len + 2), 40)
+
+        ws.freeze_panes = 'A2'
+
+    output.seek(0)
+    resp = HttpResponse(output.getvalue(), content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+    resp['Content-Disposition'] = 'attachment; filename="b2b-sales.xlsx"'
     return resp

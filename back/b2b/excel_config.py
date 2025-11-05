@@ -1,14 +1,42 @@
+# Excel field mappings for B2B Distribution
+EXCEL_FIELD_MAPPING_DISTRIBUTION = {
+    'transfer_id': 'شناسه انتقال',
+    'customer_name': 'نام توزیع کننده',
+    'warehouse_receipt_id': 'شماره رسید انبار',
+    'sales_proforma_serial': 'سریال پیش فاکتور فروش',
+    'agency_weight': 'وزن نمایندگی',
+    'unit_price': 'قیمت واحد',
+    'agency_date': 'تاریخ نمایندگی',
+    'description': 'توضیحات',
+}
+
+# Excel field mappings for B2B Offer
+EXCEL_FIELD_MAPPING_OFFER = {
+    'offer_id': 'شناسه عرضه',
+    'warehouse_receipt_id': 'شماره رسید انبار',
+    'offer_weight': 'وزن عرضه',
+    'unit_price': 'قیمت واحد',
+    'status': 'وضعیت',
+    'offer_type': 'نوع عرضه',
+    'offer_date': 'تاریخ عرضه',
+    'offer_exp_date': 'تاریخ انقضای عرضه',
+    'description': 'توضیحات',
+}
+
+# Excel field mappings for B2B Sale
 EXCEL_FIELD_MAPPING_SALE = {
     'purchase_id': 'شناسه خرید',
-    'cottage_code': 'کد کوتاژ',
-    'weight': 'وزن خرید',
-    'date': 'تاریخ خرید',
-    'total_amount': 'مبلغ پرداختی',
-    'unit_price': 'مبلغ واحد',
-    'product_title': 'عنوان کالا',
+    'is_distributor': 'فروش توزیع کننده',
+    'offer_id': 'شناسه عرضه',
+    'distribution_id': 'شناسه توزیع',
+    'product_name': 'عنوان کالا',
     'customer_name': 'نام خریدار',
-    'payment_method': 'شیوه پرداخت',
-
+    'weight': 'وزن',
+    'unit_price': 'قیمت واحد',
+    'total_price': 'مبلغ کل',
+    'sale_date': 'تاریخ فروش',
+    'purchase_type': 'نوع پرداخت',
+    'description': 'توضیحات',
 }
 EXCEL_FIELD_MAPPING_ADDRESS = {
     "purchase_id": "کد",
@@ -83,9 +111,8 @@ for i in range(1, 4):
         f'agreement_period_{i}'] = f'بازه {i} پرداخت توافقی (روز)'
     EXCEL_FIELD_MAPPING_YOUR_SALE[f'agreement_amount_{i}'] = f'مبلغ بازه {i} توافقی-ریال'
 
-FIELD_MAPPING_SALE_REVERSE = {v: k for k,
-                              v in EXCEL_FIELD_MAPPING_SALE.items()}
-FIELD_MAPPING_ADDRESS_REVERSE = {v: k for k,
-                                 v in EXCEL_FIELD_MAPPING_ADDRESS.items()}
-FIELD_MAPPING_YOUR_SALE_REVERSE = {
-    v: k for k, v in EXCEL_FIELD_MAPPING_YOUR_SALE.items()}
+FIELD_MAPPING_DISTRIBUTION_REVERSE = {v: k for k, v in EXCEL_FIELD_MAPPING_DISTRIBUTION.items()}
+FIELD_MAPPING_OFFER_REVERSE = {v: k for k, v in EXCEL_FIELD_MAPPING_OFFER.items()}
+FIELD_MAPPING_SALE_REVERSE = {v: k for k, v in EXCEL_FIELD_MAPPING_SALE.items()}
+FIELD_MAPPING_ADDRESS_REVERSE = {v: k for k, v in EXCEL_FIELD_MAPPING_ADDRESS.items()}
+FIELD_MAPPING_YOUR_SALE_REVERSE = {v: k for k, v in EXCEL_FIELD_MAPPING_YOUR_SALE.items()}
