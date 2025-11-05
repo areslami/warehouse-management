@@ -190,7 +190,7 @@ export function B2BAddressModal({ trigger, onSubmit, onClose, initialData, readO
                         <Input
                           {...field}
                           readOnly={isEditing}
-                          className={isEditing ? "bg-gray-100 cursor-not-allowed" : ""}
+                          className={isEditing ? "bg-white cursor-not-allowed" : ""}
                           autoFocus={false}
                           tabIndex={isEditing ? -1 : undefined}
                         />

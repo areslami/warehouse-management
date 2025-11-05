@@ -89,12 +89,12 @@ export function SimpleCombobox({
   }, [open]);
 
   return (
-    <div  className={cn("relative", className)}   ref={containerRef}>
+    <div  className={cn("relative max-w-full", className)}   ref={containerRef}>
       <Button
         variant="outline"
         role="combobox"
         aria-expanded={open}
-        className="w-[475px] justify-between"
+        className="w-full justify-between text-right min-w-0 max-w-full"
         disabled={disabled}
         onClick={(e) => {
           e.preventDefault();
@@ -102,9 +102,9 @@ export function SimpleCombobox({
         }}
         type="button"
       >
-      <span className="truncate">
+      <span className="truncate flex-1 min-w-0 overflow-hidden block">
         {selectedOption ? selectedOption.label : placeholder}
-      </span>        
+      </span>
         <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
       </Button>
 

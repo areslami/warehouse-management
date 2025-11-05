@@ -299,7 +299,7 @@ export default function UploadAddressModal({ isOpen, onClose, onSuccess }: Uploa
 
                 <div className="min-h-[80px]">
                   {addressType === "your_address" && (
-                    <div className="w-full">
+                    <div className="w-[475px] space-y-2">
                       <label className="block text-sm font-medium mb-2">{tDist("b2b_offer")}</label>
                       <SimpleCombobox
                         options={offers.map((o: any) => ({
@@ -319,30 +319,31 @@ export default function UploadAddressModal({ isOpen, onClose, onSuccess }: Uploa
                     </div>
                   )}
                   {addressType === "distributor_address" && (
-                    <div className="w-full">
-                      <label className=" text-sm font-medium mb-2">{tDist("distribution")}</label>
-                      <SimpleCombobox
-                        options={distributions.map((d: any) => ({
-                          value: String(d.id),
-                          label: describeDistribution(d as any),
-                          id: d.id,
-                          name: d.product_name,
-                        }))}
-                        value={selectedDistribution ? String(selectedDistribution as any) : ""}
-                        onValueChange={(v) => setSelectedDistribution(v ? Number(v) : "")}
-                        placeholder={tDist("select_distribution")}
-                        searchPlaceholder={tDist("select_distribution")}
-                        showCreateNew={true}
-                        createNewText={tDist("create_new_distribution")}
-                        onCreateNew={() => setShowDistributionModal(true)}
-                        className="w-full"
-                      />
-                    </div>
-                  )}
+                  <div className="w-[475px] space-y-2">
+                    <label className="text-sm font-medium">
+                      {tDist("distribution")}
+                    </label>
+                    <SimpleCombobox
+                      options={distributions.map((d: any) => ({
+                        value: String(d.id),
+                        label: describeDistribution(d as any),
+                        id: d.id,
+                        name: d.product_name,
+                      }))}
+                      value={selectedDistribution ? String(selectedDistribution) : ""}
+                      onValueChange={(v) => setSelectedDistribution(v ? Number(v) : "")}
+                      placeholder={tDist("select_distribution")}
+                      searchPlaceholder={tDist("select_distribution")}
+                      showCreateNew={true}
+                      createNewText={tDist("create_new_distribution")}
+                      onCreateNew={() => setShowDistributionModal(true)}
+                    />
+                  </div>
+                )}
                 </div>
               </div>
               <div className="flex items-center justify-center w-full">
-                <label className="flex flex-col items-center justify-center w-full h-48 border-2 border-gray-300 border-dashed rounded-lg cursor-pointer bg-gray-50 hover:bg-gray-100">
+                <label className="flex flex-col items-center justify-center w-full h-48 border-2 border-gray-300 border-dashed rounded-lg cursor-pointer bg-white hover:bg-gray-50">
                   <div className="flex flex-col items-center justify-center pt-5 pb-6">
                     <FileSpreadsheet className="w-10 h-10 mb-3 text-gray-400" />
                     <p className="mb-2 text-sm text-gray-500">
@@ -481,25 +482,25 @@ export default function UploadAddressModal({ isOpen, onClose, onSuccess }: Uploa
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="text-sm font-medium">{t("allocation_id")}</label>
-                  <div className="mt-1 p-2 bg-gray-50 rounded">
+                  <div className="mt-1 p-2 bg-white border rounded">
                     {previewData.address_data?.allocation_id || "-"}
                   </div>
                 </div>
                 <div>
                   <label className="text-sm font-medium">{t("purchase_id")}</label>
-                  <div className="mt-1 p-2 bg-gray-50 rounded">
+                  <div className="mt-1 p-2 bg-white border rounded">
                     {previewData.address_data?.purchase_id || "-"}
                   </div>
                 </div>
                 <div>
                   <label className="text-sm font-medium">{t("weight")}</label>
-                  <div className="mt-1 p-2 bg-gray-50 rounded">
+                  <div className="mt-1 p-2 bg-white border rounded">
                     {formatNumber(previewData.address_data?.total_weight_purchased || 0)} kg
                   </div>
                 </div>
                 <div>
                   <label className="text-sm font-medium">{t("amount")}</label>
-                  <div className="mt-1 p-2 bg-gray-50 rounded">
+                  <div className="mt-1 p-2 bg-white border rounded">
                     {formatNumber(previewData.address_data?.payment_amount || 0)}
                   </div>
                 </div>
@@ -536,7 +537,7 @@ export default function UploadAddressModal({ isOpen, onClose, onSuccess }: Uploa
                       size="sm"
                       variant="outline"
                       onClick={() => setShowProductModal(true)}
-                      className="bg-white hover:bg-gray-50"
+                      className="bg-white hover:bg-white"
                     >
                       {t("create_product")}
                     </Button>
@@ -547,7 +548,7 @@ export default function UploadAddressModal({ isOpen, onClose, onSuccess }: Uploa
               {previewData.address_data?.description && (
                 <div>
                   <label className="text-sm font-medium">{t("description")}</label>
-                  <div className="mt-1 p-3 bg-gray-50 rounded">
+                  <div className="mt-1 p-3 bg-white border rounded">
                     {previewData.address_data.description}
                   </div>
                 </div>

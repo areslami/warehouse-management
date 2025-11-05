@@ -713,7 +713,7 @@ export default function B2BPage() {
                   </CollapsibleTrigger>
                 </div>
                 <CollapsibleContent dir="rtl">
-                  <div className="bg-gray-50 border rounded-md p-4 space-y-4 mb-4">
+                  <div className="bg-white border rounded-md p-4 space-y-4 mb-4">
                     <div className="grid grid-cols-6 gap-4">
                     <div>
                       <div className="text-sm font-medium mb-1">شناسه عرضه</div>
@@ -971,7 +971,7 @@ export default function B2BPage() {
                   </CollapsibleTrigger>
                 </div>
                 <CollapsibleContent dir="rtl">
-                  <div className="bg-gray-50 border rounded-md p-4 space-y-4 mb-4">
+                  <div className="bg-white border rounded-md p-4 space-y-4 mb-4">
                     <div className="grid grid-cols-6 gap-4">
                       <div>
                         <div className="text-sm font-medium mb-1">{t('transfer_id')}</div>
@@ -1565,33 +1565,35 @@ export default function B2BPage() {
                 </div>
                 <CollapsibleContent dir="rtl">
                   <div className="grid grid-cols-6 gap-4 mb-4">
-                    <div>
+                    <div className="min-w-0">
                       <div className="text-sm font-medium mb-1">{t('allocation_id')}</div>
                       <Input value={addressFilters.allocation_id} onChange={e=>setAddressFilters({...addressFilters, allocation_id:e.target.value})} />
                     </div>
-                    <div>
+                    <div className="min-w-0">
                       <div className="text-sm font-medium mb-1">فروش بازارگاه</div>
-                      <SimpleCombobox
+                      <SearchableSelect
                         options={[{ value: '', label: 'همه فروش های بازارگاه' }, ...Array.from(new Set((sales || []).map(s => s.purchase_id).filter(Boolean))).map((id: string) => ({ value: id, label: id }))]}
                         value={addressFilters.purchase_id}
                         onValueChange={(v) => setAddressFilters({ ...addressFilters, purchase_id: v })}
                         placeholder="فروش بازارگاه"
                         searchPlaceholder="فروش بازارگاه"
                         showCreateNew={false}
+                        className="overflow-hidden"
                       />
                     </div>
-                    <div>
+                    <div className="min-w-0">
                       <div className="text-sm font-medium mb-1">{t('product')}</div>
-                      <SimpleCombobox
+                      <SearchableSelect
                         options={[{ value: '', label: 'همه محصولات' }, ...Array.from(new Set((addresses || []).map(a => a.product_name).filter(Boolean))).map((name: string) => ({ value: name, label: name }))]}
                         value={addressFilters.product_name}
                         onValueChange={(v) => setAddressFilters({ ...addressFilters, product_name: v })}
                         placeholder={t('product')}
                         searchPlaceholder={t('product')}
                         showCreateNew={false}
+                        className="overflow-hidden"
                       />
                     </div>
-                    <div>
+                    <div className="min-w-0">
                       <div className="text-sm font-medium mb-1">{t('customer')}</div>
                       <SearchableSelect
                         options={[
@@ -1612,7 +1614,7 @@ export default function B2BPage() {
                         }}
                       />
                     </div>
-                    <div>
+                    <div className="min-w-0">
                       <div className="text-sm font-medium mb-1">{t('receiver')}</div>
                       <SearchableSelect
                         options={[
@@ -1633,32 +1635,32 @@ export default function B2BPage() {
                         }}
                       />
                     </div>
-                    <div>
+                    <div className="min-w-0">
                       <div className="text-sm font-medium mb-1">{t('weight')}</div>
                       <div className="grid grid-cols-2 gap-2">
                         <Input placeholder="حداقل" value={addressFilters.weight_min} onChange={e=>setAddressFilters({...addressFilters, weight_min:e.target.value})} />
                         <Input placeholder="حداکثر" value={addressFilters.weight_max} onChange={e=>setAddressFilters({...addressFilters, weight_max:e.target.value})} />
                       </div>
                     </div>
-                    <div>
+                    <div className="min-w-0">
                       <div className="text-sm font-medium mb-1">{tCommon('detail_labels.unit_price')}</div>
                       <div className="grid grid-cols-2 gap-2">
                         <Input placeholder="حداقل" value={addressFilters.unit_price_min} onChange={e=>setAddressFilters({...addressFilters, unit_price_min:e.target.value})} />
                         <Input placeholder="حداکثر" value={addressFilters.unit_price_max} onChange={e=>setAddressFilters({...addressFilters, unit_price_max:e.target.value})} />
                       </div>
                     </div>
-                    <div>
+                    <div className="min-w-0">
                       <div className="text-sm font-medium mb-1">{t('amount')}</div>
                       <div className="grid grid-cols-2 gap-2">
                         <Input placeholder="حداقل" value={addressFilters.payment_amount_min} onChange={e=>setAddressFilters({...addressFilters, payment_amount_min:e.target.value})} />
                         <Input placeholder="حداکثر" value={addressFilters.payment_amount_max} onChange={e=>setAddressFilters({...addressFilters, payment_amount_max:e.target.value})} />
                       </div>
                     </div>
-                    <div>
+                    <div className="min-w-0">
                       <div className="text-sm font-medium mb-1">تاریخ از</div>
                       <PersianDatePicker value={addressFilters.date_from} onChange={(v)=>setAddressFilters({...addressFilters, date_from:v})} placeholder="انتخاب تاریخ" />
                     </div>
-                    <div>
+                    <div className="min-w-0">
                       <div className="text-sm font-medium mb-1">تاریخ تا</div>
                       <PersianDatePicker value={addressFilters.date_to} onChange={(v)=>setAddressFilters({...addressFilters, date_to:v})} placeholder="انتخاب تاریخ" />
                     </div>
