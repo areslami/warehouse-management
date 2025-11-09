@@ -25,6 +25,7 @@ import { SalesProforma } from "@/lib/interfaces/finance";
 import { describeWarehouseReceipt, describeParty } from "@/lib/utils/label-utils";
 import { getPartyDisplayName } from "@/lib/utils/party-utils";
 import { PersianDatePicker } from "../../ui/persian-date-picker";
+import { formatNumber } from "@/lib/utils/number-format";
 
 export type B2BDistributionFormData = {
   transfer_id: string;
@@ -347,7 +348,7 @@ export function B2BDistributionModal({ trigger, onSubmit, onClose, initialData, 
                         <span>{t("agency-weight")}</span>
                         {proformaMaxWeight && (
                           <span className="mr-2 text-sm font-normal text-muted-foreground">
-                            - نهایت {Number(proformaMaxWeight).toLocaleString('fa-IR')} کیلوگرم
+                            - نهایت {formatNumber(proformaMaxWeight)} کیلوگرم
                           </span>
                         )}
                       </FormLabel>
