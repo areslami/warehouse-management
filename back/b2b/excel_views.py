@@ -3,7 +3,7 @@ from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from django.http import HttpResponse
 from django.db import transaction, models
-from datetime import datetime
+from datetime import datetime, date
 from .utils import parse_html_table, process_address_row, process_sale_row, process_your_sale_row
 from .models import B2BDistribution, B2BSale, B2BOffer, B2BAddress
 from .serializers import B2BDistributionSerializer, B2BAddressSerializer, B2BSaleSerializer
@@ -16,6 +16,25 @@ import jdatetime
 import re
 import os
 from django.conf import settings
+
+
+def _format_jalali_date(value, fmt='%Y/%m/%d'):
+    """
+    Convert a Gregorian datetime/date to a Jalali date string suitable for Excel exports.
+    Returns an empty string when value is falsy or unsupported.
+    """
+    if not value:
+        return ''
+
+    if isinstance(value, jdatetime.datetime) or isinstance(value, jdatetime.date):
+        return value.strftime(fmt)
+
+    if isinstance(value, datetime):
+        value = value.date()
+    elif not isinstance(value, date):
+        return ''
+
+    return jdatetime.date.fromgregorian(date=value).strftime(fmt)
 
 
 @api_view(['POST'])
@@ -428,7 +447,7 @@ def export_addresses_xlsx(request):
         row = [
             a.purchase_id or '',
             int(a.total_weight_purchased or 0),
-            a.purchase_date.strftime('%Y-%m-%d') if a.purchase_date else '',
+            _format_jalali_date(a.purchase_date),
             int(a.unit_price or 0),
             a.tracking_number or '',
             a.province or '',
@@ -440,8 +459,7 @@ def export_addresses_xlsx(request):
             getattr(a, 'credit_description', '') or '',
             _fa_payment_label(getattr(a, 'payment_method', '')),
             (offer.offer_id if offer else ''),
-            (jdatetime.date.fromgregorian(date=a.created_at.date()).strftime(
-                '%Y/%m/%d') if getattr(a, 'created_at', None) else ''),
+            _format_jalali_date(getattr(a, 'created_at', None)),
             a.allocation_id or '',
             (customer.company_name or customer.full_name) if customer else '',
             (customer.national_id or customer.personal_code or '') if customer else '',
@@ -698,8 +716,8 @@ def export_offers_xlsx(request):
             int(offer.unit_price or 0),
             _fa_status_label(offer.status or ''),
             _fa_payment_label(offer.offer_type or ''),
-            offer.offer_date.strftime('%Y-%m-%d') if offer.offer_date else '',
-            offer.offer_exp_date.strftime('%Y-%m-%d') if offer.offer_exp_date else '',
+            _format_jalali_date(offer.offer_date),
+            _format_jalali_date(offer.offer_exp_date),
             offer.description or '',
         ]
         rows.append(row)
@@ -768,7 +786,7 @@ def export_distributions_xlsx(request):
             dist.sales_proforma.serial_number if dist.sales_proforma else '',
             int(dist.agency_weight or 0),
             int(dist.unit_price or 0),
-            dist.agency_date.strftime('%Y-%m-%d') if dist.agency_date else '',
+            _format_jalali_date(dist.agency_date),
             dist.description or '',
         ]
         rows.append(row)
@@ -840,7 +858,7 @@ def export_sales_xlsx(request):
             int(sale.weight or 0),
             int(sale.unit_price or 0),
             int(sale.total_price or 0),
-            sale.sale_date.strftime('%Y-%m-%d') if sale.sale_date else '',
+            _format_jalali_date(sale.sale_date),
             _fa_payment_label(sale.purchase_type or ''),
             sale.description or '',
         ]
