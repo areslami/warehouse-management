@@ -4,6 +4,8 @@ import type {
   Customer,
   Receiver,
   ShippingCompany,
+  Indicator,
+  IndicatorSection,
 } from "./../interfaces/core";
 import { getCoreContext } from "../core-data-context";
 import { apiFetch } from "./api-client";
@@ -269,4 +271,74 @@ export const deleteShippingCompany = async (id: number) => {
   }
 
   return result;
+};
+
+// ------------------  Indicator ------------------
+const indicatorsBaseUrl = () => `${API_BASE_URL()}indicators/`;
+
+const buildIndicatorsUrl = (
+  params?: Record<string, string | number | boolean>
+) => {
+  if (!params || Object.keys(params).length === 0) {
+    return indicatorsBaseUrl();
+  }
+
+  const url = new URL(indicatorsBaseUrl());
+  Object.entries(params).forEach(([key, value]) => {
+    if (value !== undefined && value !== null) {
+      url.searchParams.append(key, String(value));
+    }
+  });
+  return url.toString();
+};
+
+export const fetchIndicators = (params?: {
+  belongs?: IndicatorSection;
+  is_default?: boolean | string;
+}) => apiFetch<Indicator[]>(buildIndicatorsUrl(params));
+
+type IndicatorPayload = {
+  name: string;
+  belongs: IndicatorSection;
+};
+
+export const createIndicator = async (data: IndicatorPayload) =>
+  apiFetch<Indicator>(indicatorsBaseUrl(), {
+    method: "POST",
+    body: data,
+  });
+
+export const updateIndicator = async (
+  id: number,
+  data: Partial<IndicatorPayload>
+) =>
+  apiFetch<Indicator>(`${indicatorsBaseUrl()}${id}/`, {
+    method: "PATCH",
+    body: data,
+  });
+
+export const setDefaultIndicator = async (id: number) =>
+  apiFetch<Indicator>(`${indicatorsBaseUrl()}${id}/set-default/`, {
+    method: "POST",
+  });
+
+export const incrementIndicatorCounter = async (id: number) =>
+  apiFetch<Indicator>(`${indicatorsBaseUrl()}${id}/increment/`, {
+    method: "POST",
+  });
+
+export const deleteIndicator = async (id: number) =>
+  apiFetch(`${indicatorsBaseUrl()}${id}/`, { method: "DELETE" });
+
+export const fetchDefaultIndicator = async (
+  section: IndicatorSection
+): Promise<Indicator | null> => {
+  const list = await fetchIndicators({
+    belongs: section,
+    is_default: "true",
+  });
+  if (Array.isArray(list) && list.length > 0) {
+    return list[0];
+  }
+  return null;
 };

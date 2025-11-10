@@ -20,7 +20,8 @@ import { getPartyDisplayName } from "@/lib/utils/party-utils";
 import { describeParty, describeProduct } from "@/lib/utils/label-utils";
 import { CustomerFormData, CustomerModal } from "../customer-modal";
 import { ProductFormData, ProductModal } from "../product-modal";
-import { createCustomer, createProduct } from "@/lib/api/core";
+import { createCustomer, createProduct, incrementIndicatorCounter } from "@/lib/api/core";
+import { useDefaultIndicator } from "@/lib/hooks/use-default-indicator";
 
 export type SalesProformaFormData = {
   serial_number: string;
@@ -121,6 +122,13 @@ export function SalesProformaModal({ trigger, onSubmit, onClose, initialData, re
     },
   });
 
+  const defaultIndicator = useDefaultIndicator({
+    section: "sale_proforma",
+    form,
+    fieldName: "serial_number",
+    enabled: !readOnly && !isEditing && !initialData?.serial_number,
+  });
+
   const { fields, append, remove } = useFieldArray({
     control: form.control,
     name: "lines",
@@ -129,6 +137,13 @@ export function SalesProformaModal({ trigger, onSubmit, onClose, initialData, re
   const handleSubmit = async (data: any) => {
     if (onSubmit) {
       await onSubmit(data);
+    }
+    if (!readOnly && !isEditing && defaultIndicator) {
+      try {
+        await incrementIndicatorCounter(defaultIndicator.id);
+      } catch (error) {
+        console.error("Failed to increment indicator counter:", error);
+      }
     }
     if (trigger) {
       setOpen(false);

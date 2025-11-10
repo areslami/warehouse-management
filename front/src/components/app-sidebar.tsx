@@ -15,12 +15,14 @@ import { B2BOfferFormData, B2BOfferModal } from "./modals/b2b/b2b-offer-modal";
 import { B2BDistributionFormData, B2BDistributionModal } from "./modals/b2b/b2b-distribution-modal";
 import { B2BAddressFormData, B2BAddressModal } from "./modals/b2b/b2b-address-modal";
 
-import { Warehouse, DollarSign, ChevronLeft, BadgeCent, Package, Users, Plus } from "lucide-react";
+import { Warehouse, DollarSign, ChevronLeft, BadgeCent, Package, Users, Plus, Settings } from "lucide-react";
 import { createWarehouseReceipt, createDispatchIssue, createDeliveryFulfillment } from "@/lib/api/warehouse";
 import { createB2BOffer, createB2BDistribution, createB2BAddress, createB2BSale } from "@/lib/api/b2b";
 import Link from "next/link";
 import { B2BSaleFormData, B2BSaleModal } from "./modals/b2b/b2b-sale-modal";
 import { DeliveryFulfillmentCreate, DispatchIssueCreate } from "@/lib/interfaces/warehouse";
+import { IndicatorFormData, IndicatorModal } from "./modals/settings/indicator-modal";
+import { createIndicator } from "@/lib/api/core";
 // Define form data types for modals that don't export them
 type DispatchIssueFormData = {
   dispatch_id: string;
@@ -402,6 +404,54 @@ export function AppSidebar() {
                                                 openModal(PurchaseProformaModal as React.ComponentType, {
                                                     onSubmit: (data: PurchaseProformaFormData) => {
                                                         console.log('Purchase Proforma Data:', data);
+                                                    }
+                                                })
+                                            }}
+                                        >
+                                            <Plus className="w-3 h-3" />
+                                        </button>
+                                    </div>
+                                </SidebarMenuSub>
+                            </CollapsibleContent>
+                        </SidebarMenuItem>
+                    </Collapsible>
+
+                    <Collapsible defaultOpen className="group/collapsible my-2">
+                        <SidebarMenuItem>
+                            <div className="flex items-center">
+                                <a href="/settings" className="flex-1">
+                                    <SidebarMenuButton className="bg-[#2f323a] hover:bg-[#40444f] hover:text-black transition-colors duration-300 my-0.5 w-full">
+                                        <h3 className="flex items-center gap-2 text-white text-lg cursor-pointer">
+                                            <Settings />
+                                            <span>{t("settings")}</span>
+                                        </h3>
+                                    </SidebarMenuButton>
+                                </a>
+                                <CollapsibleTrigger asChild>
+                                    <button className="p-2 text-white hover:text-gray-300 transition-colors duration-300">
+                                        <ChevronLeft className="h-4 w-4 transition-transform duration-200 group-data-[state=open]/collapsible:rotate-270" />
+                                    </button>
+                                </CollapsibleTrigger>
+                            </div>
+                            <CollapsibleContent className="mx-3.5 mt-0.5">
+                                <SidebarMenuSub className="border-l-0 border-r-1 border-gray-50/50 hover:border-gray-100 px-2.5 my-0 py-1.5">
+                                    <div className="flex items-center justify-between w-full group">
+                                        <Link href="/settings" className="flex-1">
+                                            <SidebarMenuSubItem className="text-sm text-white/50 px-1 hover:text-white cursor-pointer">{t("indicator")}</SidebarMenuSubItem>
+                                        </Link>
+                                        <button
+                                            className="opacity-0 group-hover:opacity-100 p-1 text-white/50 hover:text-white transition-opacity"
+                                            onClick={() => {
+                                                openModal(IndicatorModal as React.ComponentType, {
+                                                    onSubmit: async (data: IndicatorFormData) => {
+                                                        try {
+                                                            await createIndicator(data);
+                                                            toast.success(t("indicator") + ' - ' + tCommon('toast_messages.create_success_suffix'));
+                                                        } catch (error) {
+                                                            console.error('Error creating indicator:', error);
+                                                            toast.error(tCommon('toast_messages.indicator_error'));
+                                                            throw error;
+                                                        }
                                                     }
                                                 })
                                             }}

@@ -25,8 +25,9 @@ import { ReceiverFormData, ReceiverModal } from "../receiver-modal";
 import { ShippingCompanyFormData, ShippingCompanyModal } from "../shipping-company-modal";
 import { SalesProformaFormData, SalesProformaModal } from "../finance/salesproforma-modal";
 import { createWarehouse } from "@/lib/api/warehouse";
-import { createProduct, createReceiver, createShippingCompany } from "@/lib/api/core";
+import { createProduct, createReceiver, createShippingCompany, incrementIndicatorCounter } from "@/lib/api/core";
 import { createSalesProforma } from "@/lib/api/finance";
+import { useDefaultIndicator } from "@/lib/hooks/use-default-indicator";
 
 type DispatchIssueFormData = {
   dispatch_id: string;
@@ -123,6 +124,13 @@ export function DispatchIssueModal({ trigger, onSubmit, onClose, initialData, is
     },
   });
 
+  const defaultIndicator = useDefaultIndicator({
+    section: "dispatch_issue",
+    form,
+    fieldName: "dispatch_id",
+    enabled: !isEditing && !initialData?.dispatch_id,
+  });
+
   const { fields, append, remove } = useFieldArray({
     control: form.control,
     name: "items",
@@ -132,6 +140,13 @@ export function DispatchIssueModal({ trigger, onSubmit, onClose, initialData, is
     try {
       if (onSubmit) {
         await onSubmit(data);
+      }
+      if (!isEditing && defaultIndicator) {
+        try {
+          await incrementIndicatorCounter(defaultIndicator.id);
+        } catch (error) {
+          console.error("Failed to increment indicator counter:", error);
+        }
       }
       // Only close and reset if successful
       if (trigger) {

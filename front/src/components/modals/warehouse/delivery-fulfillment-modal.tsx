@@ -21,7 +21,7 @@ import { describeWarehouseReceipt, describeB2BAddress, describeShippingCompany, 
 import { ProductFormData, ProductModal } from "../product-modal";
 import { ShippingCompanyFormData, ShippingCompanyModal } from "../shipping-company-modal";
 import { B2BAddressFormData, B2BAddressModal } from "../b2b/b2b-address-modal";
-import { createProduct, createShippingCompany } from "@/lib/api/core";
+import { createProduct, createShippingCompany, incrementIndicatorCounter } from "@/lib/api/core";
 import { fetchB2BAddresss, createB2BAddress, fetchB2BSales, fetchB2BDistributions, fetchB2BOffers, fetchB2BAddressById, fetchB2BDistributionById, fetchB2BOfferById } from "@/lib/api/b2b";
 import { fetchWarehouseReceipts, fetchWarehouseReceiptById } from "@/lib/api/warehouse";
 import { B2BDistribution, B2BOffer, B2BSale, B2BAddress } from "@/lib/interfaces/b2b";
@@ -30,6 +30,7 @@ import { describeDistribution, describeOffer } from "@/lib/utils/label-utils";
 import { B2BDistributionModal } from "../b2b/b2b-distribution-modal";
 import { B2BOfferModal } from "../b2b/b2b-offer-modal";
 import { WarehouseReceiptModal } from "./warehouse-receipt-modal";
+import { useDefaultIndicator } from "@/lib/hooks/use-default-indicator";
 
 type DeliveryFulfillmentFormData = {
   delivery_id: string;
@@ -201,6 +202,13 @@ export function DeliveryFulfillmentModal({ trigger, onSubmit, onClose, initialDa
     },
   });
 
+  const defaultIndicator = useDefaultIndicator({
+    section: "delivery_fulfillment",
+    form,
+    fieldName: "delivery_id",
+    enabled: !isEditing && !initialData?.delivery_id,
+  });
+
   const { fields, append, remove } = useFieldArray({
     control: form.control,
     name: "items",
@@ -340,6 +348,13 @@ export function DeliveryFulfillmentModal({ trigger, onSubmit, onClose, initialDa
     try {
       if (onSubmit) {
         await onSubmit(data);
+      }
+      if (!isEditing && defaultIndicator) {
+        try {
+          await incrementIndicatorCounter(defaultIndicator.id);
+        } catch (error) {
+          console.error("Failed to increment indicator counter:", error);
+        }
       }
       // Only close and reset if successful
       if (trigger) {

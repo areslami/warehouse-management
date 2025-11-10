@@ -25,6 +25,8 @@ import { PurchaseProformaFormData, PurchaseProformaModal } from "../finance/purc
 import { createWarehouse, fetchWarehouseReceipts } from "@/lib/api/warehouse";
 import { createProduct } from "@/lib/api/core";
 import { createPurchaseProforma } from "@/lib/api/finance";
+import { useDefaultIndicator } from "@/lib/hooks/use-default-indicator";
+import { incrementIndicatorCounter } from "@/lib/api/core";
 
 export type WarehouseReceiptFormData = {
   id?: number;
@@ -156,6 +158,13 @@ export function WarehouseReceiptModal({ trigger, onSubmit, onClose, initialData,
     },
   });
 
+  const defaultIndicator = useDefaultIndicator({
+    section: "warehouse_receipt",
+    form,
+    fieldName: "receipt_id",
+    enabled: !readOnly && !isEditing && !initialData?.receipt_id,
+  });
+
   const { fields, append, remove } = useFieldArray({
     control: form.control,
     name: "items",
@@ -182,6 +191,13 @@ export function WarehouseReceiptModal({ trigger, onSubmit, onClose, initialData,
 
       if (onSubmit) {
         await onSubmit(submissionData);
+      }
+      if (!readOnly && !isEditing && defaultIndicator) {
+        try {
+          await incrementIndicatorCounter(defaultIndicator.id);
+        } catch (error) {
+          console.error("Failed to increment indicator counter:", error);
+        }
       }
       if (trigger) {
         setOpen(false);

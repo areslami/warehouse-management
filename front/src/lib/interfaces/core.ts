@@ -69,3 +69,18 @@ export interface ShippingCompany {
   created_at: string;
   updated_at: string;
 }
+
+export type IndicatorSection =
+  | "warehouse_receipt"
+  | "dispatch_issue"
+  | "delivery_fulfillment"
+  | "sale_proforma"
+  | "purchase_proforma";
+
+export interface Indicator {
+  id: number;
+  name: string;
+  belongs: IndicatorSection | string;
+  counter: number;
+  is_default: boolean;
+}

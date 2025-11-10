@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Supplier, Customer, Receiver, Product
+from .models import Supplier, Customer, Receiver, Product, Indicator
 
 
 
@@ -117,3 +117,9 @@ class ProductListSerializer(serializers.ModelSerializer):
             'id', 'name', 'code', 'b2bcode', 'b2bregion',
             'category', 'description', 'created_at', 'updated_at'
         ]
+
+
+class IndicatorSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Indicator
+        fields = ['id', 'name', 'belongs', 'counter', 'is_default']
