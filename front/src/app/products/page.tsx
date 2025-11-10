@@ -13,6 +13,7 @@ import {
   createProduct, updateProduct, deleteProduct,
 } from "@/lib/api/core";
 import { handleApiErrorWithToast } from "@/lib/api/error-toast-handler";
+import { convertEnglishToPersianNumbers } from "@/lib/utils/number-format";
 
 export default function ProductsPage() {
   const t = useTranslations("pages.product");
@@ -21,6 +22,11 @@ export default function ProductsPage() {
   const { products, refreshData } = useCoreData();
   const [showProductModal, setShowProductModal] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
+
+  const toPersianDigits = (value: string | number | null | undefined) => {
+    if (value === null || value === undefined || value === "") return "";
+    return convertEnglishToPersianNumbers(String(value));
+  };
 
   const handleDeleteProduct = async (id: number) => {
     if (confirm(t("confirm_delete_product"))) {
@@ -93,7 +99,7 @@ export default function ProductsPage() {
                         </Button>
                       </div>
                     </div>
-                    <p className="text-sm text-gray-600">{tCommon('product_labels.product_code')} {product.code}</p>
+                    <p className="text-sm text-gray-600">{tCommon('product_labels.product_code')} {toPersianDigits(product.code)}</p>
                     {product.category && (
                       <p className="text-sm text-gray-600">{tCommon('product_labels.product_category')}<span className="text-black mr-1 font-bold">{product.category}</span></p>
                     )}

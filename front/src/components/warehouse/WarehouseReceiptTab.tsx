@@ -19,7 +19,7 @@ import { WarehouseReceiptModal } from "@/components/modals/warehouse/warehouse-r
 import {
   filterByWarehouse,
 } from "@/lib/utils/warehouse-utils";
-import { formatNumber } from "@/lib/utils/number-format";
+import { formatNumber, convertEnglishToPersianNumbers } from "@/lib/utils/number-format";
 import { Button } from "../ui/button";
 import { Edit, Plus, Trash2, ChevronUp, ChevronDown } from "lucide-react";
 import { Input } from "../ui/input";
@@ -50,6 +50,11 @@ export function WarehouseReceiptTab({ selectedWarehouseId }: WarehouseReceiptTab
     cottage_serial_number: "",
     proforma_serial: "",
   });
+
+  const toPersianDigits = (value: string | number | null | undefined, fallback = "") => {
+    if (value === null || value === undefined || value === "") return fallback;
+    return convertEnglishToPersianNumbers(String(value));
+  };
 
   const loadReceipts = useCallback(async () => {
     setLoading(true);
@@ -276,9 +281,9 @@ export function WarehouseReceiptTab({ selectedWarehouseId }: WarehouseReceiptTab
             <TableBody>
               {filteredReceipts.map((receipt, index) => (
                 <TableRowComponent key={receipt.id}>
-                  <TableCell className="text-right font-medium">{index + 1}</TableCell>
-                  <TableCell>{receipt.id}</TableCell>
-                  <TableCell>{receipt.receipt_id || '-'}</TableCell>
+                  <TableCell className="text-right font-medium">{toPersianDigits(index + 1)}</TableCell>
+                  <TableCell>{toPersianDigits(receipt.id)}</TableCell>
+                  <TableCell>{toPersianDigits(receipt.receipt_id, '-')}</TableCell>
                   <TableCell>{getReceiptTypeLabel(receipt.receipt_type)}</TableCell>
                   <TableCell>{receipt.warehouse_name || '-'}</TableCell>
                   <TableCell><PersianDateTableCell date={receipt.date} /></TableCell>

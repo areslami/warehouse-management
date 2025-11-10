@@ -29,6 +29,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { convertEnglishToPersianNumbers } from "@/lib/utils/number-format";
 
 export default function PartiesPage() {
   const t = useTranslations("pages.parties");
@@ -48,6 +49,11 @@ export default function PartiesPage() {
   const [sheetOpen, setSheetOpen] = useState(false);
   const [selectedItem, setSelectedItem] = useState<Supplier | Customer | Receiver | ShippingCompany | null>(null);
   const [selectedType, setSelectedType] = useState<'supplier' | 'customer' | 'receiver' | 'shipping'>('supplier');
+
+  const toPersianDigits = (value: string | number | null | undefined, fallback = "") => {
+    if (value === null || value === undefined || value === "") return fallback;
+    return convertEnglishToPersianNumbers(String(value));
+  };
 
   const handleDeleteSupplier = async (id: number) => {
     if (confirm(t("confirm_delete_supplier"))) {
@@ -187,9 +193,9 @@ export default function PartiesPage() {
                     <TableRow key={supplier.id} className="cursor-pointer hover:bg-gray-50" onClick={() => handleRowClick(supplier, 'supplier')}>
                       <TableCell className="font-medium">{getPartyDisplayName(supplier)}</TableCell>
                       <TableCell>{supplier.supplier_type === "corporate" ? tCommon('party_types.corporate') : tCommon('party_types.individual')}</TableCell>
-                      <TableCell>{supplier.phone}</TableCell>
+                      <TableCell>{toPersianDigits(supplier.phone)}</TableCell>
                       <TableCell>{supplier.address}</TableCell>
-                      <TableCell>{supplier.economic_code}</TableCell>
+                      <TableCell>{toPersianDigits(supplier.economic_code)}</TableCell>
                       <TableCell className="text-center">
                         <div className="flex gap-2 justify-center">
                           <Button
@@ -261,9 +267,9 @@ export default function PartiesPage() {
                     <TableRow key={customer.id} className="cursor-pointer hover:bg-gray-50" onClick={() => handleRowClick(customer, 'customer')}>
                       <TableCell className="font-medium">{getPartyDisplayName(customer)}</TableCell>
                       <TableCell>{customer.customer_type === "corporate" ? tCommon('party_types.corporate') : tCommon('party_types.individual')}</TableCell>
-                      <TableCell>{customer.phone}</TableCell>
+                      <TableCell>{toPersianDigits(customer.phone)}</TableCell>
                       <TableCell>{customer.address}</TableCell>
-                      <TableCell>{customer.economic_code}</TableCell>
+                      <TableCell>{toPersianDigits(customer.economic_code)}</TableCell>
                       <TableCell className="text-center">
                         <div className="flex gap-2 justify-center">
                           <Button
@@ -336,10 +342,10 @@ export default function PartiesPage() {
                     <TableRow key={receiver.id} className="cursor-pointer hover:bg-gray-50" onClick={() => handleRowClick(receiver, 'receiver')}>
                       <TableCell className="font-medium">{getPartyDisplayName(receiver)}</TableCell>
                       <TableCell>{receiver.receiver_type === "corporate" ? tCommon('party_types.corporate') : tCommon('party_types.individual')}</TableCell>
-                      <TableCell>{receiver.phone}</TableCell>
+                      <TableCell>{toPersianDigits(receiver.phone)}</TableCell>
                       <TableCell>{receiver.address}</TableCell>
-                      <TableCell>{receiver.unique_id}</TableCell>
-                      <TableCell>{receiver.economic_code}</TableCell>
+                      <TableCell>{toPersianDigits(receiver.unique_id)}</TableCell>
+                      <TableCell>{toPersianDigits(receiver.economic_code)}</TableCell>
                       <TableCell className="text-center">
                         <div className="flex gap-2 justify-center">
                           <Button
@@ -409,8 +415,8 @@ export default function PartiesPage() {
                   {filteredShipping.map((company) => (
                     <TableRow key={company.id} className="cursor-pointer hover:bg-gray-50" onClick={() => handleRowClick(company, 'shipping')}>
                       <TableCell className="font-medium">{company.name}</TableCell>
-                      <TableCell>{company.contact_person}</TableCell>
-                      <TableCell>{company.phone}</TableCell>
+                      <TableCell>{toPersianDigits(company.contact_person)}</TableCell>
+                      <TableCell>{toPersianDigits(company.phone)}</TableCell>
                       <TableCell>{company.address}</TableCell>
                       <TableCell className="text-center">
                         <div className="flex gap-2 justify-center">
@@ -527,34 +533,34 @@ export default function PartiesPage() {
                     {selectedItem[`${selectedType}_type`] === "corporate" ? (
                       <>
                         <div><strong>{tCommon('detail_labels.company_name_label')}</strong> {selectedItem.company_name || '-'}</div>
-                        <div><strong>{tCommon('detail_labels.national_id')}</strong> {selectedItem.national_id || '-'}</div>
+                        <div><strong>{tCommon('detail_labels.national_id')}</strong> {toPersianDigits(selectedItem.national_id, '-')}</div>
                       </>
                     ) : (
                       <>
                         <div><strong>{tCommon('detail_labels.full_name')}</strong> {selectedItem.full_name || '-'}</div>
-                        <div><strong>{tCommon('detail_labels.personal_code')}</strong> {selectedItem.personal_code || '-'}</div>
+                        <div><strong>{tCommon('detail_labels.personal_code')}</strong> {toPersianDigits(selectedItem.personal_code, '-')}</div>
                       </>
                     )}
-                    <div><strong>{tCommon('table_headers.economic_code')}</strong> {selectedItem.economic_code || '-'}</div>
-                    <div><strong>{tCommon('table_headers.phone')}</strong> {selectedItem.phone || '-'}</div>
+                    <div><strong>{tCommon('table_headers.economic_code')}</strong> {toPersianDigits(selectedItem.economic_code, '-')}</div>
+                    <div><strong>{tCommon('table_headers.phone')}</strong> {toPersianDigits(selectedItem.phone, '-')}</div>
                     <div><strong>{tCommon('table_headers.address')}</strong> {selectedItem.address || '-'}</div>
                     {selectedItem.description && <div><strong>{tCommon('detail_labels.description')}</strong> {selectedItem.description}</div>}
                     {selectedType === 'receiver' && (
                       <>
-                        <div><strong>{tCommon('detail_labels.unique_id_label')}</strong> {selectedItem.unique_id || '-'}</div>
-                        {selectedItem.postal_code && <div><strong>{tCommon('detail_labels.postal_code')}</strong> {selectedItem.postal_code}</div>}
+                        <div><strong>{tCommon('detail_labels.unique_id_label')}</strong> {toPersianDigits(selectedItem.unique_id, '-')}</div>
+                        {selectedItem.postal_code && <div><strong>{tCommon('detail_labels.postal_code')}</strong> {toPersianDigits(selectedItem.postal_code)}</div>}
                       </>
                     )}
                     {selectedType === 'customer' && selectedItem.tags && (
-                      <div><strong>{tCommon('detail_labels.tags')}</strong> {selectedItem.tags}</div>
+                      <div><strong>{tCommon('detail_labels.tags')}</strong> {toPersianDigits(selectedItem.tags)}</div>
                     )}
                   </>
                 )}
                 {selectedType === 'shipping' && (
                   <>
                     <div><strong>{tCommon('table_headers.company_name')}</strong> {selectedItem.name}</div>
-                    <div><strong>{tCommon('detail_labels.contact_person_label')}</strong> {selectedItem.contact_person || '-'}</div>
-                    <div><strong>{tCommon('table_headers.phone')}</strong> {selectedItem.phone || '-'}</div>
+                    <div><strong>{tCommon('detail_labels.contact_person_label')}</strong> {toPersianDigits(selectedItem.contact_person, '-')}</div>
+                    <div><strong>{tCommon('table_headers.phone')}</strong> {toPersianDigits(selectedItem.phone, '-')}</div>
                     <div><strong>{tCommon('table_headers.email')}</strong> {selectedItem.email || '-'}</div>
                     <div><strong>{tCommon('table_headers.address')}</strong> {selectedItem.address || '-'}</div>
                     {selectedItem.description && <div><strong>{tCommon('detail_labels.description')}</strong> {selectedItem.description}</div>}

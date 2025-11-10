@@ -672,7 +672,7 @@ export default function WarehousePage() {
                     </TableCell>
                     <TableCell className="text-right font-medium">{index + 1}</TableCell>
                     <TableCell className="text-right">{receipt.receipt_id}</TableCell>
-                    <TableCell className="text-right">{receipt.total_weight}</TableCell>
+                    <TableCell className="text-right">{formatNumber(receipt.total_weight)}</TableCell>
                     <TableCell className="text-right">{warehouses.find(w => w.id === receipt.warehouse)?.name}</TableCell>
                     <TableCell className="text-right">{new Date(receipt.date).toLocaleDateString('fa-IR')}</TableCell>
                     <TableCell>
@@ -1215,7 +1215,7 @@ export default function WarehousePage() {
                     <div><strong>{tCommon('detail_labels.receipt_id')}</strong> {(selectedItem as WarehouseReceipt).receipt_id}</div>
                     <div><strong>{tCommon('detail_labels.date')}</strong> {new Date((selectedItem as WarehouseReceipt).date).toLocaleDateString('fa-IR')}</div>
                     <div><strong>{tCommon('detail_labels.warehouse')}</strong> {warehouses.find(w => w.id === selectedItem.warehouse)?.name}</div>
-                    <div><strong>{tCommon('detail_labels.total_weight')}</strong> {selectedItem.total_weight} {tCommon('units.kg')}</div>
+                    <div><strong>{tCommon('detail_labels.total_weight')}</strong> {formatNumber(selectedItem.total_weight)} {tCommon('units.kg')}</div>
                     <div><strong>{tCommon('detail_labels.receipt_type')}</strong> {
                       (selectedItem as WarehouseReceipt).receipt_type === 'import_cottage' ? t('receipts.receipt_types.import_cottage') :
                       (selectedItem as WarehouseReceipt).receipt_type === 'distribution_cottage' ? t('receipts.receipt_types.distribution_cottage') :
@@ -1229,7 +1229,7 @@ export default function WarehousePage() {
                           {(selectedItem as WarehouseReceipt).items.map((item, idx: number) => (
                             <li key={idx} className="bg-white p-3 rounded border">
                               <div>{tCommon('product_labels.product_prefix')} {item.product}</div>
-                              <div className="text-sm text-gray-600">{tCommon('detail_labels.weight')} {item.weight} {tCommon('units.kg')}</div>
+                              <div className="text-sm text-gray-600">{tCommon('detail_labels.weight')} {formatNumber(item.weight)} {tCommon('units.kg')}</div>
                             </li>
                           ))}
                         </ul>
@@ -1243,7 +1243,7 @@ export default function WarehousePage() {
                     <div><strong>{tCommon('detail_labels.issue_date')}</strong> {new Date((selectedItem as DispatchIssue).issue_date).toLocaleDateString('fa-IR')}</div>
                     <div><strong>{tCommon('detail_labels.validity_date')}</strong> {new Date((selectedItem as DispatchIssue).validity_date).toLocaleDateString('fa-IR')}</div>
                     <div><strong>{tCommon('detail_labels.warehouse')}</strong> {warehouses.find(w => w.id === selectedItem.warehouse)?.name}</div>
-                    <div><strong>{tCommon('detail_labels.total_weight')}</strong> {selectedItem.total_weight} {tCommon('units.kg')}</div>
+                    <div><strong>{tCommon('detail_labels.total_weight')}</strong> {formatNumber(selectedItem.total_weight)} {tCommon('units.kg')}</div>
                     {selectedItem.description && <div><strong>{tCommon('detail_labels.description')}</strong> {selectedItem.description}</div>}
                   </>
                 )}
