@@ -163,6 +163,12 @@ export function WarehouseReceiptModal({ trigger, onSubmit, onClose, initialData,
 
   const receiptType = form.watch("receipt_type");
 
+  useEffect(() => {
+    if (receiptType === "import_cottage") {
+      form.setValue("proforma", undefined);
+    }
+  }, [receiptType, form]);
+
   const handleSubmit = async (data: any) => {
 
     try {
@@ -346,17 +352,46 @@ export function WarehouseReceiptModal({ trigger, onSubmit, onClose, initialData,
                   />
                 )}
 
-                <FormField
-                  control={form.control as any}
-                  name="proforma"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>{t("proforma")} <span className="text-gray-400 text-sm">{t("optional")}</span></FormLabel>
-                      <FormControl>
-                        <SimpleCombobox
-                          value={field.value !== undefined && field.value !== null && field.value > 0 ? field.value.toString() : "none"}
-                          onValueChange={(value) => {
-                            if (value === "new") {
+                {receiptType !== "import_cottage" && (
+                  <FormField
+                    control={form.control as any}
+                    name="proforma"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>{t("proforma")} <span className="text-gray-400 text-sm">{t("optional")}</span></FormLabel>
+                        <FormControl>
+                          <SimpleCombobox
+                            value={field.value !== undefined && field.value !== null && field.value > 0 ? field.value.toString() : "none"}
+                            onValueChange={(value) => {
+                              if (value === "new") {
+                                openModal(PurchaseProformaModal, {
+                                  onSubmit: async (newProforma: PurchaseProformaFormData) => {
+                                    const created = await createPurchaseProforma(newProforma);
+                                    if (created) {
+                                      await refreshData('purchaseProformas');
+                                      form.setValue('proforma', created.id);
+                                      form.trigger('proforma');
+                                    }
+                                  },
+                                },);
+                              } else {
+                                field.onChange(value === "none" ? undefined : Number(value));
+                              }
+                            }}
+                            options={[
+                              { value: "none", label: t("no-proforma") },
+                              ...(data.purchaseProformas || []).map(proforma => ({
+                                value: proforma.id.toString(),
+                                label: describePurchaseProforma(proforma),
+                                id: proforma.id,
+                                name: proforma.serial_number
+                              }))
+                            ]}
+                            placeholder={t("select-proforma")}
+                            searchPlaceholder={tCommon("search_placeholders.search_proformas")}
+                            showCreateNew={true}
+                            createNewText={t("create-new-proforma")}
+                            onCreateNew={() => {
                               openModal(PurchaseProformaModal, {
                                 onSubmit: async (newProforma: PurchaseProformaFormData) => {
                                   const created = await createPurchaseProforma(newProforma);
@@ -367,41 +402,14 @@ export function WarehouseReceiptModal({ trigger, onSubmit, onClose, initialData,
                                   }
                                 },
                               },);
-                            } else {
-                              field.onChange(value === "none" ? undefined : Number(value));
-                            }
-                          }}
-                          options={[
-                            { value: "none", label: t("no-proforma") },
-                            ...(data.purchaseProformas || []).map(proforma => ({
-                              value: proforma.id.toString(),
-                              label: describePurchaseProforma(proforma),
-                              id: proforma.id,
-                              name: proforma.serial_number
-                            }))
-                          ]}
-                          placeholder={t("select-proforma")}
-                          searchPlaceholder={tCommon("search_placeholders.search_proformas")}
-                          showCreateNew={true}
-                          createNewText={t("create-new-proforma")}
-                          onCreateNew={() => {
-                            openModal(PurchaseProformaModal, {
-                              onSubmit: async (newProforma: PurchaseProformaFormData) => {
-                                const created = await createPurchaseProforma(newProforma);
-                                if (created) {
-                                  await refreshData('purchaseProformas');
-                                  form.setValue('proforma', created.id);
-                                  form.trigger('proforma');
-                                }
-                              },
-                            },);
-                          }}
-                        />
-                      </FormControl>
-                      <FormMessage className="min-h-[1.25rem]" />
-                    </FormItem>
-                  )}
-                />
+                            }}
+                          />
+                        </FormControl>
+                        <FormMessage className="min-h-[1.25rem]" />
+                      </FormItem>
+                    )}
+                  />
+                )}
               </div>
 
               <FormField
