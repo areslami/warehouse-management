@@ -2,6 +2,8 @@ import moment from "moment-jalaali";
 
 moment.loadPersian({ usePersianDigits: false, dialect: "persian-modern" });
 
+export const DEFAULT_INDICATOR_TEMPLATE = "{{COUNTER3}}";
+
 export type IndicatorFormatSegment =
   | { id: string; type: "literal"; value: string }
   | { id: string; type: "counter"; digits: 1 | 2 | 3 | 4 | 5 }
@@ -159,18 +161,18 @@ export const serializeIndicatorSegments = (segments: IndicatorFormatSegment[]): 
 };
 
 const jalaliMonths = [
-  "farvardin",
-  "ordibehesht",
-  "khordad",
-  "tir",
-  "mordad",
-  "shahrivar",
-  "mehr",
-  "aban",
-  "azar",
-  "dey",
-  "bahman",
-  "esfand",
+  "فروردین",
+  "اردیبهشت",
+  "خرداد",
+  "تیر",
+  "مرداد",
+  "شهریور",
+  "مهر",
+  "آبان",
+  "آذر",
+  "دی",
+  "بهمن",
+  "اسفند",
 ];
 
 const padNumber = (value: number, length: number) => value.toString().padStart(length, "0");
@@ -270,3 +272,8 @@ export const createDaySegment = (variant: "dd" | "d" = "dd"): IndicatorFormatSeg
   type: "jalaliDay",
   variant,
 });
+
+export const renderIndicatorSegmentSample = (
+  segment: IndicatorFormatSegment,
+  options?: { counter?: number; date?: Date }
+) => renderSegment(segment, options);

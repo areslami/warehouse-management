@@ -17,6 +17,7 @@ import {
   FormField,
   FormItem,
   FormLabel,
+  FormDescription,
   FormMessage,
 } from "../../ui/form";
 import { Input } from "../../ui/input";
@@ -24,16 +25,16 @@ import { SimpleCombobox } from "../../ui/simple-combobox";
 import { useTranslations } from "next-intl";
 import type { IndicatorSection } from "@/lib/interfaces/core";
 import { INDICATOR_SECTIONS } from "@/lib/constants/indicator-sections";
+import { DEFAULT_INDICATOR_TEMPLATE } from "@/lib/indicator-format";
+import { IndicatorFormatBuilder } from "./indicator-format-builder";
 
 export type IndicatorFormData = {
   name: string;
   belongs: IndicatorSection;
+  format_template: string;
 };
 
-type IndicatorFormValues = {
-  name: string;
-  belongs: IndicatorSection;
-};
+type IndicatorFormValues = IndicatorFormData;
 
 interface IndicatorModalProps {
   onSubmit?: (data: IndicatorFormData) => Promise<void> | void;
@@ -63,10 +64,11 @@ export function IndicatorModal({
     [tSidebar]
   );
 
-const indicatorSchema = z.object({
-  name: z.string().min(1, tVal("name-required")),
-  belongs: z.string().min(1, tVal("belongs-required")),
-});
+  const indicatorSchema = z.object({
+    name: z.string().min(1, tVal("name-required")),
+    belongs: z.string().min(1, tVal("belongs-required")),
+    format_template: z.string().min(1, tVal("format-required")),
+  });
 
   const fallbackSection =
     (INDICATOR_SECTIONS[0]?.key as IndicatorSection | undefined) ??
@@ -79,6 +81,8 @@ const indicatorSchema = z.object({
       belongs:
         (initialData?.belongs as IndicatorSection | undefined) ??
         fallbackSection,
+      format_template:
+        initialData?.format_template ?? DEFAULT_INDICATOR_TEMPLATE,
     },
   });
 
@@ -88,6 +92,8 @@ const indicatorSchema = z.object({
       belongs:
         (initialData?.belongs as IndicatorSection | undefined) ??
         fallbackSection,
+      format_template:
+        initialData?.format_template ?? DEFAULT_INDICATOR_TEMPLATE,
     });
   }, [initialData, form, fallbackSection]);
 
@@ -103,6 +109,7 @@ const indicatorSchema = z.object({
       await onSubmit({
         name: values.name,
         belongs: resolvedBelongs as IndicatorSection,
+        format_template: values.format_template,
       });
       setOpen(false);
       onClose?.();
@@ -174,6 +181,26 @@ const indicatorSchema = z.object({
                       }}
                       placeholder={t("placeholders.belongs")}
                       searchPlaceholder={t("placeholders.belongs")}
+                      disabled={readOnly || isSubmitting}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="format_template"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>{t("fields.format_template")}</FormLabel>
+                  <FormDescription>{t("format.helper")}</FormDescription>
+                  <FormControl>
+                    <IndicatorFormatBuilder
+                      ref={field.ref}
+                      value={field.value}
+                      onChange={(next) => field.onChange(next)}
                       disabled={readOnly || isSubmitting}
                     />
                   </FormControl>

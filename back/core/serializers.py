@@ -1,5 +1,6 @@
 from rest_framework import serializers
 from .models import Supplier, Customer, Receiver, Product, Indicator
+from .utils.indicator_format import render_indicator_template
 
 
 
@@ -130,9 +131,11 @@ class IndicatorSerializer(serializers.ModelSerializer):
         "purchase_proforma": {"purchase_proforma", "پیش فاکتور خرید"},
     }
 
+    format_preview = serializers.SerializerMethodField()
+
     class Meta:
         model = Indicator
-        fields = ['id', 'name', 'belongs', 'counter', 'is_default']
+        fields = ['id', 'name', 'belongs', 'counter', 'is_default', 'format_template', 'format_preview']
         read_only_fields = ['counter']
         extra_kwargs = {
             'is_default': {'required': False},
@@ -165,3 +168,15 @@ class IndicatorSerializer(serializers.ModelSerializer):
                 return slug
 
         return normalized_value
+
+    def validate_format_template(self, value: str) -> str:
+        normalized_value = (value or "").strip()
+        if not normalized_value:
+            raise serializers.ValidationError("format_template is required")
+        return normalized_value
+
+    def get_format_preview(self, obj: Indicator) -> str:
+        return render_indicator_template(
+            obj.format_template,
+            counter_value=(obj.counter or 0) + 1,
+        )

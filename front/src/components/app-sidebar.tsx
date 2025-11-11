@@ -63,6 +63,8 @@ export function AppSidebar() {
     const tCommon = useTranslations('common');
     const { openModal } = useModal();
 
+    const sidebarTitle = t("title");
+
     const coreItems = [
         {
             name: t("products"),
@@ -75,12 +77,27 @@ export function AppSidebar() {
             href: "/parties"
         },
     ];
+
+    const baseButtonClass =
+        "w-full bg-[#2f323a] hover:bg-[#40444f] hover:text-black transition-colors duration-300 my-0.5 text-white group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:gap-0 group-data-[collapsible=icon]:px-0";
+    const sectionButtonClass = `${baseButtonClass} text-lg`;
+
     return (
         <Sidebar dir="rtl" side="right" collapsible="icon" className="m-0 p-0 list-none">
             <SidebarHeader className="m-0 p-0">
                 <SidebarMenuItem className="px-2.5 py-3.5" style={{ backgroundColor: "#f6d265" }}>
-                    <Link href="/" className="block w-full">
-                        <h1 className="font-bold text-white hover:text-gray-200 transition-colors cursor-pointer">{t("title")}</h1>
+                    <Link href="/" className="flex w-full items-center justify-center cursor-pointer gap-2">
+                        <span className="font-bold text-white hover:text-gray-200 transition-colors group-data-[collapsible=icon]:hidden">
+                            {sidebarTitle}
+                        </span>
+                        <span className="hidden h-16 items-center justify-center group-data-[collapsible=icon]:flex">
+                            <span
+                                className="text-xs font-bold leading-tight text-white"
+                                style={{ writingMode: "vertical-rl", textOrientation: "mixed" }}
+                            >
+                                {sidebarTitle}
+                            </span>
+                        </span>
                     </Link>
                 </SidebarMenuItem>
             </SidebarHeader>
@@ -89,18 +106,18 @@ export function AppSidebar() {
                     <SidebarGroupContent className="flex flex-col">
                         {
                             coreItems.map((item) => {
-                                return <SidebarMenuItem key={item.name} >
-                                    <a href={item.href}>
-                                        <SidebarMenuButton
-                                            className="bg-[#2f323a] hover:bg-[#40444f] hover:text-black transition-colors duration-300 my-0.5"
-                                        >
-                                            <div className="flex items-center gap-2 text-white">
-                                                <item.icon />
-                                                <span>{item.name}</span>
-                                            </div>
-                                        </SidebarMenuButton>
-                                    </a>
-                                </SidebarMenuItem>
+                                return (
+                                    <SidebarMenuItem key={item.name}>
+                                        <a href={item.href}>
+                                            <SidebarMenuButton
+                                                className={baseButtonClass}
+                                            >
+                                                <item.icon className="shrink-0" />
+                                                <span className="truncate group-data-[collapsible=icon]:hidden">{item.name}</span>
+                                            </SidebarMenuButton>
+                                       </a>
+                                    </SidebarMenuItem>
+                                )
                             })
                         }
 
@@ -111,11 +128,9 @@ export function AppSidebar() {
                         <SidebarMenuItem>
                             <div className="flex items-center">
                                 <a href="/warehouse" className="flex-1">
-                                    <SidebarMenuButton className="bg-[#2f323a] hover:bg-[#40444f] hover:text-black transition-colors duration-300 my-0.5 w-full">
-                                        <h3 className="flex items-center gap-2 text-white text-lg cursor-pointer">
-                                            <Warehouse />
-                                            <span>{t("warehouse")}</span>
-                                        </h3>
+                                    <SidebarMenuButton className={sectionButtonClass}>
+                                        <Warehouse className="shrink-0" />
+                                        <span className="font-semibold group-data-[collapsible=icon]:hidden">{t("warehouse")}</span>
                                     </SidebarMenuButton>
                                 </a>
                                 <CollapsibleTrigger asChild>
@@ -233,11 +248,9 @@ export function AppSidebar() {
                         <SidebarMenuItem>
                             <div className="flex items-center">
                                 <a href="/b2b" className="flex-1">
-                                    <SidebarMenuButton className="bg-[#2f323a] hover:bg-[#40444f] hover:text-black transition-colors duration-300 my-0.5 w-full">
-                                        <h3 className="flex items-center gap-2 text-white text-lg cursor-pointer">
-                                            <BadgeCent />
-                                            <span>{t("b2b")}</span>
-                                        </h3>
+                                    <SidebarMenuButton className={sectionButtonClass}>
+                                        <BadgeCent className="shrink-0" />
+                                        <span className="font-semibold group-data-[collapsible=icon]:hidden">{t("b2b")}</span>
                                     </SidebarMenuButton>
                                 </a>
                                 <CollapsibleTrigger asChild>
@@ -360,11 +373,9 @@ export function AppSidebar() {
                         <SidebarMenuItem>
                             <div className="flex items-center">
                                 <a href="/finance" className="flex-1">
-                                    <SidebarMenuButton className="bg-[#2f323a] hover:bg-[#40444f] hover:text-black transition-colors duration-300 my-0.5 w-full">
-                                        <h3 className="flex items-center gap-2 text-white text-lg cursor-pointer">
-                                            <DollarSign />
-                                            <span>{t("finance")}</span>
-                                        </h3>
+                                    <SidebarMenuButton className={sectionButtonClass}>
+                                        <DollarSign className="shrink-0" />
+                                        <span className="font-semibold group-data-[collapsible=icon]:hidden">{t("finance")}</span>
                                     </SidebarMenuButton>
                                 </a>
                                 <CollapsibleTrigger asChild>
@@ -420,11 +431,9 @@ export function AppSidebar() {
                         <SidebarMenuItem>
                             <div className="flex items-center">
                                 <a href="/settings" className="flex-1">
-                                    <SidebarMenuButton className="bg-[#2f323a] hover:bg-[#40444f] hover:text-black transition-colors duration-300 my-0.5 w-full">
-                                        <h3 className="flex items-center gap-2 text-white text-lg cursor-pointer">
-                                            <Settings />
-                                            <span>{t("settings")}</span>
-                                        </h3>
+                                    <SidebarMenuButton className={sectionButtonClass}>
+                                        <Settings className="shrink-0" />
+                                        <span className="font-semibold group-data-[collapsible=icon]:hidden">{t("settings")}</span>
                                     </SidebarMenuButton>
                                 </a>
                                 <CollapsibleTrigger asChild>

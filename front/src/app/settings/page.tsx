@@ -39,6 +39,10 @@ import {
 import type { Indicator, IndicatorSection } from "@/lib/interfaces/core";
 import { SimpleCombobox } from "@/components/ui/simple-combobox";
 import { INDICATOR_SECTIONS } from "@/lib/constants/indicator-sections";
+import {
+  DEFAULT_INDICATOR_TEMPLATE,
+  renderIndicatorFormat,
+} from "@/lib/indicator-format";
 
 const badgeClasses: Record<IndicatorSection, string> = {
   warehouse_receipt: "bg-blue-50 text-blue-700 border border-blue-200",
@@ -170,7 +174,13 @@ export default function SettingsPage() {
   );
 
   const formatNextValue = (indicator: Indicator) =>
-    `${indicator.name}${(indicator.counter ?? 0) + 1}`;
+    indicator.format_preview ||
+    renderIndicatorFormat(
+      indicator.format_template || DEFAULT_INDICATOR_TEMPLATE,
+      {
+        counter: (indicator.counter ?? 0) + 1,
+      }
+    );
 
   return (
     <>
@@ -246,11 +256,16 @@ export default function SettingsPage() {
                   >
                     <div className="flex items-start justify-between gap-3">
                       <div>
-                        <p className="text-sm font-semibold text-gray-900">
+                        <p className="text-base font-semibold text-gray-900">
                           {indicator.name}
                         </p>
                         <p className="text-xs text-muted-foreground">
-                          {t("defaults.next_value", {
+                          {t("indicator_list.current_counter", {
+                            value: indicator.counter,
+                          })}
+                        </p>
+                        <p className="text-xs text-muted-foreground" dir="ltr">
+                          {t("indicator_list.next_value", {
                             value: formatNextValue(indicator),
                           })}
                         </p>
@@ -269,11 +284,7 @@ export default function SettingsPage() {
                       </div>
                     </div>
                     <div className="mt-3 flex items-center justify-between text-xs text-muted-foreground">
-                      <span>
-                        {t("indicator_list.counter", {
-                          value: indicator.counter,
-                        })}
-                      </span>
+                      <span className="flex-1" />
                       <div className="flex items-center gap-1">
                         <Button
                           size="icon"
@@ -313,6 +324,7 @@ export default function SettingsPage() {
               ? {
                   name: editingIndicator.name,
                   belongs: editingIndicator.belongs as IndicatorSection,
+                  format_template: editingIndicator.format_template,
                 }
               : undefined
           }
@@ -342,12 +354,17 @@ export default function SettingsPage() {
                 const defaultIndicator = sectionIndicators.find(
                   (indicator) => indicator.is_default
                 );
-                const options = sectionIndicators.map((indicator) => ({
-                  value: indicator.id.toString(),
-                  label: `${indicator.name} (${t("defaults.next_value", {
-                    value: formatNextValue(indicator),
-                  })})`,
-                }));
+                const options = sectionIndicators.map((indicator) => {
+                  const sample = formatNextValue(indicator);
+                  return {
+                    value: indicator.id.toString(),
+                    label: `${indicator.name} • ${t(
+                      "indicator_list.next_value",
+                      { value: sample }
+                    )}`,
+                    name: indicator.name,
+                  };
+                });
 
                 return (
                   <div

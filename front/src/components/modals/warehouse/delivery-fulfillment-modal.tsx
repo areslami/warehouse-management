@@ -1,13 +1,13 @@
 "use client";
 
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useForm, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "../../ui/dialog";
 import { Button } from "../../ui/button";
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "../../ui/form";
+import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "../../ui/form";
 import { Input } from "../../ui/input";
 import { SimpleCombobox } from "../../ui/simple-combobox";
 import { Plus, Trash2, Info } from "lucide-react";
@@ -31,6 +31,10 @@ import { B2BDistributionModal } from "../b2b/b2b-distribution-modal";
 import { B2BOfferModal } from "../b2b/b2b-offer-modal";
 import { WarehouseReceiptModal } from "./warehouse-receipt-modal";
 import { useDefaultIndicator } from "@/lib/hooks/use-default-indicator";
+import {
+  DEFAULT_INDICATOR_TEMPLATE,
+  renderIndicatorFormat,
+} from "@/lib/indicator-format";
 
 type DeliveryFulfillmentFormData = {
   delivery_id: string;
@@ -208,6 +212,16 @@ export function DeliveryFulfillmentModal({ trigger, onSubmit, onClose, initialDa
     fieldName: "delivery_id",
     enabled: !isEditing && !initialData?.delivery_id,
   });
+
+  const indicatorPreview = useMemo(() => {
+    if (!defaultIndicator) return "";
+    return renderIndicatorFormat(
+      defaultIndicator.format_template || DEFAULT_INDICATOR_TEMPLATE,
+      {
+        counter: (defaultIndicator.counter ?? 0) + 1,
+      }
+    );
+  }, [defaultIndicator]);
 
   const { fields, append, remove } = useFieldArray({
     control: form.control,
@@ -409,6 +423,13 @@ export function DeliveryFulfillmentModal({ trigger, onSubmit, onClose, initialDa
                           tabIndex={isEditing ? -1 : undefined}
                         />
                       </FormControl>
+                      {defaultIndicator && (
+                        <FormDescription className="text-xs text-muted-foreground" dir="ltr">
+                          {tCommon("indicator_next_value", {
+                            value: indicatorPreview,
+                          })}
+                        </FormDescription>
+                      )}
                       <FormMessage />
                     </FormItem>
                   )}

@@ -300,6 +300,7 @@ export const fetchIndicators = (params?: {
 type IndicatorPayload = {
   name: string;
   belongs: IndicatorSection;
+  format_template: string;
 };
 
 export const createIndicator = async (data: IndicatorPayload) =>

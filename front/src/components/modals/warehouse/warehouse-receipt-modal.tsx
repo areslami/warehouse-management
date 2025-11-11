@@ -1,13 +1,13 @@
 "use client";
 
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useForm, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "../../ui/dialog";
 import { Button } from "../../ui/button";
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "../../ui/form";
+import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "../../ui/form";
 import { Input } from "../../ui/input";
 import { SimpleCombobox } from "../../ui/simple-combobox";
 import { NumberInput } from "../../ui/number-input";
@@ -27,6 +27,10 @@ import { createProduct } from "@/lib/api/core";
 import { createPurchaseProforma } from "@/lib/api/finance";
 import { useDefaultIndicator } from "@/lib/hooks/use-default-indicator";
 import { incrementIndicatorCounter } from "@/lib/api/core";
+import {
+  DEFAULT_INDICATOR_TEMPLATE,
+  renderIndicatorFormat,
+} from "@/lib/indicator-format";
 
 export type WarehouseReceiptFormData = {
   id?: number;
@@ -165,6 +169,16 @@ export function WarehouseReceiptModal({ trigger, onSubmit, onClose, initialData,
     enabled: !readOnly && !isEditing && !initialData?.receipt_id,
   });
 
+  const indicatorPreview = useMemo(() => {
+    if (!defaultIndicator) return "";
+    return renderIndicatorFormat(
+      defaultIndicator.format_template || DEFAULT_INDICATOR_TEMPLATE,
+      {
+        counter: (defaultIndicator.counter ?? 0) + 1,
+      }
+    );
+  }, [defaultIndicator]);
+
   const { fields, append, remove } = useFieldArray({
     control: form.control,
     name: "items",
@@ -251,10 +265,10 @@ export function WarehouseReceiptModal({ trigger, onSubmit, onClose, initialData,
                   control={form.control as any}
                   name="receipt_id"
                   render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>{t("receipt-id")}</FormLabel>
-                      <FormControl>
-                        <Input
+                <FormItem>
+                  <FormLabel>{t("receipt-id")}</FormLabel>
+                  <FormControl>
+                    <Input
                           {...field}
                           readOnly={isEditing}
                           className={isEditing ? "bg-gray-100 cursor-not-allowed" : ""}
@@ -262,6 +276,13 @@ export function WarehouseReceiptModal({ trigger, onSubmit, onClose, initialData,
                           tabIndex={isEditing ? -1 : undefined}
                         />
                       </FormControl>
+                      {defaultIndicator && (
+                        <FormDescription className="text-xs text-muted-foreground" dir="ltr">
+                          {tCommon("indicator_next_value", {
+                            value: indicatorPreview,
+                          })}
+                        </FormDescription>
+                      )}
                       <FormMessage className="min-h-[1.25rem]" />
                     </FormItem>
                   )}

@@ -16,6 +16,10 @@ class Indicator(models.Model):
         max_length=100,
         help_text="Machine key describing the entity (e.g. sale_proforma) this indicator belongs to.",
     )
+    format_template = models.TextField(
+        default="{{COUNTER3}}",
+        help_text="Template used to build identifiers. Supports literal text plus tokens such as {{JYEAR4}} or {{COUNTER4}}.",
+    )
     is_default = models.BooleanField(
         default=False,
         help_text="Automatically selected indicator for its section.",

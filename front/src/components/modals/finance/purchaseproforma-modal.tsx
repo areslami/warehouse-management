@@ -1,13 +1,13 @@
 "use client";
 
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useForm, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "../../ui/dialog";
 import { Button } from "../../ui/button";
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "../../ui/form";
+import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "../../ui/form";
 import { Input } from "../../ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../../ui/select";
 import { Plus, Trash2 } from "lucide-react";
@@ -22,6 +22,10 @@ import { SupplierFormData, SupplierModal } from "../supplier-modal";
 import { ProductFormData, ProductModal } from "../product-modal";
 import { createSupplier, createProduct, incrementIndicatorCounter } from "@/lib/api/core";
 import { useDefaultIndicator } from "@/lib/hooks/use-default-indicator";
+import {
+  DEFAULT_INDICATOR_TEMPLATE,
+  renderIndicatorFormat,
+} from "@/lib/indicator-format";
 
 export type PurchaseProformaFormData = {
   serial_number: string;
@@ -47,6 +51,7 @@ interface PurchaseProformaModalProps {
 export function PurchaseProformaModal({ trigger, onSubmit, onClose, initialData, isEditing }: PurchaseProformaModalProps) {
   const tval = useTranslations("modals.purchaseProforma.validation");
   const t = useTranslations("modals.purchaseProforma");
+  const tCommon = useTranslations("common");
   const { data, refreshData } = useCoreData();
   const { openModal } = useModal();
 
@@ -121,6 +126,16 @@ export function PurchaseProformaModal({ trigger, onSubmit, onClose, initialData,
     enabled: !isEditing && !initialData?.serial_number,
   });
 
+  const indicatorPreview = useMemo(() => {
+    if (!defaultIndicator) return "";
+    return renderIndicatorFormat(
+      defaultIndicator.format_template || DEFAULT_INDICATOR_TEMPLATE,
+      {
+        counter: (defaultIndicator.counter ?? 0) + 1,
+      }
+    );
+  }, [defaultIndicator]);
+
   const { fields, append, remove } = useFieldArray({
     control: form.control,
     name: "lines",
@@ -174,10 +189,10 @@ export function PurchaseProformaModal({ trigger, onSubmit, onClose, initialData,
                   control={form.control as any}
                   name="serial_number"
                   render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>{t('serialnumber')}</FormLabel>
-                      <FormControl>
-                        <Input
+                <FormItem>
+                  <FormLabel>{t('serialnumber')}</FormLabel>
+                  <FormControl>
+                    <Input
                           {...field}
                           readOnly={isEditing}
                           className={isEditing ? "bg-gray-100 cursor-not-allowed" : ""}
@@ -185,6 +200,13 @@ export function PurchaseProformaModal({ trigger, onSubmit, onClose, initialData,
                           tabIndex={isEditing ? -1 : undefined}
                         />
                       </FormControl>
+                      {defaultIndicator && (
+                        <FormDescription className="text-xs text-muted-foreground" dir="ltr">
+                          {tCommon("indicator_next_value", {
+                            value: indicatorPreview,
+                          })}
+                        </FormDescription>
+                      )}
                       <FormMessage className="min-h-[1.25rem]" />
                     </FormItem>
                   )}

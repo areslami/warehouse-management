@@ -1,13 +1,13 @@
 "use client";
 
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useForm, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "../../ui/dialog";
 import { Button } from "../../ui/button";
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "../../ui/form";
+import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "../../ui/form";
 import { Input } from "../../ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../../ui/select";
 import { NumberInput } from "../../ui/number-input";
@@ -28,6 +28,10 @@ import { createWarehouse } from "@/lib/api/warehouse";
 import { createProduct, createReceiver, createShippingCompany, incrementIndicatorCounter } from "@/lib/api/core";
 import { createSalesProforma } from "@/lib/api/finance";
 import { useDefaultIndicator } from "@/lib/hooks/use-default-indicator";
+import {
+  DEFAULT_INDICATOR_TEMPLATE,
+  renderIndicatorFormat,
+} from "@/lib/indicator-format";
 
 type DispatchIssueFormData = {
   dispatch_id: string;
@@ -56,6 +60,7 @@ interface DispatchIssueModalProps {
 export function DispatchIssueModal({ trigger, onSubmit, onClose, initialData, isEditing }: DispatchIssueModalProps) {
   const tval = useTranslations("modals.dispatchIssue.validation");
   const t = useTranslations("modals.dispatchIssue");
+  const tCommon = useTranslations("common");
   const { data, refreshData } = useCoreData();
   const { openModal } = useModal();
 
@@ -131,6 +136,16 @@ export function DispatchIssueModal({ trigger, onSubmit, onClose, initialData, is
     enabled: !isEditing && !initialData?.dispatch_id,
   });
 
+  const indicatorPreview = useMemo(() => {
+    if (!defaultIndicator) return "";
+    return renderIndicatorFormat(
+      defaultIndicator.format_template || DEFAULT_INDICATOR_TEMPLATE,
+      {
+        counter: (defaultIndicator.counter ?? 0) + 1,
+      }
+    );
+  }, [defaultIndicator]);
+
   const { fields, append, remove } = useFieldArray({
     control: form.control,
     name: "items",
@@ -190,10 +205,10 @@ export function DispatchIssueModal({ trigger, onSubmit, onClose, initialData, is
                   control={form.control as any}
                   name="dispatch_id"
                   render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>{t("dispatch-id")}</FormLabel>
-                      <FormControl>
-                        <Input
+                <FormItem>
+                  <FormLabel>{t("dispatch-id")}</FormLabel>
+                  <FormControl>
+                    <Input
                           {...field}
                           readOnly={isEditing}
                           className={isEditing ? "bg-gray-100 cursor-not-allowed" : ""}
@@ -201,6 +216,13 @@ export function DispatchIssueModal({ trigger, onSubmit, onClose, initialData, is
                           tabIndex={isEditing ? -1 : undefined}
                         />
                       </FormControl>
+                      {defaultIndicator && (
+                        <FormDescription className="text-xs text-muted-foreground" dir="ltr">
+                          {tCommon("indicator_next_value", {
+                            value: indicatorPreview,
+                          })}
+                        </FormDescription>
+                      )}
                       <FormMessage className="min-h-[1.25rem]" />
                     </FormItem>
                   )}

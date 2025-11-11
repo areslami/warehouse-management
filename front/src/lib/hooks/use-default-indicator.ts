@@ -3,6 +3,10 @@ import type { UseFormReturn } from "react-hook-form";
 
 import { fetchDefaultIndicator } from "@/lib/api/core";
 import type { IndicatorSection, Indicator } from "@/lib/interfaces/core";
+import {
+  DEFAULT_INDICATOR_TEMPLATE,
+  renderIndicatorFormat,
+} from "@/lib/indicator-format";
 
 interface UseDefaultIndicatorOptions<FormValues> {
   section: IndicatorSection;
@@ -35,7 +39,10 @@ export function useDefaultIndicator<FormValues>({
         if (indicator && isMounted) {
           const existingValue = form.getValues(fieldName);
           if (!existingValue) {
-            const nextValue = `${indicator.name}${indicator.counter + 1}`;
+            const template = indicator.format_template || DEFAULT_INDICATOR_TEMPLATE;
+            const nextValue = renderIndicatorFormat(template, {
+              counter: (indicator.counter ?? 0) + 1,
+            });
             form.setValue(
               fieldName as keyof FormValues,
               nextValue as FormValues[keyof FormValues],

@@ -83,4 +83,6 @@ export interface Indicator {
   belongs: IndicatorSection | string;
   counter: number;
   is_default: boolean;
+  format_template: string;
+  format_preview: string;
 }
