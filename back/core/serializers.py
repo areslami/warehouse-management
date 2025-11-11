@@ -120,6 +120,48 @@ class ProductListSerializer(serializers.ModelSerializer):
 
 
 class IndicatorSerializer(serializers.ModelSerializer):
+    """Serializes indicators while accepting both machine keys and localized labels."""
+
+    BELONGS_ALIASES = {
+        "warehouse_receipt": {"warehouse_receipt", "رسید انبار"},
+        "dispatch_issue": {"dispatch_issue", "صدور حواله"},
+        "delivery_fulfillment": {"delivery_fulfillment", "تحویل کالا"},
+        "sale_proforma": {"sale_proforma", "پیش فاکتور فروش"},
+        "purchase_proforma": {"purchase_proforma", "پیش فاکتور خرید"},
+    }
+
     class Meta:
         model = Indicator
         fields = ['id', 'name', 'belongs', 'counter', 'is_default']
+        read_only_fields = ['counter']
+        extra_kwargs = {
+            'is_default': {'required': False},
+            'belongs': {'validators': []},
+        }
+        validators = []
+
+    def validate_name(self, value: str) -> str:
+        normalized_value = value.strip()
+        if not normalized_value:
+            raise serializers.ValidationError("name is required")
+
+        queryset = Indicator.objects.filter(name=normalized_value)
+        if self.instance:
+            queryset = queryset.exclude(pk=self.instance.pk)
+
+        if queryset.exists():
+            raise serializers.ValidationError(
+                "An indicator with this name already exists. Please choose another name."
+            )
+
+        return normalized_value
+
+    def validate_belongs(self, value: str) -> str:
+        if not value:
+            raise serializers.ValidationError("belongs is required")
+        normalized_value = value.strip()
+        for slug, aliases in self.BELONGS_ALIASES.items():
+            if normalized_value in aliases:
+                return slug
+
+        return normalized_value

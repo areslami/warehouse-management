@@ -18,8 +18,13 @@ import {
   CardTitle,
   CardDescription,
   CardContent,
-  CardFooter,
 } from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle as DialogHeading,
+} from "@/components/ui/dialog";
 import {
   IndicatorFormData,
   IndicatorModal,
@@ -58,6 +63,7 @@ export default function SettingsPage() {
   const [settingSection, setSettingSection] = useState<IndicatorSection | null>(
     null
   );
+  const [defaultsDialogOpen, setDefaultsDialogOpen] = useState(false);
 
   const sectionConfigs = useMemo(
     () =>
@@ -176,22 +182,24 @@ export default function SettingsPage() {
           </p>
         </div>
 
-        <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] items-stretch">
-          <Card className="border-dashed border-gray-200 shadow-sm flex flex-col min-h-[24rem]">
+        <div className="flex flex-col gap-4">
+          <Card className="border-dashed border-gray-200 shadow-sm">
             <CardHeader className="flex flex-row items-start justify-between gap-4">
-              <div className="space-y-1">
-                <CardTitle className="text-xl">{t("indicator.title")}</CardTitle>
+              <div>
+                <CardTitle className="text-xl">
+                  {t("indicator.title")}
+                </CardTitle>
                 <CardDescription>{t("indicator.description")}</CardDescription>
               </div>
               <div className="rounded-full bg-yellow-100 p-3 text-yellow-600">
                 <Sparkles className="h-6 w-6" />
               </div>
             </CardHeader>
-            <CardContent className="flex-1 flex flex-col pt-0">
-              <div className="space-y-3">
-                <p className="text-sm text-muted-foreground">
-                  {t("indicator.helper")}
-                </p>
+            <CardContent className="space-y-4 flex justify-between pt-0">
+              <p className="text-sm text-muted-foreground">
+                {t("indicator.helper")}
+              </p>
+              <div className="flex items-end gap-3 ">
                 <Button
                   className="bg-[#f6d265] hover:bg-[#f5c842] text-black"
                   onClick={() => {
@@ -202,168 +210,99 @@ export default function SettingsPage() {
                   <Plus className="ml-2 h-4 w-4" />
                   {t("indicator.action")}
                 </Button>
-              </div>
-              <div className="mt-4 border-t border-gray-100 pt-4 flex-1 flex flex-col">
-                <div className="mb-3">
-                  <CardTitle className="text-base">
-                    {t("indicator_list.title")}
-                  </CardTitle>
-                  <CardDescription className="text-xs">
-                    {t("indicator_list.description")}
-                  </CardDescription>
-                </div>
-                <div className="flex-1 overflow-y-auto space-y-3 pr-1">
-                  {indicatorsLoading ? (
-                    <div className="py-6 text-center text-sm text-muted-foreground">
-                      {t("defaults.loading")}
-                    </div>
-                  ) : sortedIndicators.length === 0 ? (
-                    <div className="py-6 text-center text-sm text-muted-foreground">
-                      {t("indicator_list.empty")}
-                    </div>
-                  ) : (
-                    sortedIndicators.map((indicator) => {
-                      const key = indicator.belongs as IndicatorSection;
-                      const badge =
-                        badgeClasses[key] ??
-                        "bg-gray-100 text-gray-700 border border-gray-200";
-                      return (
-                        <div
-                          key={indicator.id}
-                          className="rounded-lg border border-gray-100 bg-white p-3 shadow-sm"
-                        >
-                          <div className="flex items-start justify-between gap-3">
-                            <div>
-                              <p className="text-sm font-semibold text-gray-900">
-                                {indicator.name}
-                              </p>
-                              <p className="text-xs text-muted-foreground">
-                                {t("defaults.next_value", {
-                                  value: formatNextValue(indicator),
-                                })}
-                              </p>
-                            </div>
-                            <div className="flex flex-col items-end gap-1">
-                              <span
-                                className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${badge}`}
-                              >
-                                {sectionLabel(key)}
-                              </span>
-                              {indicator.is_default && (
-                                <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold text-emerald-700">
-                                  {t("defaults.default_badge")}
-                                </span>
-                              )}
-                            </div>
-                          </div>
-                          <div className="mt-3 flex items-center justify-between text-xs text-muted-foreground">
-                            <span>
-                              {t("indicator_list.counter", {
-                                value: indicator.counter,
-                              })}
-                            </span>
-                            <div className="flex items-center gap-1">
-                              <Button
-                                size="icon"
-                                variant="ghost"
-                                className="h-8 w-8 text-gray-600 hover:text-gray-900"
-                                onClick={() => {
-                                  setEditingIndicator(indicator);
-                                  setIndicatorModalOpen(true);
-                                }}
-                                aria-label={t("indicator_list.edit")}
-                              >
-                                <PenLine className="h-4 w-4" />
-                              </Button>
-                              <Button
-                                size="icon"
-                                variant="ghost"
-                                className="h-8 w-8 text-red-500 hover:text-red-600"
-                                onClick={() => handleDeleteIndicator(indicator)}
-                                aria-label={t("indicator_list.delete")}
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
-                            </div>
-                          </div>
-                        </div>
-                      );
-                    })
-                  )}
-                </div>
+                <Button
+                  variant="outline"
+                  className="flex items-center gap-2"
+                  onClick={() => setDefaultsDialogOpen(true)}
+                >
+                  <SlidersHorizontal className="h-4 w-4" />
+                  {t("defaults.title")}
+                </Button>
               </div>
             </CardContent>
           </Card>
+        </div>
 
-          <Card className="shadow-sm h-full flex flex-col min-h-[24rem]">
-            <CardHeader className="flex flex-row items-start justify-between gap-4">
-              <div>
-                <CardTitle className="text-xl">
-                  {t("defaults.title")}
-                </CardTitle>
-                <CardDescription>{t("defaults.description")}</CardDescription>
-              </div>
-              <div className="rounded-full bg-gray-100 p-3 text-gray-500">
-                <SlidersHorizontal className="h-6 w-6" />
-              </div>
-            </CardHeader>
-            <CardContent className="flex-1 overflow-y-auto space-y-4 pr-1">
-              {indicatorsLoading ? (
-                <div className="py-6 text-center text-sm text-muted-foreground">
-                  {t("defaults.loading")}
-                </div>
-              ) : (
-                sectionConfigs.map((section) => {
-                  const sectionIndicators = indicators.filter(
-                    (indicator) => indicator.belongs === section.key
-                  );
-                  const defaultIndicator = sectionIndicators.find(
-                    (indicator) => indicator.is_default
-                  );
-                  const options = sectionIndicators.map((indicator) => ({
-                    value: indicator.id.toString(),
-                    label: `${indicator.name} (${t("defaults.next_value", {
-                      value: formatNextValue(indicator),
-                    })})`,
-                  }));
-
-                  return (
-                    <div
-                      key={section.key}
-                      className="grid gap-2 rounded-md border border-gray-100 p-3 shadow-sm md:grid-cols-[1fr_220px]"
-                    >
-                      <div className="text-right">
-                        <p className="text-sm font-semibold text-gray-800">
-                          {section.label}
+        <div className="mt-2">
+          {indicatorsLoading ? (
+            <div className="py-6 text-center text-sm text-muted-foreground">
+              {t("defaults.loading")}
+            </div>
+          ) : sortedIndicators.length === 0 ? (
+            <div className="py-6 text-center text-sm text-muted-foreground">
+              {t("indicator_list.empty")}
+            </div>
+          ) : (
+            <div className="grid gap-3">
+              {sortedIndicators.map((indicator) => {
+                const key = indicator.belongs as IndicatorSection;
+                const badge =
+                  badgeClasses[key] ??
+                  "bg-gray-100 text-gray-700 border border-gray-200";
+                return (
+                  <div
+                    key={indicator.id}
+                    className="rounded-lg border border-gray-100 bg-white p-3 shadow-sm"
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <p className="text-sm font-semibold text-gray-900">
+                          {indicator.name}
                         </p>
                         <p className="text-xs text-muted-foreground">
-                          {section.helper}
+                          {t("defaults.next_value", {
+                            value: formatNextValue(indicator),
+                          })}
                         </p>
                       </div>
-                      <SimpleCombobox
-                        options={options}
-                        value={defaultIndicator?.id.toString() || ""}
-                        placeholder={
-                          sectionIndicators.length
-                            ? t("defaults.placeholder")
-                            : t("defaults.empty")
-                        }
-                        searchPlaceholder={t("defaults.search")}
-                        emptyText={t("defaults.empty")}
-                        disabled={
-                          sectionIndicators.length === 0 ||
-                          settingSection === section.key
-                        }
-                        onValueChange={(value) =>
-                          handleSelectDefault(section.key, value)
-                        }
-                      />
+                      <div className="flex flex-col items-end gap-1">
+                        <span
+                          className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${badge}`}
+                        >
+                          {sectionLabel(key)}
+                        </span>
+                        {indicator.is_default && (
+                          <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold text-emerald-700">
+                            {t("defaults.default_badge")}
+                          </span>
+                        )}
+                      </div>
                     </div>
-                  );
-                })
-              )}
-            </CardContent>
-          </Card>
+                    <div className="mt-3 flex items-center justify-between text-xs text-muted-foreground">
+                      <span>
+                        {t("indicator_list.counter", {
+                          value: indicator.counter,
+                        })}
+                      </span>
+                      <div className="flex items-center gap-1">
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          className="h-8 w-8 text-gray-600 hover:text-gray-900"
+                          onClick={() => {
+                            setEditingIndicator(indicator);
+                            setIndicatorModalOpen(true);
+                          }}
+                          aria-label={t("indicator_list.edit")}
+                        >
+                          <PenLine className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          className="h-8 w-8 text-red-500 hover:text-red-600"
+                          onClick={() => handleDeleteIndicator(indicator)}
+                          aria-label={t("indicator_list.delete")}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
       </div>
 
@@ -381,6 +320,73 @@ export default function SettingsPage() {
           onClose={handleModalClose}
         />
       )}
+
+      <Dialog open={defaultsDialogOpen} onOpenChange={setDefaultsDialogOpen}>
+        <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogHeading>{t("defaults.title")}</DialogHeading>
+            <p className="text-sm text-muted-foreground">
+              {t("defaults.description")}
+            </p>
+          </DialogHeader>
+          {indicatorsLoading ? (
+            <div className="py-6 text-center text-sm text-muted-foreground">
+              {t("defaults.loading")}
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {sectionConfigs.map((section) => {
+                const sectionIndicators = indicators.filter(
+                  (indicator) => indicator.belongs === section.key
+                );
+                const defaultIndicator = sectionIndicators.find(
+                  (indicator) => indicator.is_default
+                );
+                const options = sectionIndicators.map((indicator) => ({
+                  value: indicator.id.toString(),
+                  label: `${indicator.name} (${t("defaults.next_value", {
+                    value: formatNextValue(indicator),
+                  })})`,
+                }));
+
+                return (
+                  <div
+                    key={section.key}
+                    className="grid gap-2 rounded-md border border-gray-100 p-3 shadow-sm md:grid-cols-[1fr_240px]"
+                  >
+                    <div className="text-right">
+                      <p className="text-sm font-semibold text-gray-800">
+                        {section.label}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {section.helper}
+                      </p>
+                    </div>
+                    <SimpleCombobox
+                      options={options}
+                      value={defaultIndicator?.id.toString() || ""}
+                      placeholder={
+                        sectionIndicators.length
+                          ? t("defaults.placeholder")
+                          : t("defaults.empty")
+                      }
+                      searchPlaceholder={t("defaults.search")}
+                      emptyText={t("defaults.empty")}
+                      disabled={
+                        sectionIndicators.length === 0 ||
+                        settingSection === section.key
+                      }
+                      onValueChange={(value) =>
+                        handleSelectDefault(section.key, value)
+                      }
+                    />
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </>
   );
 }

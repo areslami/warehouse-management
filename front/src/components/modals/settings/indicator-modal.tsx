@@ -32,7 +32,7 @@ export type IndicatorFormData = {
 
 type IndicatorFormValues = {
   name: string;
-  belongs: IndicatorSection | "";
+  belongs: IndicatorSection;
 };
 
 interface IndicatorModalProps {
@@ -63,36 +63,46 @@ export function IndicatorModal({
     [tSidebar]
   );
 
-  const indicatorSchema = z.object({
-    name: z.string().min(1, tVal("name-required")),
-    belongs: z.string().min(1, tVal("belongs-required")),
-  });
+const indicatorSchema = z.object({
+  name: z.string().min(1, tVal("name-required")),
+  belongs: z.string().min(1, tVal("belongs-required")),
+});
+
+  const fallbackSection =
+    (INDICATOR_SECTIONS[0]?.key as IndicatorSection | undefined) ??
+    "warehouse_receipt";
 
   const form = useForm<IndicatorFormValues>({
     resolver: zodResolver(indicatorSchema),
     defaultValues: {
       name: initialData?.name ?? "",
-      belongs: (initialData?.belongs as IndicatorSection) ?? "",
+      belongs:
+        (initialData?.belongs as IndicatorSection | undefined) ??
+        fallbackSection,
     },
   });
 
   useEffect(() => {
     form.reset({
       name: initialData?.name ?? "",
-      belongs: (initialData?.belongs as IndicatorSection) ?? "",
+      belongs:
+        (initialData?.belongs as IndicatorSection | undefined) ??
+        fallbackSection,
     });
-  }, [initialData, form]);
+  }, [initialData, form, fallbackSection]);
 
   const handleSubmit = form.handleSubmit(async (values) => {
     if (!onSubmit || readOnly) {
       onClose?.();
       return;
     }
+    const resolvedBelongs =
+      (values.belongs as IndicatorSection | undefined) ?? fallbackSection;
     try {
       setIsSubmitting(true);
       await onSubmit({
         name: values.name,
-        belongs: values.belongs as IndicatorSection,
+        belongs: resolvedBelongs as IndicatorSection,
       });
       setOpen(false);
       onClose?.();
@@ -155,7 +165,13 @@ export function IndicatorModal({
                     <SimpleCombobox
                       options={belongsOptions}
                       value={field.value || ""}
-                      onValueChange={(value) => field.onChange(value)}
+                      onValueChange={(value) => {
+                        field.onChange(value);
+                        form.setValue("belongs", value as IndicatorSection, {
+                          shouldDirty: true,
+                          shouldValidate: true,
+                        });
+                      }}
                       placeholder={t("placeholders.belongs")}
                       searchPlaceholder={t("placeholders.belongs")}
                       disabled={readOnly || isSubmitting}
