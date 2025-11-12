@@ -131,7 +131,7 @@ export function PurchaseProformaModal({ trigger, onSubmit, onClose, initialData,
     return renderIndicatorFormat(
       defaultIndicator.format_template || DEFAULT_INDICATOR_TEMPLATE,
       {
-        counter: (defaultIndicator.counter ?? 0) + 1,
+        counter: (defaultIndicator.counter ?? 0) + 2,
       }
     );
   }, [defaultIndicator]);

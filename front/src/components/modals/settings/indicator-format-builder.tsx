@@ -13,6 +13,7 @@ import { Plus, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
 import {
   DEFAULT_INDICATOR_TEMPLATE,
@@ -24,10 +25,10 @@ import {
   createMonthSegment,
   createYearSegment,
   parseIndicatorFormat,
-  renderIndicatorFormat,
   renderIndicatorSegmentSample,
   serializeIndicatorSegments,
 } from "@/lib/indicator-format";
+import { toPersianDigits } from "@/lib/utils/numbers";
 
 type IndicatorFormatBuilderProps = {
   value: string;
@@ -47,6 +48,53 @@ type AddSegmentButtonProps = {
 
 const sampleDateReference = new Date("2024-10-12T00:00:00Z");
 const sampleCounterReference = 128;
+const formatCounterSample = (
+  segment: IndicatorFormatSegment,
+  sample: string
+) => {
+  if (segment.type === "counter" && segment.digits <= 2) {
+    return sample.slice(-1 * segment.digits);
+  }
+  return sample;
+};
+const SEPARATOR_SYMBOLS = ["/", "_", "-", "#"] as const;
+type SeparatorSymbol = (typeof SEPARATOR_SYMBOLS)[number];
+
+const isSeparatorChar = (value?: string): value is SeparatorSymbol =>
+  typeof value === "string" &&
+  value.length === 1 &&
+  SEPARATOR_SYMBOLS.includes(value as SeparatorSymbol);
+
+const splitLiteralSeparators = (segments: IndicatorFormatSegment[]) => {
+  return segments.flatMap((segment) => {
+    if (segment.type !== "literal" || !segment.value) {
+      return [segment];
+    }
+
+    let hasSeparator = false;
+    let buffer = "";
+    const parts: IndicatorFormatSegment[] = [];
+    const flushBuffer = () => {
+      if (!buffer) return;
+      parts.push(createLiteralSegment(buffer));
+      buffer = "";
+    };
+
+    for (const char of segment.value) {
+      if (isSeparatorChar(char)) {
+        hasSeparator = true;
+        flushBuffer();
+        parts.push(createLiteralSegment(char));
+      } else {
+        buffer += char;
+      }
+    }
+
+    flushBuffer();
+
+    return hasSeparator ? parts : [segment];
+  });
+};
 
 const getSegmentLabel = (
   segment: IndicatorFormatSegment,
@@ -68,6 +116,9 @@ const getSegmentLabel = (
         ? t("chips.day_two")
         : t("chips.day_one");
     case "literal":
+      if (isSeparatorChar(segment.value)) {
+        return t("chips.separator", { value: segment.value });
+      }
       return t("chips.literal", { value: segment.value || "-" });
     default:
       return "";
@@ -79,11 +130,14 @@ const buildTokenSections = (
   sampleCounter: number,
   sampleDate: Date
 ) => {
-  const describe = (factory: () => IndicatorFormatSegment) =>
-    renderIndicatorSegmentSample(factory(), {
+  const describe = (factory: () => IndicatorFormatSegment) => {
+    const segment = factory();
+    const sample = renderIndicatorSegmentSample(segment, {
       counter: sampleCounter,
       date: sampleDate,
     });
+    return formatCounterSample(segment, sample);
+  };
 
   const counterFactory = (digits: 1 | 2 | 3 | 4 | 5) => () => createCounterSegment(digits);
 
@@ -153,6 +207,7 @@ const buildTokenSections = (
       key: "date",
       title: t("tokens.date_group"),
       options: dateOptions,
+      dividerAbove: true,
     },
   ];
 };
@@ -172,8 +227,6 @@ const AddSegmentButton = ({
     [t, sampleCounter, sampleDate]
   );
 
-  const separatorPresets = ["/", "_", "-", "#"];
-
   const addSegment = (factory: () => IndicatorFormatSegment) => {
     onAdd(factory());
     setOpen(false);
@@ -188,7 +241,11 @@ const AddSegmentButton = ({
   };
 
   return (
-    <Popover open={open} onOpenChange={(next) => !disabled && setOpen(next)}>
+    <Popover
+      open={open}
+      onOpenChange={(next) => !disabled && setOpen(next)}
+      modal={true}
+    >
       <PopoverTrigger asChild>
         <Button
           type="button"
@@ -196,12 +253,19 @@ const AddSegmentButton = ({
           size="icon"
           disabled={disabled}
           aria-label={position === "start" ? t("add_prefix") : t("add_suffix")}
-          className="h-8 w-8 rounded-full border-dashed border-gray-300 text-muted-foreground hover:text-gray-900"
+          className="h-9 w-9 rounded-full border border-[#f6d265] text-[#f6d265] bg-white hover:bg-[#f6d265]/10 focus-visible:ring-[#f6d265] shadow-sm"
         >
           <Plus className="h-4 w-4" />
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-80 p-0" align="start">
+      <PopoverContent
+        className="pointer-events-auto z-[9999] grid w-80 grid-rows-[auto_minmax(0,1fr)] overflow-hidden rounded-md border bg-popover p-0 shadow-md"
+        align="start"
+        side="bottom"
+        sideOffset={6}
+        collisionPadding={{ top: 16, bottom: 16 }}
+        onOpenAutoFocus={(event) => event.preventDefault()}
+      >
         <div className="border-b px-4 py-3">
           <p className="text-sm font-semibold text-foreground">
             {t("tokens.title")}
@@ -210,73 +274,85 @@ const AddSegmentButton = ({
             {position === "start" ? t("add_prefix") : t("add_suffix")}
           </p>
         </div>
-        <div className="max-h-80 overflow-y-auto px-3 py-2 space-y-4">
-          {sections.map((section) => (
-            <div key={section.key} className="space-y-1">
-              <p className="text-[11px] font-semibold text-muted-foreground px-1">
-                {section.title}
-              </p>
-              {section.options.map((option) => (
-                <button
-                  key={option.key}
-                  type="button"
-                  className="w-full rounded-md border border-transparent px-3 py-2 text-right text-sm hover:border-gray-200 hover:bg-gray-50 transition-colors"
-                  onClick={() => addSegment(option.create)}
-                >
-                  <div className="flex items-center justify-between gap-2">
-                    <div>
-                      <p className="font-medium text-foreground">{option.label}</p>
-                      {option.description && (
-                        <p className="text-[11px] text-muted-foreground">
-                          {option.description.toUpperCase()}
-                        </p>
-                      )}
-                    </div>
-                    <span className="font-mono text-xs text-muted-foreground" dir="ltr">
-                      {option.sample}
-                    </span>
-                  </div>
-                </button>
-              ))}
-            </div>
-          ))}
-          <div className="space-y-2 border-t border-dashed pt-2">
-            <p className="text-[11px] font-semibold text-muted-foreground px-1">
-              {t("tokens.literal_label")}
-            </p>
-            <div className="flex items-center gap-2">
-              <Input
-                value={literalValue}
-                onChange={(event) => setLiteralValue(event.target.value)}
-                maxLength={INDICATOR_LITERAL_MAX}
-                placeholder={t("literal_input.placeholder")}
-                className="h-8"
-              />
-              <Button
-                type="button"
-                variant="secondary"
-                size="sm"
-                onClick={handleAddLiteral}
-                disabled={!literalValue.trim()}
+        <ScrollArea className="max-h-80">
+          <div
+            className="space-y-4 px-3 py-2"
+            dir="rtl"
+            style={{ WebkitOverflowScrolling: "touch" }}
+          >
+            {sections.map((section) => (
+              <div
+                key={section.key}
+                className={cn(
+                  "space-y-1",
+                  section.dividerAbove && "border-t border-dashed pt-3"
+                )}
               >
-                {t("tokens.literal_add")}
-              </Button>
+                <p className="text-[11px] font-semibold text-muted-foreground px-1">
+                  {section.title}
+                </p>
+                {section.options.map((option) => (
+                  <button
+                    key={option.key}
+                    type="button"
+                    className="w-full rounded-md border border-transparent px-3 py-2 text-right text-sm transition-colors hover:border-gray-200 hover:bg-gray-50"
+                    onClick={() => addSegment(option.create)}
+                  >
+                    <div className="flex items-center justify-between gap-2">
+                      <div>
+                        <p className="font-medium text-foreground">{option.label}</p>
+                        {option.description && (
+                          <p className="text-[11px] text-muted-foreground">
+                            {option.description.toUpperCase()}
+                          </p>
+                        )}
+                      </div>
+                      <span className="font-mono text-xs text-muted-foreground" dir="ltr">
+                        {option.sample}
+                      </span>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            ))}
+            <div className="space-y-2 border-t border-dashed pt-2">
+              <p className="text-[11px] font-semibold text-muted-foreground px-1">
+                {t("tokens.literal_label")}
+              </p>
+              <div className="flex items-center gap-2">
+                <Input
+                  value={literalValue}
+                  onChange={(event) => setLiteralValue(event.target.value)}
+                  maxLength={INDICATOR_LITERAL_MAX}
+                  placeholder={t("literal_input.placeholder")}
+                  className="h-8"
+                />
+                <Button
+                  type="button"
+                  variant="secondary"
+                  size="sm"
+                  onClick={handleAddLiteral}
+                  disabled={!literalValue.trim()}
+                >
+                  {t("tokens.literal_add")}
+                </Button>
+              </div>
+              <p className="text-[11px] text-muted-foreground px-1">
+                {t("literal_input.limit", { count: INDICATOR_LITERAL_MAX })}
+              </p>
             </div>
-            <p className="text-[11px] text-muted-foreground px-1">
-              {t("literal_input.limit", { count: INDICATOR_LITERAL_MAX })}
-            </p>
-            <div className="space-y-1">
+            <div className="space-y-2 border-t border-dashed pt-2">
               <p className="text-[11px] font-semibold text-muted-foreground px-1">
                 {t("tokens.separator_label")}
               </p>
-              <div className="flex flex-wrap gap-1">
-                {separatorPresets.map((symbol) => (
+              <div className="flex flex-wrap gap-2">
+                {SEPARATOR_SYMBOLS.map((symbol) => (
                   <Button
                     key={symbol}
                     type="button"
                     size="sm"
                     variant="ghost"
-                    className="h-7 px-2"
+                    className="h-10 min-w-[48px] rounded-lg border border-gray-200 bg-white text-base font-semibold shadow-sm transition hover:border-gray-300 hover:bg-gray-50"
                     onClick={() => addSegment(() => createLiteralSegment(symbol))}
                   >
                     {symbol}
@@ -288,7 +364,7 @@ const AddSegmentButton = ({
               </p>
             </div>
           </div>
-        </div>
+        </ScrollArea>
       </PopoverContent>
     </Popover>
   );
@@ -300,14 +376,25 @@ export const IndicatorFormatBuilder = forwardRef<
 >(({ value, onChange, disabled = false, previewCounter, className, ...rest }, ref) => {
   const formatT = useTranslations("modals.indicator.format");
   const safeValue = value ?? "";
-  const segments = useMemo(() => parseIndicatorFormat(safeValue), [safeValue]);
-  const preview = useMemo(
+  const segments = useMemo(
+    () => splitLiteralSeparators(parseIndicatorFormat(safeValue)),
+    [safeValue]
+  );
+  const defaultSegments = useMemo(
+    () => splitLiteralSeparators(parseIndicatorFormat(DEFAULT_INDICATOR_TEMPLATE)),
+    []
+  );
+  const previewSegments = segments.length ? segments : defaultSegments;
+  const previewPieces = useMemo(
     () =>
-      renderIndicatorFormat(safeValue || DEFAULT_INDICATOR_TEMPLATE, {
-        counter: previewCounter ?? 1,
-        date: sampleDateReference,
-      }),
-    [safeValue, previewCounter]
+      previewSegments.map((segment) => ({
+        id: segment.id,
+        value: renderIndicatorSegmentSample(segment, {
+          counter: previewCounter ?? 1,
+          date: sampleDateReference,
+        }),
+      })),
+    [previewSegments, previewCounter]
   );
 
   const updateSegments = useCallback(
@@ -324,8 +411,11 @@ export const IndicatorFormatBuilder = forwardRef<
   };
 
   const handleRemove = (segmentId: string) => {
+    if (segments.length <= 1) return;
     updateSegments(segments.filter((segment) => segment.id !== segmentId));
   };
+
+  const canRemoveSegments = segments.length > 1;
 
   return (
     <div
@@ -336,73 +426,86 @@ export const IndicatorFormatBuilder = forwardRef<
         className
       )}
     >
-      <div className="flex items-center gap-2">
-        <div className="flex-shrink-0">
-          <AddSegmentButton
-            position="start"
-            disabled={disabled}
-            onAdd={(segment) => handleAdd(segment, "start")}
-            sampleCounter={sampleCounterReference}
-            sampleDate={sampleDateReference}
-            t={formatT}
-          />
-        </div>
-        <div className="flex-1">
-          <div className="flex min-h-[42px] flex-wrap items-center justify-center gap-2">
-            {segments.length === 0 ? (
-              <span className="text-xs text-muted-foreground">
-                {formatT("empty")}
-              </span>
-            ) : (
-              segments.map((segment) => (
-                <div
-                  key={segment.id}
-                  className="flex items-center gap-2 rounded-full border border-gray-200 bg-white px-3 py-1 text-xs shadow-sm"
-                >
-                  <div className="flex flex-col text-right leading-tight">
-                    <span className="font-semibold text-gray-800">
-                      {getSegmentLabel(segment, formatT)}
-                    </span>
-                    <span className="font-mono text-[10px] uppercase text-gray-500" dir="ltr">
-                      {renderIndicatorSegmentSample(segment, {
-                        counter: previewCounter ?? sampleCounterReference,
-                        date: sampleDateReference,
-                      })}
-                    </span>
-                  </div>
-                  {!disabled && (
-                    <button
-                      type="button"
-                      onClick={() => handleRemove(segment.id)}
-                      className="rounded-full border border-transparent p-1 text-gray-400 hover:text-red-500 hover:border-red-100"
-                      aria-label={formatT("remove_segment")}
-                    >
-                      <X className="h-3 w-3" />
-                    </button>
-                  )}
+      <div
+        className="flex flex-wrap items-center justify-center gap-3"
+        dir="rtl"
+      >
+        <AddSegmentButton
+          position="start"
+          disabled={disabled}
+          onAdd={(segment) => handleAdd(segment, "start")}
+          sampleCounter={sampleCounterReference}
+          sampleDate={sampleDateReference}
+          t={formatT}
+        />
+        <div className="flex min-h-[42px] flex-wrap items-center justify-center gap-2">
+          {segments.length === 0 ? (
+            <span className="text-xs text-muted-foreground">
+              {formatT("empty")}
+            </span>
+          ) : (
+            segments.map((segment) => (
+              <div
+                key={segment.id}
+                className="flex items-center gap-2 rounded-full border border-gray-200 bg-white px-3 py-1 text-xs shadow-sm"
+              >
+                <div className="flex flex-col text-right leading-tight" dir="rtl">
+                  <span className="font-semibold text-gray-800">
+                    {getSegmentLabel(segment, formatT)}
+                  </span>
+                  <span className="font-mono text-[10px] text-gray-500" dir="rtl">
+                    {toPersianDigits(
+                      formatCounterSample(
+                        segment,
+                        renderIndicatorSegmentSample(segment, {
+                          counter: previewCounter ?? sampleCounterReference,
+                          date: sampleDateReference,
+                        })
+                      )
+                    )}
+                  </span>
                 </div>
-              ))
-            )}
-          </div>
+                {canRemoveSegments && !disabled && (
+                  <button
+                    type="button"
+                    onClick={() => handleRemove(segment.id)}
+                    className="rounded-full border border-transparent p-1 text-gray-400 hover:text-red-500 hover:border-red-100 text-right"
+                    aria-label={formatT("remove_segment")}
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
+                )}
+              </div>
+            ))
+          )}
         </div>
-        <div className="flex-shrink-0">
-          <AddSegmentButton
-            position="end"
-            disabled={disabled}
-            onAdd={(segment) => handleAdd(segment, "end")}
-            sampleCounter={sampleCounterReference}
-            sampleDate={sampleDateReference}
-            t={formatT}
-          />
-        </div>
+        <AddSegmentButton
+          position="end"
+          disabled={disabled}
+          onAdd={(segment) => handleAdd(segment, "end")}
+          sampleCounter={sampleCounterReference}
+          sampleDate={sampleDateReference}
+          t={formatT}
+        />
       </div>
-      <div className="mt-3 text-xs text-muted-foreground">
+      <div
+        className="mt-3 text-xs text-muted-foreground text-right flex items-center gap-2"
+        dir="rtl"
+      >
         <span className="font-semibold text-foreground">
-          {formatT("preview_label")}:
-        </span>{" "}
-        <span className="font-mono text-sm" dir="ltr">
-          {preview}
+          {`${formatT("preview_label")}:`}
         </span>
+        <div className="flex flex-row flex-wrap justify-start font-mono text-sm leading-none">
+          {previewPieces.map(({ id, value }, index) => (
+            <bdi
+              key={id ?? `preview-${index}`}
+              dir="auto"
+              className="leading-none"
+            >
+              {toPersianDigits(value)}
+            </bdi>
+          ))}
+        </div>
       </div>
     </div>
   );

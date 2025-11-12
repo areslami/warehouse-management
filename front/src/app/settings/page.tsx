@@ -43,6 +43,7 @@ import {
   DEFAULT_INDICATOR_TEMPLATE,
   renderIndicatorFormat,
 } from "@/lib/indicator-format";
+import { toPersianDigits } from "@/lib/utils/numbers";
 
 const badgeClasses: Record<IndicatorSection, string> = {
   warehouse_receipt: "bg-blue-50 text-blue-700 border border-blue-200",
@@ -53,10 +54,33 @@ const badgeClasses: Record<IndicatorSection, string> = {
   purchase_proforma: "bg-rose-50 text-rose-700 border border-rose-200",
 };
 
+const VALUE_PLACEHOLDER = "__VALUE__";
+
 export default function SettingsPage() {
   const t = useTranslations("pages.settings");
   const tSidebar = useTranslations("sidebar");
   const tCommon = useTranslations("common");
+
+  const renderLocalizedValue = (
+    template: string,
+    value: string,
+    valueClassName = ""
+  ) => {
+    const [before, after = ""] = template.split(VALUE_PLACEHOLDER);
+    return (
+      <>
+        {before}
+        <bdi
+          dir="auto"
+          style={{ unicodeBidi: "plaintext" }}
+          className={`inline-block ${valueClassName}`}
+        >
+          {value}
+        </bdi>
+        {after}
+      </>
+    );
+  };
 
   const [indicatorModalOpen, setIndicatorModalOpen] = useState(false);
   const [editingIndicator, setEditingIndicator] = useState<Indicator | null>(
@@ -249,6 +273,18 @@ export default function SettingsPage() {
                 const badge =
                   badgeClasses[key] ??
                   "bg-gray-100 text-gray-700 border border-gray-200";
+                const counterTemplate = t("indicator_list.current_counter", {
+                  value: VALUE_PLACEHOLDER,
+                });
+                const nextValueTemplate = t("indicator_list.next_value", {
+                  value: VALUE_PLACEHOLDER,
+                });
+                const formattedCounter = toPersianDigits(
+                  indicator.counter ?? 0
+                );
+                const formattedNextValue = toPersianDigits(
+                  formatNextValue(indicator)
+                );
                 return (
                   <div
                     key={indicator.id}
@@ -259,15 +295,19 @@ export default function SettingsPage() {
                         <p className="text-base font-semibold text-gray-900">
                           {indicator.name}
                         </p>
-                        <p className="text-xs text-muted-foreground">
-                          {t("indicator_list.current_counter", {
-                            value: indicator.counter,
-                          })}
+                        <p className="text-xs text-muted-foreground" dir="rtl">
+                          {renderLocalizedValue(
+                            counterTemplate,
+                            formattedCounter,
+                            "font-mono"
+                          )}
                         </p>
-                        <p className="text-xs text-muted-foreground" dir="ltr">
-                          {t("indicator_list.next_value", {
-                            value: formatNextValue(indicator),
-                          })}
+                        <p className="text-xs text-muted-foreground" dir="rtl">
+                          {renderLocalizedValue(
+                            nextValueTemplate,
+                            formattedNextValue,
+                            "font-mono"
+                          )}
                         </p>
                       </div>
                       <div className="flex flex-col items-end gap-1">
@@ -355,7 +395,9 @@ export default function SettingsPage() {
                   (indicator) => indicator.is_default
                 );
                 const options = sectionIndicators.map((indicator) => {
-                  const sample = formatNextValue(indicator);
+                  const sample = toPersianDigits(
+                    formatNextValue(indicator)
+                  );
                   return {
                     value: indicator.id.toString(),
                     label: `${indicator.name} • ${t(

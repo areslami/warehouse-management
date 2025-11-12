@@ -1251,7 +1251,7 @@
           "month_long_description": "نام کامل ماه جلالی",
           "day_two_description": "روز ماه به صورت دو رقمی",
           "day_one_description": "روز ماه به صورت تک رقمی",
-          "separator_label": "میانبر جداکننده‌ها",
+          "separator_label": "کاراکتر جداکننده",
           "separator_hint": "برای افزودن سریع کاراکترهای متداول روی آنها کلیک کنید."
         },
         "literal_input": {
@@ -1268,7 +1268,8 @@
           "month_long": "نام کامل ماه",
           "day_two": "روز دو رقمی",
           "day_one": "روز تک رقمی",
-          "literal": "متن «{value}»"
+          "literal": "متن «{value}»",
+          "separator": "کاراکتر جداکننده «{value}»"
         }
       }
     }

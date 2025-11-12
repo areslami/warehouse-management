@@ -7,6 +7,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
 } from "../../ui/dialog";
@@ -135,97 +136,111 @@ export function IndicatorModal({
         }
       }}
     >
-      <DialogContent className="sm:max-w-md">
-        <DialogHeader>
-          <DialogTitle>{t("title")}</DialogTitle>
+      <DialogContent
+        dir="rtl"
+        className="min-w-[75%] max-h-[90vh] overflow-y-auto scrollbar-hide p-0 my-0 mx-auto [&>button]:hidden"
+      >
+        <DialogHeader
+          dir="rtl"
+          className="px-5 py-4 text-right sm:text-right items-end justify-start"
+          style={{ backgroundColor: "#f6d265", textAlign: "right" }}
+        >
+          <DialogTitle className="text-white text-lg font-bold w-full text-right" dir="rtl">
+            {t("title")}
+          </DialogTitle>
+          <DialogDescription className="text-white/90 text-sm w-full text-right" dir="rtl">
+            {t("description")}
+          </DialogDescription>
         </DialogHeader>
 
-        <p className="text-sm text-muted-foreground mb-4">{t("description")}</p>
+        <div className="bg-white px-8 py-6">
+          <Form {...form}>
+            <form onSubmit={handleSubmit} className="space-y-6">
+              <div className="grid gap-4 md:grid-cols-2">
+                <FormField
+                  control={form.control}
+                  name="name"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>{t("fields.name")}</FormLabel>
+                      <FormControl>
+                        <Input
+                          {...field}
+                          placeholder={t("placeholders.name")}
+                          disabled={readOnly || isSubmitting}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
 
-        <Form {...form}>
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <FormField
-              control={form.control}
-              name="name"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>{t("fields.name")}</FormLabel>
-                  <FormControl>
-                    <Input
-                      {...field}
-                      placeholder={t("placeholders.name")}
-                      disabled={readOnly || isSubmitting}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+                <FormField
+                  control={form.control}
+                  name="belongs"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>{t("fields.belongs")}</FormLabel>
+                      <FormControl>
+                        <SimpleCombobox
+                          options={belongsOptions}
+                          value={field.value || ""}
+                          onValueChange={(value) => {
+                            field.onChange(value);
+                            form.setValue("belongs", value as IndicatorSection, {
+                              shouldDirty: true,
+                              shouldValidate: true,
+                            });
+                          }}
+                          placeholder={t("placeholders.belongs")}
+                          searchPlaceholder={t("placeholders.belongs")}
+                          disabled={readOnly || isSubmitting}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
 
-            <FormField
-              control={form.control}
-              name="belongs"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>{t("fields.belongs")}</FormLabel>
-                  <FormControl>
-                    <SimpleCombobox
-                      options={belongsOptions}
-                      value={field.value || ""}
-                      onValueChange={(value) => {
-                        field.onChange(value);
-                        form.setValue("belongs", value as IndicatorSection, {
-                          shouldDirty: true,
-                          shouldValidate: true,
-                        });
-                      }}
-                      placeholder={t("placeholders.belongs")}
-                      searchPlaceholder={t("placeholders.belongs")}
-                      disabled={readOnly || isSubmitting}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+              <FormField
+                control={form.control}
+                name="format_template"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel >{t("fields.format_template")}</FormLabel>
+                    <FormDescription>{t("format.helper")}</FormDescription>
+                    <FormControl>
+                      <IndicatorFormatBuilder
+                        ref={field.ref}
+                        value={field.value}
+                        onChange={(next) => field.onChange(next)}
+                        disabled={readOnly || isSubmitting}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
 
-            <FormField
-              control={form.control}
-              name="format_template"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>{t("fields.format_template")}</FormLabel>
-                  <FormDescription>{t("format.helper")}</FormDescription>
-                  <FormControl>
-                    <IndicatorFormatBuilder
-                      ref={field.ref}
-                      value={field.value}
-                      onChange={(next) => field.onChange(next)}
-                      disabled={readOnly || isSubmitting}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <div className="flex justify-end gap-2 pt-2">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={handleClose}
-                disabled={isSubmitting}
-              >
-                {t("actions.cancel")}
-              </Button>
-              {!readOnly && (
-                <Button type="submit" disabled={isSubmitting}>
-                  {isSubmitting ? t("actions.saving") : t("actions.save")}
+              <div className="flex justify-end gap-3 pt-4">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={handleClose}
+                  disabled={isSubmitting}
+                >
+                  {t("actions.cancel")}
                 </Button>
-              )}
-            </div>
-          </form>
-        </Form>
+                {!readOnly && (
+                  <Button type="submit" disabled={isSubmitting}>
+                    {isSubmitting ? t("actions.saving") : t("actions.save")}
+                  </Button>
+                )}
+              </div>
+            </form>
+          </Form>
+        </div>
       </DialogContent>
     </Dialog>
   );
