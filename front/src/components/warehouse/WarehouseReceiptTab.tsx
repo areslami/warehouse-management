@@ -26,6 +26,11 @@ import { Input } from "../ui/input";
 import { Collapsible, CollapsibleTrigger, CollapsibleContent } from "@/components/ui/collapsible";
 import { SearchableSelect } from "@/components/ui/searchable-select";
 import { PersianDatePicker } from "@/components/ui/persian-date-picker";
+import {
+  INDICATOR_TEXT_PROPS,
+  VALUE_PLACEHOLDER,
+  renderLocalizedValue,
+} from "@/lib/utils/localized-value";
 
 interface WarehouseReceiptTabProps {
   selectedWarehouseId?: number;
@@ -283,7 +288,17 @@ export function WarehouseReceiptTab({ selectedWarehouseId }: WarehouseReceiptTab
                 <TableRowComponent key={receipt.id}>
                   <TableCell className="text-right font-medium">{toPersianDigits(index + 1)}</TableCell>
                   <TableCell>{toPersianDigits(receipt.id)}</TableCell>
-                  <TableCell>{toPersianDigits(receipt.receipt_id, '-')}</TableCell>
+                  <TableCell>
+                    {receipt.receipt_id
+                      ? renderLocalizedValue(
+                          VALUE_PLACEHOLDER,
+                          <bdi {...INDICATOR_TEXT_PROPS} className="font-mono">
+                            {toPersianDigits(receipt.receipt_id)}
+                          </bdi>,
+                          "inline"
+                        )
+                      : "-"}
+                  </TableCell>
                   <TableCell>{getReceiptTypeLabel(receipt.receipt_type)}</TableCell>
                   <TableCell>{receipt.warehouse_name || '-'}</TableCell>
                   <TableCell><PersianDateTableCell date={receipt.date} /></TableCell>

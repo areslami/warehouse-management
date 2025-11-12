@@ -41,9 +41,13 @@ import { SimpleCombobox } from "@/components/ui/simple-combobox";
 import { INDICATOR_SECTIONS } from "@/lib/constants/indicator-sections";
 import {
   DEFAULT_INDICATOR_TEMPLATE,
-  renderIndicatorFormat,
+  buildIndicatorPreview,
 } from "@/lib/indicator-format";
 import { toPersianDigits } from "@/lib/utils/numbers";
+import {
+  renderLocalizedValue,
+  VALUE_PLACEHOLDER,
+} from "@/lib/utils/localized-value";
 
 const badgeClasses: Record<IndicatorSection, string> = {
   warehouse_receipt: "bg-blue-50 text-blue-700 border border-blue-200",
@@ -54,33 +58,10 @@ const badgeClasses: Record<IndicatorSection, string> = {
   purchase_proforma: "bg-rose-50 text-rose-700 border border-rose-200",
 };
 
-const VALUE_PLACEHOLDER = "__VALUE__";
-
 export default function SettingsPage() {
   const t = useTranslations("pages.settings");
   const tSidebar = useTranslations("sidebar");
   const tCommon = useTranslations("common");
-
-  const renderLocalizedValue = (
-    template: string,
-    value: string,
-    valueClassName = ""
-  ) => {
-    const [before, after = ""] = template.split(VALUE_PLACEHOLDER);
-    return (
-      <>
-        {before}
-        <bdi
-          dir="auto"
-          style={{ unicodeBidi: "plaintext" }}
-          className={`inline-block ${valueClassName}`}
-        >
-          {value}
-        </bdi>
-        {after}
-      </>
-    );
-  };
 
   const [indicatorModalOpen, setIndicatorModalOpen] = useState(false);
   const [editingIndicator, setEditingIndicator] = useState<Indicator | null>(
@@ -198,8 +179,7 @@ export default function SettingsPage() {
   );
 
   const formatNextValue = (indicator: Indicator) =>
-    indicator.format_preview ||
-    renderIndicatorFormat(
+    buildIndicatorPreview(
       indicator.format_template || DEFAULT_INDICATOR_TEMPLATE,
       {
         counter: (indicator.counter ?? 0) + 1,
@@ -282,9 +262,7 @@ export default function SettingsPage() {
                 const formattedCounter = toPersianDigits(
                   indicator.counter ?? 0
                 );
-                const formattedNextValue = toPersianDigits(
-                  formatNextValue(indicator)
-                );
+                const nextValue = formatNextValue(indicator);
                 return (
                   <div
                     key={indicator.id}
@@ -298,14 +276,28 @@ export default function SettingsPage() {
                         <p className="text-xs text-muted-foreground" dir="rtl">
                           {renderLocalizedValue(
                             counterTemplate,
-                            formattedCounter,
+                            <bdi
+                              dir="auto"
+                              style={{ unicodeBidi: "plaintext" }}
+                            >
+                              {formattedCounter}
+                            </bdi>,
                             "font-mono"
                           )}
                         </p>
                         <p className="text-xs text-muted-foreground" dir="rtl">
                           {renderLocalizedValue(
                             nextValueTemplate,
-                            formattedNextValue,
+                            nextValue.parts.map((part, index) => (
+                              <bdi
+                                key={`${indicator.id}-next-${index}`}
+                                dir="auto"
+                                style={{ unicodeBidi: "plaintext" }}
+                                className="leading-none"
+                              >
+                                {part}
+                              </bdi>
+                            )),
                             "font-mono"
                           )}
                         </p>
@@ -395,14 +387,12 @@ export default function SettingsPage() {
                   (indicator) => indicator.is_default
                 );
                 const options = sectionIndicators.map((indicator) => {
-                  const sample = toPersianDigits(
-                    formatNextValue(indicator)
-                  );
+                  const nextValue = formatNextValue(indicator);
                   return {
                     value: indicator.id.toString(),
                     label: `${indicator.name} • ${t(
                       "indicator_list.next_value",
-                      { value: sample }
+                      { value: nextValue.text }
                     )}`,
                     name: indicator.name,
                   };

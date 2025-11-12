@@ -30,8 +30,13 @@ import { createSalesProforma } from "@/lib/api/finance";
 import { useDefaultIndicator } from "@/lib/hooks/use-default-indicator";
 import {
   DEFAULT_INDICATOR_TEMPLATE,
+  buildIndicatorPreview,
   renderIndicatorFormat,
 } from "@/lib/indicator-format";
+import {
+  renderLocalizedValue,
+  VALUE_PLACEHOLDER,
+} from "@/lib/utils/localized-value";
 
 type DispatchIssueFormData = {
   dispatch_id: string;
@@ -137,14 +142,29 @@ export function DispatchIssueModal({ trigger, onSubmit, onClose, initialData, is
   });
 
   const indicatorPreview = useMemo(() => {
-    if (!defaultIndicator) return "";
-    return renderIndicatorFormat(
+    if (!defaultIndicator) return null;
+    return buildIndicatorPreview(
       defaultIndicator.format_template || DEFAULT_INDICATOR_TEMPLATE,
       {
         counter: (defaultIndicator.counter ?? 0) + 2,
       }
     );
   }, [defaultIndicator]);
+
+    const currentIndicatorPreview = useMemo(() => {
+    if (!defaultIndicator) return null;
+    return buildIndicatorPreview(
+      defaultIndicator.format_template || DEFAULT_INDICATOR_TEMPLATE,
+      {
+        counter: (defaultIndicator.counter ?? 0) + 1,
+      }
+    );
+  }, [defaultIndicator]);
+
+  const indicatorDescriptionTemplate = useMemo(
+    () => tCommon("indicator_next_value", { value: VALUE_PLACEHOLDER }),
+    [tCommon]
+  );
 
   const { fields, append, remove } = useFieldArray({
     control: form.control,
@@ -207,20 +227,42 @@ export function DispatchIssueModal({ trigger, onSubmit, onClose, initialData, is
                   render={({ field }) => (
                 <FormItem>
                   <FormLabel>{t("dispatch-id")}</FormLabel>
-                  <FormControl>
-                    <Input
-                          {...field}
-                          readOnly={isEditing}
-                          className={isEditing ? "bg-gray-100 cursor-not-allowed" : ""}
-                          autoFocus={false}
-                          tabIndex={isEditing ? -1 : undefined}
-                        />
-                      </FormControl>
-                      {defaultIndicator && (
-                        <FormDescription className="text-xs text-muted-foreground" dir="ltr">
-                          {tCommon("indicator_next_value", {
-                            value: indicatorPreview,
-                          })}
+{indicatorPreview && <FormControl>
+                                      <div
+                                        className={`flex h-9 w-full items-center justify-start rounded-md border border-input bg-gray-100 px-3 py-1 text-sm text-right shadow-sm ${
+                                          isEditing ? "cursor-not-allowed" : ""
+                                        }`} dir="rtl"
+                                      >
+                                         {renderLocalizedValue(
+                            "",
+                            currentIndicatorPreview.parts.map((part, index) => (
+                              <bdi
+                                key={`warehouse-receipt-preview-${index-1}`}
+                                dir="auto"
+                                className="leading-none"
+                              >
+                                {part}
+                              </bdi>
+                            )),
+                            "font-mono"
+                          )}
+                                      </div>
+                                    </FormControl> } 
+                      {indicatorPreview && (
+                        <FormDescription className="text-xs text-muted-foreground" dir="rtl">
+                          {renderLocalizedValue(
+                            indicatorDescriptionTemplate,
+                            indicatorPreview.parts.map((part, index) => (
+                              <bdi
+                                key={`dispatch-issue-preview-${index}`}
+                                dir="auto"
+                                className="leading-none"
+                              >
+                                {part}
+                              </bdi>
+                            )),
+                            "font-mono"
+                          )}
                         </FormDescription>
                       )}
                       <FormMessage className="min-h-[1.25rem]" />

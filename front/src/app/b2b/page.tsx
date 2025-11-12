@@ -36,6 +36,7 @@ import { fetchWarehouseReceipts } from "@/lib/api/warehouse";
 import { fetchSalesProformaById, fetchSalesProformas } from "@/lib/api/finance";
 import { handleApiErrorWithToast } from "@/lib/api/error-toast-handler";
 import { formatNumber } from "@/lib/utils/number-format";
+import { toPersianDigits } from "@/lib/utils/numbers";
 import UploadAddressModal from "@/components/modals/b2b/upload-address-modal";
 import { da } from "zod/v4/locales";
 import { SimpleCombobox } from "@/components/ui/simple-combobox";

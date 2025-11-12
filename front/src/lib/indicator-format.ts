@@ -1,4 +1,5 @@
 import moment from "moment-jalaali";
+import { toPersianDigits } from "@/lib/utils/numbers";
 
 moment.loadPersian({ usePersianDigits: false, dialect: "persian-modern" });
 
@@ -277,3 +278,36 @@ export const renderIndicatorSegmentSample = (
   segment: IndicatorFormatSegment,
   options?: { counter?: number; date?: Date }
 ) => renderSegment(segment, options);
+
+export type IndicatorPreview = {
+  parts: string[];
+  text: string;
+};
+
+export const buildIndicatorPreview = (
+  template?: string,
+  options?: { counter?: number; date?: Date }
+): IndicatorPreview => {
+  const safeTemplate = template || DEFAULT_INDICATOR_TEMPLATE;
+  const segments = parseIndicatorFormat(safeTemplate);
+  const counterValue = Math.max(1, options?.counter ?? 1);
+
+  if (!segments.length) {
+    const fallback = toPersianDigits(counterValue);
+    return { text: fallback, parts: [fallback] };
+  }
+
+  const parts = segments.map((segment) =>
+    toPersianDigits(
+      renderIndicatorSegmentSample(segment, {
+        counter: counterValue,
+        date: options?.date,
+      })
+    )
+  );
+
+  return {
+    text: parts.join(""),
+    parts,
+  };
+};
