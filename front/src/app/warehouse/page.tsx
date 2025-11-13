@@ -35,6 +35,8 @@ import { Warehouse, WarehouseReceipt, DispatchIssue, DeliveryFulfillment } from 
 import { B2BAddress, B2BDistribution, B2BOffer } from "@/lib/interfaces/b2b";
 import { fetchB2BAddressById, fetchB2BDistributionById, fetchB2BOfferById } from "@/lib/api/b2b";
 import { formatNumber } from "@/lib/utils/number-format";
+import { buildIndicatorPreview, DEFAULT_INDICATOR_TEMPLATE } from "@/lib/indicator-format";
+import { renderLocalizedValue } from "@/lib/utils/localized-value";
 
 export default function WarehousePage() {
   const t = useTranslations("pages.warehouse");
@@ -671,7 +673,22 @@ export default function WarehousePage() {
                       />
                     </TableCell>
                     <TableCell className="text-right font-medium">{index + 1}</TableCell>
-                    <TableCell className="text-right">{receipt.receipt_id}</TableCell>
+                    <TableCell className="text-right" dir="rtl">
+                      {renderLocalizedValue(
+                        "",
+                        buildIndicatorPreview(receipt.receipt_id || "", {})?.parts.map((part, partIndex) => (
+                          <bdi
+                            key={`receipt-${receipt.id}-${partIndex}`}
+                            dir="auto"
+                            style={{ unicodeBidi: "plaintext" }}
+                            className="leading-none"
+                          >
+                            {part}
+                          </bdi>
+                        )),
+                        "font-mono"
+                      )}
+                    </TableCell>
                     <TableCell className="text-right">{formatNumber(receipt.total_weight)}</TableCell>
                     <TableCell className="text-right">{warehouses.find(w => w.id === receipt.warehouse)?.name}</TableCell>
                     <TableCell className="text-right">{new Date(receipt.date).toLocaleDateString('fa-IR')}</TableCell>
@@ -875,7 +892,22 @@ export default function WarehousePage() {
                       />
                     </TableCell>
                     <TableCell className="text-right font-medium">{index + 1}</TableCell>
-                    <TableCell className="text-right">{dispatch.dispatch_id}</TableCell>
+                    <TableCell className="text-right" dir="rtl">
+                      {renderLocalizedValue(
+                        "",
+                        buildIndicatorPreview(dispatch.dispatch_id || "", {})?.parts.map((part, partIndex) => (
+                          <bdi
+                            key={`dispatch-${dispatch.id}-${partIndex}`}
+                            dir="auto"
+                            style={{ unicodeBidi: "plaintext" }}
+                            className="leading-none"
+                          >
+                            {part}
+                          </bdi>
+                        )),
+                        "font-mono"
+                      )}
+                    </TableCell>
                     <TableCell className="text-right">{formatNumber(dispatch.total_weight)}</TableCell>
                     <TableCell className="text-right">{warehouses.find(w => w.id === dispatch.warehouse)?.name}</TableCell>
                     <TableCell className="text-right">{new Date(dispatch.issue_date).toLocaleDateString('fa-IR')}</TableCell>
@@ -1093,7 +1125,22 @@ export default function WarehousePage() {
                         />
                       </TableCell>
                       <TableCell className="text-right font-medium">{index + 1}</TableCell>
-                      <TableCell className="text-right">{delivery.delivery_id}</TableCell>
+                      <TableCell className="text-right" dir="rtl">
+                        {renderLocalizedValue(
+                          "",
+                          buildIndicatorPreview(delivery.delivery_id || "", {})?.parts.map((part, partIndex) => (
+                            <bdi
+                              key={`delivery-${delivery.id}-${partIndex}`}
+                              dir="auto"
+                              style={{ unicodeBidi: "plaintext" }}
+                              className="leading-none"
+                            >
+                              {part}
+                            </bdi>
+                          )),
+                          "font-mono"
+                        )}
+                      </TableCell>
                       <TableCell className="text-right">{delivery.b2b_address_purchase_id || '-'}</TableCell>
                       <TableCell className="text-right">{warehouses.find(w => w.id === delivery.warehouse)?.name || '-'}</TableCell>
                       <TableCell className="text-right">{new Date(delivery.issue_date).toLocaleDateString('fa-IR')}</TableCell>

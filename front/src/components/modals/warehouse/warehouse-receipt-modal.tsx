@@ -301,6 +301,7 @@ export function WarehouseReceiptModal({ trigger, onSubmit, onClose, initialData,
                               <bdi
                                 key={`warehouse-receipt-preview-${index-1}`}
                                 dir="auto"
+                                style={{ unicodeBidi: "plaintext" }}
                                 className="leading-none"
                               >
                                 {part}
@@ -317,6 +318,7 @@ export function WarehouseReceiptModal({ trigger, onSubmit, onClose, initialData,
                               <bdi
                                 key={`warehouse-receipt-preview-${index}`}
                                 dir="auto"
+                                style={{ unicodeBidi: "plaintext" }}
                                 className="leading-none"
                               >
                                 {part}

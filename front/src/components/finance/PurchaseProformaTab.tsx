@@ -24,6 +24,8 @@ import {
 import { Input } from "@/components/ui/input";
 import { Collapsible, CollapsibleTrigger, CollapsibleContent } from "@/components/ui/collapsible";
 import { PersianDatePicker } from "@/components/ui/persian-date-picker";
+import { buildIndicatorPreview } from "@/lib/indicator-format";
+import { renderLocalizedValue } from "@/lib/utils/localized-value";
 
 export function PurchaseProformaTab() {
   const t = useTranslations("modals.purchaseProforma");
@@ -242,7 +244,22 @@ export function PurchaseProformaTab() {
           ) : (
             filteredProformas.map((proforma) => (
               <TableRow key={proforma.id}>
-                <TableCell className="font-medium">{proforma.serial_number}</TableCell>
+                <TableCell className="font-medium" dir="rtl">
+                  {renderLocalizedValue(
+                    "",
+                    buildIndicatorPreview(proforma.serial_number || "", {})?.parts.map((part, partIndex) => (
+                      <bdi
+                        key={`purchase-proforma-${proforma.id}-${partIndex}`}
+                        dir="auto"
+                        style={{ unicodeBidi: "plaintext" }}
+                        className="leading-none"
+                      >
+                        {part}
+                      </bdi>
+                    )),
+                    "font-mono"
+                  )}
+                </TableCell>
                 <TableCell>{proforma.supplier}</TableCell>
                 <TableCell>{proforma.date}</TableCell>
                 <TableCell>{proforma.final_price ? formatNumber(proforma.final_price) : '-'}</TableCell>

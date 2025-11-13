@@ -25,6 +25,8 @@ import { Edit, Plus, Trash2, ChevronUp, ChevronDown } from "lucide-react";
 import { Input } from "../ui/input";
 import { Collapsible, CollapsibleTrigger, CollapsibleContent } from "@/components/ui/collapsible";
 import { PersianDatePicker } from "@/components/ui/persian-date-picker";
+import { buildIndicatorPreview } from "@/lib/indicator-format";
+import { renderLocalizedValue } from "@/lib/utils/localized-value";
 
 interface DispatchIssueTabProps {
   selectedWarehouseId?: number;
@@ -280,7 +282,22 @@ export function DispatchIssueTab({ selectedWarehouseId }: DispatchIssueTabProps)
                 <TableRowComponent key={dispatch.id}>
                   <TableCell className="text-right font-medium">{index + 1}</TableCell>
                   <TableCell>{dispatch.id}</TableCell>
-                  <TableCell>{dispatch.dispatch_id}</TableCell>
+                  <TableCell dir="rtl">
+                    {renderLocalizedValue(
+                      "",
+                      buildIndicatorPreview(dispatch.dispatch_id || "", {})?.parts.map((part, partIndex) => (
+                        <bdi
+                          key={`dispatch-${dispatch.id}-${partIndex}`}
+                          dir="auto"
+                          style={{ unicodeBidi: "plaintext" }}
+                          className="leading-none"
+                        >
+                          {part}
+                        </bdi>
+                      )),
+                      "font-mono"
+                    )}
+                  </TableCell>
                   <TableCell>{dispatch.warehouse_name || '-'}</TableCell>
                   <TableCell><PersianDateTableCell date={dispatch.issue_date} /></TableCell>
                   <TableCell><PersianDateTableCell date={dispatch.validity_date} /></TableCell>

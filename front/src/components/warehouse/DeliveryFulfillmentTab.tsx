@@ -23,6 +23,8 @@ import { Button } from "../ui/button";
 import UploadDeliveryModal from "../modals/warehouse/upload-delivery-modal";
 import { Collapsible, CollapsibleTrigger, CollapsibleContent } from "@/components/ui/collapsible";
 import { PersianDatePicker } from "@/components/ui/persian-date-picker";
+import { buildIndicatorPreview } from "@/lib/indicator-format";
+import { renderLocalizedValue } from "@/lib/utils/localized-value";
 
 interface DeliveryFulfillmentTabProps {
   selectedWarehouseId?: number;
@@ -316,7 +318,22 @@ export function DeliveryFulfillmentTab({ selectedWarehouseId }: DeliveryFulfillm
                 return (
                   <TableRowComponent key={delivery.id}>
                     <TableCell className="text-right font-medium">{index + 1}</TableCell>
-                    <TableCell>{delivery.delivery_id}</TableCell>
+                    <TableCell dir="rtl">
+                      {renderLocalizedValue(
+                        "",
+                        buildIndicatorPreview(delivery.delivery_id || "", {})?.parts.map((part, partIndex) => (
+                          <bdi
+                            key={`delivery-${delivery.id}-${partIndex}`}
+                            dir="auto"
+                            style={{ unicodeBidi: "plaintext" }}
+                            className="leading-none"
+                          >
+                            {part}
+                          </bdi>
+                        )),
+                        "font-mono"
+                      )}
+                    </TableCell>
                     <TableCell>{delivery.b2b_address_purchase_id || '-'}</TableCell>
                     <TableCell>{delivery.warehouse_receipt_id || '-'}</TableCell>
                     <TableCell><PersianDateTableCell date={delivery.issue_date} /></TableCell>
