@@ -8,7 +8,7 @@ from django.db.models import Q
 from b2b.models.base import B2BSale
 from core.models.parties import Receiver
 from core.models import Product, Customer
-from .models import B2BOffer
+from .models import B2BOffer, B2BDistribution
 from .excel_config import EXCEL_FIELD_MAPPING_SALE, EXCEL_FIELD_MAPPING_ADDRESS, EXCEL_FIELD_MAPPING_YOUR_SALE
 
 
@@ -375,7 +375,7 @@ def process_your_sale_row(row):
     return processed
 
 
-def createOrUpdateSale(row, address_type, id, customer):
+def createOrUpdateSale(row, address_type, entity_id, customer):
     purchase_id = str(row.get(EXCEL_FIELD_MAPPING_ADDRESS['purchase_id'], ''))
     cottage_code = str(
         row.get(EXCEL_FIELD_MAPPING_ADDRESS['cottage_code'], ''))
@@ -391,31 +391,33 @@ def createOrUpdateSale(row, address_type, id, customer):
         row.get(EXCEL_FIELD_MAPPING_ADDRESS['payment_method'], ''))
 
     with transaction.atomic():
-        dist_id = None
-        offer_id = None
-        try:
-            dist_id = int(id) if id is not None else None
-        except (TypeError, ValueError):
-            dist_id = None
-        offer_id = dist_id
-
-        # Fetch the offer to get the product
         offer = None
+        distribution = None
+        try:
+            resolved_id = int(entity_id) if entity_id is not None else None
+        except (TypeError, ValueError):
+            resolved_id = None
+        if address_type == 'your_address' and resolved_id:
+            offer = B2BOffer.objects.filter(id=resolved_id).first()
+        elif address_type == 'distributor_address' and resolved_id:
+            distribution = B2BDistribution.objects.filter(id=resolved_id).first()
+
         product = None
-        if offer_id:
-            offer = B2BOffer.objects.filter(id=offer_id).first()
-            if offer and offer.warehouse_receipt:
-                first_item = offer.warehouse_receipt.items.first()
-                if first_item and getattr(first_item, 'product', None):
-                    product = first_item.product
+        if offer and offer.warehouse_receipt:
+            first_item = offer.warehouse_receipt.items.first()
+            if first_item and getattr(first_item, 'product', None):
+                product = first_item.product
+        if distribution and distribution.warehouse_receipt and not product:
+            first_item = distribution.warehouse_receipt.items.first()
+            if first_item and getattr(first_item, 'product', None):
+                product = first_item.product
 
         sale, created = B2BSale.objects.update_or_create(
             purchase_id=purchase_id,
             defaults={
-                # 'cottage_code': cottage_code,
                 'is_distributor': True if address_type == 'distributor_address' else False,
-                'b2b_distribution_id': dist_id if address_type == 'distributor_address' else None,
-                'offer_id': offer_id if address_type == 'your_address' else None,
+                'b2b_distribution': distribution,
+                'offer': offer,
                 'product': product,
                 'weight': total_weight_purchased,
                 'unit_price': unit_price,
