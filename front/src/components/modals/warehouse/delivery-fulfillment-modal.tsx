@@ -36,6 +36,7 @@ import {
   DEFAULT_INDICATOR_TEMPLATE,
   buildIndicatorPreview,
   renderIndicatorFormat,
+  compactIndicatorValue,
 } from "@/lib/indicator-format";
 import {
   renderLocalizedValue,
@@ -197,7 +198,9 @@ export function DeliveryFulfillmentModal({ trigger, onSubmit, onClose, initialDa
   const form = useForm<DeliveryFulfillmentFormData>({
     resolver: zodResolver(deliveryFulfillmentSchema) as any,
     defaultValues: {
-      delivery_id: initialData?.delivery_id || "",
+      delivery_id: initialData?.delivery_id
+        ? compactIndicatorValue(initialData.delivery_id)
+        : "",
       waybill_serial: initialData?.waybill_serial || "",
       issue_date: initialData?.issue_date || getTodayDate(),
       b2b_address: initialData?.b2b_address || 0,

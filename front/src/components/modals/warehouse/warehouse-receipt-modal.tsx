@@ -31,6 +31,7 @@ import { toPersianDigits } from "@/lib/utils/numbers";
 import {
   DEFAULT_INDICATOR_TEMPLATE,
   buildIndicatorPreview,
+  compactIndicatorValue,
 } from "@/lib/indicator-format";
 import {
   INDICATOR_TEXT_PROPS,
@@ -157,7 +158,9 @@ export function WarehouseReceiptModal({ trigger, onSubmit, onClose, initialData,
     resolver: zodResolver(warehouseReceiptSchema) as any,
     defaultValues: {
       id: initialData?.id,
-      receipt_id: initialData?.receipt_id || "",
+      receipt_id: initialData?.receipt_id
+        ? compactIndicatorValue(initialData.receipt_id)
+        : "",
       receipt_type: initialData?.receipt_type || "purchase",
       date: initialData?.date || getTodayDate(),
       warehouse: initialData?.warehouse || 0,

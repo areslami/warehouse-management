@@ -26,6 +26,8 @@ import {
 import { SalesProforma, PurchaseProforma } from "@/lib/interfaces/finance";
 import { getPartyDisplayName } from "@/lib/utils/party-utils";
 import { formatNumber } from "@/lib/utils/number-format";
+import { compactIndicatorValue } from "@/lib/indicator-format";
+import { toPersianDigits } from "@/lib/utils/numbers";
 
 export default function FinancePage() {
   const t = useTranslations("pages.finance");
@@ -497,7 +499,13 @@ export default function FinancePage() {
                       />
                     </TableCell>
                     <TableCell className="text-right font-medium">{index + 1}</TableCell>
-                    <TableCell className="text-right">{proforma.serial_number}</TableCell>
+                    <TableCell
+                      className="text-right font-mono"
+                      dir="auto"
+                      style={{ unicodeBidi: "plaintext" }}
+                    >
+                      {toPersianDigits(compactIndicatorValue(proforma.serial_number))}
+                    </TableCell>
                     <TableCell className="text-right">
                       {proforma.payment_type === 'cash' && tCommon('payment_types.cash')}
                       {proforma.payment_type === 'credit' && tCommon('payment_types.credit')}
@@ -736,7 +744,13 @@ export default function FinancePage() {
                       />
                     </TableCell>
                     <TableCell className="text-right font-medium">{index + 1}</TableCell>
-                    <TableCell className="text-right">{proforma.serial_number}</TableCell>
+                    <TableCell
+                      className="text-right font-mono"
+                      dir="rtl"
+                      style={{ unicodeBidi: "plaintext" }}
+                    >
+                      {toPersianDigits(compactIndicatorValue(proforma.serial_number))}
+                    </TableCell>
                     <TableCell className="text-right">{formatNumber(calculateTotal(proforma.lines))} {tCommon('units.rial')}</TableCell>
                     <TableCell className="text-right">{new Date(proforma.date).toLocaleDateString('fa-IR')}</TableCell>
                     <TableCell className="text-right">{getPartyDisplayName(suppliers.find(s => s.id === proforma.supplier))}</TableCell>
@@ -907,7 +921,7 @@ export default function FinancePage() {
                 </Button>
               </div>
               <div className="mt-6 space-y-4 p-4 bg-gray-50 rounded-lg">
-                <div><strong>{tCommon('detail_labels.serial_number')}</strong> {selectedItem.serial_number}</div>
+                <div><strong>{tCommon('detail_labels.serial_number')}</strong> {toPersianDigits(compactIndicatorValue(selectedItem.serial_number))}</div>
                 <div><strong>{tCommon('detail_labels.date')}</strong> {new Date(selectedItem.date).toLocaleDateString('fa-IR')}</div>
                 {selectedType === 'sales' && 'customer' in selectedItem && (
                   <>

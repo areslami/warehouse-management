@@ -27,6 +27,7 @@ import {
   DEFAULT_INDICATOR_TEMPLATE,
   buildIndicatorPreview,
   renderIndicatorFormat,
+  compactIndicatorValue,
 } from "@/lib/indicator-format";
 import {
   renderLocalizedValue,
@@ -116,7 +117,9 @@ export function PurchaseProformaModal({ trigger, onSubmit, onClose, initialData,
   const form = useForm<PurchaseProformaFormData>({
     resolver: zodResolver(purchaseProformaSchema) as any,
     defaultValues: {
-      serial_number: initialData?.serial_number || "",
+      serial_number: initialData?.serial_number
+        ? compactIndicatorValue(initialData.serial_number)
+        : "",
       date: initialData?.date || getTodayDate(),
       tax: initialData?.tax || 0,
       discount: initialData?.discount || 0,
@@ -230,6 +233,7 @@ export function PurchaseProformaModal({ trigger, onSubmit, onClose, initialData,
                         {...field}
                         value={toPersianDigits(field.value ?? "")}
                         dir="rtl"
+                        style={{ unicodeBidi: "plaintext" }}
                         className={purchaseSerialInputClassNames}
                         placeholder={t('serialnumber')}
                         readOnly

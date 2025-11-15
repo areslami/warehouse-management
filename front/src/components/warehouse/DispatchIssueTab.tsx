@@ -25,7 +25,7 @@ import { Edit, Plus, Trash2, ChevronUp, ChevronDown } from "lucide-react";
 import { Input } from "../ui/input";
 import { Collapsible, CollapsibleTrigger, CollapsibleContent } from "@/components/ui/collapsible";
 import { PersianDatePicker } from "@/components/ui/persian-date-picker";
-import { buildIndicatorPreview } from "@/lib/indicator-format";
+import { buildIndicatorPreview, compactIndicatorValue } from "@/lib/indicator-format";
 import { renderLocalizedValue } from "@/lib/utils/localized-value";
 
 interface DispatchIssueTabProps {
@@ -285,7 +285,7 @@ export function DispatchIssueTab({ selectedWarehouseId }: DispatchIssueTabProps)
                   <TableCell dir="rtl">
                     {renderLocalizedValue(
                       "",
-                      buildIndicatorPreview(dispatch.dispatch_id || "", {})?.parts.map((part, partIndex) => (
+                      buildIndicatorPreview(compactIndicatorValue(dispatch.dispatch_id), {})?.parts.map((part, partIndex) => (
                         <bdi
                           key={`dispatch-${dispatch.id}-${partIndex}`}
                           dir="auto"

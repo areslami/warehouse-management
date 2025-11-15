@@ -33,6 +33,7 @@ import {
   DEFAULT_INDICATOR_TEMPLATE,
   buildIndicatorPreview,
   renderIndicatorFormat,
+  compactIndicatorValue,
 } from "@/lib/indicator-format";
 import {
   renderLocalizedValue,
@@ -124,7 +125,9 @@ export function DispatchIssueModal({ trigger, onSubmit, onClose, initialData, is
   const form = useForm<DispatchIssueFormData>({
     resolver: zodResolver(dispatchIssueSchema) as any,
     defaultValues: {
-      dispatch_id: initialData?.dispatch_id || "",
+      dispatch_id: initialData?.dispatch_id
+        ? compactIndicatorValue(initialData.dispatch_id)
+        : "",
       warehouse: initialData?.warehouse || 0,
       sales_proforma: initialData?.sales_proforma || 0,
       issue_date: initialData?.issue_date || getTodayDate(),

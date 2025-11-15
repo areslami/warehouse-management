@@ -25,8 +25,8 @@ import { Input } from "@/components/ui/input";
 import { Collapsible, CollapsibleTrigger, CollapsibleContent } from "@/components/ui/collapsible";
 import { SearchableSelect } from "@/components/ui/searchable-select";
 import { PersianDatePicker } from "@/components/ui/persian-date-picker";
-import { buildIndicatorPreview } from "@/lib/indicator-format";
-import { renderLocalizedValue } from "@/lib/utils/localized-value";
+import { compactIndicatorValue } from "@/lib/indicator-format";
+import { toPersianDigits } from "@/lib/utils/numbers";
 
 export function SalesProformaTab() {
   const t = useTranslations("modals.salesProforma");
@@ -261,21 +261,12 @@ export function SalesProformaTab() {
           ) : (
             filteredProformas.map((proforma) => (
               <TableRow key={proforma.id}>
-                <TableCell className="font-medium" dir="rtl">
-                  {renderLocalizedValue(
-                    "",
-                    buildIndicatorPreview(proforma.serial_number || "", {})?.parts.map((part, partIndex) => (
-                      <bdi
-                        key={`sales-proforma-${proforma.id}-${partIndex}`}
-                        dir="auto"
-                        style={{ unicodeBidi: "plaintext" }}
-                        className="leading-none"
-                      >
-                        {part}
-                      </bdi>
-                    )),
-                    "font-mono"
-                  )}
+                <TableCell
+                  className="font-medium font-mono"
+                  dir="rtl"
+                  style={{ unicodeBidi: "plaintext" }}
+                >
+                  {toPersianDigits(compactIndicatorValue(proforma.serial_number))}
                 </TableCell>
                 <TableCell>{proforma.customer}</TableCell>
                 <TableCell>{proforma.date}</TableCell>

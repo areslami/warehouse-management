@@ -332,3 +332,16 @@ export const buildIndicatorPreview = (
     parts,
   };
 };
+
+const reverseAdjacentNumbers = (input: string): string => {
+  return input.replace(/((?:\d+\s+){1,}\d+)/g, (match) => {
+    const parts = match.trim().split(/\s+/);
+    return parts.reverse().join("");
+  });
+};
+
+export const compactIndicatorValue = (value?: string | null) => {
+  if (!value) return "";
+  const reordered = reverseAdjacentNumbers(value);
+  return reordered.replace(/ /g, "");
+};

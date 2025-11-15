@@ -35,7 +35,12 @@ import { Warehouse, WarehouseReceipt, DispatchIssue, DeliveryFulfillment } from 
 import { B2BAddress, B2BDistribution, B2BOffer } from "@/lib/interfaces/b2b";
 import { fetchB2BAddressById, fetchB2BDistributionById, fetchB2BOfferById } from "@/lib/api/b2b";
 import { formatNumber } from "@/lib/utils/number-format";
-import { buildIndicatorPreview, DEFAULT_INDICATOR_TEMPLATE } from "@/lib/indicator-format";
+import {
+  buildIndicatorPreview,
+  DEFAULT_INDICATOR_TEMPLATE,
+  compactIndicatorValue,
+} from "@/lib/indicator-format";
+import { toPersianDigits } from "@/lib/utils/numbers";
 import { renderLocalizedValue } from "@/lib/utils/localized-value";
 
 export default function WarehousePage() {
@@ -66,6 +71,22 @@ export default function WarehousePage() {
   const [sheetOpen, setSheetOpen] = useState(false);
   const [selectedItem, setSelectedItem] = useState<WarehouseReceipt | DispatchIssue | DeliveryFulfillment | null>(null);
   const [selectedType, setSelectedType] = useState<'receipt' | 'dispatch' | 'delivery'>('receipt');
+
+  const renderFormattedId = useCallback(
+    (value?: string | null) => {
+      if (!value) return "-";
+      return (
+        <span
+          className="font-mono"
+          dir="rtl"
+          style={{ unicodeBidi: "plaintext" }}
+        >
+          {toPersianDigits(compactIndicatorValue(value))}
+        </span>
+      );
+    },
+    []
+  );
 
   // State for viewing related entities in details sheet
   const [viewingAddress, setViewingAddress] = useState<B2BAddress | null>(null);
@@ -676,7 +697,7 @@ export default function WarehousePage() {
                     <TableCell className="text-right" dir="rtl">
                       {renderLocalizedValue(
                         "",
-                        buildIndicatorPreview(receipt.receipt_id || "", {})?.parts.map((part, partIndex) => (
+                        buildIndicatorPreview(compactIndicatorValue(receipt.receipt_id), {})?.parts.map((part, partIndex) => (
                           <bdi
                             key={`receipt-${receipt.id}-${partIndex}`}
                             dir="auto"
@@ -895,7 +916,7 @@ export default function WarehousePage() {
                     <TableCell className="text-right" dir="rtl">
                       {renderLocalizedValue(
                         "",
-                        buildIndicatorPreview(dispatch.dispatch_id || "", {})?.parts.map((part, partIndex) => (
+                      buildIndicatorPreview(compactIndicatorValue(dispatch.dispatch_id), {})?.parts.map((part, partIndex) => (
                           <bdi
                             key={`dispatch-${dispatch.id}-${partIndex}`}
                             dir="auto"
@@ -1128,7 +1149,7 @@ export default function WarehousePage() {
                       <TableCell className="text-right" dir="rtl">
                         {renderLocalizedValue(
                           "",
-                          buildIndicatorPreview(delivery.delivery_id || "", {})?.parts.map((part, partIndex) => (
+                          buildIndicatorPreview(compactIndicatorValue(delivery.delivery_id), {})?.parts.map((part, partIndex) => (
                             <bdi
                               key={`delivery-${delivery.id}-${partIndex}`}
                               dir="auto"
@@ -1259,7 +1280,7 @@ export default function WarehousePage() {
               <div className="mt-6 space-y-4 p-4 bg-gray-50 rounded-lg">
                 {selectedType === 'receipt' && (
                   <>
-                    <div><strong>{tCommon('detail_labels.receipt_id')}</strong> {(selectedItem as WarehouseReceipt).receipt_id}</div>
+                    <div><strong>{tCommon('detail_labels.receipt_id')}</strong> {renderFormattedId((selectedItem as WarehouseReceipt).receipt_id)}</div>
                     <div><strong>{tCommon('detail_labels.date')}</strong> {new Date((selectedItem as WarehouseReceipt).date).toLocaleDateString('fa-IR')}</div>
                     <div><strong>{tCommon('detail_labels.warehouse')}</strong> {warehouses.find(w => w.id === selectedItem.warehouse)?.name}</div>
                     <div><strong>{tCommon('detail_labels.total_weight')}</strong> {formatNumber(selectedItem.total_weight)} {tCommon('units.kg')}</div>
@@ -1286,7 +1307,7 @@ export default function WarehousePage() {
                 )}
                 {selectedType === 'dispatch' && (
                   <>
-                    <div><strong>{tCommon('detail_labels.dispatch_id')}</strong> {(selectedItem as DispatchIssue).dispatch_id}</div>
+                    <div><strong>{tCommon('detail_labels.dispatch_id')}</strong> {renderFormattedId((selectedItem as DispatchIssue).dispatch_id)}</div>
                     <div><strong>{tCommon('detail_labels.issue_date')}</strong> {new Date((selectedItem as DispatchIssue).issue_date).toLocaleDateString('fa-IR')}</div>
                     <div><strong>{tCommon('detail_labels.validity_date')}</strong> {new Date((selectedItem as DispatchIssue).validity_date).toLocaleDateString('fa-IR')}</div>
                     <div><strong>{tCommon('detail_labels.warehouse')}</strong> {warehouses.find(w => w.id === selectedItem.warehouse)?.name}</div>
@@ -1299,10 +1320,10 @@ export default function WarehousePage() {
                   return (
                     <>
                       <div>
-                        <strong>شناسه بارنامه:</strong> {delivery.delivery_id}
+                        <strong>شناسه بارنامه:</strong> {renderFormattedId(delivery.delivery_id)}
                       </div>
                       <div>
-                        <strong>سریال بارنامه:</strong> {delivery.waybill_serial || '-'}
+                        <strong>سریال بارنامه:</strong> {renderFormattedId(delivery.waybill_serial)}
                       </div>
                       <div>
                         <strong>انبار:</strong> {warehouses.find(w => w.id === delivery.warehouse)?.name || '-'}

@@ -23,7 +23,7 @@ import { Button } from "../ui/button";
 import UploadDeliveryModal from "../modals/warehouse/upload-delivery-modal";
 import { Collapsible, CollapsibleTrigger, CollapsibleContent } from "@/components/ui/collapsible";
 import { PersianDatePicker } from "@/components/ui/persian-date-picker";
-import { buildIndicatorPreview } from "@/lib/indicator-format";
+import { buildIndicatorPreview, compactIndicatorValue } from "@/lib/indicator-format";
 import { renderLocalizedValue } from "@/lib/utils/localized-value";
 
 interface DeliveryFulfillmentTabProps {
@@ -321,7 +321,7 @@ export function DeliveryFulfillmentTab({ selectedWarehouseId }: DeliveryFulfillm
                     <TableCell dir="rtl">
                       {renderLocalizedValue(
                         "",
-                        buildIndicatorPreview(delivery.delivery_id || "", {})?.parts.map((part, partIndex) => (
+                        buildIndicatorPreview(compactIndicatorValue(delivery.delivery_id), {})?.parts.map((part, partIndex) => (
                           <bdi
                             key={`delivery-${delivery.id}-${partIndex}`}
                             dir="auto"

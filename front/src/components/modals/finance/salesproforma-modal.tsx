@@ -27,6 +27,7 @@ import {
   DEFAULT_INDICATOR_TEMPLATE,
   buildIndicatorPreview,
   renderIndicatorFormat,
+  compactIndicatorValue,
 } from "@/lib/indicator-format";
 import {
   renderLocalizedValue,
@@ -122,7 +123,9 @@ export function SalesProformaModal({ trigger, onSubmit, onClose, initialData, re
   const form = useForm<SalesProformaFormData>({
     resolver: zodResolver(salesProformaSchema) as any,
     defaultValues: {
-      serial_number: initialData?.serial_number || "",
+      serial_number: initialData?.serial_number
+        ? compactIndicatorValue(initialData.serial_number)
+        : "",
       date: initialData?.date || getTodayDate(),
       tax: initialData?.tax || "",
       discount: initialData?.discount || "",
@@ -250,6 +253,7 @@ export function SalesProformaModal({ trigger, onSubmit, onClose, initialData, re
                         {...field}
                         value={toPersianDigits(field.value ?? "")}
                         dir="rtl"
+                        style={{ unicodeBidi: "plaintext" }}
                         className={serialInputClassNames}
                         placeholder={t('serialnumber')}
                         readOnly
