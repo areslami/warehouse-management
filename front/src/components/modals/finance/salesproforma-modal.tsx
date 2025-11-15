@@ -22,6 +22,7 @@ import { CustomerFormData, CustomerModal } from "../customer-modal";
 import { ProductFormData, ProductModal } from "../product-modal";
 import { createCustomer, createProduct, incrementIndicatorCounter } from "@/lib/api/core";
 import { useDefaultIndicator } from "@/lib/hooks/use-default-indicator";
+import { toPersianDigits } from "@/lib/utils/numbers";
 import {
   DEFAULT_INDICATOR_TEMPLATE,
   buildIndicatorPreview,
@@ -137,6 +138,7 @@ export function SalesProformaModal({ trigger, onSubmit, onClose, initialData, re
     form,
     fieldName: "serial_number",
     enabled: !readOnly && !isEditing && !initialData?.serial_number,
+    formatWithSpacing: true,
   });
 
   const indicatorPreview = useMemo(() => {
@@ -163,6 +165,17 @@ export function SalesProformaModal({ trigger, onSubmit, onClose, initialData, re
     () => tCommon("indicator_next_value", { value: VALUE_PLACEHOLDER }),
     [tCommon]
   );
+  const hasExistingSerialNumber = Boolean(initialData?.serial_number);
+  const showSerialInput = hasExistingSerialNumber || !indicatorPreview;
+  const showGeneratedSerialPreview =
+    !hasExistingSerialNumber && !!indicatorPreview && !!currentIndicatorPreview;
+  const serialInputClassNames = [
+    "font-mono",
+    "text-right",
+    hasExistingSerialNumber ? "bg-gray-100" : "",
+  ]
+    .filter(Boolean)
+    .join(" ");
 
   const { fields, append, remove } = useFieldArray({
     control: form.control,
@@ -231,34 +244,48 @@ export function SalesProformaModal({ trigger, onSubmit, onClose, initialData, re
                   render={({ field }) => (
                 <FormItem>
                   <FormLabel>{t('serialnumber')}</FormLabel>
-{indicatorPreview && <FormControl>
-                                      <div
-                                        className={`flex h-9 w-full items-center justify-start rounded-md border border-input bg-gray-100 px-3 py-1 text-sm text-right shadow-sm ${
-                                          isEditing ? "cursor-not-allowed" : ""
-                                        }`} dir="rtl"
-                                      >
-                                         {renderLocalizedValue(
-                            "",
-                            currentIndicatorPreview?.parts.map((part, index) => (
-                              <bdi
-                                key={`warehouse-receipt-preview-${index-1}`}
-                                dir="auto"
-                                className="leading-none"
-                              >
-                                {part}
-                              </bdi>
-                            )),
-                            "font-mono"
-                          )}
-                                      </div>
-                                    </FormControl> } 
-                      {indicatorPreview && (
+                  <FormControl>
+                    {showSerialInput ? (
+                      <Input
+                        {...field}
+                        value={toPersianDigits(field.value ?? "")}
+                        dir="rtl"
+                        className={serialInputClassNames}
+                        placeholder={t('serialnumber')}
+                        readOnly
+                      />
+                    ) : (
+                      <input type="hidden" {...field} value={field.value ?? ""} />
+                    )}
+                  </FormControl>
+                      {showGeneratedSerialPreview && currentIndicatorPreview && (
+                        <div
+                          className={`flex h-9 w-full items-center justify-start rounded-md border border-input bg-gray-100 px-3 py-1 text-sm text-right shadow-sm ${
+                            isEditing ? "cursor-not-allowed" : ""
+                          }`} dir="rtl"
+                        >
+                           {renderLocalizedValue(
+                              "",
+                              currentIndicatorPreview.parts.map((part, index) => (
+                                <bdi
+                                  key={`sales-proforma-preview-${index}`}
+                                  dir="auto"
+                                  className="leading-none"
+                                >
+                                  {part}
+                                </bdi>
+                              )),
+                              "font-mono"
+                            )}
+                        </div>
+                      )}
+                      {showGeneratedSerialPreview && indicatorPreview && (
                         <FormDescription className="text-xs text-muted-foreground" dir="rtl">
                           {renderLocalizedValue(
                             indicatorDescriptionTemplate,
                             indicatorPreview.parts.map((part, index) => (
                               <bdi
-                                key={`sales-proforma-preview-${index}`}
+                                key={`sales-proforma-desc-${index}`}
                                 dir="auto"
                                 className="leading-none"
                               >

@@ -31,7 +31,6 @@ import { toPersianDigits } from "@/lib/utils/numbers";
 import {
   DEFAULT_INDICATOR_TEMPLATE,
   buildIndicatorPreview,
-  renderIndicatorFormat,
 } from "@/lib/indicator-format";
 import {
   INDICATOR_TEXT_PROPS,
@@ -174,6 +173,7 @@ export function WarehouseReceiptModal({ trigger, onSubmit, onClose, initialData,
     form,
     fieldName: "receipt_id",
     enabled: !readOnly && !isEditing && !initialData?.receipt_id,
+    formatWithSpacing: true,
   });
 
   const indicatorPreview = useMemo(() => {
@@ -200,6 +200,18 @@ export function WarehouseReceiptModal({ trigger, onSubmit, onClose, initialData,
     () => tCommon("indicator_next_value", { value: VALUE_PLACEHOLDER }),
     [tCommon]
   );
+
+  const hasExistingReceiptId = Boolean(initialData?.receipt_id);
+  const showReceiptInput = hasExistingReceiptId || !indicatorPreview;
+  const showGeneratedReceiptPreview =
+    !hasExistingReceiptId && !!indicatorPreview && !!currentIndicatorPreview;
+  const receiptInputClassNames = [
+    "font-mono",
+    "text-right",
+    hasExistingReceiptId ? "bg-gray-100" : "",
+  ]
+    .filter(Boolean)
+    .join(" ");
 
   const { fields, append, remove } = useFieldArray({
     control: form.control,
@@ -289,47 +301,63 @@ export function WarehouseReceiptModal({ trigger, onSubmit, onClose, initialData,
                   render={({ field }) => (
                 <FormItem>
                   <FormLabel>{t("receipt-id")}</FormLabel>
-                                    {indicatorPreview && <FormControl>
-                                      <div
-                                        className={`flex h-9 w-full items-center justify-start rounded-md border border-input bg-gray-100 px-3 py-1 text-sm text-right shadow-sm ${
-                                          isEditing ? "cursor-not-allowed" : ""
-                                        }`} dir="rtl"
-                                      >
-                                         {renderLocalizedValue(
-                            "",
-                            currentIndicatorPreview?.parts.map((part, index) => (
-                              <bdi
-                                key={`warehouse-receipt-preview-${index-1}`}
-                                dir="auto"
-                                style={{ unicodeBidi: "plaintext" }}
-                                className="leading-none"
-                              >
-                                {part}
-                              </bdi>
-                            )),
-                            "font-mono"
-                          )}
-                                      </div>
-                                    </FormControl> }                     {indicatorPreview && (
-                        <FormDescription className="text-xs text-muted-foreground" dir="rtl">
-                          {renderLocalizedValue(
-                            indicatorDescriptionTemplate,
-                            indicatorPreview.parts.map((part, index) => (
-                              <bdi
-                                key={`warehouse-receipt-preview-${index}`}
-                                dir="auto"
-                                style={{ unicodeBidi: "plaintext" }}
-                                className="leading-none"
-                              >
-                                {part}
-                              </bdi>
-                            )),
-                            "font-mono"
-                          )}
-                        </FormDescription>
+                  <FormControl>
+                    {showReceiptInput ? (
+                      <Input
+                        {...field}
+                        value={toPersianDigits(field.value ?? "")}
+                        dir="rtl"
+                        className={receiptInputClassNames}
+                        placeholder={t("receipt-id")}
+                        readOnly
+                      />
+                    ) : (
+                      <input type="hidden" {...field} value={field.value ?? ""} />
+                    )}
+                  </FormControl>
+                  {showGeneratedReceiptPreview && currentIndicatorPreview && (
+                    <div
+                      className={`flex h-9 w-full items-center justify-start rounded-md border border-input bg-gray-100 px-3 py-1 text-sm text-right shadow-sm ${
+                        isEditing ? "cursor-not-allowed" : ""
+                      }`}
+                      dir="rtl"
+                    >
+                      {renderLocalizedValue(
+                        "",
+                        currentIndicatorPreview.parts.map((part, index) => (
+                          <bdi
+                            key={`warehouse-receipt-preview-${index}`}
+                            dir="auto"
+                            style={{ unicodeBidi: "plaintext" }}
+                            className="leading-none"
+                          >
+                            {part}
+                          </bdi>
+                        )),
+                        "font-mono"
                       )}
-                      <FormMessage className="min-h-[1.25rem]" />
-                    </FormItem>
+                    </div>
+                  )}
+                  {showGeneratedReceiptPreview && indicatorPreview && (
+                    <FormDescription className="text-xs text-muted-foreground" dir="rtl">
+                      {renderLocalizedValue(
+                        indicatorDescriptionTemplate,
+                        indicatorPreview.parts.map((part, index) => (
+                          <bdi
+                            key={`warehouse-receipt-preview-desc-${index}`}
+                            dir="auto"
+                            style={{ unicodeBidi: "plaintext" }}
+                            className="leading-none"
+                          >
+                            {part}
+                          </bdi>
+                        )),
+                        "font-mono"
+                      )}
+                    </FormDescription>
+                  )}
+                  <FormMessage className="min-h-[1.25rem]" />
+                </FormItem>
                   )}
                 />
 

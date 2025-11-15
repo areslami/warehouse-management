@@ -6,6 +6,7 @@ import type { IndicatorSection, Indicator } from "@/lib/interfaces/core";
 import {
   DEFAULT_INDICATOR_TEMPLATE,
   renderIndicatorFormat,
+  renderIndicatorFormatWithSpacing,
 } from "@/lib/indicator-format";
 
 interface UseDefaultIndicatorOptions<FormValues> {
@@ -13,6 +14,7 @@ interface UseDefaultIndicatorOptions<FormValues> {
   form: UseFormReturn<FormValues>;
   fieldName: keyof FormValues & string;
   enabled?: boolean;
+  formatWithSpacing?: boolean;
 }
 
 export function useDefaultIndicator<FormValues>({
@@ -20,6 +22,7 @@ export function useDefaultIndicator<FormValues>({
   form,
   fieldName,
   enabled = true,
+  formatWithSpacing = false,
 }: UseDefaultIndicatorOptions<FormValues>) {
   const [currentIndicator, setCurrentIndicator] = useState<Indicator | null>(
     null
@@ -40,7 +43,10 @@ export function useDefaultIndicator<FormValues>({
           const existingValue = form.getValues(fieldName);
           if (!existingValue) {
             const template = indicator.format_template || DEFAULT_INDICATOR_TEMPLATE;
-            const nextValue = renderIndicatorFormat(template, {
+            const formatFn = formatWithSpacing
+              ? renderIndicatorFormatWithSpacing
+              : renderIndicatorFormat;
+            const nextValue = formatFn(template, {
               counter: (indicator.counter ?? 0) + 1,
             });
             form.setValue(
@@ -64,7 +70,7 @@ export function useDefaultIndicator<FormValues>({
     return () => {
       isMounted = false;
     };
-  }, [section, form, fieldName, enabled]);
+  }, [section, form, fieldName, enabled, formatWithSpacing]);
 
   return currentIndicator;
 }

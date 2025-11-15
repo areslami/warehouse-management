@@ -28,6 +28,7 @@ import { createWarehouse } from "@/lib/api/warehouse";
 import { createProduct, createReceiver, createShippingCompany, incrementIndicatorCounter } from "@/lib/api/core";
 import { createSalesProforma } from "@/lib/api/finance";
 import { useDefaultIndicator } from "@/lib/hooks/use-default-indicator";
+import { toPersianDigits } from "@/lib/utils/numbers";
 import {
   DEFAULT_INDICATOR_TEMPLATE,
   buildIndicatorPreview,
@@ -139,6 +140,7 @@ export function DispatchIssueModal({ trigger, onSubmit, onClose, initialData, is
     form,
     fieldName: "dispatch_id",
     enabled: !isEditing && !initialData?.dispatch_id,
+    formatWithSpacing: true,
   });
 
   const indicatorPreview = useMemo(() => {
@@ -165,6 +167,17 @@ export function DispatchIssueModal({ trigger, onSubmit, onClose, initialData, is
     () => tCommon("indicator_next_value", { value: VALUE_PLACEHOLDER }),
     [tCommon]
   );
+  const hasExistingDispatchId = Boolean(initialData?.dispatch_id);
+  const showDispatchInput = hasExistingDispatchId || !indicatorPreview;
+  const showGeneratedDispatchPreview =
+    !hasExistingDispatchId && !!indicatorPreview && !!currentIndicatorPreview;
+  const dispatchInputClassNames = [
+    "font-mono",
+    "text-right",
+    hasExistingDispatchId ? "bg-gray-100" : "",
+  ]
+    .filter(Boolean)
+    .join(" ");
 
   const { fields, append, remove } = useFieldArray({
     control: form.control,
@@ -227,46 +240,59 @@ export function DispatchIssueModal({ trigger, onSubmit, onClose, initialData, is
                   render={({ field }) => (
                 <FormItem>
                   <FormLabel>{t("dispatch-id")}</FormLabel>
-{indicatorPreview && <FormControl>
-                                      <div
-                                        className={`flex h-9 w-full items-center justify-start rounded-md border border-input bg-gray-100 px-3 py-1 text-sm text-right shadow-sm ${
-                                          isEditing ? "cursor-not-allowed" : ""
-                                        }`} dir="rtl"
-                                      >
-                                         {renderLocalizedValue(
-                            "",
-                            currentIndicatorPreview.parts.map((part, index) => (
-                              <bdi
-                                key={`warehouse-receipt-preview-${index-1}`}
-                                dir="auto"
-                                className="leading-none"
-                              >
-                                {part}
-                              </bdi>
-                            )),
-                            "font-mono"
-                          )}
-                                      </div>
-                                    </FormControl> } 
-                      {indicatorPreview && (
-                        <FormDescription className="text-xs text-muted-foreground" dir="rtl">
-                          {renderLocalizedValue(
-                            indicatorDescriptionTemplate,
-                            indicatorPreview.parts.map((part, index) => (
-                              <bdi
-                                key={`dispatch-issue-preview-${index}`}
-                                dir="auto"
-                                className="leading-none"
-                              >
-                                {part}
-                              </bdi>
-                            )),
-                            "font-mono"
-                          )}
-                        </FormDescription>
+                  <FormControl>
+                    {showDispatchInput ? (
+                      <Input
+                        {...field}
+                        value={toPersianDigits(field.value ?? "")}
+                        dir="rtl"
+                        className={dispatchInputClassNames}
+                        placeholder={t("dispatch-id")}
+                        readOnly
+                      />
+                    ) : (
+                      <input type="hidden" {...field} value={field.value ?? ""} />
+                    )}
+                  </FormControl>
+                  {showGeneratedDispatchPreview && currentIndicatorPreview && (
+                    <div
+                      className="flex h-9 w-full items-center justify-start rounded-md border border-input bg-gray-100 px-3 py-1 text-sm text-right shadow-sm"
+                      dir="rtl"
+                    >
+                      {renderLocalizedValue(
+                        "",
+                        currentIndicatorPreview.parts.map((part, index) => (
+                          <bdi
+                            key={`dispatch-issue-preview-${index}`}
+                            dir="auto"
+                            className="leading-none"
+                          >
+                            {part}
+                          </bdi>
+                        )),
+                        "font-mono"
                       )}
-                      <FormMessage className="min-h-[1.25rem]" />
-                    </FormItem>
+                    </div>
+                  )}
+                  {showGeneratedDispatchPreview && indicatorPreview && (
+                    <FormDescription className="text-xs text-muted-foreground" dir="rtl">
+                      {renderLocalizedValue(
+                        indicatorDescriptionTemplate,
+                        indicatorPreview.parts.map((part, index) => (
+                          <bdi
+                            key={`dispatch-issue-preview-desc-${index}`}
+                            dir="auto"
+                            className="leading-none"
+                          >
+                            {part}
+                          </bdi>
+                        )),
+                        "font-mono"
+                      )}
+                    </FormDescription>
+                  )}
+                  <FormMessage className="min-h-[1.25rem]" />
+                </FormItem>
                   )}
                 />
 

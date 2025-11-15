@@ -226,17 +226,38 @@ const renderSegment = (
   }
 };
 
+export const renderIndicatorFormatParts = (
+  template?: string,
+  options?: { counter?: number; date?: Date }
+) => {
+  const segments = template ? parseIndicatorFormat(template) : [];
+  const counterValue = Math.max(1, options?.counter ?? 1);
+
+  if (!segments.length) {
+    return [counterValue.toString()];
+  }
+
+  return segments.map((segment) =>
+    renderSegment(segment, {
+      counter: counterValue,
+      date: options?.date,
+    })
+  );
+};
+
 export const renderIndicatorFormat = (
   template: string,
   options?: { counter?: number; date?: Date }
-) => {
-  const segments = parseIndicatorFormat(template);
-  if (!segments.length) {
-    const value = Math.max(1, options?.counter ?? 1);
-    return value.toString();
-  }
-  return segments.map((segment) => renderSegment(segment, options)).join("");
-};
+) => renderIndicatorFormatParts(template, options).join("");
+
+export const renderIndicatorFormatWithSpacing = (
+  template: string,
+  options?: { counter?: number; date?: Date }
+) =>
+  renderIndicatorFormatParts(template, options)
+    .map((part) => part.trim())
+    .filter((part) => part.length > 0)
+    .join(" ");
 
 export const INDICATOR_LITERAL_MAX = 16;
 
