@@ -281,25 +281,6 @@ export function B2BSaleModal({ trigger, onSubmit, onClose, initialData, isEditin
                                     </div>
                                 </div>
 
-                                <FormField
-                                    control={form.control as any}
-                                    name="cottage_code"
-                                    render={({ field }) => (
-                                        <FormItem className="col-span-2">
-                                            <FormLabel>{t("cottage-code")}</FormLabel>
-                                            <FormControl>
-                                                <Input
-                                                    {...field}
-                                                    readOnly
-                                                    tabIndex={-1}
-                                                    className="bg-gray-100 cursor-not-allowed"
-                                                />
-                                            </FormControl>
-                                            <FormMessage />
-                                        </FormItem>
-                                    )}
-                                />
-
                                 {saleType === "your_sale" && (
                                     <FormField
                                         control={form.control as any}
@@ -364,6 +345,25 @@ export function B2BSaleModal({ trigger, onSubmit, onClose, initialData, isEditin
                                         </FormItem>
                                     )}
                                 />)}
+                                <FormField
+                                    control={form.control as any}
+                                    name="cottage_code"
+                                    render={({ field }) => (
+                                        <FormItem className="col-span-2">
+                                            <FormLabel>{t("cottage-code")}</FormLabel>
+                                            <FormControl>
+                                                <Input
+                                                    {...field}
+                                                    readOnly
+                                                    tabIndex={-1}
+                                                    className="bg-gray-100 cursor-not-allowed"
+                                                />
+                                            </FormControl>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
+
                             </div>
 
                             <div className="grid grid-cols-2 gap-4">

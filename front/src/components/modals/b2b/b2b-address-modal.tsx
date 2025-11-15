@@ -103,6 +103,7 @@ export function B2BAddressModal({ trigger, onSubmit, onClose, initialData, readO
   const loadSales = async () => {
     try {
       const data = await fetchB2BSales();
+      console.log("KIR",data)
       setSales(data ?? []);
     } catch (error) {
       console.error("Error loading sales:", error);
