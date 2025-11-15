@@ -47,7 +47,7 @@ EXCEL_FIELD_MAPPING_ADDRESS = {
     "province": "استان",
     "city": "شهرستان",
     "payment_amount": "مبلغ پرداختی",
-    "customoer_account_number": "شماره حساب خریدار",
+"customer_account_number": "شماره حساب خریدار",
     "cottage_code": "کد کوتاژ",
     "product_title": "عنوان کالا",
     "description": "توضیحات",

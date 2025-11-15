@@ -419,70 +419,87 @@ def _extract_agreements(desc: str):
     return p1, d1, p2, d2, p3, d3
 
 
+def _get_address_row(address: B2BAddress, columns):
+    customer = address.customer
+    receiver = address.receiver
+    offer = getattr(address, 'product_offer', None)
+    ag_p1, ag_d1, ag_p2, ag_d2, ag_p3, ag_d3 = _extract_agreements(
+        getattr(address, 'credit_description', ''))
+    column_value_map = {
+        'purchase_id': address.purchase_id or '',
+        'total_weight_purchased': int(address.total_weight_purchased or 0),
+        'purchase_date': _format_jalali_date(address.purchase_date),
+        'unit_price': int(address.unit_price or 0),
+        'tracking_number': address.tracking_number or '',
+        'province': address.province or '',
+        'city': address.city or '',
+        'payment_amount': int(address.payment_amount or 0),
+        'customer_account_number': (address.customer_account_number or ''),
+        'cottage_code': address.cottage_code or '',
+        'product_title': (f"{address.product.code} / {address.product.name}" if address.product else ''),
+        'description': getattr(address, 'credit_description', '') or '',
+        'payment_method': _fa_payment_label(getattr(address, 'payment_method', '')),
+        'offer_id': (offer.offer_id if offer else ''),
+        'address_register_date': _format_jalali_date(getattr(address, 'created_at', None)),
+        'allocation_id': address.allocation_id or '',
+        'customer_name': (customer.company_name or customer.full_name) if customer else '',
+        'customer_national_code': (customer.national_id or customer.personal_code or '') if customer else '',
+        'customer_postal_code': (customer.postal_code or '') if customer else '',
+        'customer_address': (customer.address or '') if customer else '',
+        'deposit_id': (address.deposit_id or ''),
+        'customer_phone': (customer.phone or '') if customer else '',
+        'customer_economic_code': (customer.economic_code or '') if customer else '',
+        'customer_type': ('حقوقی' if (customer and customer.customer_type == 'corporate') else ('حقیقی' if customer else '')),
+        'receiver_name': (receiver.company_name or receiver.full_name) if receiver else '',
+        'receiver_economic_code': (receiver.economic_code or '') if receiver else '',
+        'single': (address.single or ''),
+        'double': (address.double or ''),
+        'trailer': (address.trailer or ''),
+        'receiver_address': (receiver.address or '') if receiver else '',
+        'receiver_postal_code': (receiver.postal_code or '') if receiver else '',
+        'receiver_phone': (receiver.phone or '') if receiver else '',
+        'receiver_national_id': (receiver.personal_code or receiver.national_id or '') if receiver else '',
+        'purchase_weight': int(address.purchase_weight or address.total_weight_purchased or 0),
+        'waybilled_weight': int(address.waybilled_weight or 0),
+        'non_waybilled_weight': int(address.non_waybilled_weight or 0),
+        'agreement_period_1': ag_p1,
+        'agreement_amount_1': ag_d1,
+        'agreement_period_2': ag_p2,
+        'agreement_amount_2': ag_d2,
+        'agreement_period_3': ag_p3,
+        'agreement_amount_3': ag_d3,
+    }
+    return [column_value_map.get(col, '') for col in columns]
+
+
+def _extract_selected_columns(mapping_dict, requested_keys):
+    if not requested_keys:
+        return list(mapping_dict.keys()), list(mapping_dict.values())
+    available = [key for key in mapping_dict.keys() if key in requested_keys]
+    if not available:
+        return list(mapping_dict.keys()), list(mapping_dict.values())
+    return available, [mapping_dict[key] for key in available]
+
+
+def _ensure_selected_columns(request, mapping_dict):
+    requested = request.data.get('columns') or []
+    if not isinstance(requested, list):
+        requested = []
+    requested = [c for c in requested if isinstance(c, str)]
+    return _extract_selected_columns(mapping_dict, requested)
+
+
 @api_view(['POST'])
 def export_addresses_xlsx(request):
     ids = request.data.get('ids', [])
     qs = B2BAddress.objects.filter(id__in=ids).select_related(
         'product', 'customer', 'receiver', 'product_offer__warehouse_receipt__warehouse'
     )
-    headers = [
-        'کد', 'وزن کل خرید', 'تاریخ خرید', 'قیمت هر واحد', 'شماره پیگیری', 'استان', 'شهرستان', 'مبلغ پرداختی', 'شماره حساب خریدار',
-        'کد کوتاژ', 'عنوان کالا', 'توضیحات', 'شیوه پرداخت', 'شناسه عرضه', 'تاریخ ثبت آدرس', 'شناسه تخصیص', 'نام خریدار', 'شناسه ملی خریدار',
-        'کدپستی خریدار', 'آدرس خریدار', 'شناسه واریز', 'شماره همراه خریدار', 'شناسه یکتا خریدار', 'نوع کاربری خریدار', 'نام تحویل گیرنده',
-        'شناسه یکتای تحویل', 'تک', 'جفت', 'تریلی', 'آدرس تحویل', 'کد پستی تحویل', 'شماره هماهنگی تحویل', 'کد ملی تحویل', 'وزن سفارش',
-        'بازه 1 پرداخت توافقی (روز)', 'بازه 2 پرداخت توافقی (روز)', 'بازه 3 پرداخت توافقی (روز)',
-        'مبلغ بازه 1 توافقی-ریال', 'مبلغ بازه 2 توافقی-ریال', 'مبلغ بازه 3 توافقی-ریال',
-        'وزن بارنامه شده', 'وزن بارنامه نشده'
-    ]
+    from .excel_config import EXCEL_FIELD_MAPPING_ADDRESS
+    column_keys, headers = _ensure_selected_columns(request, EXCEL_FIELD_MAPPING_ADDRESS)
     rows = []
     for a in qs:
-        customer = a.customer
-        receiver = a.receiver
-        offer = getattr(a, 'product_offer', None)
-        sale = B2BSale.objects.select_related(
-            'b2b_distribution__warehouse_receipt__warehouse').filter(purchase_id=a.purchase_id).first()
-        _ = offer or sale  # reserved in case we expand mapping later
-        ag_p1, ag_d1, ag_p2, ag_d2, ag_p3, ag_d3 = _extract_agreements(
-            getattr(a, 'credit_description', ''))
-        row = [
-            a.purchase_id or '',
-            int(a.total_weight_purchased or 0),
-            _format_jalali_date(a.purchase_date),
-            int(a.unit_price or 0),
-            a.tracking_number or '',
-            a.province or '',
-            a.city or '',
-            int(a.payment_amount or 0),
-            (a.customer_account_number or ''),
-            a.cottage_code or '',
-            (f"{a.product.code} / {a.product.name}" if a.product else ''),
-            getattr(a, 'credit_description', '') or '',
-            _fa_payment_label(getattr(a, 'payment_method', '')),
-            (offer.offer_id if offer else ''),
-            _format_jalali_date(getattr(a, 'created_at', None)),
-            a.allocation_id or '',
-            (customer.company_name or customer.full_name) if customer else '',
-            (customer.national_id or customer.personal_code or '') if customer else '',
-            (customer.postal_code or '') if customer else '',
-            (customer.address or '') if customer else '',
-            (a.deposit_id or ''),
-            (customer.phone or '') if customer else '',
-            (customer.economic_code or '') if customer else '',
-            ('حقوقی' if (customer and customer.customer_type ==
-             'corporate') else ('حقیقی' if customer else '')),
-            (receiver.company_name or receiver.full_name) if receiver else '',
-            (receiver.economic_code or '') if receiver else '',
-            (a.single or ''), (a.double or ''), (a.trailer or ''),
-            (receiver.address or '') if receiver else '',
-            (receiver.postal_code or '') if receiver else '',
-            (receiver.phone or '') if receiver else '',
-            (receiver.personal_code or receiver.national_id or '') if receiver else '',
-            int(a.purchase_weight or a.total_weight_purchased or 0),
-            ag_p1, ag_d1, ag_p2, ag_d2, ag_p3, ag_d3,
-            int(a.waybilled_weight or 0),
-            int(a.non_waybilled_weight or 0),
-        ]
-        rows.append(row)
+        rows.append(_get_address_row(a, column_keys))
 
     df = pd.DataFrame(rows, columns=headers)
     output = BytesIO()
@@ -699,28 +716,32 @@ def export_addresses_xlsx(request):
     return resp
 
 
+def _get_offer_row(offer, columns):
+    column_value_map = {
+        'offer_id': offer.offer_id or '',
+        'warehouse_receipt_id': offer.warehouse_receipt.receipt_id if offer.warehouse_receipt else '',
+        'offer_weight': int(offer.offer_weight or 0),
+        'unit_price': int(offer.unit_price or 0),
+        'status': _fa_status_label(offer.status or ''),
+        'offer_type': _fa_payment_label(offer.offer_type or ''),
+        'offer_date': _format_jalali_date(offer.offer_date),
+        'offer_exp_date': _format_jalali_date(offer.offer_exp_date),
+        'description': offer.description or '',
+    }
+    return [column_value_map.get(col, '') for col in columns]
+
+
 @api_view(['POST'])
 def export_offers_xlsx(request):
     from .excel_config import EXCEL_FIELD_MAPPING_OFFER
     ids = request.data.get('ids', [])
     qs = B2BOffer.objects.filter(id__in=ids).select_related('warehouse_receipt')
 
-    headers = list(EXCEL_FIELD_MAPPING_OFFER.values())
+    column_keys, headers = _ensure_selected_columns(request, EXCEL_FIELD_MAPPING_OFFER)
     rows = []
 
     for offer in qs:
-        row = [
-            offer.offer_id or '',
-            offer.warehouse_receipt.receipt_id if offer.warehouse_receipt else '',
-            int(offer.offer_weight or 0),
-            int(offer.unit_price or 0),
-            _fa_status_label(offer.status or ''),
-            _fa_payment_label(offer.offer_type or ''),
-            _format_jalali_date(offer.offer_date),
-            _format_jalali_date(offer.offer_exp_date),
-            offer.description or '',
-        ]
-        rows.append(row)
+        rows.append(_get_offer_row(offer, column_keys))
 
     df = pd.DataFrame(rows, columns=headers)
     output = BytesIO()
@@ -763,6 +784,23 @@ def export_offers_xlsx(request):
     return resp
 
 
+def _get_distribution_row(dist, columns):
+    customer_name = ''
+    if dist.customer:
+        customer_name = dist.customer.company_name if dist.customer.customer_type == 'corporate' else dist.customer.full_name
+    column_value_map = {
+        'transfer_id': dist.transfer_id or '',
+        'customer_name': customer_name,
+        'warehouse_receipt_id': dist.warehouse_receipt.receipt_id if dist.warehouse_receipt else '',
+        'sales_proforma_serial': dist.sales_proforma.serial_number if dist.sales_proforma else '',
+        'agency_weight': int(dist.agency_weight or 0),
+        'unit_price': int(dist.unit_price or 0),
+        'agency_date': _format_jalali_date(dist.agency_date),
+        'description': dist.description or '',
+    }
+    return [column_value_map.get(col, '') for col in columns]
+
+
 @api_view(['POST'])
 def export_distributions_xlsx(request):
     from .excel_config import EXCEL_FIELD_MAPPING_DISTRIBUTION
@@ -771,25 +809,11 @@ def export_distributions_xlsx(request):
         'warehouse_receipt', 'sales_proforma', 'customer'
     )
 
-    headers = list(EXCEL_FIELD_MAPPING_DISTRIBUTION.values())
+    column_keys, headers = _ensure_selected_columns(request, EXCEL_FIELD_MAPPING_DISTRIBUTION)
     rows = []
 
     for dist in qs:
-        customer_name = ''
-        if dist.customer:
-            customer_name = dist.customer.company_name if dist.customer.customer_type == 'corporate' else dist.customer.full_name
-
-        row = [
-            dist.transfer_id or '',
-            customer_name,
-            dist.warehouse_receipt.receipt_id if dist.warehouse_receipt else '',
-            dist.sales_proforma.serial_number if dist.sales_proforma else '',
-            int(dist.agency_weight or 0),
-            int(dist.unit_price or 0),
-            _format_jalali_date(dist.agency_date),
-            dist.description or '',
-        ]
-        rows.append(row)
+        rows.append(_get_distribution_row(dist, column_keys))
 
     df = pd.DataFrame(rows, columns=headers)
     output = BytesIO()
@@ -832,6 +856,41 @@ def export_distributions_xlsx(request):
     return resp
 
 
+def _get_sale_row(sale, columns):
+    customer_name = ''
+    if sale.customer:
+        customer_name = sale.customer.company_name if sale.customer.customer_type == 'corporate' else sale.customer.full_name
+    column_value_map = {
+        'purchase_id': sale.purchase_id or '',
+        'is_distributor': 'بله' if sale.is_distributor else 'خیر',
+        'offer_id': sale.offer.offer_id if sale.offer else '',
+        'distribution_id': sale.b2b_distribution.transfer_id if sale.b2b_distribution else '',
+        'product_name': sale.product.name if sale.product else '',
+        'customer_name': customer_name,
+        'weight': int(sale.weight or 0),
+        'unit_price': int(sale.unit_price or 0),
+        'total_price': int(sale.total_price or 0),
+        'sale_date': _format_jalali_date(sale.sale_date),
+        'purchase_type': _fa_payment_label(sale.purchase_type or ''),
+        'description': sale.description or '',
+        'credit_period_1': '',
+        'credit_amount_1': '',
+        'credit_period_2': '',
+        'credit_amount_2': '',
+        'credit_period_3': '',
+        'credit_amount_3': '',
+    }
+    credit_desc = getattr(sale, 'credit_description', '')
+    ag_p1, ag_d1, ag_p2, ag_d2, ag_p3, ag_d3 = _extract_agreements(credit_desc)
+    column_value_map['credit_period_1'] = ag_p1
+    column_value_map['credit_amount_1'] = ag_d1
+    column_value_map['credit_period_2'] = ag_p2
+    column_value_map['credit_amount_2'] = ag_d2
+    column_value_map['credit_period_3'] = ag_p3
+    column_value_map['credit_amount_3'] = ag_d3
+    return [column_value_map.get(col, '') for col in columns]
+
+
 @api_view(['POST'])
 def export_sales_xlsx(request):
     from .excel_config import EXCEL_FIELD_MAPPING_SALE
@@ -840,29 +899,11 @@ def export_sales_xlsx(request):
         'product', 'customer', 'offer', 'b2b_distribution'
     )
 
-    headers = list(EXCEL_FIELD_MAPPING_SALE.values())
+    column_keys, headers = _ensure_selected_columns(request, EXCEL_FIELD_MAPPING_SALE)
     rows = []
 
     for sale in qs:
-        customer_name = ''
-        if sale.customer:
-            customer_name = sale.customer.company_name if sale.customer.customer_type == 'corporate' else sale.customer.full_name
-
-        row = [
-            sale.purchase_id or '',
-            'بله' if sale.is_distributor else 'خیر',
-            sale.offer.offer_id if sale.offer else '',
-            sale.b2b_distribution.transfer_id if sale.b2b_distribution else '',
-            sale.product.name if sale.product else '',
-            customer_name,
-            int(sale.weight or 0),
-            int(sale.unit_price or 0),
-            int(sale.total_price or 0),
-            _format_jalali_date(sale.sale_date),
-            _fa_payment_label(sale.purchase_type or ''),
-            sale.description or '',
-        ]
-        rows.append(row)
+        rows.append(_get_sale_row(sale, column_keys))
 
     df = pd.DataFrame(rows, columns=headers)
     output = BytesIO()

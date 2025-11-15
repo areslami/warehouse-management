@@ -73,8 +73,15 @@ async function fetchWithAuth(url: string, options?: RequestInit) {
 }
 
 // B2B Offer APIs
-export async function fetchB2BOffers(): Promise<B2BOffer[]> {
-  return fetchWithAuth(`${API_BASE_URL()}offers/`);
+export async function fetchB2BOffers(params?: Record<string, any>): Promise<B2BOffer[]> {
+  const query = params
+    ? `?${new URLSearchParams(
+        Object.fromEntries(
+          Object.entries(params).map(([k, v]) => [k, String(v)])
+        )
+      )}`
+    : "";
+  return fetchWithAuth(`${API_BASE_URL()}offers/${query}`);
 }
 
 export async function fetchB2BOfferById(id: number): Promise<B2BOffer> {

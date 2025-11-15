@@ -265,7 +265,7 @@ def process_address_row(row, address_type, id):
     }
 
     processed['customer_account_number'] = row.get(
-        EXCEL_FIELD_MAPPING_ADDRESS.get('customoer_account_number', ''), '')
+        EXCEL_FIELD_MAPPING_ADDRESS.get('customer_account_number', ''), '')
     adr_date = str(row.get(EXCEL_FIELD_MAPPING_ADDRESS.get(
         'address_register_date', ''), '')).strip()
     processed['address_register_date'] = persian_to_gregorian(
