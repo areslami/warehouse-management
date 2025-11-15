@@ -1,7 +1,7 @@
 "use client";
 
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -21,8 +21,8 @@ import { ProductModal } from "../product-modal";
 import { createCustomer, createProduct, createReceiver } from "@/lib/api/core";
 import { getPartyDisplayName } from "@/lib/utils/party-utils";
 import { describeProduct, describeParty, describeOffer } from "@/lib/utils/label-utils";
-import { fetchB2BOffers, fetchB2BSales, createB2BSale } from "@/lib/api/b2b";
-import { B2BOffer, B2BSale } from "@/lib/interfaces/b2b";
+import { fetchB2BOffers, fetchB2BSales, createB2BSale, fetchB2BAddresss } from "@/lib/api/b2b";
+import { B2BOffer, B2BSale, B2BAddress } from "@/lib/interfaces/b2b";
 import { B2BSaleModal, type B2BSaleFormData } from "./b2b-sale-modal";
 import { toast } from "sonner";
 
@@ -67,7 +67,22 @@ export function B2BAddressModal({ trigger, onSubmit, onClose, initialData, readO
   const [showSaleModal, setShowSaleModal] = useState(false);
   const [sales, setSales] = useState<B2BSale[]>([]);
   const [lockedSaleId, setLockedSaleId] = useState<number | null>(null);
+  const [saleWeightInfo, setSaleWeightInfo] = useState<{
+    totalWeight: number;
+    allocatedWeight: number;
+    remainingWeight: number;
+    maxAllocatableWeight: number;
+  } | null>(null);
+  const [isFetchingSaleAddresses, setIsFetchingSaleAddresses] = useState(false);
   const saleLocked = lockedSaleId !== null;
+  const initialAddressMeta = useMemo(() => {
+    const dataWithId = initialData as (Partial<B2BAddress> & Partial<B2BAddressFormData>) | undefined;
+    return {
+      id: dataWithId?.id ?? null,
+      purchaseId: dataWithId?.purchase_id ?? initialData?.purchase_id ?? null,
+      weight: initialData?.total_weight_purchased ? Number(initialData.total_weight_purchased) : 0,
+    };
+  }, [initialData]);
 
   useEffect(() => {
     if (products.length === 0) refreshCoreData('products');
@@ -144,7 +159,93 @@ export function B2BAddressModal({ trigger, onSubmit, onClose, initialData, readO
     },
   });
 
-  const handleSaleSelection = (sale: B2BSale) => {
+  const formatWeight = useCallback((value: number) => {
+    const numericValue = Number(value ?? 0);
+    if (!Number.isFinite(numericValue)) {
+      return "0";
+    }
+    return new Intl.NumberFormat("fa-IR", { maximumFractionDigits: 2 }).format(numericValue);
+  }, []);
+
+  const updateSaleWeightInfo = useCallback(async (sale: B2BSale) => {
+    if (!sale?.purchase_id) {
+      setSaleWeightInfo(null);
+      return;
+    }
+
+    setIsFetchingSaleAddresses(true);
+    try {
+      const addresses = await fetchB2BAddresss({ purchase_id: sale.purchase_id });
+      if (form.getValues("purchase_id") !== sale.purchase_id) {
+        return;
+      }
+
+      const addressList: B2BAddress[] = addresses ?? [];
+      const saleTotalWeight = Number(sale.weight || 0);
+      const totalAllocated = addressList.reduce(
+        (sum, address) => sum + Number(address.total_weight_purchased || 0),
+        0
+      );
+      const editingSameSale = Boolean(isEditing && initialAddressMeta.purchaseId === sale.purchase_id);
+      let currentAddressWeight = 0;
+
+      if (editingSameSale) {
+        if (initialAddressMeta.id) {
+          const matchingAddress = addressList.find((address) => address.id === initialAddressMeta.id);
+          currentAddressWeight = Number(
+            matchingAddress?.total_weight_purchased ?? initialAddressMeta.weight ?? 0
+          );
+        } else {
+          currentAddressWeight = initialAddressMeta.weight ?? 0;
+        }
+      }
+
+      const otherAllocations = editingSameSale
+        ? Math.max(totalAllocated - currentAddressWeight, 0)
+        : totalAllocated;
+      const remainingWeight = Math.max(saleTotalWeight - totalAllocated, 0);
+      const maxAllocatableWeight = Math.max(saleTotalWeight - otherAllocations, 0);
+
+      setSaleWeightInfo({
+        totalWeight: saleTotalWeight,
+        allocatedWeight: totalAllocated,
+        remainingWeight,
+        maxAllocatableWeight,
+      });
+
+      const currentWeightValue = Number(form.getValues("total_weight_purchased") || 0);
+      const fieldState = form.getFieldState("total_weight_purchased");
+      const saleDefaultWeight = saleTotalWeight > 0 ? saleTotalWeight : maxAllocatableWeight;
+      if ((!fieldState.isDirty && maxAllocatableWeight >= 0) || currentWeightValue > maxAllocatableWeight) {
+        const nextValue = maxAllocatableWeight > 0
+          ? Math.min(saleDefaultWeight, maxAllocatableWeight)
+          : maxAllocatableWeight;
+        form.setValue("total_weight_purchased", nextValue, {
+          shouldDirty: fieldState.isDirty,
+        });
+      }
+
+      if (maxAllocatableWeight <= 0) {
+        form.setError("total_weight_purchased", {
+          type: "manual",
+          message: tval("no-weight-remaining"),
+        });
+      } else if (form.formState.errors.total_weight_purchased?.type === "manual") {
+        form.clearErrors("total_weight_purchased");
+      }
+    } catch (error) {
+      console.error("Failed to fetch sale addresses:", error);
+      if (form.getValues("purchase_id") === sale.purchase_id) {
+        setSaleWeightInfo(null);
+      }
+    } finally {
+      if (form.getValues("purchase_id") === sale.purchase_id) {
+        setIsFetchingSaleAddresses(false);
+      }
+    }
+  }, [form, initialAddressMeta.id, initialAddressMeta.purchaseId, initialAddressMeta.weight, isEditing, tval]);
+
+  const handleSaleSelection = async (sale: B2BSale) => {
     if (!sale) return;
     setLockedSaleId(sale.id ?? -1);
     form.setValue("purchase_id", sale.purchase_id || "");
@@ -154,7 +255,9 @@ export function B2BAddressModal({ trigger, onSubmit, onClose, initialData, readO
       (sale as any)?.cottage_code ||
       (sale as any)?.cottage_number;
     if (derivedCottageCode) {
-      form.setValue("cottage_code", derivedCottageCode);
+      form.setValue("cottage_code", derivedCottageCode, { shouldDirty: true });
+    } else {
+      form.setValue("cottage_code", "", { shouldDirty: true });
     }
     form.setValue(
       "product_offer",
@@ -174,10 +277,15 @@ export function B2BAddressModal({ trigger, onSubmit, onClose, initialData, readO
     form.setValue("payment_amount", Number(sale.total_price || 0));
     form.setValue("purchase_date", sale.sale_date || "");
     form.setValue("payment_method", sale.purchase_type || "cash");
+    setSaleWeightInfo(null);
+    await updateSaleWeightInfo(sale);
   };
-  const clearSaleLock = () => {
+  const clearSaleLock = useCallback(() => {
     setLockedSaleId(null);
-  };
+    setSaleWeightInfo(null);
+    setIsFetchingSaleAddresses(false);
+    form.clearErrors("total_weight_purchased");
+  }, [form]);
 
   const handleSaleModalSubmit = async (data: B2BSaleFormData) => {
     try {
@@ -189,7 +297,7 @@ export function B2BAddressModal({ trigger, onSubmit, onClose, initialData, readO
       toast.success(t("sale_created"));
       await loadSales();
       setShowSaleModal(false);
-      handleSaleSelection(created);
+      await handleSaleSelection(created);
     } catch (error) {
       console.error("Failed to create sale:", error);
       toast.error(t("sale_creation_failed"));
@@ -197,7 +305,59 @@ export function B2BAddressModal({ trigger, onSubmit, onClose, initialData, readO
     }
   };
 
+  useEffect(() => {
+    if (!initialAddressMeta.purchaseId) return;
+    if (sales.length === 0) return;
+    const currentPurchaseId = form.getValues("purchase_id");
+    if (currentPurchaseId !== initialAddressMeta.purchaseId) return;
+    const existingSale = sales.find((sale) => sale.purchase_id === initialAddressMeta.purchaseId);
+    if (existingSale) {
+      void updateSaleWeightInfo(existingSale);
+    }
+  }, [sales, initialAddressMeta.purchaseId, form, updateSaleWeightInfo]);
+
+  const handleWeightInputChange = (value: number) => {
+    const numericValue = Number(value || 0);
+    if (saleWeightInfo) {
+      const maxAllowed = saleWeightInfo.maxAllocatableWeight;
+      if (maxAllowed <= 0) {
+        form.setError("total_weight_purchased", {
+          type: "manual",
+          message: tval("no-weight-remaining"),
+        });
+      } else if (numericValue > maxAllowed) {
+        form.setError("total_weight_purchased", {
+          type: "manual",
+          message: tval("weight-exceeds-sale", {
+            max: formatWeight(maxAllowed),
+          }),
+        });
+      } else if (form.formState.errors.total_weight_purchased?.type === "manual") {
+        form.clearErrors("total_weight_purchased");
+      }
+    }
+    form.setValue("total_weight_purchased", numericValue, { shouldDirty: true });
+  };
+
   const handleSubmit = async (data: any) => {
+    if (saleWeightInfo) {
+      const maxAllowed = saleWeightInfo.maxAllocatableWeight;
+      const numericWeight = Number(data.total_weight_purchased || 0);
+      if (maxAllowed <= 0) {
+        form.setError("total_weight_purchased", {
+          type: "manual",
+          message: tval("no-weight-remaining"),
+        });
+        return;
+      }
+      if (numericWeight > maxAllowed) {
+        form.setError("total_weight_purchased", {
+          type: "manual",
+          message: tval("weight-exceeds-sale", { max: formatWeight(maxAllowed) }),
+        });
+        return;
+      }
+    }
     try {
       await onSubmit?.(data);
       if (trigger) {
@@ -292,6 +452,7 @@ export function B2BAddressModal({ trigger, onSubmit, onClose, initialData, readO
                             if (!value) {
                               field.onChange("");
                               clearSaleLock();
+                              form.setValue("cottage_code", "", { shouldDirty: true });
                               return;
                             }
                             field.onChange(value);
@@ -299,7 +460,11 @@ export function B2BAddressModal({ trigger, onSubmit, onClose, initialData, readO
                               (sale) => sale.purchase_id === value
                             );
                             if (selectedSale) {
-                              handleSaleSelection(selectedSale);
+                              void handleSaleSelection(selectedSale);
+                            } else {
+                              setSaleWeightInfo(null);
+                              setIsFetchingSaleAddresses(false);
+                              form.clearErrors("total_weight_purchased");
                             }
                           }}
                           options={sales.map((sale) => ({
@@ -332,8 +497,9 @@ export function B2BAddressModal({ trigger, onSubmit, onClose, initialData, readO
                       <FormControl>
                         <Input
                           {...field}
-                          readOnly={saleLocked}
-                          className={saleLocked ? "bg-gray-100 cursor-not-allowed" : ""}
+                          readOnly
+                          tabIndex={-1}
+                          className="bg-gray-100 cursor-not-allowed"
                         />
                       </FormControl>
                       <FormMessage className="min-h-[1.25rem]" />
@@ -489,11 +655,25 @@ export function B2BAddressModal({ trigger, onSubmit, onClose, initialData, readO
                   name="total_weight_purchased"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>{t("weight")}</FormLabel>
+                      <FormLabel>
+                        {t("weight")}
+                        {saleWeightInfo ? (
+                          <span className="mr-2 text-xs text-gray-500">
+                            {t("weight-remaining-label", {
+                              remaining: formatWeight(saleWeightInfo.remainingWeight),
+                            })}
+                          </span>
+                        ) :
+                          isFetchingSaleAddresses && (
+                            <span className="mr-2 text-xs text-gray-400">
+                              {t("weight-remaining-loading")}
+                            </span>
+                          )}
+                      </FormLabel>
                       <FormControl>
                         <NumberInput
                           value={field.value || 0}
-                          onChange={(value) => field.onChange(value)}
+                          onChange={handleWeightInputChange}
                         />
                       </FormControl>
                       <FormMessage className="min-h-[1.25rem]" />

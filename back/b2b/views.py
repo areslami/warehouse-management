@@ -50,7 +50,7 @@ class B2BOfferViewSet(viewsets.ModelViewSet):
 class B2BAddressViewSet(viewsets.ModelViewSet):
     queryset = B2BAddress.objects.all()
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
-    filterset_fields = ['product_offer', 'customer', 'receiver']
+    filterset_fields = ['product_offer', 'customer', 'receiver', 'purchase_id']
     search_fields = ['purchase_id', 'allocation_id', 'cottage_code', 'tracking_number']
     ordering_fields = ['purchase_date', 'created_at']
     ordering = ['-created_at']

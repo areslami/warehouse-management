@@ -29,6 +29,7 @@ export type B2BSaleFormData = {
     is_distributor: boolean;
     offer: number | null;
     b2b_distribution: number | null;
+    cottage_code?: string;
     weight: number;
     unit_price: number;
     sale_date: string;
@@ -97,6 +98,7 @@ export function B2BSaleModal({ trigger, onSubmit, onClose, initialData, isEditin
         is_distributor: z.boolean(),
         offer: z.number().nullable().optional(),
         b2b_distribution: z.number().nullable().optional(),
+        cottage_code: z.string().optional(),
         weight: z.number().positive(tval("weight")),
         unit_price: z.number().positive(tval("unit-price")),
         sale_date: z.string().min(1, tval("sale-date")),
@@ -127,6 +129,7 @@ export function B2BSaleModal({ trigger, onSubmit, onClose, initialData, isEditin
             is_distributor: initialData?.is_distributor || false,
             offer: initialData?.offer || null,
             b2b_distribution: initialData?.b2b_distribution || null,
+            cottage_code: initialData?.cottage_code || "",
             weight: initialData?.weight || 0,
             unit_price: initialData?.unit_price || 0,
             sale_date: initialData?.sale_date || new Date().toISOString().split('T')[0],
@@ -141,24 +144,40 @@ export function B2BSaleModal({ trigger, onSubmit, onClose, initialData, isEditin
     const selectedDistribution = form.watch("b2b_distribution");
 
     useEffect(() => {
+        if (saleType !== "your_sale") {
+            return;
+        }
         if (selectedOffer && selectedOffer !== 0 && offers.length > 0) {
             const offer = offers.find(o => o.id === selectedOffer);
-            if (offer && offer.product_id) {
-                form.setValue('product', offer.product_id, { shouldValidate: false, shouldDirty: true, shouldTouch: true });
+            if (offer) {
+                if (offer.product_id) {
+                    form.setValue('product', offer.product_id, { shouldValidate: false, shouldDirty: true, shouldTouch: true });
+                }
                 form.setValue('unit_price', Number(offer.unit_price), { shouldValidate: false, shouldDirty: true, shouldTouch: true });
+                form.setValue('cottage_code', offer.cottage_code || offer.cottage_number || "", { shouldValidate: false, shouldDirty: true });
             }
+        } else if (!selectedOffer) {
+            form.setValue('cottage_code', "", { shouldValidate: false, shouldDirty: false });
         }
-    }, [selectedOffer, offers, form]);
+    }, [selectedOffer, offers, form, saleType]);
 
     useEffect(() => {
+        if (saleType !== "distributor_sale") {
+            return;
+        }
         if (selectedDistribution && selectedDistribution !== 0 && distributions.length > 0) {
             const distribution = distributions.find(d => d.id === selectedDistribution);
-            if (distribution && distribution.product_id) {
-                form.setValue('product', distribution.product_id, { shouldValidate: false, shouldDirty: true, shouldTouch: true });
+            if (distribution) {
+                if (distribution.product_id) {
+                    form.setValue('product', distribution.product_id, { shouldValidate: false, shouldDirty: true, shouldTouch: true });
+                }
                 form.setValue('unit_price', Number(distribution.unit_price), { shouldValidate: false, shouldDirty: true, shouldTouch: true });
+                form.setValue('cottage_code', distribution.cottage_code || distribution.cottage_number || "", { shouldValidate: false, shouldDirty: true });
             }
+        } else if (!selectedDistribution) {
+            form.setValue('cottage_code', "", { shouldValidate: false, shouldDirty: false });
         }
-    }, [selectedDistribution, distributions, form]);
+    }, [selectedDistribution, distributions, form, saleType]);
 
 
     const handleSubmit = async (data: B2BSaleFormData) => {
@@ -238,6 +257,7 @@ export function B2BSaleModal({ trigger, onSubmit, onClose, initialData, isEditin
                                                     setSaleType(e.target.value as "your_sale" | "distributor_sale");
                                                     form.setValue("is_distributor", false);
                                                     form.setValue("b2b_distribution", null);
+                                                    form.setValue("cottage_code", "", { shouldDirty: false });
                                                 }}
                                                 className="mr-2"
                                             />
@@ -252,6 +272,7 @@ export function B2BSaleModal({ trigger, onSubmit, onClose, initialData, isEditin
                                                     setSaleType(e.target.value as "your_sale" | "distributor_sale");
                                                     form.setValue("is_distributor", true);
                                                     form.setValue("offer", null);
+                                                    form.setValue("cottage_code", "", { shouldDirty: false });
                                                 }}
                                                 className="mr-2"
                                             />
@@ -259,6 +280,25 @@ export function B2BSaleModal({ trigger, onSubmit, onClose, initialData, isEditin
                                         </label>
                                     </div>
                                 </div>
+
+                                <FormField
+                                    control={form.control as any}
+                                    name="cottage_code"
+                                    render={({ field }) => (
+                                        <FormItem className="col-span-2">
+                                            <FormLabel>{t("cottage-code")}</FormLabel>
+                                            <FormControl>
+                                                <Input
+                                                    {...field}
+                                                    readOnly
+                                                    tabIndex={-1}
+                                                    className="bg-gray-100 cursor-not-allowed"
+                                                />
+                                            </FormControl>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
 
                                 {saleType === "your_sale" && (
                                     <FormField

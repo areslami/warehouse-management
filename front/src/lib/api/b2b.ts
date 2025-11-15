@@ -114,8 +114,15 @@ export async function deleteB2BOffer(id: number): Promise<void> {
 }
 
 // B2B Address APIs
-export async function fetchB2BAddresss(): Promise<B2BAddress[]> {
-  return fetchWithAuth(`${API_BASE_URL()}address/`);
+export async function fetchB2BAddresss(params?: Record<string, any>): Promise<B2BAddress[]> {
+  const query = params
+    ? `?${new URLSearchParams(
+        Object.fromEntries(
+          Object.entries(params).map(([key, value]) => [key, String(value)])
+        )
+      )}`
+    : "";
+  return fetchWithAuth(`${API_BASE_URL()}address/${query}`);
 }
 
 export async function fetchB2BAddressById(id: number): Promise<B2BAddress> {
