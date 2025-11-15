@@ -4,7 +4,15 @@ from rest_framework.response import Response
 from django.http import HttpResponse
 from django.db import transaction, models
 from datetime import datetime, date
-from .utils import parse_html_table, process_address_row, process_sale_row, process_your_sale_row
+from .utils import (
+    parse_html_table,
+    process_address_row,
+    process_sale_row,
+    process_your_sale_row,
+    fa_payment_label,
+    fa_status_label,
+    extract_agreements,
+)
 from .models import B2BDistribution, B2BSale, B2BOffer, B2BAddress
 from .serializers import B2BDistributionSerializer, B2BAddressSerializer, B2BSaleSerializer
 from core.models import Customer
@@ -376,54 +384,11 @@ def create_addresses_batch(request):
         'created': created,
         'count': len(created)
     })
-
-
-def _fa_payment_label(code: str) -> str:
-    m = (code or '').strip()
-    if m in ['cash', 'نقدی']:
-        return 'نقدی'
-    if m in ['credit', 'اعتباری']:
-        return 'اعتباری'
-    if m in ['agreement', 'توافقی', 'قراردادی']:
-        return 'توافقی'
-    return 'سایر'
-
-
-def _fa_status_label(code: str) -> str:
-    m = (code or '').strip()
-    if m in ['active', 'فعال']:
-        return 'فعال'
-    if m in ['pending', 'در انتظار']:
-        return 'در انتظار'
-    if m in ['sold', 'فروخته شده']:
-        return 'فروخته شده'
-    if m in ['expired', 'منقضی', 'منقضی شده']:
-        return 'منقضی شده'
-    return m
-
-
-def _extract_agreements(desc: str):
-    p1 = d1 = p2 = d2 = p3 = d3 = ''
-    text = (desc or '').replace('\n', ' ')
-    for i in [1, 2, 3]:
-        m = re.search(rf"دوره\s+{i}\s*:\s*(\d+)\s*روز\s*×\s*([\d\،,]+)", text)
-        if m:
-            days = m.group(1)
-            amount = m.group(2).replace('،', '').replace(',', '')
-            if i == 1:
-                p1, d1 = days, amount
-            elif i == 2:
-                p2, d2 = days, amount
-            else:
-                p3, d3 = days, amount
-    return p1, d1, p2, d2, p3, d3
-
-
 def _get_address_row(address: B2BAddress, columns):
     customer = address.customer
     receiver = address.receiver
     offer = getattr(address, 'product_offer', None)
-    ag_p1, ag_d1, ag_p2, ag_d2, ag_p3, ag_d3 = _extract_agreements(
+    ag_p1, ag_d1, ag_p2, ag_d2, ag_p3, ag_d3 = extract_agreements(
         getattr(address, 'credit_description', ''))
     column_value_map = {
         'purchase_id': address.purchase_id or '',
@@ -438,7 +403,7 @@ def _get_address_row(address: B2BAddress, columns):
         'cottage_code': address.cottage_code or '',
         'product_title': (f"{address.product.code} / {address.product.name}" if address.product else ''),
         'description': getattr(address, 'credit_description', '') or '',
-        'payment_method': _fa_payment_label(getattr(address, 'payment_method', '')),
+        'payment_method': fa_payment_label(getattr(address, 'payment_method', '')),
         'offer_id': (offer.offer_id if offer else ''),
         'address_register_date': _format_jalali_date(getattr(address, 'created_at', None)),
         'allocation_id': address.allocation_id or '',
@@ -472,21 +437,30 @@ def _get_address_row(address: B2BAddress, columns):
     return [column_value_map.get(col, '') for col in columns]
 
 
-def _extract_selected_columns(mapping_dict, requested_keys):
-    if not requested_keys:
-        return list(mapping_dict.keys()), list(mapping_dict.values())
-    available = [key for key in mapping_dict.keys() if key in requested_keys]
-    if not available:
-        return list(mapping_dict.keys()), list(mapping_dict.values())
-    return available, [mapping_dict[key] for key in available]
-
-
-def _ensure_selected_columns(request, mapping_dict):
+def _ensure_selected_columns(request, mapping_dict, required_key=None):
     requested = request.data.get('columns') or []
     if not isinstance(requested, list):
         requested = []
-    requested = [c for c in requested if isinstance(c, str)]
-    return _extract_selected_columns(mapping_dict, requested)
+
+    seen = set()
+    column_keys = []
+    for key in requested:
+        if not isinstance(key, str):
+            continue
+        if key not in mapping_dict or key in seen:
+            continue
+        seen.add(key)
+        column_keys.append(key)
+
+    if required_key and required_key in mapping_dict and required_key not in seen:
+        column_keys.insert(0, required_key)
+        seen.add(required_key)
+
+    if not column_keys:
+        column_keys = list(mapping_dict.keys())
+
+    headers = [mapping_dict[key] for key in column_keys]
+    return column_keys, headers
 
 
 @api_view(['POST'])
@@ -496,7 +470,9 @@ def export_addresses_xlsx(request):
         'product', 'customer', 'receiver', 'product_offer__warehouse_receipt__warehouse'
     )
     from .excel_config import EXCEL_FIELD_MAPPING_ADDRESS
-    column_keys, headers = _ensure_selected_columns(request, EXCEL_FIELD_MAPPING_ADDRESS)
+    column_keys, headers = _ensure_selected_columns(
+        request, EXCEL_FIELD_MAPPING_ADDRESS, required_key='purchase_id'
+    )
     rows = []
     for a in qs:
         rows.append(_get_address_row(a, column_keys))
@@ -722,8 +698,8 @@ def _get_offer_row(offer, columns):
         'warehouse_receipt_id': offer.warehouse_receipt.receipt_id if offer.warehouse_receipt else '',
         'offer_weight': int(offer.offer_weight or 0),
         'unit_price': int(offer.unit_price or 0),
-        'status': _fa_status_label(offer.status or ''),
-        'offer_type': _fa_payment_label(offer.offer_type or ''),
+        'status': fa_status_label(offer.status or ''),
+        'offer_type': fa_payment_label(offer.offer_type or ''),
         'offer_date': _format_jalali_date(offer.offer_date),
         'offer_exp_date': _format_jalali_date(offer.offer_exp_date),
         'description': offer.description or '',
@@ -737,7 +713,9 @@ def export_offers_xlsx(request):
     ids = request.data.get('ids', [])
     qs = B2BOffer.objects.filter(id__in=ids).select_related('warehouse_receipt')
 
-    column_keys, headers = _ensure_selected_columns(request, EXCEL_FIELD_MAPPING_OFFER)
+    column_keys, headers = _ensure_selected_columns(
+        request, EXCEL_FIELD_MAPPING_OFFER, required_key='offer_id'
+    )
     rows = []
 
     for offer in qs:
@@ -809,7 +787,9 @@ def export_distributions_xlsx(request):
         'warehouse_receipt', 'sales_proforma', 'customer'
     )
 
-    column_keys, headers = _ensure_selected_columns(request, EXCEL_FIELD_MAPPING_DISTRIBUTION)
+    column_keys, headers = _ensure_selected_columns(
+        request, EXCEL_FIELD_MAPPING_DISTRIBUTION, required_key='transfer_id'
+    )
     rows = []
 
     for dist in qs:
@@ -871,7 +851,7 @@ def _get_sale_row(sale, columns):
         'unit_price': int(sale.unit_price or 0),
         'total_price': int(sale.total_price or 0),
         'sale_date': _format_jalali_date(sale.sale_date),
-        'purchase_type': _fa_payment_label(sale.purchase_type or ''),
+        'purchase_type': fa_payment_label(sale.purchase_type or ''),
         'description': sale.description or '',
         'credit_period_1': '',
         'credit_amount_1': '',
@@ -881,7 +861,7 @@ def _get_sale_row(sale, columns):
         'credit_amount_3': '',
     }
     credit_desc = getattr(sale, 'credit_description', '')
-    ag_p1, ag_d1, ag_p2, ag_d2, ag_p3, ag_d3 = _extract_agreements(credit_desc)
+    ag_p1, ag_d1, ag_p2, ag_d2, ag_p3, ag_d3 = extract_agreements(credit_desc)
     column_value_map['credit_period_1'] = ag_p1
     column_value_map['credit_amount_1'] = ag_d1
     column_value_map['credit_period_2'] = ag_p2
@@ -899,7 +879,9 @@ def export_sales_xlsx(request):
         'product', 'customer', 'offer', 'b2b_distribution'
     )
 
-    column_keys, headers = _ensure_selected_columns(request, EXCEL_FIELD_MAPPING_SALE)
+    column_keys, headers = _ensure_selected_columns(
+        request, EXCEL_FIELD_MAPPING_SALE, required_key='purchase_id'
+    )
     rows = []
 
     for sale in qs:

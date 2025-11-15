@@ -9,7 +9,11 @@ from b2b.models.base import B2BSale
 from core.models.parties import Receiver
 from core.models import Product, Customer
 from .models import B2BOffer, B2BDistribution
-from .excel_config import EXCEL_FIELD_MAPPING_SALE, EXCEL_FIELD_MAPPING_ADDRESS, EXCEL_FIELD_MAPPING_YOUR_SALE
+from .excel_config import (
+    EXCEL_FIELD_MAPPING_SALE,
+    EXCEL_FIELD_MAPPING_ADDRESS,
+    EXCEL_FIELD_MAPPING_YOUR_SALE,
+)
 
 
 def parse_html_table(content):
@@ -85,6 +89,47 @@ def convert_to_persian_numbers(text):
         text = str(text).replace(digit, persian_digits[i])
 
     return text
+
+
+def fa_payment_label(code: str) -> str:
+    m = (code or '').strip()
+    if m in ['cash', 'نقدی']:
+        return 'نقدی'
+    if m in ['credit', 'اعتباری']:
+        return 'اعتباری'
+    if m in ['agreement', 'توافقی', 'قراردادی']:
+        return 'توافقی'
+    return 'سایر'
+
+
+def fa_status_label(code: str) -> str:
+    m = (code or '').strip()
+    if m in ['active', 'فعال']:
+        return 'فعال'
+    if m in ['pending', 'در انتظار']:
+        return 'در انتظار'
+    if m in ['sold', 'فروخته شده']:
+        return 'فروخته شده'
+    if m in ['expired', 'منقضی', 'منقضی شده']:
+        return 'منقضی شده'
+    return m
+
+
+def extract_agreements(desc: str):
+    p1 = d1 = p2 = d2 = p3 = d3 = ''
+    text = (desc or '').replace('\n', ' ')
+    for i in [1, 2, 3]:
+        m = re.search(rf"دوره\s+{i}\s*:\s*(\d+)\s*روز\s*×\s*([\d\،,]+)", text)
+        if m:
+            days = m.group(1)
+            amount = m.group(2).replace('،', '').replace(',', '')
+            if i == 1:
+                p1, d1 = days, amount
+            elif i == 2:
+                p2, d2 = days, amount
+            else:
+                p3, d3 = days, amount
+    return p1, d1, p2, d2, p3, d3
 
 
 def build_description(row, product_name, mapping, op_type='dist'):
