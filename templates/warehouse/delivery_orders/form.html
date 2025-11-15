@@ -1,0 +1,1000 @@
+{% extends 'warehouse/base.html' %}
+
+{% block title %}
+    {% if form.instance.pk %}ویرایش حواله خروج{% else %}ایجاد حواله خروج جدید{% endif %} - سیستم مدیریت انبار
+{% endblock %}
+
+{% block page_title %}
+    {% if form.instance.pk %}ویرایش حواله خروج{% else %}ایجاد حواله خروج جدید{% endif %}
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .form-step {
+        display: none;
+    }
+    .form-step.active {
+        display: block;
+    }
+    .step-indicator {
+        transition: all 0.3s ease;
+    }
+    .step-indicator.completed {
+        background-color: #22c55e;
+        color: white;
+    }
+    .step-indicator.active {
+        background-color: #3b82f6;
+        color: white;
+    }
+    .item-row {
+        border: 1px solid #e5e7eb;
+        border-radius: 0.5rem;
+        margin-bottom: 1rem;
+        background: #f9fafb;
+    }
+    .item-row:hover {
+        background: #f3f4f6;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Progress Steps -->
+<div class="bg-white rounded-xl shadow-sm p-6 mb-6 border border-gray-100">
+    <div class="flex items-center justify-between">
+        <div class="flex items-center">
+            <div class="step-indicator active w-10 h-10 rounded-full bg-primary-500 text-white flex items-center justify-center text-sm font-medium ml-4">
+                1
+            </div>
+            <div>
+                <div class="text-sm font-medium text-gray-900">اطلاعات کلی</div>
+                <div class="text-xs text-gray-500">شماره حواله، تاریخ و انبار</div>
+            </div>
+        </div>
+        
+        <div class="flex-1 h-px bg-gray-200 mx-4"></div>
+        
+        <div class="flex items-center">
+            <div class="step-indicator w-10 h-10 rounded-full bg-gray-200 text-gray-600 flex items-center justify-center text-sm font-medium ml-4">
+                2
+            </div>
+            <div>
+                <div class="text-sm font-medium text-gray-500">آیتم‌های حواله</div>
+                <div class="text-xs text-gray-400">کالاها و گیرندگان</div>
+            </div>
+        </div>
+        
+        <div class="flex-1 h-px bg-gray-200 mx-4"></div>
+        
+        <div class="flex items-center">
+            <div class="step-indicator w-10 h-10 rounded-full bg-gray-200 text-gray-600 flex items-center justify-center text-sm font-medium">
+                3
+            </div>
+            <div>
+                <div class="text-sm font-medium text-gray-500">بررسی نهایی</div>
+                <div class="text-xs text-gray-400">تایید و ثبت</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<form method="post" class="space-y-6" id="deliveryOrderForm">
+    {% csrf_token %}
+    
+    <!-- Step 1: Basic Information -->
+    <div class="form-step active" id="step1">
+        <div class="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
+            <h3 class="text-lg font-semibold text-gray-800 mb-6">
+                <i class="fas fa-info-circle ml-2"></i>
+                اطلاعات کلی حواله
+            </h3>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <!-- Delivery Order Number -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">شماره حواله *</label>
+                    <input type="text" name="number" value="{{ form.instance.number }}" required
+                           class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                           placeholder="مثال: DO-2025-001">
+                    <p class="text-xs text-gray-500 mt-1">شماره یکتا برای حواله خروج</p>
+                </div>
+                
+                <!-- Issue Date -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">تاریخ صدور *</label>
+                    <input type="text" name="issue_date" 
+                           value="{% if form.instance.issue_date %}{{ form.instance.issue_date|date:'Y/m/d' }}{% endif %}" 
+                           required placeholder="1403/01/01"
+                           class="jalali-date w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500">
+                    <input type="hidden" name="issue_date_gregorian" 
+                           value="{% if form.instance.issue_date %}{{ form.instance.issue_date|date:'Y-m-d' }}{% endif %}">
+                </div>
+                
+                <!-- Validity Date -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">تاریخ اعتبار *</label>
+                    <input type="text" name="validity_date" 
+                           value="{% if form.instance.validity_date %}{{ form.instance.validity_date|date:'Y/m/d' }}{% endif %}" 
+                           required placeholder="1403/12/29"
+                           class="jalali-date w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500">
+                    <input type="hidden" name="validity_date_gregorian" 
+                           value="{% if form.instance.validity_date %}{{ form.instance.validity_date|date:'Y-m-d' }}{% endif %}">
+                </div>
+                
+                <!-- Warehouse -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">انبار *</label>
+                    <select name="warehouse" required 
+                            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500">
+                        <option value="">انتخاب انبار</option>
+                        {% for warehouse in warehouses %}
+                        <option value="{{ warehouse.id }}" {% if warehouse.id == form.instance.warehouse_id %}selected{% endif %}>
+                            {{ warehouse.name }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                
+                <!-- Sales Proforma -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">پیش فاکتور فروش *</label>
+                    <select name="sales_proforma" required 
+                            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500">
+                        <option value="">انتخاب پیش فاکتور فروش</option>
+                        {% for proforma in sales_proformas %}
+                        <option value="{{ proforma.id }}" {% if proforma.id == form.instance.sales_proforma_id %}selected{% endif %}>
+                            {{ proforma.number }} - {{ proforma.customer }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                
+                <!-- Shipping Company -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">شرکت حمل *</label>
+                    <select name="shipping_company" required 
+                            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500">
+                        <option value="">انتخاب شرکت حمل</option>
+                        {% for company in shipping_companies %}
+                        <option value="{{ company.id }}" {% if company.id == form.instance.shipping_company_id %}selected{% endif %}>
+                            {{ company.name }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+            
+            <!-- Description -->
+            <div class="mt-6">
+                <label class="block text-sm font-medium text-gray-700 mb-2">توضیحات</label>
+                <textarea name="description" rows="3" 
+                          class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                          placeholder="توضیحات تکمیلی در مورد حواله...">{{ form.instance.description }}</textarea>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Step 2: Items -->
+    <div class="form-step" id="step2">
+        <div class="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
+            <div class="flex items-center justify-between mb-6">
+                <h3 class="text-lg font-semibold text-gray-800">
+                    <i class="fas fa-boxes ml-2"></i>
+                    آیتم‌های حواله
+                </h3>
+                <div class="flex gap-3">
+                    <button type="button" id="importExcel" 
+                            class="flex items-center px-4 py-2 bg-warning-500 text-white rounded-lg hover:bg-warning-600 transition-colors">
+                        <i class="fas fa-file-excel ml-2"></i>
+                        آپلود اکسل
+                    </button>
+                    <button type="button" id="downloadTemplate" 
+                            class="flex items-center px-4 py-2 bg-info-500 text-white rounded-lg hover:bg-info-600 transition-colors">
+                        <i class="fas fa-download ml-2"></i>
+                        دانلود قالب
+                    </button>
+                    <button type="button" id="addItem" 
+                            class="flex items-center px-4 py-2 bg-success-500 text-white rounded-lg hover:bg-success-600 transition-colors">
+                        <i class="fas fa-plus ml-2"></i>
+                        افزودن آیتم
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Hidden file input for Excel upload -->
+            <input type="file" id="excelFileInput" accept=".xlsx,.xls" style="display: none;">
+            
+            <div id="itemsContainer">
+                <!-- Items will be added here dynamically -->
+            </div>
+            
+            <!-- Item Template (Hidden) -->
+            <div id="itemTemplate" class="item-row p-4" style="display: none;">
+                <div class="flex items-center justify-between mb-4">
+                    <h4 class="text-sm font-medium text-gray-700">آیتم <span class="item-number"></span></h4>
+                    <button type="button" class="remove-item text-danger-600 hover:text-danger-800">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </div>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">کالا *</label>
+                        <select name="items[INDEX][product]" required 
+                                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500">
+                            <option value="">انتخاب کالا</option>
+                            {% for product in products %}
+                            <option value="{{ product.id }}">{{ product.name }} ({{ product.unit }})</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">مقدار *</label>
+                        <input type="number" name="items[INDEX][quantity]" step="0.01" required
+                               class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                               placeholder="0.00">
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">نوع وسیله حمل *</label>
+                        <select name="items[INDEX][vehicle_type]" required 
+                                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500">
+                            <option value="">انتخاب وسیله</option>
+                            <option value="truck">کامیون</option>
+                            <option value="pickup">وانت</option>
+                            <option value="van">ون</option>
+                            <option value="container">کانتینر</option>
+                            <option value="other">سایر</option>
+                        </select>
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">گیرنده *</label>
+                        <select name="items[INDEX][receiver]" required 
+                                class="receiver-select w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500">
+                            <option value="">انتخاب گیرنده</option>
+                            {% for receiver in receivers %}
+                            <option value="{{ receiver.id }}">{{ receiver }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    
+                    <div class="md:col-span-2">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">آدرس گیرنده</label>
+                        <textarea name="items[INDEX][receiver_address]" rows="2" 
+                                  class="receiver-address w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                                  placeholder="آدرس گیرنده بعد از انتخاب گیرنده تکمیل می‌شود..." readonly></textarea>
+                        <p class="text-xs text-gray-500 mt-1">این فیلد بعد از انتخاب گیرنده خودکار تکمیل می‌شود</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Step 3: Review -->
+    <div class="form-step" id="step3">
+        <div class="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
+            <h3 class="text-lg font-semibold text-gray-800 mb-6">
+                <i class="fas fa-check-circle ml-2"></i>
+                بررسی نهایی حواله
+            </h3>
+            
+            <div id="reviewContent">
+                <!-- Review content will be populated by JavaScript -->
+            </div>
+        </div>
+    </div>
+    
+    <!-- Navigation Buttons -->
+    <div class="flex justify-between">
+        <button type="button" id="prevBtn" class="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors" style="display: none;">
+            <i class="fas fa-arrow-right ml-2"></i>
+            قبلی
+        </button>
+        
+        <div class="flex gap-3">
+            <a href="{% url 'warehouse:delivery_order_list' %}" 
+               class="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors">
+                انصراف
+            </a>
+            <button type="button" id="nextBtn" 
+                    class="px-6 py-2 bg-primary-500 text-white rounded-lg hover:bg-primary-600 transition-colors">
+                بعدی
+                <i class="fas fa-arrow-left mr-2"></i>
+            </button>
+            <button type="submit" id="submitBtn" style="display: none;"
+                    class="px-6 py-2 bg-success-500 text-white rounded-lg hover:bg-success-600 transition-colors">
+                <i class="fas fa-save ml-2"></i>
+                ثبت حواله
+            </button>
+        </div>
+    </div>
+</form>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('DOM loaded, initializing form...');
+    
+    let currentStep = 1;
+    let itemIndex = 0;
+    
+    // Get CSRF token
+    const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]')?.value || '';
+    console.log('CSRF token found:', !!csrfToken);
+    
+    // Receiver data for quick access
+    const receiverData = {
+        {% for receiver in receivers %}
+        {{ receiver.id }}: {
+            id: {{ receiver.id }},
+            name: '{{ receiver|escapejs }}',
+            address: '{{ receiver.address|escapejs }}',
+            postal_code: '{{ receiver.postal_code|escapejs }}',
+            phone: '{{ receiver.phone|escapejs }}',
+            unique_id: '{{ receiver.unique_id|escapejs }}'
+        }{% if not forloop.last %},{% endif %}
+        {% endfor %}
+    };
+    console.log('Receiver data loaded:', Object.keys(receiverData).length, 'receivers');
+    
+    // Initialize date inputs
+    const jalaliInputs = document.querySelectorAll('.jalali-date');
+    console.log('Date inputs found:', jalaliInputs.length);
+    
+    jalaliInputs.forEach((input, index) => {
+        console.log(`Processing date input ${index + 1}:`, input.name);
+        
+        // Convert to regular date input for better compatibility
+        input.type = 'date';
+        input.classList.remove('jalali-date');
+        
+        // Set today's date as default if empty
+        if (!input.value) {
+            const today = new Date().toISOString().split('T')[0];
+            input.value = today;
+            console.log(`Set default date for ${input.name}:`, today);
+            
+            // Update hidden field if exists
+            const hiddenField = input.nextElementSibling;
+            if (hiddenField && hiddenField.type === 'hidden') {
+                hiddenField.value = today;
+                console.log(`Updated hidden field for ${input.name}`);
+            }
+        }
+        
+        // Update hidden field when date changes
+        input.addEventListener('change', function() {
+            const hiddenField = this.nextElementSibling;
+            if (hiddenField && hiddenField.type === 'hidden') {
+                hiddenField.value = this.value;
+                console.log(`Date changed for ${this.name}:`, this.value);
+            }
+        });
+    });
+    
+    // Get form elements
+    const steps = document.querySelectorAll('.form-step');
+    const stepIndicators = document.querySelectorAll('.step-indicator');
+    const nextBtn = document.getElementById('nextBtn');
+    const prevBtn = document.getElementById('prevBtn');
+    const submitBtn = document.getElementById('submitBtn');
+    
+    // Debug: Check if elements exist
+    console.log('Form elements found:', {
+        steps: steps.length,
+        stepIndicators: stepIndicators.length,
+        nextBtn: !!nextBtn,
+        prevBtn: !!prevBtn,
+        submitBtn: !!submitBtn
+    });
+    
+    if (!nextBtn) {
+        console.error('CRITICAL: Next button not found! Check HTML structure.');
+        return;
+    }
+    
+    if (steps.length === 0) {
+        console.error('CRITICAL: No form steps found! Check HTML structure.');
+        return;
+    }
+    
+    // Show specific step
+    function showStep(step) {
+        steps.forEach((s, index) => {
+            s.classList.remove('active');
+            if (index + 1 === step) {
+                s.classList.add('active');
+            }
+        });
+        
+        stepIndicators.forEach((indicator, index) => {
+            indicator.classList.remove('active', 'completed');
+            if (index + 1 === step) {
+                indicator.classList.add('active');
+            } else if (index + 1 < step) {
+                indicator.classList.add('completed');
+            }
+        });
+        
+        // Update navigation buttons
+        prevBtn.style.display = step === 1 ? 'none' : 'block';
+        nextBtn.style.display = step === 3 ? 'none' : 'block';
+        submitBtn.style.display = step === 3 ? 'block' : 'none';
+    }
+    
+    // Next button event handler
+    console.log('Attaching next button event handler...');
+    nextBtn.addEventListener('click', function(e) {
+        e.preventDefault();
+        console.log('🔘 Next button clicked! Current step:', currentStep);
+        
+        if (currentStep < 3) {
+            console.log('Validating step', currentStep);
+            if (validateCurrentStep()) {
+                currentStep++;
+                console.log('✅ Moving to step', currentStep);
+                
+                if (currentStep === 3) {
+                    console.log('📋 Populating review...');
+                    populateReview();
+                }
+                showStep(currentStep);
+            } else {
+                console.log('❌ Validation failed for step', currentStep - 1);
+            }
+        } else {
+            console.log('⚠️ Already at final step');
+        }
+    });
+    
+    // Previous button event handler  
+    if (prevBtn) {
+        console.log('Attaching previous button event handler...');
+        prevBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            console.log('🔙 Previous button clicked! Current step:', currentStep);
+            
+            if (currentStep > 1) {
+                currentStep--;
+                console.log('⬅️ Moving to step', currentStep);
+                showStep(currentStep);
+            }
+        });
+    }
+    
+    // Validate current step
+    function validateCurrentStep() {
+        console.log('🔍 Validating step:', currentStep);
+        
+        // For step 1, just check basic required fields
+        if (currentStep === 1) {
+            const step1 = document.getElementById('step1');
+            if (!step1) {
+                console.error('❌ Step 1 element not found');
+                return false;
+            }
+            
+            const requiredFields = step1.querySelectorAll('[required]');
+            console.log('📝 Required fields in step 1:', requiredFields.length);
+            
+            let isValid = true;
+            let invalidFields = [];
+            
+            requiredFields.forEach((field, index) => {
+                console.log(`  Field ${index + 1}: ${field.name || field.id} = "${field.value}"`);
+                
+                // Skip readonly fields
+                if (field.hasAttribute('readonly')) {
+                    field.classList.remove('border-red-500');
+                    return;
+                }
+                
+                if (!field.value || !field.value.trim()) {
+                    field.classList.add('border-red-500');
+                    invalidFields.push(field.name || field.id || `field-${index}`);
+                    isValid = false;
+                } else {
+                    field.classList.remove('border-red-500');
+                }
+            });
+            
+            if (!isValid) {
+                console.log('❌ Invalid fields in step 1:', invalidFields);
+                alert('لطفاً تمام فیلدهای اجباری را در مرحله اول تکمیل کنید.');
+                return false;
+            }
+            
+            console.log('✅ Step 1 validation passed');
+            return true;
+        }
+        
+        // For now, always allow other steps
+        console.log('✅ Step', currentStep, 'validation passed (simplified)');
+        return true;
+    }
+    
+    // Initialize form - show first step
+    console.log('🚀 Initializing form with step 1');
+    showStep(1);
+    
+    console.log('✅ Form initialization complete!');
+});
+    
+    // Add item functionality
+    const addItemBtn = document.getElementById('addItem');
+    if (addItemBtn) {
+        addItemBtn.addEventListener('click', function() {
+        const template = document.getElementById('itemTemplate');
+        const container = document.getElementById('itemsContainer');
+        
+        const newItem = template.cloneNode(true);
+        newItem.style.display = 'block';
+        newItem.id = '';
+        
+        // Replace INDEX with actual index
+        newItem.innerHTML = newItem.innerHTML.replace(/INDEX/g, itemIndex);
+        newItem.querySelector('.item-number').textContent = itemIndex + 1;
+        
+        container.appendChild(newItem);
+        
+        // Add remove functionality
+        newItem.querySelector('.remove-item').addEventListener('click', function() {
+            newItem.remove();
+            updateItemNumbers();
+        });
+        
+        // Add receiver change functionality
+        const receiverSelect = newItem.querySelector('.receiver-select');
+        const addressField = newItem.querySelector('.receiver-address');
+        
+        receiverSelect.addEventListener('change', function() {
+            const receiverId = this.value;
+            console.log('Receiver selected:', receiverId);
+            
+            if (receiverId) {
+                // Try to get data from embedded receiverData first
+                if (receiverData[receiverId]) {
+                    console.log('Using embedded receiver data:', receiverData[receiverId]);
+                    const receiver = receiverData[receiverId];
+                    
+                    // Populate fields with embedded data
+                    addressField.value = receiver.address || '';
+                    addressField.removeAttribute('readonly');
+                    addressField.classList.remove('border-red-500', 'border-yellow-500');
+                    addressField.placeholder = 'آدرس گیرنده (قابل ویرایش)';
+                } else {
+                    // Fallback to AJAX if embedded data not available
+                    console.log('Embedded data not found, trying AJAX...');
+                    addressField.value = 'در حال بارگذاری...';
+                    addressField.setAttribute('readonly', 'true');
+                    
+                    // Fetch receiver details via AJAX
+                    fetch(`/warehouse/api/receiver/${receiverId}/`, {
+                        method: 'GET',
+                        headers: {
+                            'X-Requested-With': 'XMLHttpRequest',
+                            'Content-Type': 'application/json',
+                            'X-CSRFToken': csrfToken,
+                        }
+                    })
+                    .then(response => {
+                        if (!response.ok) {
+                            throw new Error(`HTTP error! status: ${response.status}`);
+                        }
+                        return response.json();
+                    })
+                    .then(data => {
+                        console.log('AJAX receiver data received:', data);
+                        if (data.error) {
+                            throw new Error(data.error);
+                        }
+                        
+                        // Populate fields with AJAX data
+                        addressField.value = data.address || '';
+                        addressField.removeAttribute('readonly');
+                        addressField.classList.remove('border-red-500');
+                        addressField.placeholder = 'آدرس گیرنده (قابل ویرایش)';
+                    })
+                    .catch(error => {
+                        console.error('Error fetching receiver data:', error);
+                        
+                        // Allow manual entry on error
+                        addressField.value = '';
+                        addressField.removeAttribute('readonly');
+                        addressField.placeholder = 'خطا در بارگذاری - آدرس را وارد کنید...';
+                        addressField.classList.add('border-yellow-500');
+                        
+                        // Show user-friendly error
+                        alert('خطا در بارگذاری اطلاعات گیرنده. لطفاً آدرس را دستی وارد کنید.');
+                    });
+                }
+            } else {
+                // Reset field when no receiver is selected
+                addressField.value = '';
+                addressField.setAttribute('readonly', 'true');
+                addressField.placeholder = 'ابتدا گیرنده را انتخاب کنید...';
+                addressField.classList.remove('border-red-500', 'border-yellow-500');
+            }
+        });
+        
+        itemIndex++;
+        });
+    } else {
+        console.error('Add Item button not found!');
+    }
+    
+    // Update item numbers
+    function updateItemNumbers() {
+        const items = document.querySelectorAll('#itemsContainer .item-row');
+        items.forEach((item, index) => {
+            item.querySelector('.item-number').textContent = index + 1;
+        });
+    }
+    
+    // Add item from Excel data
+    function addItemFromExcel(excelData) {
+        const template = document.getElementById('itemTemplate');
+        const container = document.getElementById('itemsContainer');
+        
+        const newItem = template.cloneNode(true);
+        newItem.style.display = 'block';
+        newItem.id = '';
+        
+        // Replace INDEX with actual index
+        newItem.innerHTML = newItem.innerHTML.replace(/INDEX/g, itemIndex);
+        newItem.querySelector('.item-number').textContent = itemIndex + 1;
+        
+        container.appendChild(newItem);
+        
+        // Set values from Excel data
+        if (excelData.product) {
+            const productSelect = newItem.querySelector('select[name*="[product]"]');
+            // Try to find matching product by name
+            for (let i = 0; i < productSelect.options.length; i++) {
+                if (productSelect.options[i].text.includes(excelData.product)) {
+                    productSelect.selectedIndex = i;
+                    break;
+                }
+            }
+        }
+        
+        if (excelData.quantity) {
+            newItem.querySelector('input[name*="[quantity]"]').value = excelData.quantity;
+        }
+        
+        if (excelData.vehicleType) {
+            const vehicleSelect = newItem.querySelector('select[name*="[vehicle_type]"]');
+            // Try to find matching vehicle type
+            for (let i = 0; i < vehicleSelect.options.length; i++) {
+                if (vehicleSelect.options[i].text.includes(excelData.vehicleType) || 
+                    vehicleSelect.options[i].value === excelData.vehicleType) {
+                    vehicleSelect.selectedIndex = i;
+                    break;
+                }
+            }
+        }
+        
+        if (excelData.receiver) {
+            const receiverSelect = newItem.querySelector('select[name*="[receiver]"]');
+            // Try to find matching receiver by name
+            for (let i = 0; i < receiverSelect.options.length; i++) {
+                if (receiverSelect.options[i].text.includes(excelData.receiver)) {
+                    receiverSelect.selectedIndex = i;
+                    break;
+                }
+            }
+        }
+        
+        if (excelData.address) {
+            newItem.querySelector('textarea[name*="[receiver_address]"]').value = excelData.address;
+        }
+        
+        // Add remove functionality
+        newItem.querySelector('.remove-item').addEventListener('click', function() {
+            newItem.remove();
+            updateItemNumbers();
+        });
+        
+        // Add receiver change functionality
+        const receiverSelect = newItem.querySelector('.receiver-select');
+        const addressField = newItem.querySelector('.receiver-address');
+        
+        receiverSelect.addEventListener('change', function() {
+            const receiverId = this.value;
+            console.log('Receiver selected:', receiverId);
+            
+            if (receiverId) {
+                // Try to get data from embedded receiverData first
+                if (receiverData[receiverId]) {
+                    console.log('Using embedded receiver data:', receiverData[receiverId]);
+                    const receiver = receiverData[receiverId];
+                    
+                    // Populate fields with embedded data
+                    addressField.value = receiver.address || '';
+                    addressField.removeAttribute('readonly');
+                    addressField.classList.remove('border-red-500', 'border-yellow-500');
+                    addressField.placeholder = 'آدرس گیرنده (قابل ویرایش)';
+                } else {
+                    // Fallback to AJAX if embedded data not available
+                    console.log('Embedded data not found, trying AJAX...');
+                    addressField.value = 'در حال بارگذاری...';
+                    addressField.setAttribute('readonly', 'true');
+                    
+                    // Fetch receiver details via AJAX
+                    fetch(`/warehouse/api/receiver/${receiverId}/`, {
+                        method: 'GET',
+                        headers: {
+                            'X-Requested-With': 'XMLHttpRequest',
+                            'Content-Type': 'application/json',
+                            'X-CSRFToken': csrfToken,
+                        }
+                    })
+                    .then(response => {
+                        if (!response.ok) {
+                            throw new Error(`HTTP error! status: ${response.status}`);
+                        }
+                        return response.json();
+                    })
+                    .then(data => {
+                        console.log('AJAX receiver data received:', data);
+                        if (data.error) {
+                            throw new Error(data.error);
+                        }
+                        
+                        // Populate fields with AJAX data
+                        addressField.value = data.address || '';
+                        addressField.removeAttribute('readonly');
+                        addressField.classList.remove('border-red-500');
+                        addressField.placeholder = 'آدرس گیرنده (قابل ویرایش)';
+                    })
+                    .catch(error => {
+                        console.error('Error fetching receiver data:', error);
+                        
+                        // Allow manual entry on error
+                        addressField.value = '';
+                        addressField.removeAttribute('readonly');
+                        addressField.placeholder = 'خطا در بارگذاری - آدرس را وارد کنید...';
+                        addressField.classList.add('border-yellow-500');
+                        
+                        // Show user-friendly error
+                        alert('خطا در بارگذاری اطلاعات گیرنده. لطفاً آدرس را دستی وارد کنید.');
+                    });
+                }
+            } else {
+                // Reset field when no receiver is selected
+                addressField.value = '';
+                addressField.setAttribute('readonly', 'true');
+                addressField.placeholder = 'ابتدا گیرنده را انتخاب کنید...';
+                addressField.classList.remove('border-red-500', 'border-yellow-500');
+            }
+        });
+        
+        itemIndex++;
+    }
+    
+    // Populate review section
+    function populateReview() {
+        const reviewContent = document.getElementById('reviewContent');
+        
+        // Basic information
+        const number = document.querySelector('input[name="number"]').value;
+        const issueDate = document.querySelector('input[name="issue_date"]').value;
+        const validityDate = document.querySelector('input[name="validity_date"]').value;
+        const warehouse = document.querySelector('select[name="warehouse"] option:checked').textContent;
+        const salesProforma = document.querySelector('select[name="sales_proforma"] option:checked').textContent;
+        const shippingCompany = document.querySelector('select[name="shipping_company"] option:checked').textContent;
+        const description = document.querySelector('textarea[name="description"]').value;
+        
+        // Items
+        const items = document.querySelectorAll('#itemsContainer .item-row');
+        
+        let reviewHTML = `
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                <div>
+                    <h4 class="font-medium text-gray-900 mb-2">اطلاعات کلی</h4>
+                    <div class="space-y-2 text-sm">
+                        <div><span class="text-gray-600">شماره حواله:</span> <span class="font-medium">${number}</span></div>
+                        <div><span class="text-gray-600">تاریخ صدور:</span> <span class="font-medium">${issueDate}</span></div>
+                        <div><span class="text-gray-600">تاریخ اعتبار:</span> <span class="font-medium">${validityDate}</span></div>
+                        <div><span class="text-gray-600">انبار:</span> <span class="font-medium">${warehouse}</span></div>
+                    </div>
+                </div>
+                <div>
+                    <h4 class="font-medium text-gray-900 mb-2">اطلاعات تکمیلی</h4>
+                    <div class="space-y-2 text-sm">
+                        <div><span class="text-gray-600">پیش فاکتور فروش:</span> <span class="font-medium">${salesProforma}</span></div>
+                        <div><span class="text-gray-600">شرکت حمل:</span> <span class="font-medium">${shippingCompany}</span></div>
+                        ${description ? `<div><span class="text-gray-600">توضیحات:</span> <span class="font-medium">${description}</span></div>` : ''}
+                    </div>
+                </div>
+            </div>
+            
+            <div>
+                <h4 class="font-medium text-gray-900 mb-4">آیتم‌های حواله (${items.length} آیتم)</h4>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-sm">
+                        <thead class="bg-gray-50">
+                            <tr>
+                                <th class="text-right py-2 px-3">ردیف</th>
+                                <th class="text-right py-2 px-3">کالا</th>
+                                <th class="text-right py-2 px-3">مقدار</th>
+                                <th class="text-right py-2 px-3">وسیله حمل</th>
+                                <th class="text-right py-2 px-3">گیرنده</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-gray-200">
+        `;
+        
+        items.forEach((item, index) => {
+            const product = item.querySelector('select[name*="[product]"] option:checked').textContent;
+            const quantity = item.querySelector('input[name*="[quantity]"]').value;
+            const vehicleType = item.querySelector('select[name*="[vehicle_type]"] option:checked').textContent;
+            const receiver = item.querySelector('select[name*="[receiver]"] option:checked').textContent;
+            
+            reviewHTML += `
+                <tr>
+                    <td class="py-2 px-3">${index + 1}</td>
+                    <td class="py-2 px-3">${product}</td>
+                    <td class="py-2 px-3">${quantity}</td>
+                    <td class="py-2 px-3">${vehicleType}</td>
+                    <td class="py-2 px-3">${receiver}</td>
+                </tr>
+            `;
+        });
+        
+        reviewHTML += `
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        `;
+        
+        reviewContent.innerHTML = reviewHTML;
+    }
+    
+    // Excel import functionality
+    const importExcelBtn = document.getElementById('importExcel');
+    if (importExcelBtn) {
+        importExcelBtn.addEventListener('click', function() {
+            const fileInput = document.getElementById('excelFileInput');
+            if (fileInput) {
+                fileInput.click();
+            } else {
+                console.error('Excel file input not found!');
+            }
+        });
+    } else {
+        console.log('Import Excel button not found (this is OK for existing forms)');
+    }
+    
+    const excelFileInput = document.getElementById('excelFileInput');
+    if (excelFileInput) {
+        excelFileInput.addEventListener('change', function(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+        
+        // Show loading message
+        const importBtn = document.getElementById('importExcel');
+        const originalText = importBtn.innerHTML;
+        importBtn.innerHTML = '<i class="fas fa-spinner fa-spin ml-2"></i>در حال پردازش...';
+        importBtn.disabled = true;
+        
+        // Read Excel file
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            try {
+                const data = new Uint8Array(e.target.result);
+                const workbook = XLSX.read(data, {type: 'array'});
+                const sheetName = workbook.SheetNames[0];
+                const worksheet = workbook.Sheets[sheetName];
+                const jsonData = XLSX.utils.sheet_to_json(worksheet, {header: 1});
+                
+                // Clear existing items
+                document.getElementById('itemsContainer').innerHTML = '';
+                itemIndex = 0;
+                
+                // Process Excel data (skip header row)
+                let successCount = 0;
+                for (let i = 1; i < jsonData.length; i++) {
+                    const row = jsonData[i];
+                    if (row.length < 5) continue; // Skip incomplete rows
+                    
+                    // Add item with Excel data
+                    addItemFromExcel({
+                        product: row[0] || '',      // Column A: Product
+                        quantity: row[1] || '',     // Column B: Quantity  
+                        vehicleType: row[2] || '',  // Column C: Vehicle Type
+                        receiver: row[3] || '',     // Column D: Receiver
+                        address: row[4] || ''       // Column E: Address
+                    });
+                    successCount++;
+                }
+                
+                alert(`${successCount} آیتم از فایل اکسل با موفقیت بارگذاری شد.`);
+                
+                // Reset button
+                importBtn.innerHTML = originalText;
+                importBtn.disabled = false;
+                
+                // Clear file input
+                event.target.value = '';
+            } catch (error) {
+                alert('خطا در خواندن فایل اکسل: ' + error.message);
+                importBtn.innerHTML = originalText;
+                importBtn.disabled = false;
+                event.target.value = '';
+            }
+        };
+        reader.readAsArrayBuffer(file);
+        });
+    } else {
+        console.log('Excel file input not found (this is OK for existing forms)');
+    }
+    
+    // Download template functionality
+    const downloadTemplateBtn = document.getElementById('downloadTemplate');
+    if (downloadTemplateBtn) {
+        downloadTemplateBtn.addEventListener('click', function() {
+        // Create Excel template
+        const wb = XLSX.utils.book_new();
+        
+        // Create header data
+        const headers = [
+            'نام کالا (Product Name)',
+            'مقدار (Quantity)', 
+            'نوع وسیله حمل (Vehicle Type)',
+            'نام گیرنده (Receiver Name)',
+            'آدرس گیرنده (Receiver Address)'
+        ];
+        
+        // Create sample data
+        const sampleData = [
+            ['نمونه کالا 1', '100', 'truck', 'نمونه گیرنده 1', 'آدرس نمونه 1'],
+            ['نمونه کالا 2', '50', 'pickup', 'نمونه گیرنده 2', 'آدرس نمونه 2']
+        ];
+        
+        // Combine headers and sample data
+        const wsData = [headers, ...sampleData];
+        
+        // Create worksheet
+        const ws = XLSX.utils.aoa_to_sheet(wsData);
+        
+        // Set column widths
+        ws['!cols'] = [
+            {wch: 25}, // Product Name
+            {wch: 15}, // Quantity
+            {wch: 20}, // Vehicle Type
+            {wch: 25}, // Receiver Name
+            {wch: 40}  // Receiver Address
+        ];
+        
+        // Add worksheet to workbook
+        XLSX.utils.book_append_sheet(wb, ws, 'آیتم‌های حواله');
+        
+        // Generate filename with current date
+        const now = new Date();
+        const filename = `template_delivery_order_${now.getFullYear()}_${(now.getMonth()+1).toString().padStart(2,'0')}_${now.getDate().toString().padStart(2,'0')}.xlsx`;
+        
+        // Download file
+        XLSX.writeFile(wb, filename);
+        });
+    } else {
+        console.log('Download template button not found (this is OK for existing forms)');
+    }
+    
+    // Initialize with first item
+    const initAddItemBtn = document.getElementById('addItem');
+    if (initAddItemBtn) {
+        console.log('Initializing with first item...');
+        initAddItemBtn.click();
+    } else {
+        console.error('Cannot initialize - Add Item button not found!');
+    }
+});
+</script>
+{% endblock %}

@@ -1,0 +1,81 @@
+
+{% extends "admin/change_form.html" %}
+{% load i18n admin_urls static admin_modify %}
+
+{% block object-tools-items %}
+    {{ block.super }}
+    {% if show_excel_buttons and object_id %}
+        <li>
+            <a href="{% url 'warehouse:download_delivery_order_excel' object_id %}" class="btn btn-success" style="color: white; text-decoration: none; padding: 5px 10px; margin: 2px;">
+                <i class="fas fa-download"></i> دانلود اکسل
+            </a>
+        </li>
+        <li>
+            <a href="#" onclick="document.getElementById('excel-upload-form').style.display='block'" class="btn btn-primary" style="color: white; text-decoration: none; padding: 5px 10px; margin: 2px;">
+                <i class="fas fa-upload"></i> آپلود اکسل
+            </a>
+        </li>
+        <li>
+            <a href="{% url 'warehouse:download_delivery_order_template' %}" class="btn btn-info" style="color: white; text-decoration: none; padding: 5px 10px; margin: 2px;">
+                <i class="fas fa-file-excel"></i> دانلود نمونه
+            </a>
+        </li>
+    {% endif %}
+{% endblock %}
+
+{% block content %}
+    {{ block.super }}
+    
+    {% if show_excel_buttons and object_id %}
+    <!-- فرم آپلود اکسل -->
+    <div id="excel-upload-form" style="display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; padding: 20px; border: 2px solid #ccc; border-radius: 5px; z-index: 1000; box-shadow: 0 0 10px rgba(0,0,0,0.5);">
+        <h3>آپلود فایل اکسل</h3>
+        <form method="post" enctype="multipart/form-data" action="{% url 'warehouse:upload_delivery_order_excel' object_id %}">
+            {% csrf_token %}
+            <p>
+                <label>انتخاب فایل اکسل:</label><br>
+                <input type="file" name="excel_file" accept=".xlsx,.xls" required>
+            </p>
+            <p>
+                <button type="submit" class="btn btn-primary">آپلود</button>
+                <button type="button" onclick="document.getElementById('excel-upload-form').style.display='none'" class="btn btn-secondary">انصراف</button>
+            </p>
+        </form>
+        <div style="margin-top: 10px; font-size: 12px; color: #666;">
+            <strong>راهنما:</strong><br>
+            - فرمت فایل: .xlsx یا .xls<br>
+            - ستون‌ها: کد کالا، مقدار، نوع وسیله، شناسه گیرنده<br>
+            - ردیف اول هدر باشد
+        </div>
+    </div>
+    
+    <!-- پس‌زمینه تیره -->
+    <div id="overlay" onclick="document.getElementById('excel-upload-form').style.display='none'" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 999;"></div>
+    {% endif %}
+    
+    <style>
+        .btn {
+            display: inline-block;
+            border-radius: 3px;
+            border: none;
+            cursor: pointer;
+        }
+        .btn-success { background-color: #28a745; }
+        .btn-primary { background-color: #007bff; }
+        .btn-info { background-color: #17a2b8; }
+        .btn-secondary { background-color: #6c757d; }
+    </style>
+    
+    <script>
+        // نمایش/مخفی کردن overlay
+        function showUploadForm() {
+            document.getElementById('excel-upload-form').style.display = 'block';
+            document.getElementById('overlay').style.display = 'block';
+        }
+        
+        function hideUploadForm() {
+            document.getElementById('excel-upload-form').style.display = 'none';
+            document.getElementById('overlay').style.display = 'none';
+        }
+    </script>
+{% endblock %}
