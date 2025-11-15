@@ -36,14 +36,6 @@ import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import {
   Sheet,
   SheetContent,
   SheetHeader,
@@ -63,6 +55,7 @@ import { B2BAddressModal } from "@/components/modals/b2b/b2b-address-modal";
 import { B2BSaleModal } from "@/components/modals/b2b/b2b-sale-modal";
 import { UploadSaleModal } from "@/components/modals/b2b/upload-sale-modal";
 import { SalesProformaModal } from "@/components/modals/finance/salesproforma-modal";
+import { ExportColumnsModal } from "@/components/modals/export-columns-modal";
 import {
   B2BOffer,
   B2BAddress,
@@ -976,10 +969,10 @@ export default function B2BPage() {
   const openExportModal = (type: ExportEntityType) => {
     const ids = getSelectedIdsForExport(type);
     if (ids.length === 0) return;
-    const defaultColumns = EXPORT_CONFIG[type].columns.map(
-      (column) => column.key
+    const { requiredColumn } = EXPORT_CONFIG[type];
+    setSelectedExportColumns(
+      requiredColumn ? [requiredColumn] : EXPORT_CONFIG[type].columns.map((c) => c.key)
     );
-    setSelectedExportColumns(defaultColumns);
     setExportModalState({ type, ids });
   };
 
@@ -989,15 +982,30 @@ export default function B2BPage() {
     setIsExporting(false);
   };
 
-  const toggleExportColumn = (columnKey: string) => {
+  const addExportColumn = (columnKey: string) => {
     if (!exportModalState) return;
     const { requiredColumn } = EXPORT_CONFIG[exportModalState.type];
     if (columnKey === requiredColumn) return;
     setSelectedExportColumns((prev) =>
-      prev.includes(columnKey)
-        ? prev.filter((key) => key !== columnKey)
-        : [...prev, columnKey]
+      prev.includes(columnKey) ? prev : [...prev, columnKey]
     );
+  };
+
+  const removeExportColumn = (columnKey: string) => {
+    if (!exportModalState) return;
+    const { requiredColumn } = EXPORT_CONFIG[exportModalState.type];
+    if (columnKey === requiredColumn) return;
+    setSelectedExportColumns((prev) =>
+      prev.filter((key) => key !== columnKey)
+    );
+  };
+
+  const selectAllExportColumns = () => {
+    if (!exportModalState) return;
+    const allKeys = EXPORT_CONFIG[exportModalState.type].columns.map(
+      (column) => column.key
+    );
+    setSelectedExportColumns(allKeys);
   };
 
   const handleConfirmExport = async () => {
@@ -4091,79 +4099,21 @@ export default function B2BPage() {
         />
       )}
 
-      <Dialog
+      <ExportColumnsModal
         open={!!exportModalState}
-        onOpenChange={(open) => {
-          if (!open) {
-            closeExportModal();
-          }
-        }}
-      >
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>
-              {exportModalState
-                ? `${getExportEntityLabel(exportModalState.type)} - انتخاب ستون‌ها`
-                : "انتخاب ستون‌ها"}
-            </DialogTitle>
-            <DialogDescription>
-              ستون‌های خروجی اکسل را انتخاب کنید. ستون شناسه همیشه فعال است.
-            </DialogDescription>
-          </DialogHeader>
-          {activeExportConfig && (
-            <div className="space-y-3">
-              <div className="max-h-64 overflow-y-auto border rounded-md divide-y">
-                {activeExportConfig.columns.map((column) => {
-                  const isRequired =
-                    column.key === activeExportConfig.requiredColumn;
-                  const isChecked =
-                    selectedExportColumns.includes(column.key) || isRequired;
-                  return (
-                    <label
-                      key={column.key}
-                      className="flex items-center gap-3 px-3 py-2 text-sm"
-                    >
-                      <input
-                        type="checkbox"
-                        className="h-4 w-4"
-                        checked={isChecked}
-                        disabled={isRequired}
-                        onChange={() => toggleExportColumn(column.key)}
-                      />
-                      <span className="flex-1">{column.label}</span>
-                      {isRequired && (
-                        <span className="text-xs text-gray-500">اجباری</span>
-                      )}
-                    </label>
-                  );
-                })}
-              </div>
-              <p className="text-xs text-gray-500">
-                حداقل یک ستون باید انتخاب شود.
-              </p>
-            </div>
-          )}
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={closeExportModal}
-              disabled={isExporting}
-            >
-              لغو
-            </Button>
-            <Button
-              onClick={handleConfirmExport}
-              disabled={
-                isExporting ||
-                !exportModalState ||
-                selectedExportColumns.length === 0
-              }
-            >
-              {isExporting ? "در حال دانلود..." : "دانلود اکسل"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+        entityLabel={
+          exportModalState ? getExportEntityLabel(exportModalState.type) : ""
+        }
+        columns={activeExportConfig?.columns ?? []}
+        requiredColumn={activeExportConfig?.requiredColumn}
+        selectedColumns={selectedExportColumns}
+        isExporting={isExporting}
+        onAddColumn={addExportColumn}
+        onRemoveColumn={removeExportColumn}
+        onSelectAll={selectAllExportColumns}
+        onConfirm={handleConfirmExport}
+        onClose={closeExportModal}
+      />
     </div>
   );
 }

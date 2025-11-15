@@ -384,6 +384,8 @@ def create_addresses_batch(request):
         'created': created,
         'count': len(created)
     })
+
+
 def _get_address_row(address: B2BAddress, columns):
     customer = address.customer
     receiver = address.receiver
