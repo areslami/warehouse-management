@@ -282,10 +282,11 @@ export function B2BAddressModal({ trigger, onSubmit, onClose, initialData, readO
                   control={form.control as any}
                   name="purchase_id"
                   render={({ field }) => (
-                    <FormItem>
+                    <FormItem className="min-w-0">
                       <FormLabel>{t("purchase-id")}</FormLabel>
-                      <FormControl>
+                      <FormControl className="min-w-0">
                         <SimpleCombobox
+                          className="min-w-0"
                           value={field.value || ""}
                           onValueChange={(value) => {
                             if (!value) {
