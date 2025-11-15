@@ -1,0 +1,822 @@
+"use client";
+
+import { useState, useEffect } from "react";
+import { Upload, FileSpreadsheet, X, Check, AlertCircle } from "lucide-react";
+import {
+  ApiError,
+  uploadSalesExcel,
+  previewSales,
+  createSalesBatch,
+} from "@/lib/api/excel";
+import { Button } from "../../ui/button";
+import { useTranslations } from "next-intl";
+import { toast } from "sonner";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "../../ui/dialog";
+import { CustomerFormData, CustomerModal } from "../customer-modal";
+import { B2BOfferFormData, B2BOfferModal } from "./b2b-offer-modal";
+import { ProductFormData, ProductModal } from "../product-modal";
+import { createCustomer, createProduct } from "@/lib/api/core";
+import {
+  fetchB2BOffers,
+  createB2BOffer,
+  fetchB2BDistributions,
+  createB2BDistribution,
+} from "@/lib/api/b2b";
+import { Card } from "../../ui/card";
+import { Progress } from "../../ui/progress";
+import { B2BOffer } from "@/lib/interfaces/b2b";
+import { B2BDistributionModal } from "./b2b-distribution-modal";
+import { fetchWarehouseReceiptById } from "@/lib/api/warehouse";
+import { SimpleCombobox } from "../../ui/simple-combobox";
+import { describeOffer, describeDistribution } from "@/lib/utils/label-utils";
+
+interface UploadSaleModalProps {
+  open: boolean;
+  onClose: () => void;
+  onSuccess?: () => void;
+}
+
+interface SaleData {
+  b2b_distribution: number;
+  b2b_offer: number;
+}
+interface PreviewResponse {
+  sale_data: SaleData;
+  unmapped_fields: { [key: string]: string | number | null };
+  needs_customer_creation: boolean;
+  customer_name: string;
+  needs_product_creation: boolean;
+  product_name: string;
+}
+export function UploadSaleModal({
+  open,
+  onClose,
+  onSuccess,
+}: UploadSaleModalProps) {
+  const t = useTranslations("modals.uploadSales");
+
+  const [file, setFile] = useState<File | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [rows, setRows] = useState<object[]>([]);
+
+  const [currentRowIndex, setCurrentRowIndex] = useState(0);
+  const [previewData, setPreviewData] = useState<PreviewResponse>(
+    {} as PreviewResponse
+  );
+  const [showPreview, setShowPreview] = useState(false);
+
+  const [showProductModal, setShowProductModal] = useState(false);
+  const [showCustomerModal, setShowCustomerModal] = useState(false);
+  const [showOfferModal, setShowOfferModal] = useState(false);
+  const [showDistributionModal, setShowDistributionModal] = useState(false);
+  const [createdProducts, setCreatedProducts] = useState<{
+    [key: string]: number;
+  }>({});
+  const [createdCustomers, setCreatedCustomers] = useState<{
+    [key: string]: number;
+  }>({});
+
+  const [processedRows, setProcessedRows] = useState<object[]>([]);
+  const [uploadStep, setUploadStep] = useState<
+    "select" | "processing" | "complete"
+  >("select");
+  const [uploadError, setUploadError] = useState<{
+    code: string;
+    row?: number | null;
+  } | null>(null);
+
+  const [selectedOffer, setSelectedOffer] = useState<number | null>(null);
+  const [selectedDistribution, setSelectedDistribution] = useState<
+    number | null
+  >(null);
+  const [saleType, setSaleType] = useState<"your_sale" | "distributor_sale">(
+    "your_sale"
+  );
+
+  const [offers, setOffers] = useState<object[]>([]);
+  const [distributions, setDistributions] = useState<object[]>([]);
+
+  const getUploadErrorMessage = (
+    error?: { code?: string | null; row?: number | null } | null
+  ) => {
+    const code = error?.code;
+    if (!code) return t("errors.unknown");
+    switch (code) {
+      case "offer_required":
+        return t("errors.offer_required");
+      case "offer_not_found":
+        return t("errors.offer_not_found");
+      case "offer_mismatch":
+        return t("errors.offer_mismatch");
+      case "distribution_required":
+        return t("errors.distribution_required");
+      case "distribution_not_found":
+        return t("errors.distribution_not_found");
+      case "distribution_mismatch":
+        return t("errors.distribution_mismatch");
+      case "weight_over_capacity":
+        return t("errors.weight_over_capacity");
+      default:
+        return t("errors.unknown");
+    }
+  };
+
+  const getErrorWithRow = (
+    error?: { code?: string | null; row?: number | null } | null
+  ) => {
+    const message = getUploadErrorMessage(error);
+    if (error?.row) {
+      return `${message}`;
+    }
+    return message;
+  };
+
+  useEffect(() => {
+    if (open) {
+      loadOffers();
+      loadDistributions();
+    }
+  }, [open]);
+
+  const loadOffers = async () => {
+    try {
+      const data = await fetchB2BOffers();
+      const activeOffers =
+        data?.filter(
+          (o: B2BOffer) => o.status === "active" || o.status === "pending"
+        ) || [];
+      setOffers(activeOffers);
+    } catch (error) {
+      console.error("Failed to load offers:", error);
+    }
+  };
+  const loadDistributions = async () => {
+    try {
+      const data = await fetchB2BDistributions();
+      const activeDistributions = data;
+      setDistributions(activeDistributions);
+    } catch (error) {
+      console.error("Failed to load distributions:", error);
+    }
+  };
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const selectedFile = e.target.files?.[0];
+    if (selectedFile) {
+      setFile(selectedFile);
+      setUploadError(null);
+    }
+  };
+
+  const handleUpload = async () => {
+    if (!file) return;
+
+    if (saleType === "your_sale" && !selectedOffer) {
+      toast.error(t("select_offer"));
+      return;
+    }
+    if (saleType === "distributor_sale" && !selectedDistribution) {
+      toast.error(t("select_distribution"));
+      return;
+    }
+
+    setLoading(true);
+    setUploadError(null);
+    setUploadStep("processing");
+    try {
+      const result = await uploadSalesExcel(file, saleType, {
+        offerId: saleType === "your_sale" ? selectedOffer : undefined,
+        distributionId:
+          saleType === "distributor_sale" ? selectedDistribution : undefined,
+      });
+      setRows(result.rows);
+      if (result.rows.length > 0) {
+        processNextRow(result.rows, 0, []);
+      }
+      setUploadError(null);
+    } catch (error) {
+      const apiError = error as ApiError;
+      console.error("Upload failed:", apiError.message);
+      const structuredError = {
+        code: apiError.code || "unknown",
+        row: (apiError.payload as any)?.row,
+      };
+      setUploadError(structuredError);
+      toast.error(getUploadErrorMessage(structuredError));
+      setUploadStep("select");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const processNextRow = async (
+    allRows: object[],
+    index: number,
+    processed: object[] = []
+  ) => {
+    if (index >= allRows.length) {
+      console.log("All rows processed:", processed);
+      submitBatch(processedRows);
+      return;
+    }
+
+    setCurrentRowIndex(index);
+    let row: any = allRows[index];
+
+    const productName = row.product_name;
+    if (productName && createdProducts[productName.toLowerCase()]) {
+      row = {
+        ...row,
+        product: { id: createdProducts[productName.toLowerCase()] },
+      };
+    }
+
+    const customerName = row.customer_name;
+    if (customerName && createdCustomers[customerName.toLowerCase()]) {
+      row = {
+        ...row,
+        customer: { id: createdCustomers[customerName.toLowerCase()] },
+      };
+    }
+
+    try {
+      const previewData: any = { ...row };
+      if (saleType === "your_sale" && selectedOffer) {
+        previewData.b2b_offer = { id: selectedOffer };
+      }
+      if (saleType === "distributor_sale" && selectedDistribution) {
+        previewData.b2b_distribution = { id: selectedDistribution };
+      }
+
+      const preview = await previewSales(previewData);
+      setPreviewData({ ...preview, sale_data: preview.sale_data });
+      setShowPreview(true);
+    } catch (error) {
+      console.error("Preview failed:", error);
+      toast.error(t("preview_failed"));
+      processNextRow(allRows, index + 1, processed);
+    }
+  };
+
+  const handleConfirmRow = async (updatedData?: unknown) => {
+    const dataToSave = updatedData || previewData.sale_data;
+    console.log("Data to save:", dataToSave);
+
+    const newProcessed = [...processedRows, dataToSave];
+    setProcessedRows(newProcessed);
+    setShowPreview(false);
+
+    processNextRow(rows, currentRowIndex + 1, newProcessed);
+  };
+
+  const handleSkipRow = () => {
+    setShowPreview(false);
+    processNextRow(rows, currentRowIndex + 1, processedRows);
+  };
+
+  const submitBatch = async (sales: object[]) => {
+    if (sales.length === 0) {
+      toast.info(t("no_rows_to_process"));
+      resetState();
+      return;
+    }
+    setLoading(true);
+    try {
+      const result = await createSalesBatch(sales);
+      toast.success(t("batch_success", { count: result.count }));
+      setUploadStep("complete");
+      setTimeout(() => {
+        onSuccess?.();
+        handleClose();
+      }, 2000);
+    } catch (error) {
+      console.error("Batch creation failed:", error);
+      toast.error(t("batch_failed"));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const resetState = () => {
+    setFile(null);
+    setRows([]);
+    setCurrentRowIndex(0);
+    setPreviewData({} as PreviewResponse);
+    setProcessedRows([]);
+    setUploadStep("select");
+    setCreatedProducts({});
+    setCreatedCustomers({});
+    setUploadError(null);
+  };
+
+  const handleClose = () => {
+    resetState();
+    onClose();
+  };
+
+  const handleCreateCustomer = async (customerData: CustomerFormData) => {
+    try {
+      const newCustomer = await createCustomer(customerData);
+
+      if (previewData && newCustomer) {
+        // Store the created customer for future rows
+        const customerName = previewData.customer_name;
+        if (customerName) {
+          setCreatedCustomers((prev) => ({
+            ...prev,
+            [customerName.toLowerCase()]: newCustomer.id,
+          }));
+        }
+
+        const updatedData = {
+          ...previewData.sale_data,
+          customer: newCustomer.id,
+        };
+        setPreviewData({
+          ...previewData,
+          sale_data: updatedData,
+          needs_customer_creation: false,
+        });
+      }
+
+      setShowCustomerModal(false);
+      toast.success(t("customer_created"));
+    } catch (error) {
+      console.error("Customer creation failed:", error);
+      toast.error(t("customer_creation_failed"));
+    }
+  };
+  const handleCreateOffer = async (offerData: B2BOfferFormData) => {
+    try {
+      const newOffer = await createB2BOffer(offerData);
+
+      if (newOffer) {
+        await loadOffers();
+        setSelectedOffer(newOffer.id);
+        setShowOfferModal(false);
+        toast.success(t("offer_created"));
+      }
+    } catch (error) {
+      console.error("Offer creation failed:", error);
+      toast.error(t("offer_creation_failed"));
+    }
+  };
+  const handleCreateDistribution = async (distributionData: any) => {
+    try {
+      const newDistribution = await createB2BDistribution(distributionData);
+      if (newDistribution) {
+        await loadDistributions();
+        setSelectedDistribution(newDistribution.id);
+        setShowDistributionModal(false);
+        toast.success(t("distribution_created"));
+      }
+    } catch (error) {
+      console.error("Distribution creation failed:", error);
+      toast.error(t("distribution_creation_failed"));
+    }
+  };
+
+  const progress =
+    rows.length > 0 ? ((currentRowIndex + 1) / rows.length) * 100 : 0;
+
+  return (
+    <>
+      <Dialog open={open && !showPreview} onOpenChange={handleClose}>
+        <DialogContent className="max-w-lg" dir="rtl">
+          <DialogHeader>
+            <DialogTitle>{t("title")}</DialogTitle>
+            <DialogDescription>{t("supported_formats")}</DialogDescription>
+          </DialogHeader>
+
+          {uploadStep === "select" && (
+            <div className="space-y-4">
+              <div className="flex items-center justify-center w-full">
+                <label className="flex flex-col items-center justify-center w-full h-48 border-2 border-gray-300 border-dashed rounded-lg cursor-pointer bg-white hover:bg-gray-50">
+                  <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                    <FileSpreadsheet className="w-10 h-10 mb-3 text-gray-400" />
+                    <p className="mb-2 text-sm text-gray-500">
+                      <span className="font-semibold">
+                        {t("click_to_upload")}
+                      </span>
+                    </p>
+                    <p className="text-xs text-gray-500">
+                      {t("supported_formats")}
+                    </p>
+                  </div>
+                  <input
+                    type="file"
+                    className="hidden"
+                    accept=".xls,.xlsx,.html"
+                    onChange={handleFileSelect}
+                  />
+                </label>
+              </div>
+
+              {file && (
+                <Card className="p-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm">{file.name}</span>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => setFile(null)}
+                    >
+                      <X className="w-4 h-4" />
+                    </Button>
+                  </div>
+                </Card>
+              )}
+
+              {uploadError && (
+                <div className="flex items-start gap-2 rounded-md border border-red-200 bg-red-50 p-3">
+                  <p className="flex-1 text-sm text-red-700">
+                    {getErrorWithRow(uploadError)}
+                  </p>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="ghost"
+                    className="text-red-600 hover:text-red-700"
+                    onClick={() => setUploadError(null)}
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
+              )}
+
+              <div className="space-y-3">
+                <div>
+                  <label className="block text-sm font-medium mb-1">
+                    {t("sale_type")}
+                  </label>
+                  <div className="flex gap-4">
+                    <label className="flex items-center">
+                      <input
+                        type="radio"
+                        value="your_sale"
+                        checked={saleType === "your_sale"}
+                        onChange={(e) =>
+                          setSaleType(
+                            e.target.value as "your_sale" | "distributor_sale"
+                          )
+                        }
+                        className="mr-2"
+                      />
+                      {t("your_sale")}
+                    </label>
+                    <label className="flex items-center">
+                      <input
+                        type="radio"
+                        value="distributor_sale"
+                        checked={saleType === "distributor_sale"}
+                        onChange={(e) =>
+                          setSaleType(
+                            e.target.value as "your_sale" | "distributor_sale"
+                          )
+                        }
+                        className="mr-2"
+                      />
+                      {t("distributor_sale")}
+                    </label>
+                  </div>
+                </div>
+
+                {saleType === "your_sale" && (
+                  <div>
+                    <label className="block text-sm font-medium mb-1">
+                      {t("b2b_offer")}
+                    </label>
+                    <SimpleCombobox
+                      options={(offers as any[]).map((o) => ({
+                        value: String(o.id),
+                        label: describeOffer(o as any),
+                        id: o.id,
+                        name: o.offer_id,
+                      }))}
+                      value={selectedOffer ? String(selectedOffer) : ""}
+                      onValueChange={(v) =>
+                        setSelectedOffer(v ? Number(v) : null)
+                      }
+                      placeholder={t("select_offer")}
+                      searchPlaceholder={t("select_offer")}
+                      showCreateNew={true}
+                      createNewText={t("create_new_offer")}
+                      onCreateNew={() => setShowOfferModal(true)}
+                    />
+                  </div>
+                )}
+                {saleType === "distributor_sale" && (
+                  <div>
+                    <label className="block text-sm font-medium mb-1">
+                      {t("distribution")}
+                    </label>
+                    <SimpleCombobox
+                      options={distributions.map((d: any) => ({
+                        value: String(d.id),
+                        label: describeDistribution(d as any),
+                        id: d.id,
+                        name: d.product_name,
+                      }))}
+                      value={
+                        selectedDistribution ? String(selectedDistribution) : ""
+                      }
+                      onValueChange={(v) =>
+                        setSelectedDistribution(v ? Number(v) : null)
+                      }
+                      placeholder={t("select_distribution")}
+                      searchPlaceholder={t("select_distribution")}
+                      showCreateNew={true}
+                      createNewText={t("create_new_distribution")}
+                      onCreateNew={() => setShowDistributionModal(true)}
+                    />
+                  </div>
+                )}
+              </div>
+
+              <div className="flex justify-end gap-2">
+                <Button variant="outline" onClick={handleClose}>
+                  {t("cancel")}
+                </Button>
+                <Button
+                  onClick={handleUpload}
+                  disabled={
+                    !file ||
+                    (saleType === "your_sale" && !selectedOffer) ||
+                    loading
+                  }
+                  className="bg-[#f6d265] hover:bg-[#f5c842] text-black"
+                >
+                  <Upload className="w-4 h-4 mr-2" />
+                  {t("start_import")}
+                </Button>
+              </div>
+            </div>
+          )}
+
+          {uploadStep === "processing" && (
+            <div className="space-y-4">
+              <div className="text-center">
+                <p className="text-sm text-gray-600 mb-2">
+                  {t("processing_row", {
+                    current: currentRowIndex + 1,
+                    total: rows.length,
+                  })}
+                </p>
+                <Progress value={progress} className="w-full" />
+              </div>
+              <div className="text-center text-sm text-gray-500">
+                {t("confirmed_count", { count: processedRows.length })}
+              </div>
+            </div>
+          )}
+
+          {uploadStep === "complete" && (
+            <div className="text-center space-y-4">
+              <div className="flex justify-center">
+                <Check className="w-16 h-16 text-green-500" />
+              </div>
+              <p className="text-lg font-semibold">{t("import_complete")}</p>
+              <p className="text-sm text-gray-600">
+                {t("records_created", { count: processedRows.length })}
+              </p>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={showPreview} onOpenChange={setShowPreview}>
+        <DialogContent
+          className="max-w-2xl max-h-[80vh] overflow-y-auto"
+          dir="rtl"
+        >
+          <DialogHeader>
+            <DialogTitle>
+              {t("preview_title")} ({currentRowIndex + 1}/{rows.length})
+            </DialogTitle>
+          </DialogHeader>
+
+          {previewData &&
+            (() => {
+              return (
+                <div className="space-y-4">
+                  <Card className="p-4">
+                    <h3 className="font-semibold mb-3">{t("mapped_fields")}</h3>
+                    <div className="grid grid-cols-2 gap-3 text-sm">
+                      <div>
+                        <span className="font-medium text-gray-600">
+                          {t("transfer_id")}:
+                        </span>
+                        <p className="mt-1">
+                          {previewData.sale_data?.transfer_id || "-"}
+                        </p>
+                      </div>
+                      <div>
+                        <span className="font-medium text-gray-600">
+                          {t("weight")}:
+                        </span>
+                        <p className="mt-1">
+                          {previewData.sale_data?.agency_weight} kg
+                        </p>
+                      </div>
+                      <div>
+                        <span className="font-medium text-gray-600">
+                          {t("date")}:
+                        </span>
+                        <p className="mt-1">
+                          {previewData.sale_data?.agency_date}
+                        </p>
+                      </div>
+                      <div>
+                        <span className="font-medium text-gray-600">
+                          {t("customer")}:
+                        </span>
+                        <p className="mt-1">{previewData.customer_name}</p>
+                      </div>
+                      {previewData.sale_data?.description && (
+                        <div className="col-span-2">
+                          <span className="font-medium text-gray-600">
+                            {t("description")}:
+                          </span>
+                          <p className="mt-1">
+                            {previewData.sale_data?.description}
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  </Card>
+
+                  {Object.keys(previewData?.unmapped_fields || {}).length >
+                    0 && (
+                    <Card className="p-4 bg-yellow-50 border-yellow-200">
+                      <h3 className="font-semibold mb-2 text-yellow-800">
+                        {t("unmapped_fields")}
+                      </h3>
+                      <div className="space-y-1 text-sm text-yellow-700">
+                        {Object.entries(previewData.unmapped_fields).map(
+                          ([key, value]) => (
+                            <div key={key}>
+                              <span className="font-medium">{key}:</span>{" "}
+                              {String(value)}
+                            </div>
+                          )
+                        )}
+                      </div>
+                    </Card>
+                  )}
+
+                  {previewData.needs_customer_creation && (
+                    <Card className="p-4 bg-orange-50 border-orange-200">
+                      <div className="flex items-start gap-2">
+                        <AlertCircle className="w-5 h-5 text-orange-600 mt-0.5" />
+                        <div className="flex-1">
+                          <p className="text-sm text-orange-800 font-medium">
+                            {t("customer_not_found")}
+                          </p>
+                          <p className="text-sm text-orange-700 mt-1">
+                            {previewData.customer_name}
+                          </p>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => setShowCustomerModal(true)}
+                            className="mt-3"
+                          >
+                            {t("create_customer")}
+                          </Button>
+                        </div>
+                      </div>
+                    </Card>
+                  )}
+
+                  {previewData.needs_product_creation && (
+                    <Card className="p-4 bg-red-50 border-red-200">
+                      <div className="flex items-start gap-2">
+                        <AlertCircle className="w-5 h-5 text-red-600 mt-0.5" />
+                        <div className="flex-1">
+                          <p className="text-sm text-red-800 font-medium">
+                            {t("product_not_found")}
+                          </p>
+                          <p className="text-sm text-red-700 mt-1">
+                            {previewData.product_name}
+                          </p>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => setShowProductModal(true)}
+                            className="mt-2 bg-white hover:bg-white"
+                          >
+                            {t("create_product")}
+                          </Button>
+                          <p className="text-xs text-red-600 mt-2">
+                            {t("product_skip_warning")}
+                          </p>
+                        </div>
+                      </div>
+                    </Card>
+                  )}
+
+                  <div className="flex justify-between pt-4 border-t">
+                    <Button
+                      variant="secondary"
+                      onClick={() => {
+                        // Accept all remaining rows without preview
+                        const remainingRows = rows.slice(currentRowIndex);
+                        const acceptedRows = remainingRows.map((row: any) => ({
+                          ...row,
+                          ...(saleType === "your_sale"
+                            ? { b2b_offer: selectedOffer }
+                            : { b2b_distribution: selectedDistribution }),
+                        }));
+                        submitBatch([...processedRows, ...acceptedRows]);
+                      }}
+                    >
+                      <Check className="w-4 h-4 mr-1" />
+                      {t("accept_all")}
+                    </Button>
+                    <div className="flex gap-2">
+                      <Button variant="outline" onClick={handleSkipRow}>
+                        <X className="w-4 h-4 mr-1" />
+                        {t("skip")}
+                      </Button>
+                      <Button
+                        onClick={() => handleConfirmRow()}
+                        disabled={
+                          previewData.needs_customer_creation ||
+                          previewData.needs_product_creation
+                        }
+                        className="bg-[#f6d265] hover:bg-[#f5c842] text-black"
+                      >
+                        <Check className="w-4 h-4 mr-1" />
+                        {t("confirm")}
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              );
+            })()}
+        </DialogContent>
+      </Dialog>
+
+      {showCustomerModal && (
+        <CustomerModal
+          initialData={{ full_name: previewData?.customer_name }}
+          onSubmit={handleCreateCustomer}
+          onClose={() => setShowCustomerModal(false)}
+        />
+      )}
+
+      {showOfferModal && (
+        <B2BOfferModal
+          onSubmit={handleCreateOffer}
+          onClose={() => setShowOfferModal(false)}
+        />
+      )}
+      {showDistributionModal && (
+        <B2BDistributionModal
+          onSubmit={handleCreateDistribution}
+          onClose={() => setShowDistributionModal(false)}
+        />
+      )}
+      {showProductModal && (
+        <ProductModal
+          initialData={{ name: previewData?.product_name } as ProductFormData}
+          onSubmit={async (data) => {
+            try {
+              const newProduct = await createProduct(data);
+              if (newProduct && previewData) {
+                const productName = previewData.product_name;
+                if (productName) {
+                  setCreatedProducts((prev) => ({
+                    ...prev,
+                    [productName.toLowerCase()]: newProduct.id,
+                  }));
+                }
+                const updatedData = {
+                  ...previewData.sale_data,
+                  product: newProduct.id,
+                };
+                setPreviewData({
+                  ...previewData,
+                  sale_data: updatedData,
+                  needs_product_creation: false,
+                });
+              }
+              setShowProductModal(false);
+              toast.success(t("product_created"));
+            } catch (error) {
+              console.error("Product creation failed:", error);
+              toast.error(t("product_creation_failed"));
+            }
+          }}
+          onClose={() => setShowProductModal(false)}
+        />
+      )}
+    </>
+  );
+}

@@ -1,141 +1,0 @@
-{% extends "admin/base_site.html" %}
-{% load i18n admin_urls static admin_modify %}
-
-{% block title %}{{ title }} | {{ site_title|default:_('Django site admin') }}{% endblock %}
-
-{% block extrahead %}{{ block.super }}
-<script src="{% static 'admin/js/vendor/jquery/jquery.js' %}"></script>
-<style>
-    .form-row {
-        margin-bottom: 20px;
-    }
-    .form-row label {
-        display: block;
-        font-weight: bold;
-        margin-bottom: 5px;
-        color: #333;
-    }
-    .form-control {
-        width: 100%;
-        padding: 8px 12px;
-        border: 1px solid #ddd;
-        border-radius: 4px;
-        font-size: 14px;
-    }
-    .form-control-file {
-        width: 100%;
-        padding: 8px 0;
-        border-radius: 4px;
-        font-size: 14px;
-    }
-    .help-text {
-        font-size: 12px;
-        color: #666;
-        margin-top: 5px;
-    }
-    .btn {
-        padding: 10px 20px;
-        border: none;
-        border-radius: 4px;
-        font-size: 14px;
-        cursor: pointer;
-        text-decoration: none;
-        display: inline-block;
-        margin-right: 10px;
-    }
-    .btn-primary {
-        background-color: #007bff;
-        color: white;
-    }
-    .btn-secondary {
-        background-color: #6c757d;
-        color: white;
-    }
-    .btn:hover {
-        opacity: 0.9;
-    }
-    .excel-info {
-        background-color: #e7f3ff;
-        border: 1px solid #b3d9ff;
-        padding: 15px;
-        border-radius: 5px;
-        margin-bottom: 20px;
-    }
-    .excel-info h3 {
-        margin-top: 0;
-        color: #0056b3;
-    }
-    .excel-info ul {
-        margin: 10px 0;
-        padding-right: 20px;
-    }
-    .excel-info li {
-        margin-bottom: 5px;
-    }
-</style>
-{% endblock %}
-
-{% block content %}
-<div id="content-main">
-    <div class="module aligned">
-        <h1>{{ title }}</h1>
-        
-        <div class="excel-info">
-            <h3>📋 راهنمای آپلود فایل اکسل</h3>
-            <p>برای آپلود خریدها، فایل اکسل باید شامل ستون‌های زیر باشد:</p>
-            <ul>
-                <li><strong>شناسه خرید:</strong> شناسه یکتا برای هر خرید</li>
-                <li><strong>شماره کوتاژ:</strong> باید با شماره کوتاژ عرضه انتخابی مطابقت داشته باشد</li>
-                <li><strong>توضیحات:</strong> توضیحات اضافی (اختیاری)</li>
-                <li><strong>وزن خرید شده-Kg:</strong> وزن به کیلوگرم</li>
-                <li><strong>استان:</strong> استان خریدار</li>
-                <li><strong>تاریخ خرید:</strong> تاریخ شمسی (مثال: 1403/05/15)</li>
-                <li><strong>مبلغ پرداختی-ریال:</strong> مبلغ به ریال</li>
-                <li><strong>قیمت هر واحد-ریال:</strong> قیمت واحد به ریال</li>
-                <li><strong>کد ملی خریدار:</strong> کد ملی یا شناسه ملی</li>
-                <li><strong>شماره همراه خریدار:</strong> شماره موبایل</li>
-                <li><strong>نام خریدار:</strong> نام کامل خریدار</li>
-                <li><strong>شیوه پرداخت:</strong> نقدی، توافقی یا ترکیبی</li>
-            </ul>
-            <p><strong>نکات مهم:</strong></p>
-            <ul>
-                <li>در صورت عدم تطابق شماره کوتاژ با عرضه، اخطار داده خواهد شد</li>
-                <li>مشتریان جدید به صورت خودکار با برچسب «بازارگاه» اضافه می‌شوند</li>
-                <li>می‌توانید بدون آپلود فایل، فروش را ایجاد کرده و بعداً خریدها را اضافه کنید</li>
-            </ul>
-        </div>
-
-        <form method="post" enctype="multipart/form-data" novalidate>
-            {% csrf_token %}
-            
-            <div class="form-row">
-                <label for="{{ form.product_offer.id_for_label }}">{{ form.product_offer.label }}:</label>
-                {{ form.product_offer }}
-                {% if form.product_offer.help_text %}
-                    <div class="help-text">{{ form.product_offer.help_text }}</div>
-                {% endif %}
-                {% if form.product_offer.errors %}
-                    <div class="error">{{ form.product_offer.errors }}</div>
-                {% endif %}
-            </div>
-            
-            <div class="form-row">
-                <label for="{{ form.excel_file.id_for_label }}">{{ form.excel_file.label }}:</label>
-                {{ form.excel_file }}
-                {% if form.excel_file.help_text %}
-                    <div class="help-text">{{ form.excel_file.help_text }}</div>
-                {% endif %}
-                {% if form.excel_file.errors %}
-                    <div class="error">{{ form.excel_file.errors }}</div>
-                {% endif %}
-            </div>
-            
-            <div class="form-row">
-                <button type="submit" class="btn btn-primary">✅ ایجاد فروش</button>
-                <a href="{% url 'admin:marketplace_marketplacesale_changelist' %}" class="btn btn-secondary">↩️ بازگشت</a>
-                <a href="{% url 'marketplace:download_purchases_template' %}" class="btn btn-secondary" target="_blank">📋 دانلود نمونه اکسل</a>
-            </div>
-        </form>
-    </div>
-</div>
-{% endblock %}

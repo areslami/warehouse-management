@@ -1,0 +1,506 @@
+"use client";
+
+
+import { useState, useEffect, useMemo } from "react";
+import { useForm, useFieldArray } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "../../ui/dialog";
+import { Button } from "../../ui/button";
+import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "../../ui/form";
+import { Input } from "../../ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../../ui/select";
+import { Plus, Trash2 } from "lucide-react";
+import { useTranslations } from "next-intl";
+import { useCoreData } from "@/lib/core-data-context";
+import { useModal } from "@/lib/modal-context";
+import { PersianDatePicker } from "../../ui/persian-date-picker";
+import { getTodayGregorian } from "@/lib/utils/persian-date";
+import { getPartyDisplayName } from "@/lib/utils/party-utils";
+import { describeParty, describeProduct } from "@/lib/utils/label-utils";
+import { SupplierFormData, SupplierModal } from "../supplier-modal";
+import { ProductFormData, ProductModal } from "../product-modal";
+import { createSupplier, createProduct, incrementIndicatorCounter } from "@/lib/api/core";
+import { useDefaultIndicator } from "@/lib/hooks/use-default-indicator";
+import {
+  DEFAULT_INDICATOR_TEMPLATE,
+  buildIndicatorPreview,
+  renderIndicatorFormat,
+} from "@/lib/indicator-format";
+import {
+  renderLocalizedValue,
+  VALUE_PLACEHOLDER,
+} from "@/lib/utils/localized-value";
+
+export type PurchaseProformaFormData = {
+  serial_number: string;
+  date: string;
+  tax: number;
+  discount: number;
+  supplier: number;
+  lines: {
+    product: number;
+    weight: number;
+    unit_price: number;
+  }[];
+};
+
+interface PurchaseProformaModalProps {
+  trigger?: React.ReactNode;
+  onSubmit?: (data: PurchaseProformaFormData) => void;
+  onClose?: () => void;
+  initialData?: Partial<PurchaseProformaFormData>;
+  isEditing?: boolean;
+}
+
+export function PurchaseProformaModal({ trigger, onSubmit, onClose, initialData, isEditing }: PurchaseProformaModalProps) {
+  const tval = useTranslations("modals.purchaseProforma.validation");
+  const t = useTranslations("modals.purchaseProforma");
+  const tCommon = useTranslations("common");
+  const { data, refreshData } = useCoreData();
+  const { openModal } = useModal();
+
+  useEffect(() => {
+    if (data.suppliers.length === 0) {
+      refreshData('suppliers');
+    }
+    if (data.products.length === 0) {
+      refreshData('products');
+    }
+  }, []);
+  const getTodayDate = () => {
+    if (typeof window === 'undefined') return '';
+    return getTodayGregorian();
+  };
+
+  const proformaLineSchema = z.object({
+    product: z.number().min(1, tval("product-required")),
+    weight: z.union([z.string(), z.number()]).refine(
+      (val) => {
+        if (val === "" || val === null || val === undefined) return false;
+        const num = typeof val === 'string' ? parseFloat(val) : val;
+        return !isNaN(num) && num > 0;
+      },
+      { message: tval("weight-required") }
+    ),
+    unit_price: z.union([z.string(), z.number()]).refine(
+      (val) => {
+        if (val === "" || val === null || val === undefined) return false;
+        const num = typeof val === 'string' ? parseFloat(val) : val;
+        return !isNaN(num) && num > 0;
+      },
+      { message: tval("unit-price-required") }
+    ),
+  });
+
+  const purchaseProformaSchema = z.object({
+    serial_number: z.string().min(1, tval('serialnumber')).max(20, tval('serialnumber')),
+    date: z.string().min(1, tval('date')),
+    tax: z.union([z.string(), z.number()]).transform((val) => {
+      if (val === "" || val === null || val === undefined) return 0;
+      const num = typeof val === 'string' ? parseFloat(val) : val;
+      return isNaN(num) ? 0 : num;
+    }).pipe(z.number().min(0)),
+    discount: z.union([z.string(), z.number()]).transform((val) => {
+      if (val === "" || val === null || val === undefined) return 0;
+      const num = typeof val === 'string' ? parseFloat(val) : val;
+      return isNaN(num) ? 0 : num;
+    }).pipe(z.number().min(0)),
+    supplier: z.number().min(1, tval('supplier')),
+    lines: z.array(proformaLineSchema).min(1, tval('lines')),
+  });
+
+  const [open, setOpen] = useState(trigger ? false : true);
+
+  const form = useForm<PurchaseProformaFormData>({
+    resolver: zodResolver(purchaseProformaSchema) as any,
+    defaultValues: {
+      serial_number: initialData?.serial_number || "",
+      date: initialData?.date || getTodayDate(),
+      tax: initialData?.tax || 0,
+      discount: initialData?.discount || 0,
+      supplier: initialData?.supplier || 0,
+      lines: initialData?.lines || [{ product: 0, weight: 0, unit_price: 0 }],
+    },
+  });
+
+  const defaultIndicator = useDefaultIndicator({
+    section: "purchase_proforma",
+    form,
+    fieldName: "serial_number",
+    enabled: !isEditing && !initialData?.serial_number,
+  });
+
+  const indicatorPreview = useMemo(() => {
+    if (!defaultIndicator) return null;
+    return buildIndicatorPreview(
+      defaultIndicator.format_template || DEFAULT_INDICATOR_TEMPLATE,
+      {
+        counter: (defaultIndicator.counter ?? 0) + 2,
+      }
+    );
+  }, [defaultIndicator]);
+
+    const currentIndicatorPreview = useMemo(() => {
+    if (!defaultIndicator) return null;
+    return buildIndicatorPreview(
+      defaultIndicator.format_template || DEFAULT_INDICATOR_TEMPLATE,
+      {
+        counter: (defaultIndicator.counter ?? 0) + 1,
+      }
+    );
+  }, [defaultIndicator]);
+
+  const indicatorDescriptionTemplate = useMemo(
+    () => tCommon("indicator_next_value", { value: VALUE_PLACEHOLDER }),
+    [tCommon]
+  );
+
+  const { fields, append, remove } = useFieldArray({
+    control: form.control,
+    name: "lines",
+  });
+
+  const handleSubmit = async (data: any) => {
+    if (onSubmit) {
+      await onSubmit(data);
+    }
+    if (!isEditing && defaultIndicator) {
+      try {
+        await incrementIndicatorCounter(defaultIndicator.id);
+      } catch (error) {
+        console.error("Failed to increment indicator counter:", error);
+      }
+    }
+    if (trigger) {
+      setOpen(false);
+    } else {
+      onClose?.();
+    }
+    form.reset();
+  };
+
+  const handleClose = () => {
+    if (trigger) {
+      setOpen(false);
+    } else {
+      onClose?.();
+    }
+  };
+
+  return (
+    <>
+      <Dialog open={open} onOpenChange={trigger ? setOpen : handleClose}>
+        {trigger && (
+          <DialogTrigger asChild>
+            {trigger}
+          </DialogTrigger>
+        )}
+        <DialogContent dir="rtl" className="min-w-[80%] max-h-[90vh] overflow-y-auto scrollbar-hide  p-0 my-0 mx-auto [&>button]:hidden">
+          <DialogHeader className="px-3.5 py-4.5  justify-start" style={{ backgroundColor: "#f6d265" }}>
+            <DialogTitle className="font-bold text-white text-right">{t("title")}</DialogTitle>
+            <DialogDescription className="sr-only">Create or edit purchase proforma</DialogDescription>
+          </DialogHeader>
+
+          <Form {...form} >
+            <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6 py-4 px-12">
+              <div className="grid grid-cols-2 gap-4 items-start">
+                <FormField
+                  control={form.control as any}
+                  name="serial_number"
+                  render={({ field }) => (
+                <FormItem>
+                  <FormLabel>{t('serialnumber')}</FormLabel>
+{indicatorPreview && <FormControl>
+                                      <div
+                                        className={`flex h-9 w-full items-center justify-start rounded-md border border-input bg-gray-100 px-3 py-1 text-sm text-right shadow-sm ${
+                                          isEditing ? "cursor-not-allowed" : ""
+                                        }`} dir="rtl"
+                                      >
+                                         {renderLocalizedValue(
+                            "",
+                            currentIndicatorPreview?.parts.map((part, index) => (
+                              <bdi
+                                key={`warehouse-receipt-preview-${index-1}`}
+                                dir="auto"
+                                className="leading-none"
+                              >
+                                {part}
+                              </bdi>
+                            )),
+                            "font-mono"
+                          )}
+                                      </div>
+                                    </FormControl> } 
+                      {indicatorPreview && (
+                        <FormDescription className="text-xs text-muted-foreground" dir="rtl">
+                          {renderLocalizedValue(
+                            indicatorDescriptionTemplate,
+                            indicatorPreview.parts.map((part, index) => (
+                              <bdi
+                                key={`purchase-proforma-preview-${index}`}
+                                dir="auto"
+                                className="leading-none"
+                              >
+                                {part}
+                              </bdi>
+                            )),
+                            "font-mono"
+                          )}
+                        </FormDescription>
+                      )}
+                      <FormMessage className="min-h-[1.25rem]" />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control as any}
+                  name="date"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>{t('date')}</FormLabel>
+                      <FormControl>
+                        <PersianDatePicker
+                          value={field.value}
+                          onChange={(value) => field.onChange(value)}
+                          placeholder={t("select-date")}
+                        />
+                      </FormControl>
+                      <FormMessage className="min-h-[1.25rem]" />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              <FormField
+                control={form.control as any}
+                name="supplier"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>{t('supplier')}</FormLabel>
+                    <FormControl>
+                      <Select
+                        value={field.value > 0 ? field.value.toString() : ""}
+                        onValueChange={(value) => {
+                          if (value === "new") {
+                            openModal(SupplierModal, {
+                              onSubmit: async (newSupplier: SupplierFormData) => {
+                                const created = await createSupplier(newSupplier);
+                                if (created) {
+                                  await refreshData('suppliers');
+                                  form.setValue('supplier', created.id);
+                                }
+                              }
+                            });
+                          } else if (value) {
+                            field.onChange(Number(value));
+                          }
+                        }}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder={t("select-supplier")} />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem
+                            value="new"
+                            className="font-semibold text-[#f6d265]"
+                            onPointerDown={(e) => e.preventDefault()}
+                          >
+                            <Plus className="inline-block w-4 h-4 mr-2" />
+                            {t("create-new-supplier")}
+                          </SelectItem>
+                          {data.suppliers.length > 0 && (
+                            <div className="border-t my-1" />
+                          )}
+                          {data.suppliers.map((supplier) => (
+                            <SelectItem key={supplier.id} value={supplier.id.toString()}>
+                              {describeParty(supplier)}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <div className="grid grid-cols-2 gap-4 items-start">
+                <FormField
+                  control={form.control as any}
+                  name="tax"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>{t("tax")}</FormLabel>
+                      <FormControl>
+                        <Input
+                          type="text"
+                          step="0.01"
+                          {...field}
+                          onChange={(e) => field.onChange(e.target.value)}
+                        />
+                      </FormControl>
+                      <FormMessage className="min-h-[1.25rem]" />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control as any}
+                  name="discount"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>{t("discount")}</FormLabel>
+                      <FormControl>
+                        <Input
+                          type="text"
+                          step="0.01"
+                          {...field}
+                          onChange={(e) => field.onChange(e.target.value)}
+                        />
+                      </FormControl>
+                      <FormMessage className="min-h-[1.25rem]" />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-lg font-medium">{t("lines")}</h3>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => append({ product: 0, weight: 0, unit_price: 0 })}
+                  >
+                    <Plus className="w-4 h-4 mr-2" />
+                    {t("add-line")}
+                  </Button>
+                </div>
+
+                {fields.map((field, index) => (
+                  <div key={field.id} className="grid grid-cols-4 gap-4 p-4 border rounded-lg items-start">
+                    <FormField
+                      control={form.control as any}
+                      name={`lines.${index}.product`}
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>{t("product")}</FormLabel>
+                          <FormControl>
+                            <Select
+                              value={field.value > 0 ? field.value.toString() : ""}
+                              onValueChange={(value) => {
+                                if (value === "new") {
+                                  const currentIndex = index;
+                                  openModal(ProductModal, {
+                                    onSubmit: async (newProduct: ProductFormData) => {
+                                      const created = await createProduct(newProduct);
+                                      if (created) {
+                                        await refreshData('products');
+                                        const lines = form.getValues('lines');
+                                        lines[currentIndex].product = created.id;
+                                        form.setValue('lines', lines);
+                                      }
+                                    }
+                                  });
+                                } else if (value) {
+                                  field.onChange(Number(value));
+                                }
+                              }}
+                            >
+                              <SelectTrigger>
+                                <SelectValue placeholder={t("select-product")} />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem
+                                  value="new"
+                                  className="font-semibold text-[#f6d265]"
+                                  onPointerDown={(e) => e.preventDefault()}
+                                >
+                                  <Plus className="inline-block w-4 h-4 mr-2" />
+                                  {t("create-new-product")}
+                                </SelectItem>
+                                {data.products.length > 0 && (
+                                  <div className="border-t my-1" />
+                                )}
+                                {data.products.map((product) => (
+                                  <SelectItem key={product.id} value={product.id.toString()}>
+                                    {describeProduct(product)}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </FormControl>
+                          <FormMessage className="min-h-[1.25rem]" />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control as any}
+                      name={`lines.${index}.weight`}
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>{t("weight")}</FormLabel>
+                          <FormControl>
+                            <Input
+                              type="text"
+                              step="0.00000001"
+                              {...field}
+                              onChange={(value) => field.onChange(value)}
+                            />
+                          </FormControl>
+                          <FormMessage className="min-h-[1.25rem]" />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control as any}
+                      name={`lines.${index}.unit_price`}
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>{t('unit_price')}</FormLabel>
+                          <FormControl>
+                            <Input
+                              type="text"
+                              step="0.01"
+                              {...field}
+                              onChange={(value) => field.onChange(value)}
+                            />
+                          </FormControl>
+                          <FormMessage className="min-h-[1.25rem]" />
+                        </FormItem>
+                      )}
+                    />
+
+                    <div className="flex items-end">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => remove(index)}
+                        disabled={fields.length === 1}
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <div className="flex justify-end space-x-2">
+                <Button type="button" variant="outline" onClick={handleClose}>
+                  {t("cancel")}
+                </Button>
+                <Button type="submit" className="hover:bg-[#f6d265]"> {t("save")}</Button>
+              </div>
+            </form>
+          </Form>
+        </DialogContent>
+      </Dialog>
+    </>
+  );
+}
