@@ -48,6 +48,8 @@ export interface B2BAddress {
 export interface B2BSale {
   id: number;
   purchase_id: string;
+  cottage_code?: string;
+  cottage_number?: string;
   is_distributor: boolean;
   b2b_distribution?: number | null;
   distribution_id?: string;

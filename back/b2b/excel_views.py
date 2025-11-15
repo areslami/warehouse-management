@@ -12,7 +12,10 @@ from .utils import (
     fa_payment_label,
     fa_status_label,
     extract_agreements,
+    clean_number,
+    extract_product_parts,
 )
+from .excel_config import EXCEL_FIELD_MAPPING_ADDRESS
 from .models import B2BDistribution, B2BSale, B2BOffer, B2BAddress
 from .serializers import B2BDistributionSerializer, B2BAddressSerializer, B2BSaleSerializer
 from core.models import Customer
@@ -23,8 +26,19 @@ from io import BytesIO
 import jdatetime
 import re
 import os
+from decimal import Decimal
+import logging
 from django.conf import settings
 
+logger = logging.getLogger(__name__)
+
+
+class UploadValidationError(Exception):
+    def __init__(self, code: str, message: str, row: int | None = None):
+        super().__init__(message)
+        self.code = code
+        self.message = message
+        self.row = row
 
 def _format_jalali_date(value, fmt='%Y/%m/%d'):
     """
@@ -45,6 +59,241 @@ def _format_jalali_date(value, fmt='%Y/%m/%d'):
     return jdatetime.date.fromgregorian(date=value).strftime(fmt)
 
 
+def _prepare_address_rows_for_validation(raw_rows):
+    """
+    Build lightweight rows used for validation before any DB changes happen.
+    """
+    prepared = []
+    product_key = EXCEL_FIELD_MAPPING_ADDRESS.get('product_title')
+    weight_key = EXCEL_FIELD_MAPPING_ADDRESS.get('total_weight_purchased')
+    offer_key = EXCEL_FIELD_MAPPING_ADDRESS.get('offer_id')
+    cottage_key = EXCEL_FIELD_MAPPING_ADDRESS.get('cottage_code')
+
+    for raw in raw_rows:
+        product_title = str(raw.get(product_key, '') or '')
+        product_name, _ = extract_product_parts(product_title)
+        weight_value = raw.get(weight_key, '0')
+        try:
+            total_weight = clean_number(weight_value or '0')
+        except Exception:
+            total_weight = Decimal('0')
+
+        offer_identifier = raw.get(offer_key) or raw.get(cottage_key) or ''
+        prepared.append({
+            'product_name': product_name,
+            'row_offer_code': str(offer_identifier).strip(),
+            'total_weight_purchased': total_weight,
+        })
+    return prepared
+
+
+def _normalize_name(value):
+    return (value or '').replace(' ', '').strip().lower()
+
+
+def _extract_row_product_info(row):
+    product_obj = row.get('product') or {}
+    product_id = product_obj.get('id')
+    product_name = (
+        product_obj.get('name')
+        or row.get('product_name')
+        or ''
+    )
+    return product_id, product_name
+
+
+def _get_offer_product(offer):
+    if not offer or not offer.warehouse_receipt:
+        return None
+    first_item = offer.warehouse_receipt.items.first()
+    if first_item and getattr(first_item, 'product', None):
+        return first_item.product
+    return None
+
+
+def _get_distribution_product(distribution):
+    if not distribution or not distribution.warehouse_receipt:
+        return None
+    first_item = distribution.warehouse_receipt.items.first()
+    if first_item and getattr(first_item, 'product', None):
+        return first_item.product
+    return None
+
+
+def _fetch_offer_for_validation(offer_id):
+    try:
+        return B2BOffer.objects.select_related(
+            'warehouse_receipt__warehouse'
+        ).prefetch_related(
+            'warehouse_receipt__items__product'
+        ).get(id=int(offer_id))
+    except (ValueError, B2BOffer.DoesNotExist):
+        return None
+
+
+def _fetch_distribution_for_validation(distribution_id):
+    try:
+        return B2BDistribution.objects.select_related(
+            'warehouse_receipt__warehouse'
+        ).prefetch_related(
+            'warehouse_receipt__items__product'
+        ).get(id=int(distribution_id))
+    except (ValueError, B2BDistribution.DoesNotExist):
+        return None
+
+
+def _ensure_product_match(row, target_product, error_code, row_index):
+    if not target_product:
+        return
+    row_product_id, row_product_name = _extract_row_product_info(row)
+    if row_product_id and row_product_id != target_product.id:
+        raise UploadValidationError(
+            error_code,
+            f"Row {row_index} references product id {row_product_id} which differs from selected product id {target_product.id}.",
+            row=row_index,
+        )
+    if not row_product_id and row_product_name:
+        if _normalize_name(row_product_name) != _normalize_name(target_product.name):
+            raise UploadValidationError(
+                error_code,
+                f"Row {row_index} references product '{row_product_name}' which differs from selected product '{target_product.name}'.",
+                row=row_index,
+            )
+
+
+def _validate_rows_against_offer(rows, offer, *, enforce_offer_code=True):
+    offer_product = _get_offer_product(offer)
+    expected_code = str(getattr(offer, 'offer_id', '') or '').strip()
+    for idx, row in enumerate(rows, start=1):
+        row_offer = row.get('offer') or row.get('b2b_offer')
+        row_offer_id = None
+        row_offer_code = None
+        has_explicit_code = False
+        if isinstance(row_offer, dict):
+            row_offer_id = row_offer.get('id')
+            row_offer_code = row_offer.get('offer_id') or row_offer.get('code')
+            has_explicit_code = bool(row_offer_code)
+        elif row_offer:
+            row_offer_id = row_offer
+
+        if row_offer_id and row_offer_id != offer.id:
+            raise UploadValidationError(
+                'offer_mismatch',
+                f"Row {idx} references offer id {row_offer_id} which does not match selected offer id {offer.id}.",
+                row=idx,
+            )
+
+        if enforce_offer_code and not has_explicit_code:
+            fallback_code = row.get('row_offer_code')
+            if fallback_code:
+                row_offer_code = fallback_code
+
+        if row_offer_code and (has_explicit_code or enforce_offer_code):
+            normalized_row_code = str(row_offer_code).strip()
+            if normalized_row_code and expected_code and normalized_row_code != expected_code:
+                raise UploadValidationError(
+                    'offer_mismatch',
+                    f"Row {idx} references offer '{normalized_row_code}' which does not match selected offer '{expected_code}'.",
+                    row=idx,
+                )
+        _ensure_product_match(row, offer_product, 'offer_mismatch', idx)
+
+
+def _validate_rows_against_distribution(rows, distribution):
+    distribution_product = _get_distribution_product(distribution)
+    for idx, row in enumerate(rows, start=1):
+        row_distribution = row.get('b2b_distribution') or row.get('distribution')
+        row_dist_id = row_distribution.get('id') if isinstance(row_distribution, dict) else None
+        if row_dist_id and row_dist_id != distribution.id:
+            raise UploadValidationError(
+                'distribution_mismatch',
+                f"Row {idx} references distribution id {row_dist_id} which does not match selected distribution id {distribution.id}.",
+                row=idx,
+            )
+        _ensure_product_match(row, distribution_product, 'distribution_mismatch', idx)
+
+
+def _validate_offer_capacity(rows, offer):
+    if not offer or offer.offer_weight is None:
+        return
+    existing = offer.sales.aggregate(
+        total=models.Sum('total_weight_purchased')
+    )['total'] or Decimal('0')
+    remaining = Decimal(offer.offer_weight) - existing
+    for idx, row in enumerate(rows, start=1):
+        row_weight = Decimal(row.get('total_weight_purchased') or 0)
+        if row_weight > remaining:
+            raise UploadValidationError(
+                'weight_over_capacity',
+                'Requested weight exceeds offer capacity.',
+                row=idx,
+            )
+        remaining -= row_weight
+
+
+def _validate_address_upload(rows, address_type, offer_id, transfer_id):
+    if not rows:
+        return
+    if address_type == 'your_address':
+        if not offer_id:
+            raise UploadValidationError(
+                'offer_required',
+                'An offer must be selected before uploading address rows.'
+            )
+        offer = _fetch_offer_for_validation(offer_id)
+        if not offer:
+            raise UploadValidationError(
+                'offer_not_found',
+                'The selected offer could not be found.'
+            )
+        _validate_rows_against_offer(rows, offer, enforce_offer_code=False)
+        _validate_offer_capacity(rows, offer)
+    else:
+        if not transfer_id:
+            raise UploadValidationError(
+                'distribution_required',
+                'A distribution must be selected before uploading address rows.'
+            )
+        distribution = _fetch_distribution_for_validation(transfer_id)
+        if not distribution:
+            raise UploadValidationError(
+                'distribution_not_found',
+                'The selected distribution could not be found.'
+            )
+        _validate_rows_against_distribution(rows, distribution)
+
+
+def _validate_sales_upload(rows, sale_type, offer_id, distribution_id):
+    if not rows:
+        return
+    if sale_type == 'your_sale':
+        if not offer_id:
+            raise UploadValidationError(
+                'offer_required',
+                'An offer must be selected before uploading sales rows.'
+            )
+        offer = _fetch_offer_for_validation(offer_id)
+        if not offer:
+            raise UploadValidationError(
+                'offer_not_found',
+                'The selected offer could not be found.'
+            )
+        _validate_rows_against_offer(rows, offer)
+    else:
+        if not distribution_id:
+            raise UploadValidationError(
+                'distribution_required',
+                'A distribution must be selected before uploading sales rows.'
+            )
+        distribution = _fetch_distribution_for_validation(distribution_id)
+        if not distribution:
+            raise UploadValidationError(
+                'distribution_not_found',
+                'The selected distribution could not be found.'
+            )
+        _validate_rows_against_distribution(rows, distribution)
+
+
 @api_view(['POST'])
 def upload_excel_sales(request):
     if 'file' not in request.FILES:
@@ -52,6 +301,8 @@ def upload_excel_sales(request):
 
     file = request.FILES['file']
     sale_type = request.POST.get('sale_type', 'distributor_sale')
+    offer_id = request.POST.get('offer_id') or None
+    distribution_id = request.POST.get('distribution_id') or request.POST.get('transfer_id') or None
 
     try:
         if sale_type == 'your_sale':
@@ -60,6 +311,8 @@ def upload_excel_sales(request):
             print(
                 f"Your sale HTML columns: {list(rows[0].keys()) if rows else 'No rows'}")
             processed_rows = [process_your_sale_row(row) for row in rows]
+
+            _validate_sales_upload(processed_rows, 'your_sale', offer_id, distribution_id)
 
             return Response({
                 'rows': processed_rows,
@@ -73,11 +326,19 @@ def upload_excel_sales(request):
                 f"Distributor sale HTML columns: {list(rows[0].keys()) if rows else 'No rows'}")
             processed_rows = [process_sale_row(row) for row in rows]
 
+            _validate_sales_upload(processed_rows, 'distributor_sale', offer_id, distribution_id)
+
             return Response({
                 'rows': processed_rows,
                 'count': len(processed_rows),
                 'sale_type': 'distributor_sale'
             })
+    except UploadValidationError as exc:
+        logger.warning("Sales upload validation failed: %s", exc.message)
+        return Response(
+            {'error': exc.code, 'message': exc.message, 'row': exc.row},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
     except Exception as e:
         import traceback
         print(f"Error in upload_excel_sales: {str(e)}")
@@ -91,17 +352,18 @@ def upload_excel_addresses(request):
         return Response({'error': 'No file provided'}, status=status.HTTP_400_BAD_REQUEST)
 
     file = request.FILES['file']
-    address_type = request.POST.get('address_type', '')
+    address_type = request.POST.get('address_type', 'your_address')
+    offer_id = request.POST.get('offer_id') or None
+    transfer_id = request.POST.get('transfer_id') or None
     try:
         df = pd.read_excel(io.BytesIO(file.read()))
         rows = df.fillna('').to_dict('records')
-
+        validation_rows = _prepare_address_rows_for_validation(rows)
+        _validate_address_upload(validation_rows, address_type or '', offer_id, transfer_id)
         if address_type == "your_address":
-            offer_id = request.POST.get('offer_id', "")
             result = [process_address_row(
                 row, address_type, offer_id) for row in rows]
         else:
-            transfer_id = request.POST.get('transfer_id', "")
             result = [process_address_row(
                 row, address_type, transfer_id) for row in rows]
 
@@ -117,6 +379,12 @@ def upload_excel_addresses(request):
             'number_of_receiver_created': number_of_receiver_created,
             'number_of_sales_created': number_of_sales_created,
         })
+    except UploadValidationError as exc:
+        logger.warning("Address upload validation failed: %s", exc.message)
+        return Response(
+            {'error': exc.code, 'message': exc.message, 'row': exc.row},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
     except Exception as e:
         import traceback
         print(f"Error in upload_excel_addresses: {str(e)}")
@@ -471,7 +739,6 @@ def export_addresses_xlsx(request):
     qs = B2BAddress.objects.filter(id__in=ids).select_related(
         'product', 'customer', 'receiver', 'product_offer__warehouse_receipt__warehouse'
     )
-    from .excel_config import EXCEL_FIELD_MAPPING_ADDRESS
     column_keys, headers = _ensure_selected_columns(
         request, EXCEL_FIELD_MAPPING_ADDRESS, required_key='purchase_id'
     )

@@ -376,6 +376,7 @@ def process_your_sale_row(row):
     processed = {
         'purchase_id': row.get(EXCEL_FIELD_MAPPING_YOUR_SALE['purchase_id']),
         'cottage_number': row.get(EXCEL_FIELD_MAPPING_YOUR_SALE['cottage_number']),
+        'cottage_code': row.get(EXCEL_FIELD_MAPPING_YOUR_SALE['cottage_number']),
         'total_weight_purchased': clean_number(row.get(EXCEL_FIELD_MAPPING_YOUR_SALE['total_weight_purchased'], '0')),
         'purchase_date': persian_to_gregorian(date_str),
         'unit_price': clean_number(row.get(EXCEL_FIELD_MAPPING_YOUR_SALE['unit_price'], '0')),
@@ -470,6 +471,7 @@ def createOrUpdateSale(row, address_type, entity_id, customer):
                 'sale_date': purchase_date,
                 'purchase_type': purchase_type,
                 'customer': customer,
+                'cottage_code': cottage_code,
                 'description': f'ایجاد شده از طریق بارگذاری فایل فروش بازارگاه ',
             }
         )

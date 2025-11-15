@@ -44,9 +44,11 @@ interface B2BSaleModalProps {
     onClose?: () => void;
     initialData?: Partial<B2BSaleFormData>;
     isEditing?: boolean;
+    open?: boolean;
+    onOpenChange?: (open: boolean) => void;
 }
 
-export function B2BSaleModal({ trigger, onSubmit, onClose, initialData, isEditing }: B2BSaleModalProps) {
+export function B2BSaleModal({ trigger, onSubmit, onClose, initialData, isEditing, open: controlledOpen, onOpenChange }: B2BSaleModalProps) {
     const tval = useTranslations("modals.b2bSale.validation");
     const t = useTranslations("modals.b2bSale");
     const tCommon = useTranslations("common");
@@ -104,7 +106,19 @@ export function B2BSaleModal({ trigger, onSubmit, onClose, initialData, isEditin
         description: z.string().optional(),
     });
 
-    const [open, setOpen] = useState(trigger ? false : true);
+    const [internalOpen, setInternalOpen] = useState(trigger ? false : true);
+    const isControlled = controlledOpen !== undefined;
+    const open = isControlled ? controlledOpen : internalOpen;
+
+    const handleOpenChange = (next: boolean) => {
+        if (!isControlled) {
+            setInternalOpen(next);
+        }
+        if (!next) {
+            onClose?.();
+        }
+        onOpenChange?.(next);
+    };
 
     const form = useForm<B2BSaleFormData>({
         resolver: zodResolver(b2bSaleSchema) as any,
@@ -179,7 +193,7 @@ export function B2BSaleModal({ trigger, onSubmit, onClose, initialData, isEditin
 
     return (
         <>
-            <Dialog open={open} onOpenChange={trigger ? setOpen : handleClose}>
+            <Dialog open={open} onOpenChange={trigger ? setInternalOpen : handleOpenChange}>
                 {trigger && (
                     <DialogTrigger asChild>
                         {trigger}

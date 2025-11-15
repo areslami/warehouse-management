@@ -21,8 +21,10 @@ import { ProductModal } from "../product-modal";
 import { createCustomer, createProduct, createReceiver } from "@/lib/api/core";
 import { getPartyDisplayName } from "@/lib/utils/party-utils";
 import { describeProduct, describeParty, describeOffer } from "@/lib/utils/label-utils";
-import { fetchB2BOffers } from "@/lib/api/b2b";
-import { B2BOffer } from "@/lib/interfaces/b2b";
+import { fetchB2BOffers, fetchB2BSales, createB2BSale } from "@/lib/api/b2b";
+import { B2BOffer, B2BSale } from "@/lib/interfaces/b2b";
+import { B2BSaleModal, type B2BSaleFormData } from "./b2b-sale-modal";
+import { toast } from "sonner";
 
 export type B2BAddressFormData = {
   purchase_id: string;
@@ -62,12 +64,17 @@ export function B2BAddressModal({ trigger, onSubmit, onClose, initialData, readO
   const [showCustomerModal, setShowCustomerModal] = useState(false);
   const [showReceiverModal, setShowReceiverModal] = useState(false);
   const [isEditMode, setIsEditMode] = useState(!readOnly);
+  const [showSaleModal, setShowSaleModal] = useState(false);
+  const [sales, setSales] = useState<B2BSale[]>([]);
+  const [lockedSaleId, setLockedSaleId] = useState<number | null>(null);
+  const saleLocked = lockedSaleId !== null;
 
   useEffect(() => {
     if (products.length === 0) refreshCoreData('products');
     if (customers.length === 0) refreshCoreData('customers');
     if (receivers.length === 0) refreshCoreData('receivers');
     loadOffers();
+    loadSales();
   }, []);
 
   const loadOffers = async () => {
@@ -76,6 +83,14 @@ export function B2BAddressModal({ trigger, onSubmit, onClose, initialData, readO
       setOffers(data ?? []);
     } catch (error) {
       console.error('Error loading offers:', error);
+    }
+  };
+  const loadSales = async () => {
+    try {
+      const data = await fetchB2BSales();
+      setSales(data ?? []);
+    } catch (error) {
+      console.error("Error loading sales:", error);
     }
   };
 
@@ -129,6 +144,59 @@ export function B2BAddressModal({ trigger, onSubmit, onClose, initialData, readO
     },
   });
 
+  const handleSaleSelection = (sale: B2BSale) => {
+    if (!sale) return;
+    setLockedSaleId(sale.id ?? -1);
+    form.setValue("purchase_id", sale.purchase_id || "");
+    const derivedCottageCode =
+      sale.cottage_code ||
+      sale.cottage_number ||
+      (sale as any)?.cottage_code ||
+      (sale as any)?.cottage_number;
+    if (derivedCottageCode) {
+      form.setValue("cottage_code", derivedCottageCode);
+    }
+    form.setValue(
+      "product_offer",
+      sale.offer !== null && sale.offer !== undefined ? sale.offer : undefined
+    );
+    if (sale.product) {
+      form.setValue("product", Number(sale.product));
+    }
+    if (sale.customer) {
+      form.setValue("customer", Number(sale.customer));
+    }
+    form.setValue(
+      "total_weight_purchased",
+      Number(sale.weight || 0)
+    );
+    form.setValue("unit_price", Number(sale.unit_price || 0));
+    form.setValue("payment_amount", Number(sale.total_price || 0));
+    form.setValue("purchase_date", sale.sale_date || "");
+    form.setValue("payment_method", sale.purchase_type || "cash");
+  };
+  const clearSaleLock = () => {
+    setLockedSaleId(null);
+  };
+
+  const handleSaleModalSubmit = async (data: B2BSaleFormData) => {
+    try {
+      const created = await createB2BSale({
+        ...data,
+        weight: Number(data.weight),
+        unit_price: Number(data.unit_price),
+      });
+      toast.success(t("sale_created"));
+      await loadSales();
+      setShowSaleModal(false);
+      handleSaleSelection(created);
+    } catch (error) {
+      console.error("Failed to create sale:", error);
+      toast.error(t("sale_creation_failed"));
+      throw error;
+    }
+  };
+
   const handleSubmit = async (data: any) => {
     try {
       await onSubmit?.(data);
@@ -138,17 +206,27 @@ export function B2BAddressModal({ trigger, onSubmit, onClose, initialData, readO
         onClose?.();
       }
       form.reset();
+      clearSaleLock();
     } catch (error) {
       // Error is already handled and displayed by the API client
     }
   };
 
   const handleClose = () => {
+    clearSaleLock();
     if (trigger) {
       setOpen(false);
     } else {
       onClose?.();
     }
+  };
+
+  const getSaleOptionLabel = (sale: B2BSale) => {
+    const fullLabel = `${sale.purchase_id}${sale.customer_name ? ` - ${sale.customer_name}` : ""}`;
+    if (fullLabel.length <= 60) {
+      return fullLabel;
+    }
+    return `${fullLabel.slice(0, 57)}...`;
   };
 
   return (
@@ -207,7 +285,37 @@ export function B2BAddressModal({ trigger, onSubmit, onClose, initialData, readO
                     <FormItem>
                       <FormLabel>{t("purchase-id")}</FormLabel>
                       <FormControl>
-                        <Input {...field} />
+                        <SimpleCombobox
+                          value={field.value || ""}
+                          onValueChange={(value) => {
+                            if (!value) {
+                              field.onChange("");
+                              clearSaleLock();
+                              return;
+                            }
+                            field.onChange(value);
+                            const selectedSale = sales.find(
+                              (sale) => sale.purchase_id === value
+                            );
+                            if (selectedSale) {
+                              handleSaleSelection(selectedSale);
+                            }
+                          }}
+                          options={sales.map((sale) => ({
+                            value: sale.purchase_id,
+                            label: getSaleOptionLabel(sale),
+                            id: sale.id,
+                            name: `${sale.purchase_id}${sale.customer_name ? ` - ${sale.customer_name}` : ""}`,
+                          }))}
+                          placeholder={t("select-sale")}
+                          searchPlaceholder={tCommon(
+                            "search_placeholders.search_sales"
+                          )}
+                          disabled={!isEditMode}
+                          showCreateNew={isEditMode && !saleLocked}
+                          createNewText={t("create-sale")}
+                          onCreateNew={() => setShowSaleModal(true)}
+                        />
                       </FormControl>
                       <FormMessage className="min-h-[1.25rem]" />
                     </FormItem>
@@ -221,7 +329,11 @@ export function B2BAddressModal({ trigger, onSubmit, onClose, initialData, readO
                     <FormItem>
                       <FormLabel>{t("cottage-code")}</FormLabel>
                       <FormControl>
-                        <Input {...field} />
+                        <Input
+                          {...field}
+                          readOnly={saleLocked}
+                          className={saleLocked ? "bg-gray-100 cursor-not-allowed" : ""}
+                        />
                       </FormControl>
                       <FormMessage className="min-h-[1.25rem]" />
                     </FormItem>
@@ -253,7 +365,8 @@ export function B2BAddressModal({ trigger, onSubmit, onClose, initialData, readO
                           }))}
                           placeholder={t("select-product")}
                           searchPlaceholder={tCommon("search_placeholders.search_products")}
-                          showCreateNew={true}
+                          disabled={!isEditMode || saleLocked}
+                          showCreateNew={isEditMode && !saleLocked}
                           createNewText={t("create-new-product")}
                           onCreateNew={() => setShowProductModal(true)}
                         />
@@ -285,7 +398,8 @@ export function B2BAddressModal({ trigger, onSubmit, onClose, initialData, readO
                           }))}
                           placeholder={t("select-customer")}
                           searchPlaceholder={tCommon("search_placeholders.search_customers")}
-                          showCreateNew={true}
+                          disabled={!isEditMode || saleLocked}
+                          showCreateNew={isEditMode && !saleLocked}
                           createNewText={t("create-new-customer")}
                           onCreateNew={() => setShowCustomerModal(true)}
                         />
@@ -358,6 +472,7 @@ export function B2BAddressModal({ trigger, onSubmit, onClose, initialData, readO
                           ]}
                           placeholder={t("select-offer")}
                           searchPlaceholder={tCommon("search_placeholders.search_offers")}
+                          disabled={!isEditMode || saleLocked}
                         />
                       </FormControl>
                       <FormMessage className="min-h-[1.25rem]" />
@@ -576,6 +691,13 @@ export function B2BAddressModal({ trigger, onSubmit, onClose, initialData, readO
             }
           }}
           onClose={() => setShowReceiverModal(false)}
+        />
+      )}
+
+      {showSaleModal && (
+        <B2BSaleModal
+          onSubmit={handleSaleModalSubmit}
+          onClose={() => setShowSaleModal(false)}
         />
       )}
     </>
