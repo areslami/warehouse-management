@@ -4,7 +4,18 @@ from rest_framework.response import Response
 from django.http import HttpResponse
 from django.db import transaction, models
 from datetime import datetime, date
-from .utils import parse_html_table, process_address_row, process_sale_row, process_your_sale_row
+from .utils import (
+    parse_html_table,
+    process_address_row,
+    process_sale_row,
+    process_your_sale_row,
+    fa_payment_label,
+    fa_status_label,
+    extract_agreements,
+    clean_number,
+    extract_product_parts,
+)
+from .excel_config import EXCEL_FIELD_MAPPING_ADDRESS
 from .models import B2BDistribution, B2BSale, B2BOffer, B2BAddress
 from .serializers import B2BDistributionSerializer, B2BAddressSerializer, B2BSaleSerializer
 from core.models import Customer
@@ -15,8 +26,19 @@ from io import BytesIO
 import jdatetime
 import re
 import os
+from decimal import Decimal
+import logging
 from django.conf import settings
 
+logger = logging.getLogger(__name__)
+
+
+class UploadValidationError(Exception):
+    def __init__(self, code: str, message: str, row: int | None = None):
+        super().__init__(message)
+        self.code = code
+        self.message = message
+        self.row = row
 
 def _format_jalali_date(value, fmt='%Y/%m/%d'):
     """
@@ -37,6 +59,241 @@ def _format_jalali_date(value, fmt='%Y/%m/%d'):
     return jdatetime.date.fromgregorian(date=value).strftime(fmt)
 
 
+def _prepare_address_rows_for_validation(raw_rows):
+    """
+    Build lightweight rows used for validation before any DB changes happen.
+    """
+    prepared = []
+    product_key = EXCEL_FIELD_MAPPING_ADDRESS.get('product_title')
+    weight_key = EXCEL_FIELD_MAPPING_ADDRESS.get('total_weight_purchased')
+    offer_key = EXCEL_FIELD_MAPPING_ADDRESS.get('offer_id')
+    cottage_key = EXCEL_FIELD_MAPPING_ADDRESS.get('cottage_code')
+
+    for raw in raw_rows:
+        product_title = str(raw.get(product_key, '') or '')
+        product_name, _ = extract_product_parts(product_title)
+        weight_value = raw.get(weight_key, '0')
+        try:
+            total_weight = clean_number(weight_value or '0')
+        except Exception:
+            total_weight = Decimal('0')
+
+        offer_identifier = raw.get(offer_key) or raw.get(cottage_key) or ''
+        prepared.append({
+            'product_name': product_name,
+            'row_offer_code': str(offer_identifier).strip(),
+            'total_weight_purchased': total_weight,
+        })
+    return prepared
+
+
+def _normalize_name(value):
+    return (value or '').replace(' ', '').strip().lower()
+
+
+def _extract_row_product_info(row):
+    product_obj = row.get('product') or {}
+    product_id = product_obj.get('id')
+    product_name = (
+        product_obj.get('name')
+        or row.get('product_name')
+        or ''
+    )
+    return product_id, product_name
+
+
+def _get_offer_product(offer):
+    if not offer or not offer.warehouse_receipt:
+        return None
+    first_item = offer.warehouse_receipt.items.first()
+    if first_item and getattr(first_item, 'product', None):
+        return first_item.product
+    return None
+
+
+def _get_distribution_product(distribution):
+    if not distribution or not distribution.warehouse_receipt:
+        return None
+    first_item = distribution.warehouse_receipt.items.first()
+    if first_item and getattr(first_item, 'product', None):
+        return first_item.product
+    return None
+
+
+def _fetch_offer_for_validation(offer_id):
+    try:
+        return B2BOffer.objects.select_related(
+            'warehouse_receipt__warehouse'
+        ).prefetch_related(
+            'warehouse_receipt__items__product'
+        ).get(id=int(offer_id))
+    except (ValueError, B2BOffer.DoesNotExist):
+        return None
+
+
+def _fetch_distribution_for_validation(distribution_id):
+    try:
+        return B2BDistribution.objects.select_related(
+            'warehouse_receipt__warehouse'
+        ).prefetch_related(
+            'warehouse_receipt__items__product'
+        ).get(id=int(distribution_id))
+    except (ValueError, B2BDistribution.DoesNotExist):
+        return None
+
+
+def _ensure_product_match(row, target_product, error_code, row_index):
+    if not target_product:
+        return
+    row_product_id, row_product_name = _extract_row_product_info(row)
+    if row_product_id and row_product_id != target_product.id:
+        raise UploadValidationError(
+            error_code,
+            f"Row {row_index} references product id {row_product_id} which differs from selected product id {target_product.id}.",
+            row=row_index,
+        )
+    if not row_product_id and row_product_name:
+        if _normalize_name(row_product_name) != _normalize_name(target_product.name):
+            raise UploadValidationError(
+                error_code,
+                f"Row {row_index} references product '{row_product_name}' which differs from selected product '{target_product.name}'.",
+                row=row_index,
+            )
+
+
+def _validate_rows_against_offer(rows, offer, *, enforce_offer_code=True):
+    offer_product = _get_offer_product(offer)
+    expected_code = str(getattr(offer, 'offer_id', '') or '').strip()
+    for idx, row in enumerate(rows, start=1):
+        row_offer = row.get('offer') or row.get('b2b_offer')
+        row_offer_id = None
+        row_offer_code = None
+        has_explicit_code = False
+        if isinstance(row_offer, dict):
+            row_offer_id = row_offer.get('id')
+            row_offer_code = row_offer.get('offer_id') or row_offer.get('code')
+            has_explicit_code = bool(row_offer_code)
+        elif row_offer:
+            row_offer_id = row_offer
+
+        if row_offer_id and row_offer_id != offer.id:
+            raise UploadValidationError(
+                'offer_mismatch',
+                f"Row {idx} references offer id {row_offer_id} which does not match selected offer id {offer.id}.",
+                row=idx,
+            )
+
+        if enforce_offer_code and not has_explicit_code:
+            fallback_code = row.get('row_offer_code')
+            if fallback_code:
+                row_offer_code = fallback_code
+
+        if row_offer_code and (has_explicit_code or enforce_offer_code):
+            normalized_row_code = str(row_offer_code).strip()
+            if normalized_row_code and expected_code and normalized_row_code != expected_code:
+                raise UploadValidationError(
+                    'offer_mismatch',
+                    f"Row {idx} references offer '{normalized_row_code}' which does not match selected offer '{expected_code}'.",
+                    row=idx,
+                )
+        _ensure_product_match(row, offer_product, 'offer_mismatch', idx)
+
+
+def _validate_rows_against_distribution(rows, distribution):
+    distribution_product = _get_distribution_product(distribution)
+    for idx, row in enumerate(rows, start=1):
+        row_distribution = row.get('b2b_distribution') or row.get('distribution')
+        row_dist_id = row_distribution.get('id') if isinstance(row_distribution, dict) else None
+        if row_dist_id and row_dist_id != distribution.id:
+            raise UploadValidationError(
+                'distribution_mismatch',
+                f"Row {idx} references distribution id {row_dist_id} which does not match selected distribution id {distribution.id}.",
+                row=idx,
+            )
+        _ensure_product_match(row, distribution_product, 'distribution_mismatch', idx)
+
+
+def _validate_offer_capacity(rows, offer):
+    if not offer or offer.offer_weight is None:
+        return
+    existing = offer.sales.aggregate(
+        total=models.Sum('total_weight_purchased')
+    )['total'] or Decimal('0')
+    remaining = Decimal(offer.offer_weight) - existing
+    for idx, row in enumerate(rows, start=1):
+        row_weight = Decimal(row.get('total_weight_purchased') or 0)
+        if row_weight > remaining:
+            raise UploadValidationError(
+                'weight_over_capacity',
+                'Requested weight exceeds offer capacity.',
+                row=idx,
+            )
+        remaining -= row_weight
+
+
+def _validate_address_upload(rows, address_type, offer_id, transfer_id):
+    if not rows:
+        return
+    if address_type == 'your_address':
+        if not offer_id:
+            raise UploadValidationError(
+                'offer_required',
+                'An offer must be selected before uploading address rows.'
+            )
+        offer = _fetch_offer_for_validation(offer_id)
+        if not offer:
+            raise UploadValidationError(
+                'offer_not_found',
+                'The selected offer could not be found.'
+            )
+        _validate_rows_against_offer(rows, offer, enforce_offer_code=False)
+        _validate_offer_capacity(rows, offer)
+    else:
+        if not transfer_id:
+            raise UploadValidationError(
+                'distribution_required',
+                'A distribution must be selected before uploading address rows.'
+            )
+        distribution = _fetch_distribution_for_validation(transfer_id)
+        if not distribution:
+            raise UploadValidationError(
+                'distribution_not_found',
+                'The selected distribution could not be found.'
+            )
+        _validate_rows_against_distribution(rows, distribution)
+
+
+def _validate_sales_upload(rows, sale_type, offer_id, distribution_id):
+    if not rows:
+        return
+    if sale_type == 'your_sale':
+        if not offer_id:
+            raise UploadValidationError(
+                'offer_required',
+                'An offer must be selected before uploading sales rows.'
+            )
+        offer = _fetch_offer_for_validation(offer_id)
+        if not offer:
+            raise UploadValidationError(
+                'offer_not_found',
+                'The selected offer could not be found.'
+            )
+        _validate_rows_against_offer(rows, offer)
+    else:
+        if not distribution_id:
+            raise UploadValidationError(
+                'distribution_required',
+                'A distribution must be selected before uploading sales rows.'
+            )
+        distribution = _fetch_distribution_for_validation(distribution_id)
+        if not distribution:
+            raise UploadValidationError(
+                'distribution_not_found',
+                'The selected distribution could not be found.'
+            )
+        _validate_rows_against_distribution(rows, distribution)
+
+
 @api_view(['POST'])
 def upload_excel_sales(request):
     if 'file' not in request.FILES:
@@ -44,6 +301,8 @@ def upload_excel_sales(request):
 
     file = request.FILES['file']
     sale_type = request.POST.get('sale_type', 'distributor_sale')
+    offer_id = request.POST.get('offer_id') or None
+    distribution_id = request.POST.get('distribution_id') or request.POST.get('transfer_id') or None
 
     try:
         if sale_type == 'your_sale':
@@ -52,6 +311,8 @@ def upload_excel_sales(request):
             print(
                 f"Your sale HTML columns: {list(rows[0].keys()) if rows else 'No rows'}")
             processed_rows = [process_your_sale_row(row) for row in rows]
+
+            _validate_sales_upload(processed_rows, 'your_sale', offer_id, distribution_id)
 
             return Response({
                 'rows': processed_rows,
@@ -65,11 +326,19 @@ def upload_excel_sales(request):
                 f"Distributor sale HTML columns: {list(rows[0].keys()) if rows else 'No rows'}")
             processed_rows = [process_sale_row(row) for row in rows]
 
+            _validate_sales_upload(processed_rows, 'distributor_sale', offer_id, distribution_id)
+
             return Response({
                 'rows': processed_rows,
                 'count': len(processed_rows),
                 'sale_type': 'distributor_sale'
             })
+    except UploadValidationError as exc:
+        logger.warning("Sales upload validation failed: %s", exc.message)
+        return Response(
+            {'error': exc.code, 'message': exc.message, 'row': exc.row},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
     except Exception as e:
         import traceback
         print(f"Error in upload_excel_sales: {str(e)}")
@@ -83,17 +352,18 @@ def upload_excel_addresses(request):
         return Response({'error': 'No file provided'}, status=status.HTTP_400_BAD_REQUEST)
 
     file = request.FILES['file']
-    address_type = request.POST.get('address_type', '')
+    address_type = request.POST.get('address_type', 'your_address')
+    offer_id = request.POST.get('offer_id') or None
+    transfer_id = request.POST.get('transfer_id') or None
     try:
         df = pd.read_excel(io.BytesIO(file.read()))
         rows = df.fillna('').to_dict('records')
-
+        validation_rows = _prepare_address_rows_for_validation(rows)
+        _validate_address_upload(validation_rows, address_type or '', offer_id, transfer_id)
         if address_type == "your_address":
-            offer_id = request.POST.get('offer_id', "")
             result = [process_address_row(
                 row, address_type, offer_id) for row in rows]
         else:
-            transfer_id = request.POST.get('transfer_id', "")
             result = [process_address_row(
                 row, address_type, transfer_id) for row in rows]
 
@@ -109,6 +379,12 @@ def upload_excel_addresses(request):
             'number_of_receiver_created': number_of_receiver_created,
             'number_of_sales_created': number_of_sales_created,
         })
+    except UploadValidationError as exc:
+        logger.warning("Address upload validation failed: %s", exc.message)
+        return Response(
+            {'error': exc.code, 'message': exc.message, 'row': exc.row},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
     except Exception as e:
         import traceback
         print(f"Error in upload_excel_addresses: {str(e)}")
@@ -378,45 +654,83 @@ def create_addresses_batch(request):
     })
 
 
-def _fa_payment_label(code: str) -> str:
-    m = (code or '').strip()
-    if m in ['cash', 'نقدی']:
-        return 'نقدی'
-    if m in ['credit', 'اعتباری']:
-        return 'اعتباری'
-    if m in ['agreement', 'توافقی', 'قراردادی']:
-        return 'توافقی'
-    return 'سایر'
+def _get_address_row(address: B2BAddress, columns):
+    customer = address.customer
+    receiver = address.receiver
+    offer = getattr(address, 'product_offer', None)
+    ag_p1, ag_d1, ag_p2, ag_d2, ag_p3, ag_d3 = extract_agreements(
+        getattr(address, 'credit_description', ''))
+    column_value_map = {
+        'purchase_id': address.purchase_id or '',
+        'total_weight_purchased': int(address.total_weight_purchased or 0),
+        'purchase_date': _format_jalali_date(address.purchase_date),
+        'unit_price': int(address.unit_price or 0),
+        'tracking_number': address.tracking_number or '',
+        'province': address.province or '',
+        'city': address.city or '',
+        'payment_amount': int(address.payment_amount or 0),
+        'customer_account_number': (address.customer_account_number or ''),
+        'cottage_code': address.cottage_code or '',
+        'product_title': (f"{address.product.code} / {address.product.name}" if address.product else ''),
+        'description': getattr(address, 'credit_description', '') or '',
+        'payment_method': fa_payment_label(getattr(address, 'payment_method', '')),
+        'offer_id': (offer.offer_id if offer else ''),
+        'address_register_date': _format_jalali_date(getattr(address, 'created_at', None)),
+        'allocation_id': address.allocation_id or '',
+        'customer_name': (customer.company_name or customer.full_name) if customer else '',
+        'customer_national_code': (customer.national_id or customer.personal_code or '') if customer else '',
+        'customer_postal_code': (customer.postal_code or '') if customer else '',
+        'customer_address': (customer.address or '') if customer else '',
+        'deposit_id': (address.deposit_id or ''),
+        'customer_phone': (customer.phone or '') if customer else '',
+        'customer_economic_code': (customer.economic_code or '') if customer else '',
+        'customer_type': ('حقوقی' if (customer and customer.customer_type == 'corporate') else ('حقیقی' if customer else '')),
+        'receiver_name': (receiver.company_name or receiver.full_name) if receiver else '',
+        'receiver_economic_code': (receiver.economic_code or '') if receiver else '',
+        'single': (address.single or ''),
+        'double': (address.double or ''),
+        'trailer': (address.trailer or ''),
+        'receiver_address': (receiver.address or '') if receiver else '',
+        'receiver_postal_code': (receiver.postal_code or '') if receiver else '',
+        'receiver_phone': (receiver.phone or '') if receiver else '',
+        'receiver_national_id': (receiver.personal_code or receiver.national_id or '') if receiver else '',
+        'purchase_weight': int(address.purchase_weight or address.total_weight_purchased or 0),
+        'waybilled_weight': int(address.waybilled_weight or 0),
+        'non_waybilled_weight': int(address.non_waybilled_weight or 0),
+        'agreement_period_1': ag_p1,
+        'agreement_amount_1': ag_d1,
+        'agreement_period_2': ag_p2,
+        'agreement_amount_2': ag_d2,
+        'agreement_period_3': ag_p3,
+        'agreement_amount_3': ag_d3,
+    }
+    return [column_value_map.get(col, '') for col in columns]
 
 
-def _fa_status_label(code: str) -> str:
-    m = (code or '').strip()
-    if m in ['active', 'فعال']:
-        return 'فعال'
-    if m in ['pending', 'در انتظار']:
-        return 'در انتظار'
-    if m in ['sold', 'فروخته شده']:
-        return 'فروخته شده'
-    if m in ['expired', 'منقضی', 'منقضی شده']:
-        return 'منقضی شده'
-    return m
+def _ensure_selected_columns(request, mapping_dict, required_key=None):
+    requested = request.data.get('columns') or []
+    if not isinstance(requested, list):
+        requested = []
 
+    seen = set()
+    column_keys = []
+    for key in requested:
+        if not isinstance(key, str):
+            continue
+        if key not in mapping_dict or key in seen:
+            continue
+        seen.add(key)
+        column_keys.append(key)
 
-def _extract_agreements(desc: str):
-    p1 = d1 = p2 = d2 = p3 = d3 = ''
-    text = (desc or '').replace('\n', ' ')
-    for i in [1, 2, 3]:
-        m = re.search(rf"دوره\s+{i}\s*:\s*(\d+)\s*روز\s*×\s*([\d\،,]+)", text)
-        if m:
-            days = m.group(1)
-            amount = m.group(2).replace('،', '').replace(',', '')
-            if i == 1:
-                p1, d1 = days, amount
-            elif i == 2:
-                p2, d2 = days, amount
-            else:
-                p3, d3 = days, amount
-    return p1, d1, p2, d2, p3, d3
+    if required_key and required_key in mapping_dict and required_key not in seen:
+        column_keys.insert(0, required_key)
+        seen.add(required_key)
+
+    if not column_keys:
+        column_keys = list(mapping_dict.keys())
+
+    headers = [mapping_dict[key] for key in column_keys]
+    return column_keys, headers
 
 
 @api_view(['POST'])
@@ -425,64 +739,12 @@ def export_addresses_xlsx(request):
     qs = B2BAddress.objects.filter(id__in=ids).select_related(
         'product', 'customer', 'receiver', 'product_offer__warehouse_receipt__warehouse'
     )
-    headers = [
-        'کد', 'وزن کل خرید', 'تاریخ خرید', 'قیمت هر واحد', 'شماره پیگیری', 'استان', 'شهرستان', 'مبلغ پرداختی', 'شماره حساب خریدار',
-        'کد کوتاژ', 'عنوان کالا', 'توضیحات', 'شیوه پرداخت', 'شناسه عرضه', 'تاریخ ثبت آدرس', 'شناسه تخصیص', 'نام خریدار', 'شناسه ملی خریدار',
-        'کدپستی خریدار', 'آدرس خریدار', 'شناسه واریز', 'شماره همراه خریدار', 'شناسه یکتا خریدار', 'نوع کاربری خریدار', 'نام تحویل گیرنده',
-        'شناسه یکتای تحویل', 'تک', 'جفت', 'تریلی', 'آدرس تحویل', 'کد پستی تحویل', 'شماره هماهنگی تحویل', 'کد ملی تحویل', 'وزن سفارش',
-        'بازه 1 پرداخت توافقی (روز)', 'بازه 2 پرداخت توافقی (روز)', 'بازه 3 پرداخت توافقی (روز)',
-        'مبلغ بازه 1 توافقی-ریال', 'مبلغ بازه 2 توافقی-ریال', 'مبلغ بازه 3 توافقی-ریال',
-        'وزن بارنامه شده', 'وزن بارنامه نشده'
-    ]
+    column_keys, headers = _ensure_selected_columns(
+        request, EXCEL_FIELD_MAPPING_ADDRESS, required_key='purchase_id'
+    )
     rows = []
     for a in qs:
-        customer = a.customer
-        receiver = a.receiver
-        offer = getattr(a, 'product_offer', None)
-        sale = B2BSale.objects.select_related(
-            'b2b_distribution__warehouse_receipt__warehouse').filter(purchase_id=a.purchase_id).first()
-        _ = offer or sale  # reserved in case we expand mapping later
-        ag_p1, ag_d1, ag_p2, ag_d2, ag_p3, ag_d3 = _extract_agreements(
-            getattr(a, 'credit_description', ''))
-        row = [
-            a.purchase_id or '',
-            int(a.total_weight_purchased or 0),
-            _format_jalali_date(a.purchase_date),
-            int(a.unit_price or 0),
-            a.tracking_number or '',
-            a.province or '',
-            a.city or '',
-            int(a.payment_amount or 0),
-            (a.customer_account_number or ''),
-            a.cottage_code or '',
-            (f"{a.product.code} / {a.product.name}" if a.product else ''),
-            getattr(a, 'credit_description', '') or '',
-            _fa_payment_label(getattr(a, 'payment_method', '')),
-            (offer.offer_id if offer else ''),
-            _format_jalali_date(getattr(a, 'created_at', None)),
-            a.allocation_id or '',
-            (customer.company_name or customer.full_name) if customer else '',
-            (customer.national_id or customer.personal_code or '') if customer else '',
-            (customer.postal_code or '') if customer else '',
-            (customer.address or '') if customer else '',
-            (a.deposit_id or ''),
-            (customer.phone or '') if customer else '',
-            (customer.economic_code or '') if customer else '',
-            ('حقوقی' if (customer and customer.customer_type ==
-             'corporate') else ('حقیقی' if customer else '')),
-            (receiver.company_name or receiver.full_name) if receiver else '',
-            (receiver.economic_code or '') if receiver else '',
-            (a.single or ''), (a.double or ''), (a.trailer or ''),
-            (receiver.address or '') if receiver else '',
-            (receiver.postal_code or '') if receiver else '',
-            (receiver.phone or '') if receiver else '',
-            (receiver.personal_code or receiver.national_id or '') if receiver else '',
-            int(a.purchase_weight or a.total_weight_purchased or 0),
-            ag_p1, ag_d1, ag_p2, ag_d2, ag_p3, ag_d3,
-            int(a.waybilled_weight or 0),
-            int(a.non_waybilled_weight or 0),
-        ]
-        rows.append(row)
+        rows.append(_get_address_row(a, column_keys))
 
     df = pd.DataFrame(rows, columns=headers)
     output = BytesIO()
@@ -699,28 +961,34 @@ def export_addresses_xlsx(request):
     return resp
 
 
+def _get_offer_row(offer, columns):
+    column_value_map = {
+        'offer_id': offer.offer_id or '',
+        'warehouse_receipt_id': offer.warehouse_receipt.receipt_id if offer.warehouse_receipt else '',
+        'offer_weight': int(offer.offer_weight or 0),
+        'unit_price': int(offer.unit_price or 0),
+        'status': fa_status_label(offer.status or ''),
+        'offer_type': fa_payment_label(offer.offer_type or ''),
+        'offer_date': _format_jalali_date(offer.offer_date),
+        'offer_exp_date': _format_jalali_date(offer.offer_exp_date),
+        'description': offer.description or '',
+    }
+    return [column_value_map.get(col, '') for col in columns]
+
+
 @api_view(['POST'])
 def export_offers_xlsx(request):
     from .excel_config import EXCEL_FIELD_MAPPING_OFFER
     ids = request.data.get('ids', [])
     qs = B2BOffer.objects.filter(id__in=ids).select_related('warehouse_receipt')
 
-    headers = list(EXCEL_FIELD_MAPPING_OFFER.values())
+    column_keys, headers = _ensure_selected_columns(
+        request, EXCEL_FIELD_MAPPING_OFFER, required_key='offer_id'
+    )
     rows = []
 
     for offer in qs:
-        row = [
-            offer.offer_id or '',
-            offer.warehouse_receipt.receipt_id if offer.warehouse_receipt else '',
-            int(offer.offer_weight or 0),
-            int(offer.unit_price or 0),
-            _fa_status_label(offer.status or ''),
-            _fa_payment_label(offer.offer_type or ''),
-            _format_jalali_date(offer.offer_date),
-            _format_jalali_date(offer.offer_exp_date),
-            offer.description or '',
-        ]
-        rows.append(row)
+        rows.append(_get_offer_row(offer, column_keys))
 
     df = pd.DataFrame(rows, columns=headers)
     output = BytesIO()
@@ -763,6 +1031,23 @@ def export_offers_xlsx(request):
     return resp
 
 
+def _get_distribution_row(dist, columns):
+    customer_name = ''
+    if dist.customer:
+        customer_name = dist.customer.company_name if dist.customer.customer_type == 'corporate' else dist.customer.full_name
+    column_value_map = {
+        'transfer_id': dist.transfer_id or '',
+        'customer_name': customer_name,
+        'warehouse_receipt_id': dist.warehouse_receipt.receipt_id if dist.warehouse_receipt else '',
+        'sales_proforma_serial': dist.sales_proforma.serial_number if dist.sales_proforma else '',
+        'agency_weight': int(dist.agency_weight or 0),
+        'unit_price': int(dist.unit_price or 0),
+        'agency_date': _format_jalali_date(dist.agency_date),
+        'description': dist.description or '',
+    }
+    return [column_value_map.get(col, '') for col in columns]
+
+
 @api_view(['POST'])
 def export_distributions_xlsx(request):
     from .excel_config import EXCEL_FIELD_MAPPING_DISTRIBUTION
@@ -771,25 +1056,13 @@ def export_distributions_xlsx(request):
         'warehouse_receipt', 'sales_proforma', 'customer'
     )
 
-    headers = list(EXCEL_FIELD_MAPPING_DISTRIBUTION.values())
+    column_keys, headers = _ensure_selected_columns(
+        request, EXCEL_FIELD_MAPPING_DISTRIBUTION, required_key='transfer_id'
+    )
     rows = []
 
     for dist in qs:
-        customer_name = ''
-        if dist.customer:
-            customer_name = dist.customer.company_name if dist.customer.customer_type == 'corporate' else dist.customer.full_name
-
-        row = [
-            dist.transfer_id or '',
-            customer_name,
-            dist.warehouse_receipt.receipt_id if dist.warehouse_receipt else '',
-            dist.sales_proforma.serial_number if dist.sales_proforma else '',
-            int(dist.agency_weight or 0),
-            int(dist.unit_price or 0),
-            _format_jalali_date(dist.agency_date),
-            dist.description or '',
-        ]
-        rows.append(row)
+        rows.append(_get_distribution_row(dist, column_keys))
 
     df = pd.DataFrame(rows, columns=headers)
     output = BytesIO()
@@ -832,6 +1105,41 @@ def export_distributions_xlsx(request):
     return resp
 
 
+def _get_sale_row(sale, columns):
+    customer_name = ''
+    if sale.customer:
+        customer_name = sale.customer.company_name if sale.customer.customer_type == 'corporate' else sale.customer.full_name
+    column_value_map = {
+        'purchase_id': sale.purchase_id or '',
+        'is_distributor': 'بله' if sale.is_distributor else 'خیر',
+        'offer_id': sale.offer.offer_id if sale.offer else '',
+        'distribution_id': sale.b2b_distribution.transfer_id if sale.b2b_distribution else '',
+        'product_name': sale.product.name if sale.product else '',
+        'customer_name': customer_name,
+        'weight': int(sale.weight or 0),
+        'unit_price': int(sale.unit_price or 0),
+        'total_price': int(sale.total_price or 0),
+        'sale_date': _format_jalali_date(sale.sale_date),
+        'purchase_type': fa_payment_label(sale.purchase_type or ''),
+        'description': sale.description or '',
+        'credit_period_1': '',
+        'credit_amount_1': '',
+        'credit_period_2': '',
+        'credit_amount_2': '',
+        'credit_period_3': '',
+        'credit_amount_3': '',
+    }
+    credit_desc = getattr(sale, 'credit_description', '')
+    ag_p1, ag_d1, ag_p2, ag_d2, ag_p3, ag_d3 = extract_agreements(credit_desc)
+    column_value_map['credit_period_1'] = ag_p1
+    column_value_map['credit_amount_1'] = ag_d1
+    column_value_map['credit_period_2'] = ag_p2
+    column_value_map['credit_amount_2'] = ag_d2
+    column_value_map['credit_period_3'] = ag_p3
+    column_value_map['credit_amount_3'] = ag_d3
+    return [column_value_map.get(col, '') for col in columns]
+
+
 @api_view(['POST'])
 def export_sales_xlsx(request):
     from .excel_config import EXCEL_FIELD_MAPPING_SALE
@@ -840,29 +1148,13 @@ def export_sales_xlsx(request):
         'product', 'customer', 'offer', 'b2b_distribution'
     )
 
-    headers = list(EXCEL_FIELD_MAPPING_SALE.values())
+    column_keys, headers = _ensure_selected_columns(
+        request, EXCEL_FIELD_MAPPING_SALE, required_key='purchase_id'
+    )
     rows = []
 
     for sale in qs:
-        customer_name = ''
-        if sale.customer:
-            customer_name = sale.customer.company_name if sale.customer.customer_type == 'corporate' else sale.customer.full_name
-
-        row = [
-            sale.purchase_id or '',
-            'بله' if sale.is_distributor else 'خیر',
-            sale.offer.offer_id if sale.offer else '',
-            sale.b2b_distribution.transfer_id if sale.b2b_distribution else '',
-            sale.product.name if sale.product else '',
-            customer_name,
-            int(sale.weight or 0),
-            int(sale.unit_price or 0),
-            int(sale.total_price or 0),
-            _format_jalali_date(sale.sale_date),
-            _fa_payment_label(sale.purchase_type or ''),
-            sale.description or '',
-        ]
-        rows.append(row)
+        rows.append(_get_sale_row(sale, column_keys))
 
     df = pd.DataFrame(rows, columns=headers)
     output = BytesIO()

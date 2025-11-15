@@ -2,16 +2,32 @@
 
 import { useState, useEffect } from "react";
 import { Upload, FileSpreadsheet, X, Check, AlertCircle } from "lucide-react";
-import { uploadSalesExcel, previewSales, createSalesBatch } from "@/lib/api/excel";
+import {
+  ApiError,
+  uploadSalesExcel,
+  previewSales,
+  createSalesBatch,
+} from "@/lib/api/excel";
 import { Button } from "../../ui/button";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../../ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "../../ui/dialog";
 import { CustomerFormData, CustomerModal } from "../customer-modal";
 import { B2BOfferFormData, B2BOfferModal } from "./b2b-offer-modal";
 import { ProductFormData, ProductModal } from "../product-modal";
 import { createCustomer, createProduct } from "@/lib/api/core";
-import { fetchB2BOffers, createB2BOffer, fetchB2BDistributions, createB2BDistribution } from "@/lib/api/b2b";
+import {
+  fetchB2BOffers,
+  createB2BOffer,
+  fetchB2BDistributions,
+  createB2BDistribution,
+} from "@/lib/api/b2b";
 import { Card } from "../../ui/card";
 import { Progress } from "../../ui/progress";
 import { B2BOffer } from "@/lib/interfaces/b2b";
@@ -29,7 +45,7 @@ interface UploadSaleModalProps {
 interface SaleData {
   b2b_distribution: number;
   b2b_offer: number;
-};
+}
 interface PreviewResponse {
   sale_data: SaleData;
   unmapped_fields: { [key: string]: string | number | null };
@@ -38,7 +54,11 @@ interface PreviewResponse {
   needs_product_creation: boolean;
   product_name: string;
 }
-export function UploadSaleModal({ open, onClose, onSuccess }: UploadSaleModalProps) {
+export function UploadSaleModal({
+  open,
+  onClose,
+  onSuccess,
+}: UploadSaleModalProps) {
   const t = useTranslations("modals.uploadSales");
 
   const [file, setFile] = useState<File | null>(null);
@@ -46,26 +66,76 @@ export function UploadSaleModal({ open, onClose, onSuccess }: UploadSaleModalPro
   const [rows, setRows] = useState<object[]>([]);
 
   const [currentRowIndex, setCurrentRowIndex] = useState(0);
-  const [previewData, setPreviewData] = useState<PreviewResponse>({} as PreviewResponse);
+  const [previewData, setPreviewData] = useState<PreviewResponse>(
+    {} as PreviewResponse
+  );
   const [showPreview, setShowPreview] = useState(false);
 
   const [showProductModal, setShowProductModal] = useState(false);
   const [showCustomerModal, setShowCustomerModal] = useState(false);
   const [showOfferModal, setShowOfferModal] = useState(false);
   const [showDistributionModal, setShowDistributionModal] = useState(false);
-  const [createdProducts, setCreatedProducts] = useState<{ [key: string]: number }>({});
-  const [createdCustomers, setCreatedCustomers] = useState<{ [key: string]: number }>({});
+  const [createdProducts, setCreatedProducts] = useState<{
+    [key: string]: number;
+  }>({});
+  const [createdCustomers, setCreatedCustomers] = useState<{
+    [key: string]: number;
+  }>({});
 
   const [processedRows, setProcessedRows] = useState<object[]>([]);
-  const [uploadStep, setUploadStep] = useState<"select" | "processing" | "complete">("select");
-
+  const [uploadStep, setUploadStep] = useState<
+    "select" | "processing" | "complete"
+  >("select");
+  const [uploadError, setUploadError] = useState<{
+    code: string;
+    row?: number | null;
+  } | null>(null);
 
   const [selectedOffer, setSelectedOffer] = useState<number | null>(null);
-  const [selectedDistribution, setSelectedDistribution] = useState<number | null>(null);
-  const [saleType, setSaleType] = useState<"your_sale" | "distributor_sale">("your_sale");
+  const [selectedDistribution, setSelectedDistribution] = useState<
+    number | null
+  >(null);
+  const [saleType, setSaleType] = useState<"your_sale" | "distributor_sale">(
+    "your_sale"
+  );
 
   const [offers, setOffers] = useState<object[]>([]);
   const [distributions, setDistributions] = useState<object[]>([]);
+
+  const getUploadErrorMessage = (
+    error?: { code?: string | null; row?: number | null } | null
+  ) => {
+    const code = error?.code;
+    if (!code) return t("errors.unknown");
+    switch (code) {
+      case "offer_required":
+        return t("errors.offer_required");
+      case "offer_not_found":
+        return t("errors.offer_not_found");
+      case "offer_mismatch":
+        return t("errors.offer_mismatch");
+      case "distribution_required":
+        return t("errors.distribution_required");
+      case "distribution_not_found":
+        return t("errors.distribution_not_found");
+      case "distribution_mismatch":
+        return t("errors.distribution_mismatch");
+      case "weight_over_capacity":
+        return t("errors.weight_over_capacity");
+      default:
+        return t("errors.unknown");
+    }
+  };
+
+  const getErrorWithRow = (
+    error?: { code?: string | null; row?: number | null } | null
+  ) => {
+    const message = getUploadErrorMessage(error);
+    if (error?.row) {
+      return `${message}`;
+    }
+    return message;
+  };
 
   useEffect(() => {
     if (open) {
@@ -77,7 +147,10 @@ export function UploadSaleModal({ open, onClose, onSuccess }: UploadSaleModalPro
   const loadOffers = async () => {
     try {
       const data = await fetchB2BOffers();
-      const activeOffers = data?.filter((o: B2BOffer) => o.status === 'active' || o.status === 'pending') || [];
+      const activeOffers =
+        data?.filter(
+          (o: B2BOffer) => o.status === "active" || o.status === "pending"
+        ) || [];
       setOffers(activeOffers);
     } catch (error) {
       console.error("Failed to load offers:", error);
@@ -86,7 +159,7 @@ export function UploadSaleModal({ open, onClose, onSuccess }: UploadSaleModalPro
   const loadDistributions = async () => {
     try {
       const data = await fetchB2BDistributions();
-      const activeDistributions = data
+      const activeDistributions = data;
       setDistributions(activeDistributions);
     } catch (error) {
       console.error("Failed to load distributions:", error);
@@ -97,6 +170,7 @@ export function UploadSaleModal({ open, onClose, onSuccess }: UploadSaleModalPro
     const selectedFile = e.target.files?.[0];
     if (selectedFile) {
       setFile(selectedFile);
+      setUploadError(null);
     }
   };
 
@@ -113,23 +187,39 @@ export function UploadSaleModal({ open, onClose, onSuccess }: UploadSaleModalPro
     }
 
     setLoading(true);
+    setUploadError(null);
     setUploadStep("processing");
     try {
-      const result = await uploadSalesExcel(file, saleType);
+      const result = await uploadSalesExcel(file, saleType, {
+        offerId: saleType === "your_sale" ? selectedOffer : undefined,
+        distributionId:
+          saleType === "distributor_sale" ? selectedDistribution : undefined,
+      });
       setRows(result.rows);
       if (result.rows.length > 0) {
         processNextRow(result.rows, 0, []);
       }
+      setUploadError(null);
     } catch (error) {
-      console.error("Upload failed:", error);
-      toast.error(t("upload_failed"));
+      const apiError = error as ApiError;
+      console.error("Upload failed:", apiError.message);
+      const structuredError = {
+        code: apiError.code || "unknown",
+        row: (apiError.payload as any)?.row,
+      };
+      setUploadError(structuredError);
+      toast.error(getUploadErrorMessage(structuredError));
       setUploadStep("select");
     } finally {
       setLoading(false);
     }
   };
 
-  const processNextRow = async (allRows: object[], index: number, processed: object[] = []) => {
+  const processNextRow = async (
+    allRows: object[],
+    index: number,
+    processed: object[] = []
+  ) => {
     if (index >= allRows.length) {
       console.log("All rows processed:", processed);
       submitBatch(processedRows);
@@ -143,7 +233,7 @@ export function UploadSaleModal({ open, onClose, onSuccess }: UploadSaleModalPro
     if (productName && createdProducts[productName.toLowerCase()]) {
       row = {
         ...row,
-        product: { id: createdProducts[productName.toLowerCase()] }
+        product: { id: createdProducts[productName.toLowerCase()] },
       };
     }
 
@@ -151,7 +241,7 @@ export function UploadSaleModal({ open, onClose, onSuccess }: UploadSaleModalPro
     if (customerName && createdCustomers[customerName.toLowerCase()]) {
       row = {
         ...row,
-        customer: { id: createdCustomers[customerName.toLowerCase()] }
+        customer: { id: createdCustomers[customerName.toLowerCase()] },
       };
     }
 
@@ -222,6 +312,7 @@ export function UploadSaleModal({ open, onClose, onSuccess }: UploadSaleModalPro
     setUploadStep("select");
     setCreatedProducts({});
     setCreatedCustomers({});
+    setUploadError(null);
   };
 
   const handleClose = () => {
@@ -237,9 +328,9 @@ export function UploadSaleModal({ open, onClose, onSuccess }: UploadSaleModalPro
         // Store the created customer for future rows
         const customerName = previewData.customer_name;
         if (customerName) {
-          setCreatedCustomers(prev => ({
+          setCreatedCustomers((prev) => ({
             ...prev,
-            [customerName.toLowerCase()]: newCustomer.id
+            [customerName.toLowerCase()]: newCustomer.id,
           }));
         }
 
@@ -278,7 +369,6 @@ export function UploadSaleModal({ open, onClose, onSuccess }: UploadSaleModalPro
   };
   const handleCreateDistribution = async (distributionData: any) => {
     try {
-
       const newDistribution = await createB2BDistribution(distributionData);
       if (newDistribution) {
         await loadDistributions();
@@ -290,9 +380,10 @@ export function UploadSaleModal({ open, onClose, onSuccess }: UploadSaleModalPro
       console.error("Distribution creation failed:", error);
       toast.error(t("distribution_creation_failed"));
     }
-  }
+  };
 
-  const progress = rows.length > 0 ? ((currentRowIndex + 1) / rows.length) * 100 : 0;
+  const progress =
+    rows.length > 0 ? ((currentRowIndex + 1) / rows.length) * 100 : 0;
 
   return (
     <>
@@ -300,6 +391,7 @@ export function UploadSaleModal({ open, onClose, onSuccess }: UploadSaleModalPro
         <DialogContent className="max-w-lg" dir="rtl">
           <DialogHeader>
             <DialogTitle>{t("title")}</DialogTitle>
+            <DialogDescription>{t("supported_formats")}</DialogDescription>
           </DialogHeader>
 
           {uploadStep === "select" && (
@@ -309,9 +401,13 @@ export function UploadSaleModal({ open, onClose, onSuccess }: UploadSaleModalPro
                   <div className="flex flex-col items-center justify-center pt-5 pb-6">
                     <FileSpreadsheet className="w-10 h-10 mb-3 text-gray-400" />
                     <p className="mb-2 text-sm text-gray-500">
-                      <span className="font-semibold">{t("click_to_upload")}</span>
+                      <span className="font-semibold">
+                        {t("click_to_upload")}
+                      </span>
                     </p>
-                    <p className="text-xs text-gray-500">{t("supported_formats")}</p>
+                    <p className="text-xs text-gray-500">
+                      {t("supported_formats")}
+                    </p>
                   </div>
                   <input
                     type="file"
@@ -337,16 +433,39 @@ export function UploadSaleModal({ open, onClose, onSuccess }: UploadSaleModalPro
                 </Card>
               )}
 
+              {uploadError && (
+                <div className="flex items-start gap-2 rounded-md border border-red-200 bg-red-50 p-3">
+                  <p className="flex-1 text-sm text-red-700">
+                    {getErrorWithRow(uploadError)}
+                  </p>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="ghost"
+                    className="text-red-600 hover:text-red-700"
+                    onClick={() => setUploadError(null)}
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
+              )}
+
               <div className="space-y-3">
                 <div>
-                  <label className="block text-sm font-medium mb-1">{t("sale_type")}</label>
+                  <label className="block text-sm font-medium mb-1">
+                    {t("sale_type")}
+                  </label>
                   <div className="flex gap-4">
                     <label className="flex items-center">
                       <input
                         type="radio"
                         value="your_sale"
                         checked={saleType === "your_sale"}
-                        onChange={(e) => setSaleType(e.target.value as "your_sale" | "distributor_sale")}
+                        onChange={(e) =>
+                          setSaleType(
+                            e.target.value as "your_sale" | "distributor_sale"
+                          )
+                        }
                         className="mr-2"
                       />
                       {t("your_sale")}
@@ -356,7 +475,11 @@ export function UploadSaleModal({ open, onClose, onSuccess }: UploadSaleModalPro
                         type="radio"
                         value="distributor_sale"
                         checked={saleType === "distributor_sale"}
-                        onChange={(e) => setSaleType(e.target.value as "your_sale" | "distributor_sale")}
+                        onChange={(e) =>
+                          setSaleType(
+                            e.target.value as "your_sale" | "distributor_sale"
+                          )
+                        }
                         className="mr-2"
                       />
                       {t("distributor_sale")}
@@ -366,7 +489,9 @@ export function UploadSaleModal({ open, onClose, onSuccess }: UploadSaleModalPro
 
                 {saleType === "your_sale" && (
                   <div>
-                    <label className="block text-sm font-medium mb-1">{t("b2b_offer")}</label>
+                    <label className="block text-sm font-medium mb-1">
+                      {t("b2b_offer")}
+                    </label>
                     <SimpleCombobox
                       options={(offers as any[]).map((o) => ({
                         value: String(o.id),
@@ -375,7 +500,9 @@ export function UploadSaleModal({ open, onClose, onSuccess }: UploadSaleModalPro
                         name: o.offer_id,
                       }))}
                       value={selectedOffer ? String(selectedOffer) : ""}
-                      onValueChange={(v) => setSelectedOffer(v ? Number(v) : null)}
+                      onValueChange={(v) =>
+                        setSelectedOffer(v ? Number(v) : null)
+                      }
                       placeholder={t("select_offer")}
                       searchPlaceholder={t("select_offer")}
                       showCreateNew={true}
@@ -386,7 +513,9 @@ export function UploadSaleModal({ open, onClose, onSuccess }: UploadSaleModalPro
                 )}
                 {saleType === "distributor_sale" && (
                   <div>
-                    <label className="block text-sm font-medium mb-1">{t("distribution")}</label>
+                    <label className="block text-sm font-medium mb-1">
+                      {t("distribution")}
+                    </label>
                     <SimpleCombobox
                       options={distributions.map((d: any) => ({
                         value: String(d.id),
@@ -394,8 +523,12 @@ export function UploadSaleModal({ open, onClose, onSuccess }: UploadSaleModalPro
                         id: d.id,
                         name: d.product_name,
                       }))}
-                      value={selectedDistribution ? String(selectedDistribution) : ""}
-                      onValueChange={(v) => setSelectedDistribution(v ? Number(v) : null)}
+                      value={
+                        selectedDistribution ? String(selectedDistribution) : ""
+                      }
+                      onValueChange={(v) =>
+                        setSelectedDistribution(v ? Number(v) : null)
+                      }
                       placeholder={t("select_distribution")}
                       searchPlaceholder={t("select_distribution")}
                       showCreateNew={true}
@@ -404,8 +537,6 @@ export function UploadSaleModal({ open, onClose, onSuccess }: UploadSaleModalPro
                     />
                   </div>
                 )}
-
-
               </div>
 
               <div className="flex justify-end gap-2">
@@ -414,7 +545,11 @@ export function UploadSaleModal({ open, onClose, onSuccess }: UploadSaleModalPro
                 </Button>
                 <Button
                   onClick={handleUpload}
-                  disabled={!file || (saleType === "your_sale" && !selectedOffer) || loading}
+                  disabled={
+                    !file ||
+                    (saleType === "your_sale" && !selectedOffer) ||
+                    loading
+                  }
                   className="bg-[#f6d265] hover:bg-[#f5c842] text-black"
                 >
                   <Upload className="w-4 h-4 mr-2" />
@@ -428,7 +563,10 @@ export function UploadSaleModal({ open, onClose, onSuccess }: UploadSaleModalPro
             <div className="space-y-4">
               <div className="text-center">
                 <p className="text-sm text-gray-600 mb-2">
-                  {t("processing_row", { current: currentRowIndex + 1, total: rows.length })}
+                  {t("processing_row", {
+                    current: currentRowIndex + 1,
+                    total: rows.length,
+                  })}
                 </p>
                 <Progress value={progress} className="w-full" />
               </div>
@@ -453,145 +591,175 @@ export function UploadSaleModal({ open, onClose, onSuccess }: UploadSaleModalPro
       </Dialog>
 
       <Dialog open={showPreview} onOpenChange={setShowPreview}>
-        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto" dir="rtl">
+        <DialogContent
+          className="max-w-2xl max-h-[80vh] overflow-y-auto"
+          dir="rtl"
+        >
           <DialogHeader>
             <DialogTitle>
               {t("preview_title")} ({currentRowIndex + 1}/{rows.length})
             </DialogTitle>
           </DialogHeader>
 
-          {previewData && (() => {
-            return (
-              <div className="space-y-4">
-                <Card className="p-4">
-                  <h3 className="font-semibold mb-3">{t("mapped_fields")}</h3>
-                  <div className="grid grid-cols-2 gap-3 text-sm">
-                    <div>
-                      <span className="font-medium text-gray-600">{t("transfer_id")}:</span>
-                      <p className="mt-1">{previewData.sale_data?.transfer_id || "-"}</p>
-                    </div>
-                    <div>
-                      <span className="font-medium text-gray-600">{t("weight")}:</span>
-                      <p className="mt-1">{previewData.sale_data?.agency_weight} kg</p>
-                    </div>
-                    <div>
-                      <span className="font-medium text-gray-600">{t("date")}:</span>
-                      <p className="mt-1">{previewData.sale_data?.agency_date}</p>
-                    </div>
-                    <div>
-                      <span className="font-medium text-gray-600">{t("customer")}:</span>
-                      <p className="mt-1">{previewData.customer_name}</p>
-                    </div>
-                    {previewData.sale_data?.description && (
-                      <div className="col-span-2">
-                        <span className="font-medium text-gray-600">{t("description")}:</span>
-                        <p className="mt-1">{previewData.sale_data?.description}</p>
+          {previewData &&
+            (() => {
+              return (
+                <div className="space-y-4">
+                  <Card className="p-4">
+                    <h3 className="font-semibold mb-3">{t("mapped_fields")}</h3>
+                    <div className="grid grid-cols-2 gap-3 text-sm">
+                      <div>
+                        <span className="font-medium text-gray-600">
+                          {t("transfer_id")}:
+                        </span>
+                        <p className="mt-1">
+                          {previewData.sale_data?.transfer_id || "-"}
+                        </p>
                       </div>
-                    )}
-                  </div>
-                </Card>
-
-                {Object.keys(previewData?.unmapped_fields || {}).length > 0 && (
-                  <Card className="p-4 bg-yellow-50 border-yellow-200">
-                    <h3 className="font-semibold mb-2 text-yellow-800">
-                      {t("unmapped_fields")}
-                    </h3>
-                    <div className="space-y-1 text-sm text-yellow-700">
-                      {Object.entries(previewData.unmapped_fields).map(([key, value]) => (
-                        <div key={key}>
-                          <span className="font-medium">{key}:</span> {String(value)}
+                      <div>
+                        <span className="font-medium text-gray-600">
+                          {t("weight")}:
+                        </span>
+                        <p className="mt-1">
+                          {previewData.sale_data?.agency_weight} kg
+                        </p>
+                      </div>
+                      <div>
+                        <span className="font-medium text-gray-600">
+                          {t("date")}:
+                        </span>
+                        <p className="mt-1">
+                          {previewData.sale_data?.agency_date}
+                        </p>
+                      </div>
+                      <div>
+                        <span className="font-medium text-gray-600">
+                          {t("customer")}:
+                        </span>
+                        <p className="mt-1">{previewData.customer_name}</p>
+                      </div>
+                      {previewData.sale_data?.description && (
+                        <div className="col-span-2">
+                          <span className="font-medium text-gray-600">
+                            {t("description")}:
+                          </span>
+                          <p className="mt-1">
+                            {previewData.sale_data?.description}
+                          </p>
                         </div>
-                      ))}
+                      )}
                     </div>
                   </Card>
-                )}
 
-                {previewData.needs_customer_creation && (
-                  <Card className="p-4 bg-orange-50 border-orange-200">
-                    <div className="flex items-start gap-2">
-                      <AlertCircle className="w-5 h-5 text-orange-600 mt-0.5" />
-                      <div className="flex-1">
-                        <p className="text-sm text-orange-800 font-medium">
-                          {t("customer_not_found")}
-                        </p>
-                        <p className="text-sm text-orange-700 mt-1">
-                          {previewData.customer_name}
-                        </p>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => setShowCustomerModal(true)}
-                          className="mt-3"
-                        >
-                          {t("create_customer")}
-                        </Button>
+                  {Object.keys(previewData?.unmapped_fields || {}).length >
+                    0 && (
+                    <Card className="p-4 bg-yellow-50 border-yellow-200">
+                      <h3 className="font-semibold mb-2 text-yellow-800">
+                        {t("unmapped_fields")}
+                      </h3>
+                      <div className="space-y-1 text-sm text-yellow-700">
+                        {Object.entries(previewData.unmapped_fields).map(
+                          ([key, value]) => (
+                            <div key={key}>
+                              <span className="font-medium">{key}:</span>{" "}
+                              {String(value)}
+                            </div>
+                          )
+                        )}
                       </div>
-                    </div>
-                  </Card>
-                )}
+                    </Card>
+                  )}
 
-                {previewData.needs_product_creation && (
-                  <Card className="p-4 bg-red-50 border-red-200">
-                    <div className="flex items-start gap-2">
-                      <AlertCircle className="w-5 h-5 text-red-600 mt-0.5" />
-                      <div className="flex-1">
-                        <p className="text-sm text-red-800 font-medium">
-                          {t("product_not_found")}
-                        </p>
-                        <p className="text-sm text-red-700 mt-1">
-                          {previewData.product_name}
-                        </p>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => setShowProductModal(true)}
-                          className="mt-2 bg-white hover:bg-white"
-                        >
-                          {t("create_product")}
-                        </Button>
-                        <p className="text-xs text-red-600 mt-2">
-                          {t("product_skip_warning")}
-                        </p>
+                  {previewData.needs_customer_creation && (
+                    <Card className="p-4 bg-orange-50 border-orange-200">
+                      <div className="flex items-start gap-2">
+                        <AlertCircle className="w-5 h-5 text-orange-600 mt-0.5" />
+                        <div className="flex-1">
+                          <p className="text-sm text-orange-800 font-medium">
+                            {t("customer_not_found")}
+                          </p>
+                          <p className="text-sm text-orange-700 mt-1">
+                            {previewData.customer_name}
+                          </p>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => setShowCustomerModal(true)}
+                            className="mt-3"
+                          >
+                            {t("create_customer")}
+                          </Button>
+                        </div>
                       </div>
-                    </div>
-                  </Card>
-                )}
+                    </Card>
+                  )}
 
-                <div className="flex justify-between pt-4 border-t">
-                  <Button
-                    variant="secondary"
-                    onClick={() => {
-                      // Accept all remaining rows without preview
-                      const remainingRows = rows.slice(currentRowIndex);
-                      const acceptedRows = remainingRows.map((row: any) => ({
-                        ...row,
-                        ...(saleType === "your_sale"
-                          ? { b2b_offer: selectedOffer }
-                          : { b2b_distribution: selectedDistribution }),
-                      }));
-                      submitBatch([...processedRows, ...acceptedRows]);
-                    }}
-                  >
-                    <Check className="w-4 h-4 mr-1" />
-                    {t("accept_all")}
-                  </Button>
-                  <div className="flex gap-2">
-                    <Button variant="outline" onClick={handleSkipRow}>
-                      <X className="w-4 h-4 mr-1" />
-                      {t("skip")}
-                    </Button>
+                  {previewData.needs_product_creation && (
+                    <Card className="p-4 bg-red-50 border-red-200">
+                      <div className="flex items-start gap-2">
+                        <AlertCircle className="w-5 h-5 text-red-600 mt-0.5" />
+                        <div className="flex-1">
+                          <p className="text-sm text-red-800 font-medium">
+                            {t("product_not_found")}
+                          </p>
+                          <p className="text-sm text-red-700 mt-1">
+                            {previewData.product_name}
+                          </p>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => setShowProductModal(true)}
+                            className="mt-2 bg-white hover:bg-white"
+                          >
+                            {t("create_product")}
+                          </Button>
+                          <p className="text-xs text-red-600 mt-2">
+                            {t("product_skip_warning")}
+                          </p>
+                        </div>
+                      </div>
+                    </Card>
+                  )}
+
+                  <div className="flex justify-between pt-4 border-t">
                     <Button
-                      onClick={() => handleConfirmRow()}
-                      disabled={previewData.needs_customer_creation || previewData.needs_product_creation}
-                      className="bg-[#f6d265] hover:bg-[#f5c842] text-black"
+                      variant="secondary"
+                      onClick={() => {
+                        // Accept all remaining rows without preview
+                        const remainingRows = rows.slice(currentRowIndex);
+                        const acceptedRows = remainingRows.map((row: any) => ({
+                          ...row,
+                          ...(saleType === "your_sale"
+                            ? { b2b_offer: selectedOffer }
+                            : { b2b_distribution: selectedDistribution }),
+                        }));
+                        submitBatch([...processedRows, ...acceptedRows]);
+                      }}
                     >
                       <Check className="w-4 h-4 mr-1" />
-                      {t("confirm")}
+                      {t("accept_all")}
                     </Button>
+                    <div className="flex gap-2">
+                      <Button variant="outline" onClick={handleSkipRow}>
+                        <X className="w-4 h-4 mr-1" />
+                        {t("skip")}
+                      </Button>
+                      <Button
+                        onClick={() => handleConfirmRow()}
+                        disabled={
+                          previewData.needs_customer_creation ||
+                          previewData.needs_product_creation
+                        }
+                        className="bg-[#f6d265] hover:bg-[#f5c842] text-black"
+                      >
+                        <Check className="w-4 h-4 mr-1" />
+                        {t("confirm")}
+                      </Button>
+                    </div>
                   </div>
                 </div>
-              </div>);
-          })()}
+              );
+            })()}
         </DialogContent>
       </Dialog>
 
@@ -624,9 +792,9 @@ export function UploadSaleModal({ open, onClose, onSuccess }: UploadSaleModalPro
               if (newProduct && previewData) {
                 const productName = previewData.product_name;
                 if (productName) {
-                  setCreatedProducts(prev => ({
+                  setCreatedProducts((prev) => ({
                     ...prev,
-                    [productName.toLowerCase()]: newProduct.id
+                    [productName.toLowerCase()]: newProduct.id,
                   }));
                 }
                 const updatedData = {
@@ -647,11 +815,8 @@ export function UploadSaleModal({ open, onClose, onSuccess }: UploadSaleModalPro
             }
           }}
           onClose={() => setShowProductModal(false)}
-
         />
       )}
-
-
     </>
   );
 }

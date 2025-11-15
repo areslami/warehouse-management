@@ -82,15 +82,14 @@ def get_warehouse_receipt_from_b2b_address(b2b_address):
     """Find warehouse receipt from B2B address by matching cottage_code"""
     if not b2b_address:
         return None
-
-    # Match by cottage_code → cottage_serial_number
+    if getattr(b2b_address, 'product_offer', None) and b2b_address.product_offer.warehouse_receipt:
+        return b2b_address.product_offer.warehouse_receipt
+    from warehouse.models import WarehouseReceipt
+    related_sale = B2BSale.objects.filter(purchase_id=b2b_address.purchase_id).select_related('b2b_distribution__warehouse_receipt').first()
+    if related_sale and related_sale.b2b_distribution and related_sale.b2b_distribution.warehouse_receipt:
+        return related_sale.b2b_distribution.warehouse_receipt
     if b2b_address.cottage_code:
-        from warehouse.models import WarehouseReceipt
-        receipt = WarehouseReceipt.objects.filter(
-            cottage_serial_number=b2b_address.cottage_code
-        ).first()
-        return receipt
-
+        return WarehouseReceipt.objects.filter(cottage_serial_number=b2b_address.cottage_code).first()
     return None
 
 

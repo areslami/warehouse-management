@@ -1,6 +1,7 @@
+from decimal import Decimal
 from rest_framework import serializers
 from rest_framework.validators import UniqueValidator
-from django.db import transaction
+from django.db import transaction, models
 from django.utils import timezone
 
 from b2b.models.base import B2BSale
@@ -13,6 +14,8 @@ from finance.models import SalesProforma, ProformaLine
 class B2BOfferSerializer(serializers.ModelSerializer):
     warehouse_receipt_id = serializers.CharField(
         source='warehouse_receipt.receipt_id', read_only=True)
+    cottage_code = serializers.CharField(
+        source='warehouse_receipt.cottage_serial_number', read_only=True)
 
     class Meta:
         model = B2BOffer
@@ -25,11 +28,13 @@ class B2BOfferListSerializer(serializers.ModelSerializer):
     product_id = serializers.SerializerMethodField()
     warehouse_receipt_id = serializers.CharField(
         source='warehouse_receipt.receipt_id', read_only=True)
+    cottage_code = serializers.CharField(
+        source='warehouse_receipt.cottage_serial_number', read_only=True)
 
     class Meta:
         model = B2BOffer
         fields = ['id', 'offer_id', 'warehouse_receipt', 'warehouse_receipt_id', 'offer_weight', 'unit_price',
-                  'total_price', 'offer_type', 'status', 'offer_date', 'offer_exp_date', 'product_name', 'product_id']
+                  'total_price', 'offer_type', 'status', 'offer_date', 'offer_exp_date', 'product_name', 'product_id', 'cottage_code']
 
     def get_product_name(self, obj):
         try:
@@ -62,15 +67,42 @@ class B2BAddressSerializer(serializers.ModelSerializer):
         fields = '__all__'
         read_only_fields = ['created_at', 'updated_at']
 
+    def validate(self, attrs):
+        attrs = super().validate(attrs)
+        offer = attrs.get('product_offer') or getattr(
+            self.instance, 'product_offer', None)
+        product = attrs.get('product') or getattr(
+            self.instance, 'product', None)
+        weight = attrs.get('total_weight_purchased') or getattr(
+            self.instance, 'total_weight_purchased', None)
+        cottage_code = attrs.get('cottage_code')
+
+        if offer and product:
+            receipt = offer.warehouse_receipt
+            receipt_product = receipt.items.first(
+            ).product if receipt and receipt.items.exists() else None
+            if receipt_product and receipt_product.id != product.id:
+                raise serializers.ValidationError(
+                    {'product': 'کالا با عرضه انتخاب شده همخوانی ندارد.'})
+            if offer.offer_weight and weight:
+                qs = offer.sales.all()
+                if self.instance:
+                    qs = qs.exclude(pk=self.instance.pk)
+                consumed = qs.aggregate(total=models.Sum('total_weight_purchased'))[
+                    'total'] or Decimal('0')
+                remaining = Decimal(offer.offer_weight) - consumed
+                requested = Decimal(weight)
+                if remaining < requested:
+                    raise serializers.ValidationError(
+                        {'total_weight_purchased': 'وزن درخواستی بیش از ظرفیت عرضه است.'})
+        return attrs
+
     def validate_allocation_id(self, value):
-        # Check if we're updating an existing instance
         if self.instance and self.instance.allocation_id == value:
             return value
-
-        # Check if allocation_id already exists
         if B2BAddress.objects.filter(allocation_id=value).exists():
-            raise serializers.ValidationError("آدرس بازارگاه با این شماره تخصیص قبلاً ثبت شده است.")
-
+            raise serializers.ValidationError(
+                "آدرس بازارگاه با این شماره تخصیص قبلاً ثبت شده است.")
         return value
 
     def get_product_name(self, obj):
@@ -122,7 +154,11 @@ class B2BAddressListSerializer(serializers.ModelSerializer):
             if offer and offer.warehouse_receipt and offer.warehouse_receipt.warehouse:
                 return offer.warehouse_receipt.warehouse.name
             sale = B2BSale.objects.select_related(
-                'b2b_distribution__warehouse_receipt__warehouse').filter(purchase_id=obj.purchase_id).first()
+                'offer__warehouse_receipt__warehouse',
+                'b2b_distribution__warehouse_receipt__warehouse',
+            ).filter(purchase_id=obj.purchase_id).first()
+            if sale and sale.offer and sale.offer.warehouse_receipt and sale.offer.warehouse_receipt.warehouse:
+                return sale.offer.warehouse_receipt.warehouse.name
             if sale and sale.b2b_distribution and sale.b2b_distribution.warehouse_receipt and sale.b2b_distribution.warehouse_receipt.warehouse:
                 return sale.b2b_distribution.warehouse_receipt.warehouse.name
         except Exception:
@@ -148,13 +184,76 @@ class B2BSaleSerializer(serializers.ModelSerializer):
     customer_name = serializers.SerializerMethodField()
     product_name = serializers.SerializerMethodField()
     product_id = serializers.SerializerMethodField()
-    sales_proforma_id = serializers.IntegerField(source='sales_proforma.id', read_only=True)
-    sales_proforma_serial = serializers.CharField(source='sales_proforma.serial_number', read_only=True)
+    sales_proforma_id = serializers.IntegerField(
+        source='sales_proforma.id', read_only=True)
+    sales_proforma_serial = serializers.CharField(
+        source='sales_proforma.serial_number', read_only=True)
+
+    cottage_code = serializers.SerializerMethodField()
 
     class Meta:
         model = B2BSale
         fields = '__all__'
         read_only_fields = ['total_price', 'sales_proforma']
+
+    def validate(self, attrs):
+        attrs = super().validate(attrs)
+        offer = attrs.get('offer') or getattr(self.instance, 'offer', None)
+        distribution = attrs.get('b2b_distribution') or getattr(
+            self.instance, 'b2b_distribution', None)
+        is_distributor = attrs.get('is_distributor') if 'is_distributor' in attrs else getattr(
+            self.instance, 'is_distributor', False)
+        product = attrs.get('product') or getattr(
+            self.instance, 'product', None)
+        weight = attrs.get('weight') or getattr(self.instance, 'weight', None)
+        if is_distributor and not distribution:
+            raise serializers.ValidationError(
+                {'b2b_distribution': 'عاملیت توزیع الزامی است.'})
+        if not is_distributor and not offer:
+            raise serializers.ValidationError(
+                {'offer': 'عرضه برای فروش الزامی است.'})
+        if is_distributor and offer:
+            raise serializers.ValidationError(
+                {'offer': 'برای فروش عاملیت نباید عرضه انتخاب شود.'})
+        if not is_distributor and distribution:
+            raise serializers.ValidationError(
+                {'b2b_distribution': 'برای فروش مستقیم نباید عاملیت انتخاب شود.'})
+        source_receipt = None
+        available_capacity = None
+        if offer:
+            source_receipt = offer.warehouse_receipt
+            if offer.offer_weight:
+                qs = offer.b2b_sales.all()
+                if self.instance:
+                    qs = qs.exclude(pk=self.instance.pk)
+                consumed = qs.aggregate(total=models.Sum('weight'))[
+                    'total'] or Decimal('0')
+                available_capacity = Decimal(offer.offer_weight) - consumed
+        elif distribution:
+            source_receipt = distribution.warehouse_receipt
+            if distribution.agency_weight:
+                qs = distribution.b2b_sales.all()
+                if self.instance:
+                    qs = qs.exclude(pk=self.instance.pk)
+                consumed = qs.aggregate(total=models.Sum('weight'))[
+                    'total'] or Decimal('0')
+                available_capacity = Decimal(
+                    distribution.agency_weight) - consumed
+        if source_receipt and product:
+            source_item = source_receipt.items.first()
+            if source_item and source_item.product_id != product.id:
+                raise serializers.ValidationError(
+                    {'product': 'کالا با منبع انتخابی همخوانی ندارد.'})
+        if available_capacity is not None and weight:
+            requested = Decimal(weight)
+            if requested > available_capacity:
+                raise serializers.ValidationError(
+                    {'weight': 'وزن فروش بیش از موجودی مجاز است.'})
+        if source_receipt:
+            attrs['cottage_code'] = source_receipt.cottage_serial_number or source_receipt.cottage_code or ''
+        elif self.instance and 'cottage_code' not in attrs:
+            attrs['cottage_code'] = getattr(self.instance, 'cottage_code', '')
+        return attrs
 
     def get_customer_name(self, obj):
         if obj.customer:
@@ -172,6 +271,12 @@ class B2BSaleSerializer(serializers.ModelSerializer):
         if obj.product:
             return obj.product.id
         return None
+
+    def get_cottage_code(self, obj):
+        if obj.offer:
+            return obj.offer.warehouse_receipt.cottage_serial_number
+        elif obj.b2b_distribution:
+            return obj.b2b_distribution.warehouse_receipt.cottage_serial_number
 
     def _generate_unique_serial_number(self):
         """Generate a unique 5-digit serial number for sales proforma"""
@@ -255,6 +360,8 @@ class B2BDistributionSerializer(serializers.ModelSerializer):
         source='warehouse_receipt.receipt_id', read_only=True)
     warehouse_name = serializers.CharField(
         source='warehouse_receipt.warehouse.name', read_only=True)
+    cottage_code = serializers.CharField(
+        source='warehouse_receipt.cottage_serial_number', read_only=True)
     sales_proforma_serial = serializers.CharField(
         source='sales_proforma.serial_number', read_only=True)
     sales_proforma_customer_name = serializers.SerializerMethodField()
@@ -298,11 +405,13 @@ class B2BDistributionListSerializer(serializers.ModelSerializer):
         source='warehouse_receipt.items.first.product.id', read_only=True)
     product_name = serializers.CharField(
         source='warehouse_receipt.items.first.product.name', read_only=True)
+    cottage_code = serializers.CharField(
+        source='warehouse_receipt.cottage_serial_number', read_only=True)
 
     class Meta:
         model = B2BDistribution
         fields = ['id', 'transfer_id', 'warehouse_receipt', 'customer_name', 'product_name', 'agency_weight', 'unit_price',
-                  'agency_date', 'warehouse_receipt_id', 'warehouse_name', 'product_id', 'sales_proforma', 'sales_proforma_serial', 'sales_proforma_customer_name']
+                  'agency_date', 'warehouse_receipt_id', 'warehouse_name', 'product_id', 'sales_proforma', 'sales_proforma_serial', 'sales_proforma_customer_name', 'cottage_code']
 
     def get_customer_name(self, obj):
         if obj.customer:

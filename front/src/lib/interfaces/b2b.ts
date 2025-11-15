@@ -10,6 +10,7 @@ export interface B2BOffer {
   status: "active" | "pending" | "sold" | "expired";
   offer_date: string;
   offer_exp_date: string;
+  cottage_code?: string;
   cottage_number?: string;
   description?: string;
   product_id?: number;
@@ -48,6 +49,8 @@ export interface B2BAddress {
 export interface B2BSale {
   id: number;
   purchase_id: string;
+  cottage_code?: string;
+  cottage_number?: string;
   is_distributor: boolean;
   b2b_distribution?: number | null;
   distribution_id?: string;
@@ -82,6 +85,7 @@ export interface B2BDistribution {
   customer: number;
   customer_name?: string;
   cottage_number?: string;
+  cottage_code?: string;
   agency_weight: number;
   unit_price: number;
   agency_date: string;

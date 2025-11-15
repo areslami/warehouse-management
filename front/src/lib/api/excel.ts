@@ -2,6 +2,29 @@ import { getApiBaseUrl } from "./config";
 
 const API_BASE_URL = () => `${getApiBaseUrl()}b2b/`;
 
+export class ApiError extends Error {
+  code?: string;
+  payload?: unknown;
+  constructor(message: string, code?: string, payload?: unknown) {
+    super(message);
+    this.code = code;
+    this.payload = payload;
+  }
+}
+
+async function parseJsonResponse(response: Response) {
+  const text = await response.text();
+  const data = text ? JSON.parse(text) : null;
+  if (!response.ok) {
+    throw new ApiError(
+      data?.message || `HTTP error! status: ${response.status}`,
+      data?.error,
+      data
+    );
+  }
+  return data;
+}
+
 async function fetchWithAuth(url: string, options?: RequestInit) {
   const response = await fetch(url, {
     ...options,
@@ -10,20 +33,25 @@ async function fetchWithAuth(url: string, options?: RequestInit) {
       ...options?.headers,
     },
   });
-
-  if (!response.ok) {
-    throw new Error(`HTTP error! status: ${response.status}`);
-  }
-
-  return response.json();
+  return parseJsonResponse(response);
 }
 
 // Sales (B2B Sale) Excel APIs
-export async function uploadSalesExcel(file: File, saleType?: "your_sale" | "distributor_sale") {
+export async function uploadSalesExcel(
+  file: File,
+  saleType?: "your_sale" | "distributor_sale",
+  context?: { offerId?: number | null; distributionId?: number | null }
+) {
   const formData = new FormData();
   formData.append("file", file);
   if (saleType) {
     formData.append("sale_type", saleType);
+  }
+  if (saleType === "your_sale" && context?.offerId) {
+    formData.append("offer_id", String(context.offerId));
+  }
+  if (saleType === "distributor_sale" && context?.distributionId) {
+    formData.append("distribution_id", String(context.distributionId));
   }
 
   const response = await fetch(`${API_BASE_URL()}sales/upload/`, {
@@ -31,11 +59,7 @@ export async function uploadSalesExcel(file: File, saleType?: "your_sale" | "dis
     body: formData,
   });
 
-  if (!response.ok) {
-    throw new Error(`HTTP error! status: ${response.status}`);
-  }
-
-  return response.json();
+  return parseJsonResponse(response);
 }
 
 export async function previewSales(rowData: unknown) {
@@ -53,20 +77,30 @@ export async function createSalesBatch(sales: object[]) {
 }
 
 // Address Excel APIs
-export async function uploadAddressExcel(file: File) {
+export async function uploadAddressExcel(
+  file: File,
+  params: {
+    addressType: "your_address" | "distributor_address";
+    offerId?: number | null;
+    transferId?: number | null;
+  }
+) {
   const formData = new FormData();
   formData.append("file", file);
+  formData.append("address_type", params.addressType);
+  if (params.addressType === "your_address" && params.offerId) {
+    formData.append("offer_id", String(params.offerId));
+  }
+  if (params.addressType === "distributor_address" && params.transferId) {
+    formData.append("transfer_id", String(params.transferId));
+  }
 
   const response = await fetch(`${API_BASE_URL()}addresses/upload/`, {
     method: "POST",
     body: formData,
   });
 
-  if (!response.ok) {
-    throw new Error(`HTTP error! status: ${response.status}`);
-  }
-
-  return response.json();
+  return parseJsonResponse(response);
 }
 
 export async function previewAddress(rowData: unknown) {

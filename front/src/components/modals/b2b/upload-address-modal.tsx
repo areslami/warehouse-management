@@ -1,11 +1,27 @@
-"use client"
+"use client";
 
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Progress } from "@/components/ui/progress";
-import { createAddressBatch, previewAddress, uploadAddressExcel } from "@/lib/api/excel";
-import { fetchB2BOffers, fetchB2BDistributions, createB2BOffer, createB2BDistribution } from "@/lib/api/b2b";
+import {
+  ApiError,
+  createAddressBatch,
+  previewAddress,
+  uploadAddressExcel,
+} from "@/lib/api/excel";
+import {
+  fetchB2BOffers,
+  fetchB2BDistributions,
+  createB2BOffer,
+  createB2BDistribution,
+} from "@/lib/api/b2b";
 import { ProductFormData, ProductModal } from "../product-modal";
 import { createProduct } from "@/lib/api/core";
 import { Check, FileSpreadsheet, Upload, X } from "lucide-react";
@@ -18,50 +34,98 @@ import { describeOffer, describeDistribution } from "@/lib/utils/label-utils";
 import { B2BOfferModal } from "./b2b-offer-modal";
 import { B2BDistributionModal } from "./b2b-distribution-modal";
 
-
-
 interface UploadAddressModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSuccess: () => void;
 }
 
-
-export default function UploadAddressModal({ isOpen, onClose, onSuccess }: UploadAddressModalProps) {
-  const t = useTranslations("modals.uploadAddress")
-  const tDist = useTranslations("modals.uploadDistribution")
+export default function UploadAddressModal({
+  isOpen,
+  onClose,
+  onSuccess,
+}: UploadAddressModalProps) {
+  const t = useTranslations("modals.uploadAddress");
+  const tDist = useTranslations("modals.uploadDistribution");
   const [file, setFile] = useState<File | null>(null);
   const [rows, setRows] = useState<object[]>([]);
   const [currentRowIndex, setCurrentRowIndex] = useState(0);
   const [processedRows, setProcessedRows] = useState<object[]>([]);
-  const [addressType, setAddressType] = useState<"your_address" | "distributor_address">("your_address")
-  const [selectedOffer, setSelectedOffer] = useState<number | "" | "new">("")
-  const [selectedDistribution, setSelectedDistribution] = useState<number | "" | "new">("")
-  const [offers, setOffers] = useState<any[]>([])
-  const [distributions, setDistributions] = useState<any[]>([])
+  const [addressType, setAddressType] = useState<
+    "your_address" | "distributor_address"
+  >("your_address");
+  const [selectedOffer, setSelectedOffer] = useState<number | "" | "new">("");
+  const [selectedDistribution, setSelectedDistribution] = useState<
+    number | "" | "new"
+  >("");
+  const [offers, setOffers] = useState<any[]>([]);
+  const [distributions, setDistributions] = useState<any[]>([]);
 
   const [loading, setLoading] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
   const [previewData, setPreviewData] = useState<any>(null);
   const [showProductModal, setShowProductModal] = useState(false);
-  const [createdProducts, setCreatedProducts] = useState<{ [key: string]: number }>({});
+  const [createdProducts, setCreatedProducts] = useState<{
+    [key: string]: number;
+  }>({});
 
-  const [uploadStep, setUploadStep] = useState<"select" | "processing" | "complete">("select");
+  const [uploadStep, setUploadStep] = useState<
+    "select" | "processing" | "complete"
+  >("select");
   const [showOfferModal, setShowOfferModal] = useState(false);
   const [showDistributionModal, setShowDistributionModal] = useState(false);
+  const [uploadError, setUploadError] = useState<{
+    code: string;
+    row?: number | null;
+  } | null>(null);
   useEffect(() => {
     const loadLists = async () => {
       try {
         const [o, d] = await Promise.all([
           fetchB2BOffers(),
-          fetchB2BDistributions()
-        ])
-        setOffers(o || [])
-        setDistributions(d || [])
-      } catch { }
+          fetchB2BDistributions(),
+        ]);
+        setOffers(o || []);
+        setDistributions(d || []);
+      } catch {}
+    };
+    if (isOpen) loadLists();
+  }, [isOpen]);
+
+  const getUploadErrorMessage = (
+    error?: { code?: string | null; row?: number | null } | null
+  ) => {
+    const code = error?.code;
+    if (!code) return t("errors.unknown");
+    switch (code) {
+      case "offer_required":
+        return t("errors.offer_required");
+      case "offer_not_found":
+        return t("errors.offer_not_found");
+      case "offer_mismatch":
+        return t("errors.offer_mismatch");
+      case "distribution_required":
+        return t("errors.distribution_required");
+      case "distribution_not_found":
+        return t("errors.distribution_not_found");
+      case "distribution_mismatch":
+        return t("errors.distribution_mismatch");
+      case "weight_over_capacity":
+        return t("errors.weight_over_capacity");
+      default:
+        return t("errors.unknown");
     }
-    if (isOpen) loadLists()
-  }, [isOpen])
+  };
+
+  const getErrorWithRow = (
+    error?: { code?: string | null; row?: number | null } | null
+  ) => {
+    const message = getUploadErrorMessage(error);
+    if (error?.row) {
+      return `${message}`;
+    }
+    return message;
+  };
 
   const handleClose = () => {
     resetState();
@@ -73,9 +137,10 @@ export default function UploadAddressModal({ isOpen, onClose, onSuccess }: Uploa
     setUploadStep("select");
     setShowProductModal(false);
     setCreatedProducts({});
-    setAddressType("your_address")
-    setSelectedOffer("")
-    setSelectedDistribution("")
+    setAddressType("your_address");
+    setSelectedOffer("");
+    setSelectedDistribution("");
+    setUploadError(null);
   };
   const handleCreateOffer = async (data: any) => {
     try {
@@ -86,7 +151,7 @@ export default function UploadAddressModal({ isOpen, onClose, onSuccess }: Uploa
         setSelectedOffer(created.id);
       }
       setShowOfferModal(false);
-    } catch { }
+    } catch {}
   };
   const handleCreateDistribution = async (data: any) => {
     try {
@@ -97,7 +162,7 @@ export default function UploadAddressModal({ isOpen, onClose, onSuccess }: Uploa
         setSelectedDistribution(created.id);
       }
       setShowDistributionModal(false);
-    } catch { }
+    } catch {}
   };
 
   const handleCreateProduct = async (productData: ProductFormData) => {
@@ -105,11 +170,12 @@ export default function UploadAddressModal({ isOpen, onClose, onSuccess }: Uploa
       const newProduct = await createProduct(productData);
       if (previewData && newProduct) {
         // Store the created product for future rows
-        const productName = previewData.product_name || previewData.address_data?.product_name;
+        const productName =
+          previewData.product_name || previewData.address_data?.product_name;
         if (productName) {
-          setCreatedProducts(prev => ({
+          setCreatedProducts((prev) => ({
             ...prev,
-            [productName.toLowerCase()]: newProduct.id
+            [productName.toLowerCase()]: newProduct.id,
           }));
         }
 
@@ -131,11 +197,11 @@ export default function UploadAddressModal({ isOpen, onClose, onSuccess }: Uploa
     }
   };
 
-
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = e.target.files?.[0];
     if (selectedFile) {
       setFile(selectedFile);
+      setUploadError(null);
     }
   };
   const handleUpload = async () => {
@@ -149,44 +215,46 @@ export default function UploadAddressModal({ isOpen, onClose, onSuccess }: Uploa
       return;
     }
     setLoading(true);
+    setUploadError(null);
     setUploadStep("processing");
     try {
-      const formData = new FormData();
-      formData.append("file", file);
-      formData.append("address_type", addressType);
-      if (addressType === "your_address") {
-        formData.append("offer_id", String(selectedOffer));
-      } else if (addressType === "distributor_address") {
-        formData.append("transfer_id", String(selectedDistribution));
-      }
-
-      const { getApiBaseUrl } = await import("@/lib/api/config");
-      const response = await fetch(`${getApiBaseUrl()}b2b/addresses/upload/`, {
-        method: "POST",
-        body: formData,
+      const result = await uploadAddressExcel(file, {
+        addressType,
+        offerId:
+          addressType === "your_address" && typeof selectedOffer === "number"
+            ? selectedOffer
+            : null,
+        transferId:
+          addressType === "distributor_address" &&
+          typeof selectedDistribution === "number"
+            ? selectedDistribution
+            : null,
       });
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const result = await response.json();
       toast.success(
-        `${t("customer_created", { count: result.number_of_customer_created || 0 })}, 
+        `${t("customer_created", {
+          count: result.number_of_customer_created || 0,
+        })}, 
    ${t("receiver_created", { count: result.number_of_receiver_created || 0 })}`
       );
+      setUploadError(null);
       setRows(result.rows);
       if (result.rows.length > 0) {
         processNextRow(result.rows, 0, []);
       }
-
     } catch (error) {
-      console.error("Error uploading file:", error);
-      toast.error(t("upload_failed"));
+      const apiError = error as ApiError;
+      console.error("Error uploading file:", apiError.message);
+      const structuredError = {
+        code: apiError.code || "unknown",
+        row: (apiError.payload as any)?.row,
+      };
+      setUploadError(structuredError);
+      toast.error(getUploadErrorMessage(structuredError));
+      setUploadStep("select");
     } finally {
       setLoading(false);
     }
-  }
+  };
   const submitBatch = async (addresses: object[]) => {
     if (addresses.length === 0) {
       toast.info(t("no_rows_to_process"));
@@ -208,8 +276,12 @@ export default function UploadAddressModal({ isOpen, onClose, onSuccess }: Uploa
     } finally {
       setLoading(false);
     }
-  }
-  const processNextRow = async (allRows: object[], index: number, processed: object[]) => {
+  };
+  const processNextRow = async (
+    allRows: object[],
+    index: number,
+    processed: object[]
+  ) => {
     if (index >= allRows.length) {
       submitBatch(processed);
       return;
@@ -222,15 +294,23 @@ export default function UploadAddressModal({ isOpen, onClose, onSuccess }: Uploa
     if (productName && createdProducts[productName.toLowerCase()]) {
       row = {
         ...row,
-        product: { id: createdProducts[productName.toLowerCase()] }
+        product: { id: createdProducts[productName.toLowerCase()] },
       };
     }
 
-    if (addressType === "your_address" && selectedOffer && selectedOffer !== "new") {
-      row = { ...row, offer: { id: Number(selectedOffer) } }
+    if (
+      addressType === "your_address" &&
+      selectedOffer &&
+      selectedOffer !== "new"
+    ) {
+      row = { ...row, offer: { id: Number(selectedOffer) } };
     }
-    if (addressType === "distributor_address" && selectedDistribution && selectedDistribution !== "new") {
-      row = { ...row, b2b_distribution: { id: Number(selectedDistribution) } }
+    if (
+      addressType === "distributor_address" &&
+      selectedDistribution &&
+      selectedDistribution !== "new"
+    ) {
+      row = { ...row, b2b_distribution: { id: Number(selectedDistribution) } };
     }
 
     try {
@@ -242,7 +322,7 @@ export default function UploadAddressModal({ isOpen, onClose, onSuccess }: Uploa
       toast.error(t("preview_failed"));
       processNextRow(allRows, index + 1, processed);
     }
-  }
+  };
 
   const handlePreviewConfirm = () => {
     if (previewData?.address_data) {
@@ -251,28 +331,34 @@ export default function UploadAddressModal({ isOpen, onClose, onSuccess }: Uploa
       setShowPreview(false);
       processNextRow(rows, currentRowIndex + 1, updatedRows);
     }
-  }
+  };
 
   const handlePreviewSkip = () => {
     setShowPreview(false);
     processNextRow(rows, currentRowIndex + 1, processedRows);
-  }
+  };
 
-  const progress = rows.length > 0 ? ((currentRowIndex + 1) / rows.length) * 100 : 0;
+  const progress =
+    rows.length > 0 ? ((currentRowIndex + 1) / rows.length) * 100 : 0;
   return (
     <>
-
       <Dialog open={isOpen && !showPreview} onOpenChange={handleClose}>
-        <DialogContent className="max-w-lg overflow-hidden max-h-[90vh] overflow-y-auto " dir="rtl">
+        <DialogContent
+          className="max-w-lg overflow-hidden max-h-[90vh] overflow-y-auto "
+          dir="rtl"
+        >
           <DialogHeader>
             <DialogTitle>{t("title")}</DialogTitle>
+            <DialogDescription>{t("supported_formats")}</DialogDescription>
           </DialogHeader>
 
           {uploadStep === "select" && (
             <div className="space-y-4 pb-2">
               <div className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium mb-2">{t("sale_type")}</label>
+                  <label className="block text-sm font-medium mb-2">
+                    {t("sale_type")}
+                  </label>
                   <div className="flex gap-4">
                     <label className="flex items-center">
                       <input
@@ -300,7 +386,9 @@ export default function UploadAddressModal({ isOpen, onClose, onSuccess }: Uploa
                 <div className="min-h-[80px]">
                   {addressType === "your_address" && (
                     <div className="w-[475px] space-y-2">
-                      <label className="block text-sm font-medium mb-2">{tDist("b2b_offer")}</label>
+                      <label className="block text-sm font-medium mb-2">
+                        {tDist("b2b_offer")}
+                      </label>
                       <SimpleCombobox
                         options={offers.map((o: any) => ({
                           value: String(o.id),
@@ -308,8 +396,12 @@ export default function UploadAddressModal({ isOpen, onClose, onSuccess }: Uploa
                           id: o.id,
                           name: o.offer_id,
                         }))}
-                        value={selectedOffer ? String(selectedOffer as any) : ""}
-                        onValueChange={(v) => setSelectedOffer(v ? Number(v) : "")}
+                        value={
+                          selectedOffer ? String(selectedOffer as any) : ""
+                        }
+                        onValueChange={(v) =>
+                          setSelectedOffer(v ? Number(v) : "")
+                        }
                         placeholder={tDist("select_offer")}
                         searchPlaceholder={tDist("select_offer")}
                         showCreateNew={true}
@@ -319,27 +411,33 @@ export default function UploadAddressModal({ isOpen, onClose, onSuccess }: Uploa
                     </div>
                   )}
                   {addressType === "distributor_address" && (
-                  <div className="w-[475px] space-y-2">
-                    <label className="text-sm font-medium">
-                      {tDist("distribution")}
-                    </label>
-                    <SimpleCombobox
-                      options={distributions.map((d: any) => ({
-                        value: String(d.id),
-                        label: describeDistribution(d as any),
-                        id: d.id,
-                        name: d.product_name,
-                      }))}
-                      value={selectedDistribution ? String(selectedDistribution) : ""}
-                      onValueChange={(v) => setSelectedDistribution(v ? Number(v) : "")}
-                      placeholder={tDist("select_distribution")}
-                      searchPlaceholder={tDist("select_distribution")}
-                      showCreateNew={true}
-                      createNewText={tDist("create_new_distribution")}
-                      onCreateNew={() => setShowDistributionModal(true)}
-                    />
-                  </div>
-                )}
+                    <div className="w-[475px] space-y-2">
+                      <label className="text-sm font-medium">
+                        {tDist("distribution")}
+                      </label>
+                      <SimpleCombobox
+                        options={distributions.map((d: any) => ({
+                          value: String(d.id),
+                          label: describeDistribution(d as any),
+                          id: d.id,
+                          name: d.product_name,
+                        }))}
+                        value={
+                          selectedDistribution
+                            ? String(selectedDistribution)
+                            : ""
+                        }
+                        onValueChange={(v) =>
+                          setSelectedDistribution(v ? Number(v) : "")
+                        }
+                        placeholder={tDist("select_distribution")}
+                        searchPlaceholder={tDist("select_distribution")}
+                        showCreateNew={true}
+                        createNewText={tDist("create_new_distribution")}
+                        onCreateNew={() => setShowDistributionModal(true)}
+                      />
+                    </div>
+                  )}
                 </div>
               </div>
               <div className="flex items-center justify-center w-full">
@@ -347,9 +445,13 @@ export default function UploadAddressModal({ isOpen, onClose, onSuccess }: Uploa
                   <div className="flex flex-col items-center justify-center pt-5 pb-6">
                     <FileSpreadsheet className="w-10 h-10 mb-3 text-gray-400" />
                     <p className="mb-2 text-sm text-gray-500">
-                      <span className="font-semibold">{t("click_to_upload")}</span>
+                      <span className="font-semibold">
+                        {t("click_to_upload")}
+                      </span>
                     </p>
-                    <p className="text-xs text-gray-500">{t("supported_formats")}</p>
+                    <p className="text-xs text-gray-500">
+                      {t("supported_formats")}
+                    </p>
                   </div>
                   <input
                     type="file"
@@ -373,6 +475,23 @@ export default function UploadAddressModal({ isOpen, onClose, onSuccess }: Uploa
                     </Button>
                   </div>
                 </Card>
+              )}
+
+              {uploadError && (
+                <div className="flex items-start gap-2 rounded-md border border-red-200 bg-red-50 p-3">
+                  <p className="flex-1 text-sm text-red-700">
+                    {getErrorWithRow(uploadError)}
+                  </p>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="ghost"
+                    className="text-red-600 hover:text-red-700"
+                    onClick={() => setUploadError(null)}
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
               )}
 
               <div className="space-y-3">
@@ -445,7 +564,10 @@ export default function UploadAddressModal({ isOpen, onClose, onSuccess }: Uploa
             <div className="space-y-4">
               <div className="text-center">
                 <p className="text-sm text-gray-600 mb-2">
-                  {t("processing_row", { current: currentRowIndex + 1, total: rows.length })}
+                  {t("processing_row", {
+                    current: currentRowIndex + 1,
+                    total: rows.length,
+                  })}
                 </p>
                 <Progress value={progress} className="w-full" />
               </div>
@@ -469,7 +591,10 @@ export default function UploadAddressModal({ isOpen, onClose, onSuccess }: Uploa
         </DialogContent>
       </Dialog>
 
-      <Dialog open={showPreview} onOpenChange={(open) => !open && handlePreviewSkip()}>
+      <Dialog
+        open={showPreview}
+        onOpenChange={(open) => !open && handlePreviewSkip()}
+      >
         <DialogContent className="max-w-3xl" dir="rtl">
           <DialogHeader>
             <DialogTitle>
@@ -481,13 +606,17 @@ export default function UploadAddressModal({ isOpen, onClose, onSuccess }: Uploa
             <div className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="text-sm font-medium">{t("allocation_id")}</label>
+                  <label className="text-sm font-medium">
+                    {t("allocation_id")}
+                  </label>
                   <div className="mt-1 p-2 bg-white border rounded">
                     {previewData.address_data?.allocation_id || "-"}
                   </div>
                 </div>
                 <div>
-                  <label className="text-sm font-medium">{t("purchase_id")}</label>
+                  <label className="text-sm font-medium">
+                    {t("purchase_id")}
+                  </label>
                   <div className="mt-1 p-2 bg-white border rounded">
                     {previewData.address_data?.purchase_id || "-"}
                   </div>
@@ -495,13 +624,18 @@ export default function UploadAddressModal({ isOpen, onClose, onSuccess }: Uploa
                 <div>
                   <label className="text-sm font-medium">{t("weight")}</label>
                   <div className="mt-1 p-2 bg-white border rounded">
-                    {formatNumber(previewData.address_data?.total_weight_purchased || 0)} kg
+                    {formatNumber(
+                      previewData.address_data?.total_weight_purchased || 0
+                    )}{" "}
+                    kg
                   </div>
                 </div>
                 <div>
                   <label className="text-sm font-medium">{t("amount")}</label>
                   <div className="mt-1 p-2 bg-white border rounded">
-                    {formatNumber(previewData.address_data?.payment_amount || 0)}
+                    {formatNumber(
+                      previewData.address_data?.payment_amount || 0
+                    )}
                   </div>
                 </div>
               </div>
@@ -530,7 +664,8 @@ export default function UploadAddressModal({ isOpen, onClose, onSuccess }: Uploa
                         {t("product_not_found")}
                       </p>
                       <p className="text-sm text-red-700 mt-1">
-                        {previewData.product_name || previewData.address_data?.product_name}
+                        {previewData.product_name ||
+                          previewData.address_data?.product_name}
                       </p>
                     </div>
                     <Button
@@ -547,7 +682,9 @@ export default function UploadAddressModal({ isOpen, onClose, onSuccess }: Uploa
 
               {previewData.address_data?.description && (
                 <div>
-                  <label className="text-sm font-medium">{t("description")}</label>
+                  <label className="text-sm font-medium">
+                    {t("description")}
+                  </label>
                   <div className="mt-1 p-3 bg-white border rounded">
                     {previewData.address_data.description}
                   </div>
@@ -562,41 +699,48 @@ export default function UploadAddressModal({ isOpen, onClose, onSuccess }: Uploa
                     if (previewData?.address_data) {
                       const remainingRows = rows.slice(currentRowIndex + 1);
                       // Process remaining rows to extract address_data
-                      const remainingAddresses = remainingRows.map((row: any) => ({
-                        allocation_id: row.allocation_id,
-                        purchase_id: row.purchase_id,
-                        product: row.product?.id || row.product,
-                        customer: row.customer?.id || row.customer,
-                        receiver: row.receiver?.id || row.receiver,
-                        total_weight_purchased: row.total_weight_purchased,
-                        cottage_code: row.cottage_code,
-                        purchase_date: row.purchase_date,
-                        unit_price: row.unit_price,
-                        payment_amount: row.payment_amount,
-                        payment_method: row.payment_method,
-                        province: row.province,
-                        city: row.city,
-                        tracking_number: row.tracking_number,
-                        credit_description: row.credit_description || '',
-                        customer_account_number: row.customer_account_number || '',
-                        address_register_date: row.address_register_date || null,
-                        agreement_period_1: row.agreement_period_1 || '',
-                        agreement_amount_1: row.agreement_amount_1 || '',
-                        agreement_period_2: row.agreement_period_2 || '',
-                        agreement_amount_2: row.agreement_amount_2 || '',
-                        agreement_period_3: row.agreement_period_3 || '',
-                        agreement_amount_3: row.agreement_amount_3 || '',
-                        deposit_id: row.deposit_id || '',
-                        purchase_weight: row.purchase_weight || 0,
-                        non_waybilled_weight: row.non_waybilled_weight || 0,
-                        waybilled_weight: row.waybilled_weight || 0,
-                        description: row.description || '',
-                        single: row.single || '',
-                        double: row.double || '',
-                        trailer: row.trailer || '',
-
-                      }));
-                      submitBatch([...processedRows, previewData.address_data, ...remainingAddresses]);
+                      const remainingAddresses = remainingRows.map(
+                        (row: any) => ({
+                          allocation_id: row.allocation_id,
+                          purchase_id: row.purchase_id,
+                          product: row.product?.id || row.product,
+                          customer: row.customer?.id || row.customer,
+                          receiver: row.receiver?.id || row.receiver,
+                          total_weight_purchased: row.total_weight_purchased,
+                          cottage_code: row.cottage_code,
+                          purchase_date: row.purchase_date,
+                          unit_price: row.unit_price,
+                          payment_amount: row.payment_amount,
+                          payment_method: row.payment_method,
+                          province: row.province,
+                          city: row.city,
+                          tracking_number: row.tracking_number,
+                          credit_description: row.credit_description || "",
+                          customer_account_number:
+                            row.customer_account_number || "",
+                          address_register_date:
+                            row.address_register_date || null,
+                          agreement_period_1: row.agreement_period_1 || "",
+                          agreement_amount_1: row.agreement_amount_1 || "",
+                          agreement_period_2: row.agreement_period_2 || "",
+                          agreement_amount_2: row.agreement_amount_2 || "",
+                          agreement_period_3: row.agreement_period_3 || "",
+                          agreement_amount_3: row.agreement_amount_3 || "",
+                          deposit_id: row.deposit_id || "",
+                          purchase_weight: row.purchase_weight || 0,
+                          non_waybilled_weight: row.non_waybilled_weight || 0,
+                          waybilled_weight: row.waybilled_weight || 0,
+                          description: row.description || "",
+                          single: row.single || "",
+                          double: row.double || "",
+                          trailer: row.trailer || "",
+                        })
+                      );
+                      submitBatch([
+                        ...processedRows,
+                        previewData.address_data,
+                        ...remainingAddresses,
+                      ]);
                     }
                   }}
                 >
@@ -623,7 +767,11 @@ export default function UploadAddressModal({ isOpen, onClose, onSuccess }: Uploa
 
       {showProductModal && previewData && (
         <ProductModal
-          initialData={{ name: previewData?.product_name || previewData?.address_data?.product_name }}
+          initialData={{
+            name:
+              previewData?.product_name ||
+              previewData?.address_data?.product_name,
+          }}
           onSubmit={handleCreateProduct}
           onClose={() => setShowProductModal(false)}
         />
@@ -642,5 +790,4 @@ export default function UploadAddressModal({ isOpen, onClose, onSuccess }: Uploa
       )}
     </>
   );
-
 }

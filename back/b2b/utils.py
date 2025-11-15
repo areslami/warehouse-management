@@ -8,8 +8,12 @@ from django.db.models import Q
 from b2b.models.base import B2BSale
 from core.models.parties import Receiver
 from core.models import Product, Customer
-from .models import B2BOffer
-from .excel_config import EXCEL_FIELD_MAPPING_SALE, EXCEL_FIELD_MAPPING_ADDRESS, EXCEL_FIELD_MAPPING_YOUR_SALE
+from .models import B2BOffer, B2BDistribution
+from .excel_config import (
+    EXCEL_FIELD_MAPPING_SALE,
+    EXCEL_FIELD_MAPPING_ADDRESS,
+    EXCEL_FIELD_MAPPING_YOUR_SALE,
+)
 
 
 def parse_html_table(content):
@@ -85,6 +89,47 @@ def convert_to_persian_numbers(text):
         text = str(text).replace(digit, persian_digits[i])
 
     return text
+
+
+def fa_payment_label(code: str) -> str:
+    m = (code or '').strip()
+    if m in ['cash', 'نقدی']:
+        return 'نقدی'
+    if m in ['credit', 'اعتباری']:
+        return 'اعتباری'
+    if m in ['agreement', 'توافقی', 'قراردادی']:
+        return 'توافقی'
+    return 'سایر'
+
+
+def fa_status_label(code: str) -> str:
+    m = (code or '').strip()
+    if m in ['active', 'فعال']:
+        return 'فعال'
+    if m in ['pending', 'در انتظار']:
+        return 'در انتظار'
+    if m in ['sold', 'فروخته شده']:
+        return 'فروخته شده'
+    if m in ['expired', 'منقضی', 'منقضی شده']:
+        return 'منقضی شده'
+    return m
+
+
+def extract_agreements(desc: str):
+    p1 = d1 = p2 = d2 = p3 = d3 = ''
+    text = (desc or '').replace('\n', ' ')
+    for i in [1, 2, 3]:
+        m = re.search(rf"دوره\s+{i}\s*:\s*(\d+)\s*روز\s*×\s*([\d\،,]+)", text)
+        if m:
+            days = m.group(1)
+            amount = m.group(2).replace('،', '').replace(',', '')
+            if i == 1:
+                p1, d1 = days, amount
+            elif i == 2:
+                p2, d2 = days, amount
+            else:
+                p3, d3 = days, amount
+    return p1, d1, p2, d2, p3, d3
 
 
 def build_description(row, product_name, mapping, op_type='dist'):
@@ -265,7 +310,7 @@ def process_address_row(row, address_type, id):
     }
 
     processed['customer_account_number'] = row.get(
-        EXCEL_FIELD_MAPPING_ADDRESS.get('customoer_account_number', ''), '')
+        EXCEL_FIELD_MAPPING_ADDRESS.get('customer_account_number', ''), '')
     adr_date = str(row.get(EXCEL_FIELD_MAPPING_ADDRESS.get(
         'address_register_date', ''), '')).strip()
     processed['address_register_date'] = persian_to_gregorian(
@@ -331,6 +376,7 @@ def process_your_sale_row(row):
     processed = {
         'purchase_id': row.get(EXCEL_FIELD_MAPPING_YOUR_SALE['purchase_id']),
         'cottage_number': row.get(EXCEL_FIELD_MAPPING_YOUR_SALE['cottage_number']),
+        'cottage_code': row.get(EXCEL_FIELD_MAPPING_YOUR_SALE['cottage_number']),
         'total_weight_purchased': clean_number(row.get(EXCEL_FIELD_MAPPING_YOUR_SALE['total_weight_purchased'], '0')),
         'purchase_date': persian_to_gregorian(date_str),
         'unit_price': clean_number(row.get(EXCEL_FIELD_MAPPING_YOUR_SALE['unit_price'], '0')),
@@ -375,7 +421,7 @@ def process_your_sale_row(row):
     return processed
 
 
-def createOrUpdateSale(row, address_type, id, customer):
+def createOrUpdateSale(row, address_type, entity_id, customer):
     purchase_id = str(row.get(EXCEL_FIELD_MAPPING_ADDRESS['purchase_id'], ''))
     cottage_code = str(
         row.get(EXCEL_FIELD_MAPPING_ADDRESS['cottage_code'], ''))
@@ -391,31 +437,33 @@ def createOrUpdateSale(row, address_type, id, customer):
         row.get(EXCEL_FIELD_MAPPING_ADDRESS['payment_method'], ''))
 
     with transaction.atomic():
-        dist_id = None
-        offer_id = None
-        try:
-            dist_id = int(id) if id is not None else None
-        except (TypeError, ValueError):
-            dist_id = None
-        offer_id = dist_id
-
-        # Fetch the offer to get the product
         offer = None
+        distribution = None
+        try:
+            resolved_id = int(entity_id) if entity_id is not None else None
+        except (TypeError, ValueError):
+            resolved_id = None
+        if address_type == 'your_address' and resolved_id:
+            offer = B2BOffer.objects.filter(id=resolved_id).first()
+        elif address_type == 'distributor_address' and resolved_id:
+            distribution = B2BDistribution.objects.filter(id=resolved_id).first()
+
         product = None
-        if offer_id:
-            offer = B2BOffer.objects.filter(id=offer_id).first()
-            if offer and offer.warehouse_receipt:
-                first_item = offer.warehouse_receipt.items.first()
-                if first_item and getattr(first_item, 'product', None):
-                    product = first_item.product
+        if offer and offer.warehouse_receipt:
+            first_item = offer.warehouse_receipt.items.first()
+            if first_item and getattr(first_item, 'product', None):
+                product = first_item.product
+        if distribution and distribution.warehouse_receipt and not product:
+            first_item = distribution.warehouse_receipt.items.first()
+            if first_item and getattr(first_item, 'product', None):
+                product = first_item.product
 
         sale, created = B2BSale.objects.update_or_create(
             purchase_id=purchase_id,
             defaults={
-                # 'cottage_code': cottage_code,
                 'is_distributor': True if address_type == 'distributor_address' else False,
-                'b2b_distribution_id': dist_id if address_type == 'distributor_address' else None,
-                'offer_id': offer_id if address_type == 'your_address' else None,
+                'b2b_distribution': distribution,
+                'offer': offer,
                 'product': product,
                 'weight': total_weight_purchased,
                 'unit_price': unit_price,
@@ -423,6 +471,7 @@ def createOrUpdateSale(row, address_type, id, customer):
                 'sale_date': purchase_date,
                 'purchase_type': purchase_type,
                 'customer': customer,
+                'cottage_code': cottage_code,
                 'description': f'ایجاد شده از طریق بارگذاری فایل فروش بازارگاه ',
             }
         )

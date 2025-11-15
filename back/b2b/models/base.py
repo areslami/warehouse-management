@@ -166,6 +166,7 @@ class B2BDistribution(models.Model):
 
 class B2BSale(models.Model):
     purchase_id = models.CharField(max_length=100, unique=True)
+    cottage_code = models.CharField(max_length=100, blank=False, default='')
     is_distributor = models.BooleanField(default=False)
     b2b_distribution = models.ForeignKey(
         B2BDistribution, on_delete=models.CASCADE, related_name='b2b_sales', null=True, blank=True)

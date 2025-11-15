@@ -73,8 +73,15 @@ async function fetchWithAuth(url: string, options?: RequestInit) {
 }
 
 // B2B Offer APIs
-export async function fetchB2BOffers(): Promise<B2BOffer[]> {
-  return fetchWithAuth(`${API_BASE_URL()}offers/`);
+export async function fetchB2BOffers(params?: Record<string, any>): Promise<B2BOffer[]> {
+  const query = params
+    ? `?${new URLSearchParams(
+        Object.fromEntries(
+          Object.entries(params).map(([k, v]) => [k, String(v)])
+        )
+      )}`
+    : "";
+  return fetchWithAuth(`${API_BASE_URL()}offers/${query}`);
 }
 
 export async function fetchB2BOfferById(id: number): Promise<B2BOffer> {
@@ -107,8 +114,15 @@ export async function deleteB2BOffer(id: number): Promise<void> {
 }
 
 // B2B Address APIs
-export async function fetchB2BAddresss(): Promise<B2BAddress[]> {
-  return fetchWithAuth(`${API_BASE_URL()}address/`);
+export async function fetchB2BAddresss(params?: Record<string, any>): Promise<B2BAddress[]> {
+  const query = params
+    ? `?${new URLSearchParams(
+        Object.fromEntries(
+          Object.entries(params).map(([key, value]) => [key, String(value)])
+        )
+      )}`
+    : "";
+  return fetchWithAuth(`${API_BASE_URL()}address/${query}`);
 }
 
 export async function fetchB2BAddressById(id: number): Promise<B2BAddress> {
