@@ -141,7 +141,11 @@ class B2BAddressListSerializer(serializers.ModelSerializer):
             if offer and offer.warehouse_receipt and offer.warehouse_receipt.warehouse:
                 return offer.warehouse_receipt.warehouse.name
             sale = B2BSale.objects.select_related(
-                'b2b_distribution__warehouse_receipt__warehouse').filter(purchase_id=obj.purchase_id).first()
+                'offer__warehouse_receipt__warehouse',
+                'b2b_distribution__warehouse_receipt__warehouse',
+            ).filter(purchase_id=obj.purchase_id).first()
+            if sale and sale.offer and sale.offer.warehouse_receipt and sale.offer.warehouse_receipt.warehouse:
+                return sale.offer.warehouse_receipt.warehouse.name
             if sale and sale.b2b_distribution and sale.b2b_distribution.warehouse_receipt and sale.b2b_distribution.warehouse_receipt.warehouse:
                 return sale.b2b_distribution.warehouse_receipt.warehouse.name
         except Exception:
