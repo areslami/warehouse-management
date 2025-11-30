@@ -55,6 +55,8 @@ def render_indicator_template(
         "COUNTER3": _pad(counter_value, 3),
         "COUNTER4": _pad(counter_value, 4),
         "COUNTER5": _pad(counter_value, 5),
+        "COUNTER6": _pad(counter_value, 6),
+        "COUNTER7": _pad(counter_value, 7),
         "JYEAR4": _pad(jalali_now.year, 4),
         "JYEAR3": _pad(jalali_now.year, 3)[-3:],
         "JYEAR2": _pad(jalali_now.year, 2)[-2:],

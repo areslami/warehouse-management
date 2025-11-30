@@ -7,7 +7,7 @@ export const DEFAULT_INDICATOR_TEMPLATE = "{{COUNTER3}}";
 
 export type IndicatorFormatSegment =
   | { id: string; type: "literal"; value: string }
-  | { id: string; type: "counter"; digits: 1 | 2 | 3 | 4 | 5 }
+  | { id: string; type: "counter"; digits: 1 | 2 | 3 | 4 | 5 | 6 | 7 }
   | {
       id: string;
       type: "jalaliYear";
@@ -37,6 +37,8 @@ const CODE_TO_SEGMENT: Record<string, SegmentWithoutId> = {
   COUNTER3: { type: "counter", digits: 3 },
   COUNTER4: { type: "counter", digits: 4 },
   COUNTER5: { type: "counter", digits: 5 },
+  COUNTER6: { type: "counter", digits: 6 },
+  COUNTER7: { type: "counter", digits: 7 },
 
   JYEAR4: { type: "jalaliYear", variant: "yyyy" },
   JYEAR3: { type: "jalaliYear", variant: "yyy" },
@@ -56,6 +58,8 @@ const COUNTER_CODE_BY_DIGITS: Record<number, string> = {
   3: "COUNTER3",
   4: "COUNTER4",
   5: "COUNTER5",
+  6: "COUNTER6",
+  7: "COUNTER7",
 };
 
 const YEAR_CODE_BY_VARIANT: Record<"yyyy" | "yyy" | "yy", string> = {
@@ -267,7 +271,7 @@ export const createLiteralSegment = (value = "-"): IndicatorFormatSegment => ({
   value,
 });
 
-export const createCounterSegment = (digits: 1 | 2 | 3 | 4 | 5 = 3): IndicatorFormatSegment => ({
+export const createCounterSegment = (digits: 1 | 2 | 3 | 4 | 5 | 6 | 7 = 3): IndicatorFormatSegment => ({
   id: createSegmentId(),
   type: "counter",
   digits,

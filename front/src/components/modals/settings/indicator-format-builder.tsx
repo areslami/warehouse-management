@@ -3,6 +3,7 @@
 import {
   forwardRef,
   useCallback,
+  useEffect,
   useMemo,
   useState,
   type HTMLAttributes,
@@ -35,6 +36,7 @@ type IndicatorFormatBuilderProps = {
   onChange: (value: string) => void;
   disabled?: boolean;
   previewCounter?: number;
+  endNumber?: number;
 } & Omit<HTMLAttributes<HTMLDivElement>, "onChange">;
 
 type AddSegmentButtonProps = {
@@ -43,6 +45,7 @@ type AddSegmentButtonProps = {
   onAdd: (segment: IndicatorFormatSegment) => void;
   sampleDate: Date;
   sampleCounter: number;
+  endNumber?: number;
   t: ReturnType<typeof useTranslations>;
 };
 
@@ -102,7 +105,7 @@ const getSegmentLabel = (
 ) => {
   switch (segment.type) {
     case "counter":
-      return t("chips.counter", { digits: segment.digits });
+      return t("chips.counter");
     case "jalaliYear":
       if (segment.variant === "yyyy") return t("chips.year_full");
       if (segment.variant === "yyy") return t("chips.year_three");
@@ -119,16 +122,30 @@ const getSegmentLabel = (
       if (isSeparatorChar(segment.value)) {
         return t("chips.separator", { value: segment.value });
       }
+      // Check if the literal is a number
+      if (segment.value && /^\d+$/.test(segment.value)) {
+        return t("chips.number", { value: toPersianDigits(segment.value) });
+      }
       return t("chips.literal", { value: segment.value || "-" });
     default:
       return "";
   }
 };
 
+const calculateDigits = (
+  endNumber?: number,
+  fallback: 1 | 2 | 3 | 4 | 5 | 6 | 7 = 3
+): 1 | 2 | 3 | 4 | 5 | 6 | 7 => {
+  if (!endNumber || endNumber < 1) return fallback;
+  const digits = endNumber.toString().length;
+  return Math.min(7, Math.max(1, digits)) as 1 | 2 | 3 | 4 | 5 | 6 | 7;
+};
+
 const buildTokenSections = (
   t: ReturnType<typeof useTranslations>,
   sampleCounter: number,
-  sampleDate: Date
+  sampleDate: Date,
+  endNumber?: number
 ) => {
   const describe = (factory: () => IndicatorFormatSegment) => {
     const segment = factory();
@@ -138,16 +155,6 @@ const buildTokenSections = (
     });
     return formatCounterSample(segment, sample);
   };
-
-  const counterFactory = (digits: 1 | 2 | 3 | 4 | 5) => () => createCounterSegment(digits);
-
-  const counterOptions = [1, 2, 3, 4, 5].map((digits) => ({
-    key: `counter-${digits}`,
-    label: t("tokens.counter", { digits }),
-    description: t("tokens.counter_description", { digits }),
-    sample: describe(counterFactory(digits as 1 | 2 | 3 | 4 | 5)),
-    create: counterFactory(digits as 1 | 2 | 3 | 4 | 5),
-  }));
 
   const dateOptions = [
     {
@@ -199,15 +206,9 @@ const buildTokenSections = (
 
   return [
     {
-      key: "counter",
-      title: t("tokens.counter_group"),
-      options: counterOptions,
-    },
-    {
       key: "date",
       title: t("tokens.date_group"),
       options: dateOptions,
-      dividerAbove: true,
     },
   ];
 };
@@ -218,13 +219,14 @@ const AddSegmentButton = ({
   onAdd,
   sampleCounter,
   sampleDate,
+  endNumber,
   t,
 }: AddSegmentButtonProps) => {
   const [open, setOpen] = useState(false);
   const [literalValue, setLiteralValue] = useState("");
   const sections = useMemo(
-    () => buildTokenSections(t, sampleCounter, sampleDate),
-    [t, sampleCounter, sampleDate]
+    () => buildTokenSections(t, sampleCounter, sampleDate, endNumber),
+    [t, sampleCounter, sampleDate, endNumber]
   );
 
   const addSegment = (factory: () => IndicatorFormatSegment) => {
@@ -373,7 +375,7 @@ const AddSegmentButton = ({
 export const IndicatorFormatBuilder = forwardRef<
   HTMLDivElement,
   IndicatorFormatBuilderProps
->(({ value, onChange, disabled = false, previewCounter, className, ...rest }, ref) => {
+>(({ value, onChange, disabled = false, previewCounter, endNumber, className, ...rest }, ref) => {
   const formatT = useTranslations("modals.indicator.format");
   const safeValue = value ?? "";
   const segments = useMemo(
@@ -397,12 +399,41 @@ export const IndicatorFormatBuilder = forwardRef<
     [previewSegments, previewCounter]
   );
 
+  const currentCounterDigits = useMemo(
+    () => segments.find((segment) => segment.type === "counter")?.digits,
+    [segments]
+  );
+
+  const resolvedCounterDigits = useMemo(
+    () =>
+      calculateDigits(
+        endNumber,
+        (currentCounterDigits ?? 3) as 1 | 2 | 3 | 4 | 5 | 6 | 7
+      ),
+    [endNumber, currentCounterDigits]
+  );
+
   const updateSegments = useCallback(
     (next: IndicatorFormatSegment[]) => {
       onChange(serializeIndicatorSegments(next));
     },
     [onChange]
   );
+
+  useEffect(() => {
+    const needsUpdate = segments.some(
+      (segment) =>
+        segment.type === "counter" && segment.digits !== resolvedCounterDigits
+    );
+    if (!needsUpdate) return;
+
+    const normalizedSegments = segments.map((segment) =>
+      segment.type === "counter"
+        ? { ...segment, digits: resolvedCounterDigits }
+        : segment
+    );
+    updateSegments(normalizedSegments);
+  }, [segments, resolvedCounterDigits, updateSegments]);
 
   const handleAdd = (segment: IndicatorFormatSegment, position: "start" | "end") => {
     const nextSegments =
@@ -411,11 +442,22 @@ export const IndicatorFormatBuilder = forwardRef<
   };
 
   const handleRemove = (segmentId: string) => {
+    const segmentToRemove = segments.find((s) => s.id === segmentId);
+    if (!segmentToRemove) return;
+
+    // Never allow removing counter segments
+    if (segmentToRemove.type === "counter") return;
+
     if (segments.length <= 1) return;
     updateSegments(segments.filter((segment) => segment.id !== segmentId));
   };
 
-  const canRemoveSegments = segments.length > 1;
+  const canRemoveSegment = (segment: IndicatorFormatSegment) => {
+    // Counter segments can never be removed
+    if (segment.type === "counter") return false;
+    // Can only remove if there's more than one segment
+    return segments.length > 1;
+  };
 
   return (
     <div
@@ -436,6 +478,7 @@ export const IndicatorFormatBuilder = forwardRef<
           onAdd={(segment) => handleAdd(segment, "start")}
           sampleCounter={sampleCounterReference}
           sampleDate={sampleDateReference}
+          endNumber={endNumber}
           t={formatT}
         />
         <div className="flex min-h-[42px] flex-wrap items-center justify-center gap-2">
@@ -447,7 +490,12 @@ export const IndicatorFormatBuilder = forwardRef<
             segments.map((segment) => (
               <div
                 key={segment.id}
-                className="flex items-center gap-2 rounded-full border border-gray-200 bg-white px-3 py-1 text-xs shadow-sm"
+                className={cn(
+                  "flex items-center gap-2 rounded-full border border-gray-200 bg-white shadow-sm",
+                  segment.type === "counter"
+                    ? "px-6 py-1 text-xs"
+                    : "px-3 py-1 text-xs"
+                )}
               >
                 <div className="flex flex-col text-right leading-tight" dir="rtl">
                   <span className="font-semibold text-gray-800">
@@ -465,7 +513,7 @@ export const IndicatorFormatBuilder = forwardRef<
                     )}
                   </span>
                 </div>
-                {canRemoveSegments && !disabled && (
+                {canRemoveSegment(segment) && !disabled && (
                   <button
                     type="button"
                     onClick={() => handleRemove(segment.id)}
@@ -485,17 +533,15 @@ export const IndicatorFormatBuilder = forwardRef<
           onAdd={(segment) => handleAdd(segment, "end")}
           sampleCounter={sampleCounterReference}
           sampleDate={sampleDateReference}
+          endNumber={endNumber}
           t={formatT}
         />
       </div>
-      <div
-        className="mt-3 text-xs text-muted-foreground text-right flex items-center gap-2"
-        dir="rtl"
-      >
-        <span className="font-semibold text-foreground">
-          {`${formatT("preview_label")}:`}
-        </span>
-        <div className="flex flex-row flex-wrap justify-start font-mono text-sm leading-none">
+      <div className="mt-4 rounded-lg border border-gray-200 bg-white p-3" dir="rtl">
+        <div className="text-sm font-bold text-foreground mb-2">
+          {formatT("preview_label")}
+        </div>
+        <div className="flex flex-row flex-wrap justify-start font-mono text-lg leading-none text-foreground">
           {previewPieces.map(({ id, value }, index) => (
             <bdi
               key={id ?? `preview-${index}`}

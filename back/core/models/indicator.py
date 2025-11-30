@@ -24,6 +24,14 @@ class Indicator(models.Model):
         default=False,
         help_text="Automatically selected indicator for its section.",
     )
+    start_number = models.PositiveIntegerField(
+        default=1,
+        help_text="Starting number for the counter range.",
+    )
+    end_number = models.PositiveIntegerField(
+        default=999,
+        help_text="Ending number for the counter range. Used to auto-calculate digit count.",
+    )
 
     class Meta:
         constraints = [

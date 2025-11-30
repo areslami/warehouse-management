@@ -31,6 +31,7 @@ import { B2BDistributionModal } from "../b2b/b2b-distribution-modal";
 import { B2BOfferModal } from "../b2b/b2b-offer-modal";
 import { WarehouseReceiptModal } from "./warehouse-receipt-modal";
 import { useDefaultIndicator } from "@/lib/hooks/use-default-indicator";
+import { IndicatorCapacityGuard } from "@/components/indicator-capacity-guard";
 import { toPersianDigits } from "@/lib/utils/numbers";
 import {
   DEFAULT_INDICATOR_TEMPLATE,
@@ -223,6 +224,15 @@ export function DeliveryFulfillmentModal({ trigger, onSubmit, onClose, initialDa
     formatWithSpacing: true,
   });
 
+  const isCounterExhausted = useMemo(
+    () =>
+      !!defaultIndicator &&
+      typeof defaultIndicator.counter === "number" &&
+      typeof defaultIndicator.end_number === "number" &&
+      defaultIndicator.counter >= defaultIndicator.end_number,
+    [defaultIndicator]
+  );
+
   const indicatorPreview = useMemo(() => {
     if (!defaultIndicator) return null;
     return buildIndicatorPreview(
@@ -390,6 +400,7 @@ export function DeliveryFulfillmentModal({ trigger, onSubmit, onClose, initialDa
   }, [selectedWarehouseReceiptId, warehouseReceipts, form]);
 
   const handleSubmit = async (data: any) => {
+    if (isCounterExhausted) return;
     // Prevent submission if there's a cottage code error
     if (cottageCodeError) {
       return;
@@ -436,6 +447,7 @@ export function DeliveryFulfillmentModal({ trigger, onSubmit, onClose, initialDa
           </DialogTrigger>
         )}
         <DialogContent dir="rtl" className="min-w-[85%] max-h-[90vh] overflow-y-auto scrollbar-hide  p-0 my-0 mx-auto [&>button]:hidden">
+          <IndicatorCapacityGuard indicator={defaultIndicator} />
           <DialogHeader className="px-3.5 py-4.5  justify-start" style={{ backgroundColor: "#f6d265" }}>
             <DialogTitle className="font-bold text-white text-right">{t("title")}</DialogTitle>
             <DialogDescription className="sr-only">Create or edit delivery fulfillment</DialogDescription>
@@ -443,6 +455,7 @@ export function DeliveryFulfillmentModal({ trigger, onSubmit, onClose, initialDa
 
           <Form {...form} >
             <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6 py-4 px-6">
+              <fieldset disabled={isCounterExhausted} className="space-y-6">
               <div className="grid grid-cols-4 gap-4 items-start">
                 <FormField
                   control={form.control as any}
@@ -1036,12 +1049,19 @@ export function DeliveryFulfillmentModal({ trigger, onSubmit, onClose, initialDa
                   </div>
                 ))}
               </div>
+              </fieldset>
 
               <div className="flex justify-end space-x-2">
                 <Button type="button" variant="outline" onClick={handleClose}>
                   {t("cancel")}
                 </Button>
-                <Button type="submit" className="hover:bg-[#f6d265]"> {t("save")}</Button>
+                <Button
+                  type="submit"
+                  className="hover:bg-[#f6d265]"
+                  disabled={isCounterExhausted}
+                >
+                  {t("save")}
+                </Button>
               </div>
             </form>
           </Form>

@@ -22,6 +22,7 @@ import { SupplierFormData, SupplierModal } from "../supplier-modal";
 import { ProductFormData, ProductModal } from "../product-modal";
 import { createSupplier, createProduct, incrementIndicatorCounter } from "@/lib/api/core";
 import { useDefaultIndicator } from "@/lib/hooks/use-default-indicator";
+import { IndicatorCapacityGuard } from "@/components/indicator-capacity-guard";
 import { toPersianDigits } from "@/lib/utils/numbers";
 import {
   DEFAULT_INDICATOR_TEMPLATE,
@@ -136,6 +137,15 @@ export function PurchaseProformaModal({ trigger, onSubmit, onClose, initialData,
     formatWithSpacing: true,
   });
 
+  const isCounterExhausted = useMemo(
+    () =>
+      !!defaultIndicator &&
+      typeof defaultIndicator.counter === "number" &&
+      typeof defaultIndicator.end_number === "number" &&
+      defaultIndicator.counter >= defaultIndicator.end_number,
+    [defaultIndicator]
+  );
+
   const indicatorPreview = useMemo(() => {
     if (!defaultIndicator) return null;
     return buildIndicatorPreview(
@@ -178,6 +188,7 @@ export function PurchaseProformaModal({ trigger, onSubmit, onClose, initialData,
   });
 
   const handleSubmit = async (data: any) => {
+    if (isCounterExhausted) return;
     if (onSubmit) {
       await onSubmit(data);
     }
@@ -213,6 +224,7 @@ export function PurchaseProformaModal({ trigger, onSubmit, onClose, initialData,
           </DialogTrigger>
         )}
         <DialogContent dir="rtl" className="min-w-[80%] max-h-[90vh] overflow-y-auto scrollbar-hide  p-0 my-0 mx-auto [&>button]:hidden">
+          <IndicatorCapacityGuard indicator={defaultIndicator} />
           <DialogHeader className="px-3.5 py-4.5  justify-start" style={{ backgroundColor: "#f6d265" }}>
             <DialogTitle className="font-bold text-white text-right">{t("title")}</DialogTitle>
             <DialogDescription className="sr-only">Create or edit purchase proforma</DialogDescription>
@@ -220,6 +232,7 @@ export function PurchaseProformaModal({ trigger, onSubmit, onClose, initialData,
 
           <Form {...form} >
             <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6 py-4 px-12">
+              <fieldset disabled={isCounterExhausted} className="space-y-6">
               <div className="grid grid-cols-2 gap-4 items-start">
                 <FormField
                   control={form.control as any}
@@ -518,15 +531,22 @@ export function PurchaseProformaModal({ trigger, onSubmit, onClose, initialData,
                         <Trash2 className="w-4 h-4" />
                       </Button>
                     </div>
-                  </div>
+                </div>
                 ))}
               </div>
+              </fieldset>
 
               <div className="flex justify-end space-x-2">
                 <Button type="button" variant="outline" onClick={handleClose}>
                   {t("cancel")}
                 </Button>
-                <Button type="submit" className="hover:bg-[#f6d265]"> {t("save")}</Button>
+                <Button
+                  type="submit"
+                  className="hover:bg-[#f6d265]"
+                  disabled={isCounterExhausted}
+                >
+                  {t("save")}
+                </Button>
               </div>
             </form>
           </Form>

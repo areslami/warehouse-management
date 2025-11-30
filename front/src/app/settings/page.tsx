@@ -357,6 +357,8 @@ export default function SettingsPage() {
                   name: editingIndicator.name,
                   belongs: editingIndicator.belongs as IndicatorSection,
                   format_template: editingIndicator.format_template,
+                  start_number: editingIndicator.start_number,
+                  end_number: editingIndicator.end_number,
                 }
               : undefined
           }

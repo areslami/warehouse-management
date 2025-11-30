@@ -85,4 +85,6 @@ export interface Indicator {
   is_default: boolean;
   format_template: string;
   format_preview: string;
+  start_number: number;
+  end_number: number;
 }

@@ -1250,11 +1250,17 @@
       "fields": {
         "name": "نام شناسه",
         "belongs": "متعلق به",
-        "format_template": "قالب شماره‌گذاری"
+        "format_template": "قالب شماره‌گذاری",
+        "counter_digits": "ارقام شمارنده",
+        "start_number": "شماره شروع",
+        "end_number": "شماره پایان"
       },
       "placeholders": {
         "name": "مثال: پ ف",
-        "belongs": "مثال: پیش فاکتور فروش"
+        "belongs": "مثال: پیش فاکتور فروش",
+        "counter_digits": "تعداد ارقام",
+        "start_number": "مثال: 1",
+        "end_number": "مثال: 999"
       },
       "actions": {
         "cancel": "انصراف",
@@ -1264,7 +1270,10 @@
       "validation": {
         "name-required": "نام شناسه الزامی است",
         "belongs-required": "نام فرم الزامی است",
-        "format-required": "قالب شماره‌گذاری باید حداقل یک جزء داشته باشد"
+        "format-required": "قالب شماره‌گذاری باید حداقل یک جزء داشته باشد",
+        "counter-digits-min": "تعداد ارقام شمارنده باید حداقل ۱ باشد",
+        "counter-digits-max": "ارقام شمارنده نمیتواند از 7 بزرگتر باشد",
+        "end-number-max": "شماره پایان نمی‌تواند بیش از ۷ رقم باشد"
       },
       "format": {
         "helper": "با کنار هم قرار دادن اجزای تاریخ جلالی، شمارنده و متن ثابت، قالب دلخواه خود را بسازید.",
@@ -1277,8 +1286,8 @@
           "title": "انتخاب جزء جدید",
           "counter_group": "شمارنده",
           "date_group": "تاریخ جلالی",
-          "counter": "شمارنده {digits} رقمی",
-          "counter_description": "شمارنده {digits} رقمی با صفرهای پیشرو.",
+          "counter": "شمارنده",
+          "counter_description": "شمارنده با تعداد ارقام خودکار بر اساس محدوده.",
           "year_full": "سال چهار رقمی (yyyy)",
           "year_three": "سال سه رقمی (yyy)",
           "year_two": "سال دو رقمی (yy)",
@@ -1298,14 +1307,17 @@
           "day_two_description": "روز ماه به صورت دو رقمی",
           "day_one_description": "روز ماه به صورت تک رقمی",
           "separator_label": "کاراکتر جداکننده",
-          "separator_hint": "برای افزودن سریع کاراکترهای متداول روی آنها کلیک کنید."
+          "separator_hint": "برای افزودن سریع کاراکترهای متداول روی آنها کلیک کنید.",
+          "secretariat_code_label": "کد دبیرخانه",
+          "secretariat_code_placeholder": "مثال: 123",
+          "secretariat_code_add": "افزودن کد"
         },
         "literal_input": {
           "placeholder": "مثلاً INV/",
           "limit": "حداکثر {count} کاراکتر"
         },
         "chips": {
-          "counter": "شمارنده {digits} رقمی",
+          "counter": "شمارنده",
           "year_full": "سال (۴ رقم)",
           "year_three": "سال (۳ رقم)",
           "year_two": "سال (۲ رقم)",
@@ -1314,6 +1326,7 @@
           "month_long": "نام کامل ماه",
           "day_two": "روز دو رقمی",
           "day_one": "روز تک رقمی",
+          "number": "شماره {value}",
           "literal": "متن «{value}»",
           "separator": "کاراکتر جداکننده «{value}»"
         }
@@ -1492,6 +1505,11 @@
     "filters": "فیلترها",
     "all_warehouses": "همه انبارها",
     "initial_data_error": "خطا در بارگیری اطلاعات اولیه",
+      "indicator_limit": {
+        "title": "هشدار!",
+      "message": "ظرفیت شمارنده شما تمام شده است؛ برای مدیریت این مورد به تنظیمات مراجعه کنید.",
+      "cta": "رفتن به تنظیمات"
+    },
     "search_placeholders": {
       "search_products": "جستجوی محصولات...",
       "search_customers": "جستجوی مشتریان...",

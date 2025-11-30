@@ -135,11 +135,13 @@ class IndicatorSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Indicator
-        fields = ['id', 'name', 'belongs', 'counter', 'is_default', 'format_template', 'format_preview']
+        fields = ['id', 'name', 'belongs', 'counter', 'is_default', 'format_template', 'format_preview', 'start_number', 'end_number']
         read_only_fields = ['counter']
         extra_kwargs = {
             'is_default': {'required': False},
             'belongs': {'validators': []},
+            'start_number': {'required': False},
+            'end_number': {'required': False},
         }
         validators = []
 
