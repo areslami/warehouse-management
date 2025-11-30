@@ -460,88 +460,89 @@ export const IndicatorFormatBuilder = forwardRef<
   };
 
   return (
-    <div
-      ref={ref}
-      {...rest}
-      className={cn(
-        "rounded-lg border border-dashed border-gray-200 bg-gray-50 p-3",
-        className
-      )}
-    >
+    <div className="space-y-4" ref={ref} {...rest}>
       <div
-        className="flex flex-wrap items-center justify-center gap-3"
+        className={cn(
+          "rounded-lg border border-dashed border-gray-200 bg-gray-50 p-3",
+          className
+        )}
+      >
+        <div
+          className="flex flex-wrap items-center justify-center gap-3"
+          dir="rtl"
+        >
+          <AddSegmentButton
+            position="start"
+            disabled={disabled}
+            onAdd={(segment) => handleAdd(segment, "start")}
+            sampleCounter={sampleCounterReference}
+            sampleDate={sampleDateReference}
+            endNumber={endNumber}
+            t={formatT}
+          />
+          <div className="flex min-h-[42px] flex-wrap items-center justify-center gap-2">
+            {segments.length === 0 ? (
+              <span className="text-xs text-muted-foreground">
+                {formatT("empty")}
+              </span>
+            ) : (
+              segments.map((segment) => (
+                <div
+                  key={segment.id}
+                  className={cn(
+                    "flex items-center gap-2 rounded-full border border-gray-200 bg-white shadow-sm",
+                    segment.type === "counter"
+                      ? "px-6 py-1 text-xs"
+                      : "px-3 py-1 text-xs"
+                  )}
+                >
+                  <div className="flex flex-col text-right leading-tight" dir="rtl">
+                    <span className="font-semibold text-gray-800">
+                      {getSegmentLabel(segment, formatT)}
+                    </span>
+                    <span className="font-mono text-[10px] text-gray-500" dir="rtl">
+                      {toPersianDigits(
+                        formatCounterSample(
+                          segment,
+                          renderIndicatorSegmentSample(segment, {
+                            counter: previewCounter ?? sampleCounterReference,
+                            date: sampleDateReference,
+                          })
+                        )
+                      )}
+                    </span>
+                  </div>
+                  {canRemoveSegment(segment) && !disabled && (
+                    <button
+                      type="button"
+                      onClick={() => handleRemove(segment.id)}
+                      className="rounded-full border border-transparent p-1 text-gray-400 hover:text-red-500 hover:border-red-100 text-right"
+                      aria-label={formatT("remove_segment")}
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  )}
+                </div>
+              ))
+            )}
+          </div>
+          <AddSegmentButton
+            position="end"
+            disabled={disabled}
+            onAdd={(segment) => handleAdd(segment, "end")}
+            sampleCounter={sampleCounterReference}
+            sampleDate={sampleDateReference}
+            endNumber={endNumber}
+            t={formatT}
+          />
+        </div>
+      </div>
+
+      <div
+        className="mx-auto w-full max-w-xs rounded-2xl border border-white/70 bg-gradient-to-br from-[#fff7e6] via-[#fff3c4] to-[#f7faa2] px-4 py-3 text-center shadow-md ring-1 ring-[#f6d265]/40"
         dir="rtl"
       >
-        <AddSegmentButton
-          position="start"
-          disabled={disabled}
-          onAdd={(segment) => handleAdd(segment, "start")}
-          sampleCounter={sampleCounterReference}
-          sampleDate={sampleDateReference}
-          endNumber={endNumber}
-          t={formatT}
-        />
-        <div className="flex min-h-[42px] flex-wrap items-center justify-center gap-2">
-          {segments.length === 0 ? (
-            <span className="text-xs text-muted-foreground">
-              {formatT("empty")}
-            </span>
-          ) : (
-            segments.map((segment) => (
-              <div
-                key={segment.id}
-                className={cn(
-                  "flex items-center gap-2 rounded-full border border-gray-200 bg-white shadow-sm",
-                  segment.type === "counter"
-                    ? "px-6 py-1 text-xs"
-                    : "px-3 py-1 text-xs"
-                )}
-              >
-                <div className="flex flex-col text-right leading-tight" dir="rtl">
-                  <span className="font-semibold text-gray-800">
-                    {getSegmentLabel(segment, formatT)}
-                  </span>
-                  <span className="font-mono text-[10px] text-gray-500" dir="rtl">
-                    {toPersianDigits(
-                      formatCounterSample(
-                        segment,
-                        renderIndicatorSegmentSample(segment, {
-                          counter: previewCounter ?? sampleCounterReference,
-                          date: sampleDateReference,
-                        })
-                      )
-                    )}
-                  </span>
-                </div>
-                {canRemoveSegment(segment) && !disabled && (
-                  <button
-                    type="button"
-                    onClick={() => handleRemove(segment.id)}
-                    className="rounded-full border border-transparent p-1 text-gray-400 hover:text-red-500 hover:border-red-100 text-right"
-                    aria-label={formatT("remove_segment")}
-                  >
-                    <X className="h-3 w-3" />
-                  </button>
-                )}
-              </div>
-            ))
-          )}
-        </div>
-        <AddSegmentButton
-          position="end"
-          disabled={disabled}
-          onAdd={(segment) => handleAdd(segment, "end")}
-          sampleCounter={sampleCounterReference}
-          sampleDate={sampleDateReference}
-          endNumber={endNumber}
-          t={formatT}
-        />
-      </div>
-      <div className="mt-4 rounded-lg border border-gray-200 bg-white p-3" dir="rtl">
-        <div className="text-sm font-bold text-foreground mb-2">
-          {formatT("preview_label")}
-        </div>
-        <div className="flex flex-row flex-wrap justify-start font-mono text-lg leading-none text-foreground">
+        <div className="flex flex-row flex-wrap justify-center font-mono text-lg font-bold leading-tight text-gray-800 tracking-wide">
           {previewPieces.map(({ id, value }, index) => (
             <bdi
               key={id ?? `preview-${index}`}
