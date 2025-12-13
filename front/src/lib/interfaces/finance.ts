@@ -19,6 +19,10 @@ export interface PurchaseProforma extends Proforma {
 export interface SalesProforma extends Proforma {
   payment_type: "cash" | "credit" | "other";
   payment_description?: string;
+  shipping_cost?: number;
+  commission?: number;
+  other_cost?: number;
+  export_preset?: number | null;
   customer: number;
   customer_name?: string;
   lines?: ProformaLine[];
@@ -47,6 +51,10 @@ export interface SalesProformaCreate {
   subtotal?: number;
   tax?: number;
   discount?: number;
+  shipping_cost?: number;
+  commission?: number;
+  other_cost?: number;
+  export_preset?: number | null;
   customer: number;
   payment_type: "cash" | "credit" | "other";
   payment_description?: string;
@@ -61,4 +69,15 @@ export interface PurchaseProformaCreate {
   discount?: number;
   supplier: number;
   lines: ProformaLineCreate[];
+}
+
+export interface SalesProformaExportPreset {
+  id: number;
+  name: string;
+  bank_name: string;
+  account_number: string;
+  sheba_number: string;
+  description?: string;
+  created_at: string;
+  updated_at: string;
 }
