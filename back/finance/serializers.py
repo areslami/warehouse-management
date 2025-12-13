@@ -1,3 +1,4 @@
+from models.proforma import SalesProformaExportPreset
 from rest_framework import serializers
 from .models import SalesProforma,PurchaseProforma,ProformaLine
 
@@ -42,8 +43,7 @@ class PurchaseProformaSerializer(serializers.ModelSerializer):
             ProformaLine.objects.create(proforma=proforma, **item_data)
             subtotal += item_data['weight'] * item_data['unit_price']
         proforma.subtotal = subtotal
-        proforma.final_price = (1 - (proforma.discount/100)) * subtotal 
-        proforma.final_price = (1 + (proforma.tax/100)) * proforma.final_price
+        proforma.final_price = (1 - proforma.discount+ proforma.tax) * subtotal 
         proforma.save()
         return proforma
     
@@ -62,11 +62,28 @@ class PurchaseProformaSerializer(serializers.ModelSerializer):
                 subtotal += item_data['weight'] * item_data['unit_price']
             
             instance.subtotal = subtotal
-            instance.final_price = (1 - (instance.discount/100)) * (subtotal /100)
-            instance.final_price = (1 + (instance.tax/100)) * (instance.final_price/100)
+            instance.final_price = (1 - instance.discount + instance.tax) * subtotal
         
         instance.save()
         return instance
+
+
+
+
+class SalesProformaExportPresetSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = SalesProformaExportPreset
+        fields = [
+            'id',
+            'name',
+            'bank_name',
+            'account_number',
+            'sheba_number',
+            'description',
+            'created_at',
+            'updated_at',
+        ]
+        read_only_fields = ['created_at', 'updated_at']
 
 
 class SalesProformaSerializer(serializers.ModelSerializer):
@@ -74,7 +91,26 @@ class SalesProformaSerializer(serializers.ModelSerializer):
     customer_name=serializers.SerializerMethodField()
     class Meta:
         model = SalesProforma
-        fields = ['id','serial_number','date','subtotal','tax','discount' ,'final_price','payment_type',"payment_description",'customer','customer_name','lines','created_at','updated_at']
+        fields = [
+            'id',
+            'serial_number',
+            'date',
+            'subtotal',
+            'tax',
+            'discount',
+            'shipping_cost',
+            'commission',
+            'other_cost',
+            'final_price',
+            'export_preset',
+            'payment_type',
+            "payment_description",
+            'customer',
+            'customer_name',
+            'lines',
+            'created_at',
+            'updated_at',
+        ]
         read_only_fields=['subtotal','final_price','created_at','updated_at']
     
     def get_customer_name(self, obj):
@@ -91,8 +127,14 @@ class SalesProformaSerializer(serializers.ModelSerializer):
             ProformaLine.objects.create(proforma=proforma, **item_data)
             subtotal += item_data['weight'] * item_data['unit_price']
         proforma.subtotal = subtotal
-        proforma.final_price = (1 - proforma.discount) * subtotal 
-        proforma.final_price = (1 + proforma.tax) * proforma.final_price
+        proforma.final_price = (
+            subtotal
+            - proforma.discount
+            + proforma.tax
+            + proforma.shipping_cost
+            + proforma.commission
+            + proforma.other_cost
+        )
         proforma.save()
         return proforma
     
@@ -111,11 +153,14 @@ class SalesProformaSerializer(serializers.ModelSerializer):
                 subtotal += item_data['weight'] * item_data['unit_price']
             
             instance.subtotal = subtotal
-            instance.final_price = (1 - instance.discount) * subtotal 
-            instance.final_price = (1 + instance.tax) * instance.final_price
+            instance.final_price = (
+                1
+                - instance.discount
+                + instance.tax
+                + instance.shipping_cost
+                + instance.commission
+                + instance.other_cost
+            ) * subtotal
         
         instance.save()
         return instance
-    
-    
-
