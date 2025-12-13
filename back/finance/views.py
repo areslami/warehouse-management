@@ -119,7 +119,7 @@ class SalesProformaViewSet(viewsets.ModelViewSet):
         serializer = self.get_serializer(proformas, many=True)
         return Response(serializer.data)
 
-    @action(detail=True, methods=["get"])
+    @action(detail=True, methods=["get"], url_path="export_pdf")
     def pdf(self, request, pk=None):
         proforma = self.get_object()
         try:
