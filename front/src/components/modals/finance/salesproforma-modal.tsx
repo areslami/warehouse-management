@@ -1,15 +1,35 @@
 "use client";
 
-
 import { useState, useEffect, useMemo } from "react";
 import { useForm, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "../../ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+  DialogDescription,
+} from "../../ui/dialog";
 import { Button } from "../../ui/button";
-import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "../../ui/form";
+import {
+  Form,
+  FormControl,
+  FormDescription,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "../../ui/form";
 import { Input } from "../../ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../../ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "../../ui/select";
 import { Plus, Trash2, Edit2 } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useCoreData } from "@/lib/core-data-context";
@@ -20,7 +40,15 @@ import { getPartyDisplayName } from "@/lib/utils/party-utils";
 import { describeParty, describeProduct } from "@/lib/utils/label-utils";
 import { CustomerFormData, CustomerModal } from "../customer-modal";
 import { ProductFormData, ProductModal } from "../product-modal";
-import { createCustomer, createProduct, incrementIndicatorCounter } from "@/lib/api/core";
+import {
+  createCustomer,
+  createProduct,
+  incrementIndicatorCounter,
+} from "@/lib/api/core";
+import {
+  createSalesProformaPreset,
+  fetchSalesProformaPresets,
+} from "@/lib/api/finance";
 import { useDefaultIndicator } from "@/lib/hooks/use-default-indicator";
 import { IndicatorCapacityGuard } from "@/components/indicator-capacity-guard";
 import { toPersianDigits } from "@/lib/utils/numbers";
@@ -34,12 +62,21 @@ import {
   renderLocalizedValue,
   VALUE_PLACEHOLDER,
 } from "@/lib/utils/localized-value";
+import {
+  SalesProformaPresetFormData,
+  SalesProformaPresetModal,
+} from "@/components/modals/finance/salesproforma-preset-modal";
+import { SalesProformaExportPreset } from "@/lib/interfaces/finance";
 
 export type SalesProformaFormData = {
   serial_number: string;
   date: string;
   tax: string;
   discount: string;
+  shipping_cost?: string;
+  commission?: string;
+  other_cost?: string;
+  export_preset?: number | null;
   payment_type: "cash" | "credit" | "other";
   payment_description?: string;
   customer: number;
@@ -59,24 +96,36 @@ interface SalesProformaModalProps {
   isEditing?: boolean;
 }
 
-export function SalesProformaModal({ trigger, onSubmit, onClose, initialData, readOnly = false, isEditing }: SalesProformaModalProps) {
+export function SalesProformaModal({
+  trigger,
+  onSubmit,
+  onClose,
+  initialData,
+  readOnly = false,
+  isEditing,
+}: SalesProformaModalProps) {
   const tval = useTranslations("modals.salesProforma.validation");
   const t = useTranslations("modals.salesProforma");
   const tCommon = useTranslations("common");
   const { data, refreshData } = useCoreData();
   const { openModal } = useModal();
   const [isEditMode, setIsEditMode] = useState(!readOnly);
+  const [presets, setPresets] = useState<SalesProformaExportPreset[]>([]);
 
   useEffect(() => {
     if (data.customers.length === 0) {
-      refreshData('customers');
+      refreshData("customers");
     }
     if (data.products.length === 0) {
-      refreshData('products');
+      refreshData("products");
     }
+
+    fetchSalesProformaPresets()
+      .then((items) => setPresets(items || []))
+      .catch(() => setPresets([]));
   }, []);
   const getTodayDate = () => {
-    if (typeof window === 'undefined') return '';
+    if (typeof window === "undefined") return "";
     return getTodayGregorian();
   };
 
@@ -85,7 +134,7 @@ export function SalesProformaModal({ trigger, onSubmit, onClose, initialData, re
     weight: z.union([z.string(), z.number()]).refine(
       (val) => {
         if (val === "" || val === null || val === undefined) return false;
-        const num = typeof val === 'string' ? parseFloat(val) : val;
+        const num = typeof val === "string" ? parseFloat(val) : val;
         return !isNaN(num) && num > 0;
       },
       { message: tval("weight-required") }
@@ -93,7 +142,7 @@ export function SalesProformaModal({ trigger, onSubmit, onClose, initialData, re
     unit_price: z.union([z.string(), z.number()]).refine(
       (val) => {
         if (val === "" || val === null || val === undefined) return false;
-        const num = typeof val === 'string' ? parseFloat(val) : val;
+        const num = typeof val === "string" ? parseFloat(val) : val;
         return !isNaN(num) && num > 0;
       },
       { message: tval("unit-price-required") }
@@ -101,22 +150,68 @@ export function SalesProformaModal({ trigger, onSubmit, onClose, initialData, re
   });
 
   const salesProformaSchema = z.object({
-    serial_number: z.string().min(1, tval('serialnumber')).max(20, tval('serialnumber')),
-    date: z.string().min(1, tval('date')),
-    tax: z.union([z.string(), z.number()]).transform((val) => {
-      if (val === "" || val === null || val === undefined) return 0;
-      const num = typeof val === 'string' ? parseFloat(val) : val;
-      return isNaN(num) ? 0 : num;
-    }).pipe(z.number().min(0)),
-    discount: z.union([z.string(), z.number()]).transform((val) => {
-      if (val === "" || val === null || val === undefined) return 0;
-      const num = typeof val === 'string' ? parseFloat(val) : val;
-      return isNaN(num) ? 0 : num;
-    }).pipe(z.number().min(0)),
+    serial_number: z
+      .string()
+      .min(1, tval("serialnumber"))
+      .max(20, tval("serialnumber")),
+    date: z.string().min(1, tval("date")),
+    tax: z
+      .union([z.string(), z.number()])
+      .transform((val) => {
+        if (val === "" || val === null || val === undefined) return 0;
+        const num = typeof val === "string" ? parseFloat(val) : val;
+        return isNaN(num) ? 0 : num;
+      })
+      .pipe(z.number().min(0)),
+    discount: z
+      .union([z.string(), z.number()])
+      .transform((val) => {
+        if (val === "" || val === null || val === undefined) return 0;
+        const num = typeof val === "string" ? parseFloat(val) : val;
+        return isNaN(num) ? 0 : num;
+      })
+      .pipe(z.number().min(0)),
+    shipping_cost: z
+      .union([z.string(), z.number()])
+      .transform((val) => {
+        if (val === "" || val === null || val === undefined) return 0;
+        const num = typeof val === "string" ? parseFloat(val) : val;
+        return isNaN(num) ? 0 : num;
+      })
+      .pipe(z.number().min(0))
+      .optional(),
+    commission: z
+      .union([z.string(), z.number()])
+      .transform((val) => {
+        if (val === "" || val === null || val === undefined) return 0;
+        const num = typeof val === "string" ? parseFloat(val) : val;
+        return isNaN(num) ? 0 : num;
+      })
+      .pipe(z.number().min(0))
+      .optional(),
+    other_cost: z
+      .union([z.string(), z.number()])
+      .transform((val) => {
+        if (val === "" || val === null || val === undefined) return 0;
+        const num = typeof val === "string" ? parseFloat(val) : val;
+        return isNaN(num) ? 0 : num;
+      })
+      .pipe(z.number().min(0))
+      .optional(),
+    export_preset: z
+      .union([z.string(), z.number(), z.null(), z.undefined()])
+      .transform((val) => {
+        if (val === "" || val === null || val === undefined) return null;
+        const num = typeof val === "string" ? Number(val) : val;
+        if (!num || Number.isNaN(num)) return null;
+        return num;
+      })
+      .nullable()
+      .optional(),
     payment_type: z.enum(["cash", "credit", "other"]),
     payment_description: z.string().optional(),
-    customer: z.number().min(1, tval('customer')),
-    lines: z.array(proformaLineSchema).min(1, tval('lines')),
+    customer: z.number().min(1, tval("customer")),
+    lines: z.array(proformaLineSchema).min(1, tval("lines")),
   });
 
   const [open, setOpen] = useState(trigger ? false : true);
@@ -130,6 +225,10 @@ export function SalesProformaModal({ trigger, onSubmit, onClose, initialData, re
       date: initialData?.date || getTodayDate(),
       tax: initialData?.tax || "",
       discount: initialData?.discount || "",
+      shipping_cost: initialData?.shipping_cost || "",
+      commission: initialData?.commission || "",
+      other_cost: initialData?.other_cost || "",
+      export_preset: initialData?.export_preset ?? null,
       payment_type: initialData?.payment_type || "cash",
       payment_description: initialData?.payment_description || "",
       customer: initialData?.customer || 0,
@@ -164,7 +263,7 @@ export function SalesProformaModal({ trigger, onSubmit, onClose, initialData, re
     );
   }, [defaultIndicator]);
 
-      const currentIndicatorPreview = useMemo(() => {
+  const currentIndicatorPreview = useMemo(() => {
     if (!defaultIndicator) return null;
     return buildIndicatorPreview(
       defaultIndicator.format_template || DEFAULT_INDICATOR_TEMPLATE,
@@ -198,7 +297,12 @@ export function SalesProformaModal({ trigger, onSubmit, onClose, initialData, re
   const handleSubmit = async (data: any) => {
     if (isCounterExhausted) return;
     if (onSubmit) {
-      await onSubmit(data);
+      const apiData = {
+        ...data,
+        payment_description: data.payment_description || null,
+        export_preset: data.export_preset || null,
+      };
+      await onSubmit(apiData);
     }
     if (!readOnly && !isEditing && defaultIndicator) {
       try {
@@ -226,16 +330,22 @@ export function SalesProformaModal({ trigger, onSubmit, onClose, initialData, re
   return (
     <>
       <Dialog open={open} onOpenChange={trigger ? setOpen : handleClose}>
-        {trigger && (
-          <DialogTrigger asChild>
-            {trigger}
-          </DialogTrigger>
-        )}
-        <DialogContent dir="rtl" className="min-w-[80%] max-h-[90vh] overflow-y-auto scrollbar-hide  p-0 my-0 mx-auto [&>button]:hidden">
+        {trigger && <DialogTrigger asChild>{trigger}</DialogTrigger>}
+        <DialogContent
+          dir="rtl"
+          className="min-w-[80%] max-h-[90vh] overflow-y-auto scrollbar-hide  p-0 my-0 mx-auto [&>button]:hidden"
+        >
           <IndicatorCapacityGuard indicator={defaultIndicator} />
-          <DialogHeader className="px-3.5 py-4.5  justify-start relative" style={{ backgroundColor: "#f6d265" }}>
-            <DialogTitle className="font-bold text-white text-right">{t("title")}</DialogTitle>
-            <DialogDescription className="sr-only">Create or edit sales proforma</DialogDescription>
+          <DialogHeader
+            className="px-3.5 py-4.5  justify-start relative"
+            style={{ backgroundColor: "#f6d265" }}
+          >
+            <DialogTitle className="font-bold text-white text-right">
+              {t("title")}
+            </DialogTitle>
+            <DialogDescription className="sr-only">
+              Create or edit sales proforma
+            </DialogDescription>
             {readOnly && !isEditMode && (
               <Button
                 type="button"
@@ -249,42 +359,76 @@ export function SalesProformaModal({ trigger, onSubmit, onClose, initialData, re
             )}
           </DialogHeader>
 
-          <Form {...form} >
-            <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6 py-4 px-12">
-              <fieldset disabled={!isEditMode || isCounterExhausted} className="space-y-6">
-              <div className="grid grid-cols-2 gap-4 items-start">
-                <FormField
-                  control={form.control as any}
-                  name="serial_number"
-                  render={({ field }) => (
-                <FormItem>
-                  <FormLabel>{t('serialnumber')}</FormLabel>
-                  <FormControl>
-                    {showSerialInput ? (
-                      <Input
-                        {...field}
-                        value={toPersianDigits(field.value ?? "")}
-                        dir="rtl"
-                        style={{ unicodeBidi: "plaintext" }}
-                        className={serialInputClassNames}
-                        placeholder={t('serialnumber')}
-                        readOnly
-                      />
-                    ) : (
-                      <input type="hidden" {...field} value={field.value ?? ""} />
-                    )}
-                  </FormControl>
-                      {showGeneratedSerialPreview && currentIndicatorPreview && (
-                        <div
-                          className={`flex h-9 w-full items-center justify-start rounded-md border border-input bg-gray-100 px-3 py-1 text-sm text-right shadow-sm ${
-                            isEditing ? "cursor-not-allowed" : ""
-                          }`} dir="rtl"
-                        >
-                           {renderLocalizedValue(
-                              "",
-                              currentIndicatorPreview.parts.map((part, index) => (
+          <Form {...form}>
+            <form
+              onSubmit={form.handleSubmit(handleSubmit)}
+              className="space-y-6 py-4 px-12"
+            >
+              <fieldset
+                disabled={!isEditMode || isCounterExhausted}
+                className="space-y-6"
+              >
+                <div className="grid grid-cols-2 gap-4 items-start">
+                  <FormField
+                    control={form.control as any}
+                    name="serial_number"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>{t("serialnumber")}</FormLabel>
+                        <FormControl>
+                          {showSerialInput ? (
+                            <Input
+                              {...field}
+                              value={toPersianDigits(field.value ?? "")}
+                              dir="rtl"
+                              style={{ unicodeBidi: "plaintext" }}
+                              className={serialInputClassNames}
+                              placeholder={t("serialnumber")}
+                              readOnly
+                            />
+                          ) : (
+                            <input
+                              type="hidden"
+                              {...field}
+                              value={field.value ?? ""}
+                            />
+                          )}
+                        </FormControl>
+                        {showGeneratedSerialPreview &&
+                          currentIndicatorPreview && (
+                            <div
+                              className={`flex h-9 w-full items-center justify-start rounded-md border border-input bg-gray-100 px-3 py-1 text-sm text-right shadow-sm ${
+                                isEditing ? "cursor-not-allowed" : ""
+                              }`}
+                              dir="rtl"
+                            >
+                              {renderLocalizedValue(
+                                "",
+                                currentIndicatorPreview.parts.map(
+                                  (part, index) => (
+                                    <bdi
+                                      key={`sales-proforma-preview-${index}`}
+                                      dir="auto"
+                                      className="leading-none"
+                                    >
+                                      {part}
+                                    </bdi>
+                                  )
+                                ),
+                                "font-mono"
+                              )}
+                            </div>
+                          )}
+                        {showGeneratedSerialPreview && indicatorPreview && (
+                          <FormDescription
+                            className="text-xs text-muted-foreground"
+                            dir="rtl"
+                          >
+                            {renderLocalizedValue(
+                              indicatorDescriptionTemplate,
+                              indicatorPreview.parts.map((part, index) => (
                                 <bdi
-                                  key={`sales-proforma-preview-${index}`}
+                                  key={`sales-proforma-desc-${index}`}
                                   dir="auto"
                                   className="leading-none"
                                 >
@@ -293,94 +437,184 @@ export function SalesProformaModal({ trigger, onSubmit, onClose, initialData, re
                               )),
                               "font-mono"
                             )}
-                        </div>
-                      )}
-                      {showGeneratedSerialPreview && indicatorPreview && (
-                        <FormDescription className="text-xs text-muted-foreground" dir="rtl">
-                          {renderLocalizedValue(
-                            indicatorDescriptionTemplate,
-                            indicatorPreview.parts.map((part, index) => (
-                              <bdi
-                                key={`sales-proforma-desc-${index}`}
-                                dir="auto"
-                                className="leading-none"
+                          </FormDescription>
+                        )}
+                        <FormMessage className="min-h-[1.25rem]" />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control as any}
+                    name="date"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>{t("date")}</FormLabel>
+                        <FormControl>
+                          <PersianDatePicker
+                            value={field.value}
+                            onChange={(value) => field.onChange(value)}
+                            placeholder={t("select-date")}
+                            disabled={!isEditMode}
+                          />
+                        </FormControl>
+                        <FormMessage className="min-h-[1.25rem]" />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-4 items-start">
+                  <FormField
+                    control={form.control as any}
+                    name="customer"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>{t("customer")}</FormLabel>
+                        <FormControl>
+                          <Select
+                            value={
+                              field.value > 0 ? field.value.toString() : ""
+                            }
+                            onValueChange={(value) => {
+                              if (value === "new") {
+                                openModal(CustomerModal, {
+                                  onSubmit: async (
+                                    newCustomer: CustomerFormData
+                                  ) => {
+                                    const created = await createCustomer(
+                                      newCustomer
+                                    );
+                                    if (created) {
+                                      await refreshData("customers");
+                                      form.setValue("customer", created.id);
+                                    }
+                                  },
+                                });
+                              } else if (value) {
+                                field.onChange(Number(value));
+                              }
+                            }}
+                          >
+                            <SelectTrigger>
+                              <SelectValue placeholder={t("select-customer")} />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem
+                                value="new"
+                                className="font-semibold text-[#f6d265]"
+                                onPointerDown={(e) => e.preventDefault()}
                               >
-                                {part}
-                              </bdi>
-                            )),
-                            "font-mono"
-                          )}
-                        </FormDescription>
-                      )}
-                      <FormMessage className="min-h-[1.25rem]" />
-                    </FormItem>
-                  )}
-                />
+                                <Plus className="inline-block w-4 h-4 mr-2" />
+                                {t("create-new-customer")}
+                              </SelectItem>
+                              {data.customers.length > 0 && (
+                                <div className="border-t my-1" />
+                              )}
+                              {data.customers.map((customer) => (
+                                <SelectItem
+                                  key={customer.id}
+                                  value={customer.id.toString()}
+                                >
+                                  {describeParty(customer)}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </FormControl>
+                        <FormMessage className="min-h-[1.25rem]" />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control as any}
+                    name="payment_type"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>{t("payment")}</FormLabel>
+                        <FormControl>
+                          <select
+                            {...field}
+                            className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-base shadow-xs transition-[color,box-shadow] outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] disabled:cursor-not-allowed disabled:opacity-50 md:text-sm"
+                          >
+                            <option value="cash">{t("payment_cash")}</option>
+                            <option value="credit">
+                              {t("payment_credit")}
+                            </option>
+                            <option value="other">{t("payment_other")}</option>
+                          </select>
+                        </FormControl>
+                        <FormMessage className="min-h-[1.25rem]" />
+                      </FormItem>
+                    )}
+                  />
+                </div>
 
                 <FormField
                   control={form.control as any}
-                  name="date"
+                  name="export_preset"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>{t('date')}</FormLabel>
-                      <FormControl>
-                        <PersianDatePicker
-                          value={field.value}
-                          onChange={(value) => field.onChange(value)}
-                          placeholder={t("select-date")}
-                          disabled={!isEditMode}
-                        />
-                      </FormControl>
-                      <FormMessage className="min-h-[1.25rem]" />
-                    </FormItem>
-                  )}
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-4 items-start">
-                <FormField
-                  control={form.control as any}
-                  name="customer"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>{t('customer')}</FormLabel>
+                      <FormLabel>
+                        {t("export_preset")}{" "}
+                        <span className="text-gray-400 text-sm">
+                          {t("optional")}
+                        </span>
+                      </FormLabel>
                       <FormControl>
                         <Select
-                          value={field.value > 0 ? field.value.toString() : ""}
+                          value={field.value ? String(field.value) : "0"}
                           onValueChange={(value) => {
                             if (value === "new") {
-                              openModal(CustomerModal, {
-                                onSubmit: async (newCustomer: CustomerFormData) => {
-                                  const created = await createCustomer(newCustomer);
+                              openModal(SalesProformaPresetModal, {
+                                onSubmit: async (
+                                  newPreset: SalesProformaPresetFormData
+                                ) => {
+                                  const created =
+                                    await createSalesProformaPreset(newPreset);
+                                  const fresh =
+                                    await fetchSalesProformaPresets().catch(
+                                      () => null
+                                    );
+                                  setPresets(fresh || []);
                                   if (created) {
-                                    await refreshData('customers');
-                                    form.setValue('customer', created.id);
+                                    form.setValue("export_preset", created.id);
                                   }
-                                }
+                                },
                               });
-                            } else if (value) {
+                            } else if (value === "0") {
+                              field.onChange(null);
+                            } else {
                               field.onChange(Number(value));
                             }
                           }}
+                          disabled={!isEditMode}
                         >
                           <SelectTrigger>
-                            <SelectValue placeholder={t("select-customer")} />
+                            <SelectValue
+                              placeholder={t("select-export-preset")}
+                            />
                           </SelectTrigger>
                           <SelectContent>
+                            <SelectItem value="0">{tCommon("none")}</SelectItem>
                             <SelectItem
                               value="new"
                               className="font-semibold text-[#f6d265]"
                               onPointerDown={(e) => e.preventDefault()}
                             >
                               <Plus className="inline-block w-4 h-4 mr-2" />
-                              {t("create-new-customer")}
+                              {t("create-new-export-preset")}
                             </SelectItem>
-                            {data.customers.length > 0 && (
+                            {presets.length > 0 && (
                               <div className="border-t my-1" />
                             )}
-                            {data.customers.map((customer) => (
-                              <SelectItem key={customer.id} value={customer.id.toString()}>
-                                {describeParty(customer)}
+                            {presets.map((preset) => (
+                              <SelectItem
+                                key={preset.id}
+                                value={preset.id.toString()}
+                              >
+                                {preset.name}
                               </SelectItem>
                             ))}
                           </SelectContent>
@@ -393,204 +627,261 @@ export function SalesProformaModal({ trigger, onSubmit, onClose, initialData, re
 
                 <FormField
                   control={form.control as any}
-                  name="payment_type"
+                  name="payment_description"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>{t('payment')}</FormLabel>
+                      <FormLabel>
+                        {t("payment_desc")}{" "}
+                        <span className="text-gray-400 text-sm">
+                          {t("optional")}
+                        </span>
+                      </FormLabel>
                       <FormControl>
-                        <select
-                          {...field}
-                          className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-base shadow-xs transition-[color,box-shadow] outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] disabled:cursor-not-allowed disabled:opacity-50 md:text-sm"
-                        >
-                          <option value="cash">{t("payment_cash")}</option>
-                          <option value="credit">{t("payment_credit")}</option>
-                          <option value="other">{t("payment_other")}</option>
-                        </select>
-                      </FormControl>
-                      <FormMessage className="min-h-[1.25rem]" />
-                    </FormItem>
-                  )}
-                />
-              </div>
-
-              <FormField
-                control={form.control as any}
-                name="payment_description"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>{t("payment_desc")} <span className="text-gray-400 text-sm">{t("optional")}</span></FormLabel>
-                    <FormControl>
-                      <Input {...field} />
-                    </FormControl>
-                    <FormMessage className="min-h-[1.25rem]" />
-                  </FormItem>
-                )}
-              />
-
-              <div className="grid grid-cols-2 gap-4 items-start">
-                <FormField
-                  control={form.control as any}
-                  name="tax"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>{t("tax")}</FormLabel>
-                      <FormControl>
-                        <Input
-                          type="text"
-                          step="0.01"
-                          {...field}
-                          onChange={(e) => field.onChange(e.target.value)}
-                        />
+                        <Input {...field} />
                       </FormControl>
                       <FormMessage className="min-h-[1.25rem]" />
                     </FormItem>
                   )}
                 />
 
-                <FormField
-                  control={form.control as any}
-                  name="discount"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>{t("discount")}</FormLabel>
-                      <FormControl>
-                        <Input
-                          type="text"
-                          step="0.01"
-                          {...field}
-                          onChange={(e) => field.onChange(e.target.value)}
-                        />
-                      </FormControl>
-                      <FormMessage className="min-h-[1.25rem]" />
-                    </FormItem>
-                  )}
-                />
-              </div>
+                <div className="grid grid-cols-2 gap-4 items-start">
+                  <FormField
+                    control={form.control as any}
+                    name="tax"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>{t("tax")}</FormLabel>
+                        <FormControl>
+                          <Input
+                            type="text"
+                            step="0.01"
+                            {...field}
+                            onChange={(e) => field.onChange(e.target.value)}
+                          />
+                        </FormControl>
+                        <FormMessage className="min-h-[1.25rem]" />
+                      </FormItem>
+                    )}
+                  />
 
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <h3 className="text-lg font-medium">{t("lines")}</h3>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() => append({ product: 0, weight: "", unit_price: "" })}
-                  >
-                    <Plus className="w-4 h-4 mr-2" />
-                    {t("add-line")}
-                  </Button>
+                  <FormField
+                    control={form.control as any}
+                    name="discount"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>{t("discount")}</FormLabel>
+                        <FormControl>
+                          <Input
+                            type="text"
+                            step="0.01"
+                            {...field}
+                            onChange={(e) => field.onChange(e.target.value)}
+                          />
+                        </FormControl>
+                        <FormMessage className="min-h-[1.25rem]" />
+                      </FormItem>
+                    )}
+                  />
                 </div>
 
-                {fields.map((field, index) => (
-                  <div key={field.id} className="grid grid-cols-4 gap-4 p-4 border rounded-lg items-start">
-                    <FormField
-                      control={form.control as any}
-                      name={`lines.${index}.product`}
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>{t("product")}</FormLabel>
-                          <FormControl>
-                            <Select
-                              value={field.value > 0 ? field.value.toString() : ""}
-                              onValueChange={(value) => {
-                                if (value === "new") {
-                                  const currentIndex = index;
-                                  openModal(ProductModal, {
-                                    onSubmit: async (newProduct: ProductFormData) => {
-                                      const created = await createProduct(newProduct);
-                                      if (created) {
-                                        await refreshData('products');
-                                        const lines = form.getValues('lines');
-                                        lines[currentIndex].product = created.id;
-                                        form.setValue('lines', lines);
-                                      }
-                                    }
-                                  });
-                                } else if (value) {
-                                  field.onChange(Number(value));
-                                }
-                              }}
-                            >
-                              <SelectTrigger>
-                                <SelectValue placeholder={t("select-product")} />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem
-                                  value="new"
-                                  className="font-semibold text-[#f6d265]"
-                                  onPointerDown={(e) => e.preventDefault()}
-                                >
-                                  <Plus className="inline-block w-4 h-4 mr-2" />
-                                  {t("create-new-product")}
-                                </SelectItem>
-                                {data.products.length > 0 && (
-                                  <div className="border-t my-1" />
-                                )}
-                                {data.products.map((product) => (
-                                  <SelectItem key={product.id} value={product.id.toString()}>
-                                    {describeProduct(product)}
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                          </FormControl>
-                          <FormMessage className="min-h-[1.25rem]" />
-                        </FormItem>
-                      )}
-                    />
+                <div className="grid grid-cols-3 gap-4 items-start">
+                  <FormField
+                    control={form.control as any}
+                    name="shipping_cost"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>{t("shipping_cost")}</FormLabel>
+                        <FormControl>
+                          <Input
+                            type="text"
+                            step="0.01"
+                            {...field}
+                            onChange={(e) => field.onChange(e.target.value)}
+                          />
+                        </FormControl>
+                        <FormMessage className="min-h-[1.25rem]" />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control as any}
+                    name="commission"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>{t("commission")}</FormLabel>
+                        <FormControl>
+                          <Input
+                            type="text"
+                            step="0.01"
+                            {...field}
+                            onChange={(e) => field.onChange(e.target.value)}
+                          />
+                        </FormControl>
+                        <FormMessage className="min-h-[1.25rem]" />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control as any}
+                    name="other_cost"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>{t("other_cost")}</FormLabel>
+                        <FormControl>
+                          <Input
+                            type="text"
+                            step="0.01"
+                            {...field}
+                            onChange={(e) => field.onChange(e.target.value)}
+                          />
+                        </FormControl>
+                        <FormMessage className="min-h-[1.25rem]" />
+                      </FormItem>
+                    )}
+                  />
+                </div>
 
-                    <FormField
-                      control={form.control as any}
-                      name={`lines.${index}.weight`}
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>{t("weight")}</FormLabel>
-                          <FormControl>
-                            <Input
-                              type="text"
-                              step="0.00000001"
-                              {...field}
-                              onChange={(value) => field.onChange(value)}
-                            />
-                          </FormControl>
-                          <FormMessage className="min-h-[1.25rem]" />
-                        </FormItem>
-                      )}
-                    />
-
-                    <FormField
-                      control={form.control as any}
-                      name={`lines.${index}.unit_price`}
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>{t('unit_price')}</FormLabel>
-                          <FormControl>
-                            <Input
-                              type="text"
-                              step="0.01"
-                              {...field}
-                              onChange={(value) => field.onChange(value)}
-                            />
-                          </FormControl>
-                          <FormMessage className="min-h-[1.25rem]" />
-                        </FormItem>
-                      )}
-                    />
-
-                    <div className="flex items-end">
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={() => remove(index)}
-                        disabled={fields.length === 1}
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </Button>
-                    </div>
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-lg font-medium">{t("lines")}</h3>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() =>
+                        append({ product: 0, weight: "", unit_price: "" })
+                      }
+                    >
+                      <Plus className="w-4 h-4 mr-2" />
+                      {t("add-line")}
+                    </Button>
                   </div>
-                ))}
-              </div>
+
+                  {fields.map((field, index) => (
+                    <div
+                      key={field.id}
+                      className="grid grid-cols-4 gap-4 p-4 border rounded-lg items-start"
+                    >
+                      <FormField
+                        control={form.control as any}
+                        name={`lines.${index}.product`}
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>{t("product")}</FormLabel>
+                            <FormControl>
+                              <Select
+                                value={
+                                  field.value > 0 ? field.value.toString() : ""
+                                }
+                                onValueChange={(value) => {
+                                  if (value === "new") {
+                                    const currentIndex = index;
+                                    openModal(ProductModal, {
+                                      onSubmit: async (
+                                        newProduct: ProductFormData
+                                      ) => {
+                                        const created = await createProduct(
+                                          newProduct
+                                        );
+                                        if (created) {
+                                          await refreshData("products");
+                                          const lines = form.getValues("lines");
+                                          lines[currentIndex].product =
+                                            created.id;
+                                          form.setValue("lines", lines);
+                                        }
+                                      },
+                                    });
+                                  } else if (value) {
+                                    field.onChange(Number(value));
+                                  }
+                                }}
+                              >
+                                <SelectTrigger>
+                                  <SelectValue
+                                    placeholder={t("select-product")}
+                                  />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem
+                                    value="new"
+                                    className="font-semibold text-[#f6d265]"
+                                    onPointerDown={(e) => e.preventDefault()}
+                                  >
+                                    <Plus className="inline-block w-4 h-4 mr-2" />
+                                    {t("create-new-product")}
+                                  </SelectItem>
+                                  {data.products.length > 0 && (
+                                    <div className="border-t my-1" />
+                                  )}
+                                  {data.products.map((product) => (
+                                    <SelectItem
+                                      key={product.id}
+                                      value={product.id.toString()}
+                                    >
+                                      {describeProduct(product)}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            </FormControl>
+                            <FormMessage className="min-h-[1.25rem]" />
+                          </FormItem>
+                        )}
+                      />
+
+                      <FormField
+                        control={form.control as any}
+                        name={`lines.${index}.weight`}
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>{t("weight")}</FormLabel>
+                            <FormControl>
+                              <Input
+                                type="text"
+                                step="0.00000001"
+                                {...field}
+                                onChange={(value) => field.onChange(value)}
+                              />
+                            </FormControl>
+                            <FormMessage className="min-h-[1.25rem]" />
+                          </FormItem>
+                        )}
+                      />
+
+                      <FormField
+                        control={form.control as any}
+                        name={`lines.${index}.unit_price`}
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>{t("unit_price")}</FormLabel>
+                            <FormControl>
+                              <Input
+                                type="text"
+                                step="0.01"
+                                {...field}
+                                onChange={(value) => field.onChange(value)}
+                              />
+                            </FormControl>
+                            <FormMessage className="min-h-[1.25rem]" />
+                          </FormItem>
+                        )}
+                      />
+
+                      <div className="flex items-end">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => remove(index)}
+                          disabled={fields.length === 1}
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
               </fieldset>
 
               {isEditMode && (

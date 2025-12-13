@@ -335,12 +335,18 @@
       "customer": "مشتری",
       "payment": "نوع پرداخت",
       "payment_desc": "توضیحات پرداخت",
+      "export_preset": "قالب بانک/توضیحات",
+      "select-export-preset": "انتخاب قالب",
+      "create-new-export-preset": "ایجاد قالب جدید",
       "add-line": "افزودن ردیف",
       "lines": "ردیف ها",
       "product": "محصول",
       "weight": "وزن (کیلوگرم)",
       "tax": "مالیات",
       "discount": "تخفیف",
+      "shipping_cost": "هزینه حمل باربری",
+      "commission": "کمیسیون",
+      "other_cost": "سایر",
       "unit_price": "قیمت واحد (ریال)",
       "total_price": "مجموع قیمت (ریال)",
       "date": "تاریخ",
@@ -381,6 +387,22 @@
         "lines": "حداقل یک ردیف الزامی است"
       },
       "serialnumber_helper": "نمونه شماره بعدی: {sample}"
+    },
+    "salesProformaPreset": {
+      "title": "قالب بانک/توضیحات پیش‌فاکتور",
+      "name": "نام قالب",
+      "bank_name": "نام بانک",
+      "account_number": "شماره حساب",
+      "sheba_number": "شماره شبا",
+      "description": "توضیحات",
+      "save": "ذخیره",
+      "cancel": "لغو",
+      "validation": {
+        "name": "نام قالب الزامی است",
+        "bank_name": "نام بانک الزامی است",
+        "account_number": "شماره حساب الزامی است",
+        "sheba_number": "شماره شبا الزامی است"
+      }
     },
     "purchaseProforma": {
       "title": "پیش فاکتور خرید",
@@ -1501,6 +1523,7 @@
   },
   "common": {
     "search": "جستجو...",
+    "none": "هیچکدام",
     "filter_warehouse": "فیلتر انبار",
     "filters": "فیلترها",
     "all_warehouses": "همه انبارها",
