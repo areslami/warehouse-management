@@ -1,3 +1,4 @@
+from decimal import Decimal
 from django.db import models
 
        
@@ -6,8 +7,9 @@ class Proforma(models.Model):
     date = models.DateTimeField()
     
     subtotal = models.DecimalField(max_digits=20, decimal_places=0, default=0)
-    tax = models.DecimalField(max_digits=20, decimal_places=0, default=0)
-    discount = models.DecimalField(max_digits=20, decimal_places=0, default=0)
+    tax = models.DecimalField(max_digits=6, decimal_places=4, default=Decimal("0.0000"))
+    discount =models.DecimalField(max_digits=6, decimal_places=4, default=Decimal("0.0000"))
+        
     final_price = models.DecimalField(max_digits=20, decimal_places=0, default=0)
     
     created_at = models.DateTimeField(auto_now_add=True)
@@ -45,9 +47,9 @@ class SalesProforma(Proforma):
     customer = models.ForeignKey('core.Customer', on_delete=models.PROTECT)
     payment_type = models.CharField(max_length=6,choices=PAYMENT_TYPES,null=False)
     payment_description =  models.CharField(max_length=200,null=True)
-    shipping_cost = models.DecimalField(max_digits=20, decimal_places=0, default=0)
-    commission = models.DecimalField(max_digits=20, decimal_places=0, default=0)
-    other_cost = models.DecimalField(max_digits=20, decimal_places=0, default=0)
+    shipping_cost =models.DecimalField(max_digits=6, decimal_places=4, default=Decimal("0.0000"))
+    commission =models.DecimalField(max_digits=6, decimal_places=4, default=Decimal("0.0000"))
+    other_cost =models.DecimalField(max_digits=6, decimal_places=4, default=Decimal("0.0000"))
     export_preset = models.ForeignKey(
         'finance.SalesProformaExportPreset',
         on_delete=models.SET_NULL,

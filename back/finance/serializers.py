@@ -42,8 +42,8 @@ class PurchaseProformaSerializer(serializers.ModelSerializer):
             ProformaLine.objects.create(proforma=proforma, **item_data)
             subtotal += item_data['weight'] * item_data['unit_price']
         proforma.subtotal = subtotal
-        proforma.final_price = (1 - proforma.discount) * subtotal 
-        proforma.final_price = (1 + proforma.tax) * proforma.final_price
+        proforma.final_price = (1 - (proforma.discount/100)) * subtotal 
+        proforma.final_price = (1 + (proforma.tax/100)) * proforma.final_price
         proforma.save()
         return proforma
     
@@ -62,8 +62,8 @@ class PurchaseProformaSerializer(serializers.ModelSerializer):
                 subtotal += item_data['weight'] * item_data['unit_price']
             
             instance.subtotal = subtotal
-            instance.final_price = (1 - instance.discount) * subtotal 
-            instance.final_price = (1 + instance.tax) * instance.final_price
+            instance.final_price = (1 - (instance.discount/100)) * (subtotal /100)
+            instance.final_price = (1 + (instance.tax/100)) * (instance.final_price/100)
         
         instance.save()
         return instance
