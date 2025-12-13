@@ -1,7 +1,7 @@
 from decimal import Decimal
 
 from .models import SalesProforma
-from .proforma_pdf_utils import (
+from .utils import (
     jalali_date,
     load_sales_proforma_template,
     party_name,

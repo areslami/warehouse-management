@@ -1,6 +1,5 @@
-from models.proforma import SalesProformaExportPreset
 from rest_framework import serializers
-from .models import SalesProforma,PurchaseProforma,ProformaLine
+from .models import SalesProforma,PurchaseProforma,ProformaLine, SalesProformaExportPreset
 
 
 class ProformaLineSerializer(serializers.ModelSerializer):
