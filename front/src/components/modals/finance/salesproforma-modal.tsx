@@ -130,25 +130,50 @@ export function SalesProformaModal({
     if (typeof window === "undefined") return "";
     return getTodayGregorian();
   };
+  const toDecimal = (v?: string | number) => {
+    if (v === undefined || v === null || v === "") return 0;
+    const n = typeof v === "number" ? v : parseFloat(v.replace(/,/g, "."));
+    return Number.isFinite(n) ? n : 0;
+  };
 
   const proformaLineSchema = z.object({
     product: z.number().min(1, tval("product-required")),
-    weight: z.union([z.string(), z.number()]).refine(
-      (val) => {
-        if (val === "" || val === null || val === undefined) return false;
+
+    weight: z
+      .union([z.string(), z.number()])
+      .transform((val) => {
+        if (val === "" || val === null || val === undefined) return 0;
         const num = typeof val === "string" ? parseFloat(val) : val;
-        return !isNaN(num) && num > 0;
-      },
-      { message: tval("weight-required") }
-    ),
-    unit_price: z.union([z.string(), z.number()]).refine(
-      (val) => {
-        if (val === "" || val === null || val === undefined) return false;
+        return isNaN(num) ? 0 : num;
+      })
+      .pipe(z.number().positive(tval("weight-required"))),
+
+    unit_price: z
+      .union([z.string(), z.number()])
+      .transform((val) => {
+        if (val === "" || val === null || val === undefined) return 0;
         const num = typeof val === "string" ? parseFloat(val) : val;
-        return !isNaN(num) && num > 0;
-      },
-      { message: tval("unit-price-required") }
-    ),
+        return isNaN(num) ? 0 : num;
+      })
+      .pipe(z.number().positive(tval("unit-price-required"))),
+
+    discount: z
+      .union([z.string(), z.number()])
+      .transform((val) => {
+        if (val === "" || val === null || val === undefined) return 0;
+        const num = typeof val === "string" ? parseFloat(val) : val;
+        return isNaN(num) ? 0 : num;
+      })
+      .pipe(z.number().min(0)),
+
+    tax: z
+      .union([z.string(), z.number()])
+      .transform((val) => {
+        if (val === "" || val === null || val === undefined) return 0;
+        const num = typeof val === "string" ? parseFloat(val) : val;
+        return isNaN(num) ? 0 : num;
+      })
+      .pipe(z.number().min(0)),
   });
 
   const salesProformaSchema = z.object({
@@ -768,7 +793,7 @@ export function SalesProformaModal({
                   {fields.map((field, index) => (
                     <div
                       key={field.id}
-                      className="grid grid-cols-4 gap-4 p-4 border rounded-lg items-start"
+                      className="grid grid-cols-6 gap-1 p-4 border rounded-lg items-end"
                     >
                       <FormField
                         control={form.control as any}
@@ -863,6 +888,43 @@ export function SalesProformaModal({
                         render={({ field }) => (
                           <FormItem>
                             <FormLabel>{t("unit_price")}</FormLabel>
+                            <FormControl>
+                              <Input
+                                type="text"
+                                step="0.01"
+                                {...field}
+                                onChange={(value) => field.onChange(value)}
+                              />
+                            </FormControl>
+                            <FormMessage className="min-h-[1.25rem]" />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={form.control as any}
+                        name={`lines.${index}.discount`}
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>{t("discount")}</FormLabel>
+                            <FormControl>
+                              <Input
+                                type="text"
+                                step="0.01"
+                                {...field}
+                                onChange={(value) => field.onChange(value)}
+                              />
+                            </FormControl>
+                            <FormMessage className="min-h-[1.25rem]" />
+                          </FormItem>
+                        )}
+                      />
+
+                      <FormField
+                        control={form.control as any}
+                        name={`lines.${index}.tax`}
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>{t("tax")}</FormLabel>
                             <FormControl>
                               <Input
                                 type="text"

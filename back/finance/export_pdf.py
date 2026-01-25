@@ -2,6 +2,7 @@ from decimal import Decimal
 from openpyxl.styles import Alignment
 from .models import SalesProforma, PurchaseProforma
 from .utils import (
+    en_digits,
     jalali_date,
     load_sales_proforma_template,
     party_name,
@@ -21,22 +22,22 @@ def _render_proforma_pdf(proforma, kind: str) -> bytes:
     title_text = "پیش فاکتور فروش" if kind == "sales" else "پیش فاکتور خرید"
 
     proforma = (
-        model.objects.select_related(party_attr_main, "export_preset")
+        model.objects
+        .select_related(party_attr_main, "export_preset")
         .prefetch_related("lines__product")
         .get(pk=proforma.pk)
     )
 
     wb, ws = load_sales_proforma_template()
 
-    # clear old C:J row 3 for title
+    # ─── Title (Row 3, F:J) ─────────────────────────────────────────────
     for col in range(3, 11):
         ws.cell(row=3, column=col).value = None
 
-    # Merge F:J for header and center
-    ws.merge_cells(start_row=3, start_column=6, end_row=3, end_column=10)
-    cell = ws.cell(row=3, column=6)
-    cell.value = title_text
-    cell.alignment = Alignment(horizontal="center", vertical="center")
+    ws.merge_cells("F3:J3")
+    title_cell = ws["F3"]
+    title_cell.value = title_text
+    title_cell.alignment = Alignment(horizontal="center", vertical="center")
 
     party_main = getattr(proforma, party_attr_main)
     preset = proforma.export_preset
@@ -45,62 +46,71 @@ def _render_proforma_pdf(proforma, kind: str) -> bytes:
     ws["N2"].value = proforma.serial_number
     ws["N3"].value = jalali_date(proforma.date)
 
-    # Row 5: مشخصات فروشنده / مشخصات خریدار
     ws.merge_cells("A5:O5")
     ws["A5"].value = "مشخصات فروشنده" if kind == "sales" else "مشخصات خریدار"
     ws["A5"].alignment = Alignment(horizontal="center", vertical="center")
 
-    # Row 14: مشخصات خریدار / مشخصات تامین کننده
     ws.merge_cells("A14:O14")
     ws["A14"].value = "مشخصات خریدار" if kind == "sales" else "مشخصات تامین کننده"
     ws["A14"].alignment = Alignment(horizontal="center", vertical="center")
 
-    # Party info main
-    ws["C16"].value = party_name(party_main)
-    ws["I16"].value = party_national_code(party_main)
-    ws["M16"].value = getattr(party_main, "economic_code", "") or ""
-    ws["C18"].value = getattr(party_main, "postal_code", "") or ""
-    ws["I18"].value = getattr(party_main, "phone", "") or ""
-    ws["C20"].value = getattr(party_main, "address", "") or ""
+    ws["C16"].value = en_digits(party_name(party_main))
+    ws["I16"].value = en_digits(party_national_code(party_main))
+    ws["M16"].value = en_digits(getattr(party_main, "economic_code", "") or "")
+    ws["C18"].value = en_digits(getattr(party_main, "postal_code", "") or "")
+    ws["I18"].value = en_digits(getattr(party_main, "phone", "") or "")
+    ws["C20"].value = en_digits(getattr(party_main, "address", "") or "")
+
 
     start_row = 24
     subtotal = Decimal(0)
 
     for idx, line in enumerate(proforma.lines.all()):
         row = start_row + idx
+
         weight = Decimal(line.weight or 0)
         unit_price = Decimal(line.unit_price or 0)
+        tax = Decimal(line.tax or 0)
+        discount = Decimal(line.discount or 0)
+
         line_subtotal = weight * unit_price
-        line_total = line_subtotal * (Decimal(1) + (line.tax or 0) - (line.discount or 0))
+        line_total = line_subtotal * (Decimal(1) + tax - discount)
 
         ws[f"B{row}"].value = getattr(line.product, "name", "") or ""
         ws[f"F{row}"].value = weight
         ws[f"H{row}"].value = unit_price
-        ws[f"K{row}"].value = line.tax or Decimal(0)
-        ws[f"L{row}"].value = line.discount or Decimal(0)
+        ws[f"K{row}"].value = tax
+        ws[f"L{row}"].value = discount
         ws[f"I{row}"].value = line_subtotal
         ws[f"N{row}"].value = line_total
 
-        for col in ["F", "H", "K", "L", "I", "N"]:
-            ws[f"{col}{row}"].number_format = '0.####'
+        for col in ("F", "H", "K", "L", "I", "N"):
+            ws[f"{col}{row}"].number_format = "0.####"
 
         subtotal += line_total
 
-    total_payable = subtotal * (Decimal(1) - (proforma.discount or 0)) \
-                    + Decimal(proforma.tax or 0) \
-                    + Decimal(proforma.shipping_cost or 0) \
-                    + Decimal(proforma.commission or 0) \
-                    + Decimal(proforma.other_cost or 0)
+    total_payable = (
+        subtotal
+        * (Decimal(1) - Decimal(proforma.discount or 0)
+        + Decimal(proforma.tax or 0)
+        + Decimal(proforma.shipping_cost or 0)
+        + Decimal(proforma.commission or 0)
+        + Decimal(proforma.other_cost or 0))
+    )
 
-    ws["N26"].value = proforma.shipping_cost or Decimal(0)
-    ws["N27"].value = proforma.commission or Decimal(0)
-    ws["N28"].value = proforma.discount or Decimal(0)
-    ws["N29"].value = proforma.tax or Decimal(0)
-    ws["N30"].value = proforma.other_cost or Decimal(0)
+    ws["N26"].value = Decimal(proforma.shipping_cost or 0)
+    ws["N27"].value = Decimal(proforma.commission or 0)
+    ws["N28"].value = Decimal(proforma.discount or 0)
+    ws["N29"].value = Decimal(proforma.tax or 0)
+    ws["N30"].value = Decimal(proforma.other_cost or 0)
     ws["N33"].value = total_payable
-    for cell in ["N26", "N27", "N28", "N29", "N30", "N33"]:
-        ws[cell].number_format = '0.####'
 
+    for c in ("N26", "N27", "N28", "N29", "N30", "N33"):
+        ws[c].number_format = "0.####"
+
+    ws.merge_cells("H33:K33")
+    ws["H33"].value = rial_words(total_payable)
+    ws["H33"].alignment = Alignment(horizontal="center", vertical="center")
 
     if preset:
         ws["A27"].value = f"حساب بانک {preset.bank_name}:           {preset.account_number}"

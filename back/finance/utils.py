@@ -9,6 +9,10 @@ import jdatetime
 from django.conf import settings
 from django.utils import timezone
 from openpyxl import load_workbook
+_FA_TO_EN = str.maketrans("۰۱۲۳۴۵۶۷۸۹", "0123456789")
+
+def en_digits(v):
+    return str(v).translate(_FA_TO_EN) if v is not None else ""
 
 
 _ONES = {

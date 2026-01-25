@@ -441,46 +441,6 @@ export function PurchaseProformaModal({
                     </FormItem>
                   )}
                 />
-
-                <div className="grid grid-cols-2 gap-4 items-start">
-                  <FormField
-                    control={form.control as any}
-                    name="tax"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>{t("tax")}</FormLabel>
-                        <FormControl>
-                          <Input
-                            type="text"
-                            step="0.01"
-                            {...field}
-                            onChange={(e) => field.onChange(e.target.value)}
-                          />
-                        </FormControl>
-                        <FormMessage className="min-h-[1.25rem]" />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control as any}
-                    name="discount"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>{t("discount")}</FormLabel>
-                        <FormControl>
-                          <Input
-                            type="text"
-                            step="0.01"
-                            {...field}
-                            onChange={(e) => field.onChange(e.target.value)}
-                          />
-                        </FormControl>
-                        <FormMessage className="min-h-[1.25rem]" />
-                      </FormItem>
-                    )}
-                  />
-                </div>
                 <FormField
                   control={form.control as any}
                   name="export_preset"
@@ -553,6 +513,45 @@ export function PurchaseProformaModal({
                     </FormItem>
                   )}
                 />
+                <div className="grid grid-cols-2 gap-4 items-start">
+                  <FormField
+                    control={form.control as any}
+                    name="tax"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>{t("tax")}</FormLabel>
+                        <FormControl>
+                          <Input
+                            type="text"
+                            step="0.01"
+                            {...field}
+                            onChange={(e) => field.onChange(e.target.value)}
+                          />
+                        </FormControl>
+                        <FormMessage className="min-h-[1.25rem]" />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control as any}
+                    name="discount"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>{t("discount")}</FormLabel>
+                        <FormControl>
+                          <Input
+                            type="text"
+                            step="0.01"
+                            {...field}
+                            onChange={(e) => field.onChange(e.target.value)}
+                          />
+                        </FormControl>
+                        <FormMessage className="min-h-[1.25rem]" />
+                      </FormItem>
+                    )}
+                  />
+                </div>
 
                 <div className="grid grid-cols-3 gap-4 items-start">
                   <FormField
@@ -636,7 +635,7 @@ export function PurchaseProformaModal({
                   {fields.map((field, index) => (
                     <div
                       key={field.id}
-                      className="grid grid-cols-4 gap-4 p-4 border rounded-lg items-start"
+                      className="grid grid-cols-6 gap-1 p-4 border rounded-lg items-end"
                     >
                       <FormField
                         control={form.control as any}
@@ -731,6 +730,44 @@ export function PurchaseProformaModal({
                         render={({ field }) => (
                           <FormItem>
                             <FormLabel>{t("unit_price")}</FormLabel>
+                            <FormControl>
+                              <Input
+                                type="text"
+                                step="0.01"
+                                {...field}
+                                onChange={(value) => field.onChange(value)}
+                              />
+                            </FormControl>
+                            <FormMessage className="min-h-[1.25rem]" />
+                          </FormItem>
+                        )}
+                      />
+
+                      <FormField
+                        control={form.control as any}
+                        name={`lines.${index}.discount`}
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>{t("discount")}</FormLabel>
+                            <FormControl>
+                              <Input
+                                type="text"
+                                step="0.01"
+                                {...field}
+                                onChange={(value) => field.onChange(value)}
+                              />
+                            </FormControl>
+                            <FormMessage className="min-h-[1.25rem]" />
+                          </FormItem>
+                        )}
+                      />
+
+                      <FormField
+                        control={form.control as any}
+                        name={`lines.${index}.tax`}
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>{t("tax")}</FormLabel>
                             <FormControl>
                               <Input
                                 type="text"
