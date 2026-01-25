@@ -1,7 +1,7 @@
 import type {
   PurchaseProforma,
   SalesProforma,
-  SalesProformaExportPreset,
+  ProformaExportPreset,
   ProformaLine,
   ProformaLineCreate,
   SalesProformaCreate,
@@ -155,23 +155,18 @@ export const fetchSalesProformasByDateRange = (
 
 // ------------------------ SalesProforma Presets ------------------------
 export const fetchSalesProformaPresets = () =>
-  apiFetch<SalesProformaExportPreset[]>(
-    `${API_BASE_URL()}sales-proforma-presets/`
-  );
+  apiFetch<ProformaExportPreset[]>(`${API_BASE_URL()}sales-proforma-presets/`);
 
 export const createSalesProformaPreset = (
   data: SalesProformaExportPresetCreate
 ) =>
-  apiFetch<SalesProformaExportPreset>(
-    `${API_BASE_URL()}sales-proforma-presets/`,
-    {
-      method: "POST",
-      body: data,
-    }
-  );
+  apiFetch<ProformaExportPreset>(`${API_BASE_URL()}sales-proforma-presets/`, {
+    method: "POST",
+    body: data,
+  });
 
-export const exportSalesProformaPdf = async (id: number) => {
-  const url = `${API_BASE_URL()}sales-proformas/${id}/export_pdf/`;
+export const exportProformaPdf = async (id: number, type: string) => {
+  const url = `${API_BASE_URL()}${type}-proformas/${id}/export_pdf/`;
   const response = await fetch(url);
   if (!response.ok) {
     const errorText = await response.text().catch(() => "");
@@ -180,7 +175,7 @@ export const exportSalesProformaPdf = async (id: number) => {
   const blob = await response.blob();
   const disposition = response.headers.get("content-disposition") || "";
   const match = disposition.match(/filename=\"?([^\";]+)\"?/i);
-  const filename = match?.[1] || `sales-proforma-${id}.pdf`;
+  const filename = match?.[1] || `${type}-proforma-${id}.pdf`;
   return { blob, filename };
 };
 

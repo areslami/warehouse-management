@@ -1,6 +1,6 @@
 from decimal import Decimal
 
-from .models import SalesProforma
+from .models import SalesProforma,PurchaseProforma
 from .utils import (
     jalali_date,
     load_sales_proforma_template,
@@ -29,8 +29,8 @@ def render_sales_proforma_pdf(proforma: SalesProforma) -> bytes:
     weight = int(line.weight or 0)
     unit_price = int(line.unit_price or 0)
     subtotal = Decimal(line.weight or 0) * Decimal(line.unit_price or 0)
-    total_payable = (
-        subtotal
+    total_payable = subtotal* (
+        1
         + Decimal(proforma.shipping_cost or 0)
         + Decimal(proforma.commission or 0)
         + Decimal(proforma.other_cost or 0)
@@ -90,5 +90,86 @@ def render_sales_proforma_pdf(proforma: SalesProforma) -> bytes:
 
     return workbook_to_pdf_bytes(
         wb, ws, filename_stem=f"sales-proforma-{proforma.pk}", print_area="A1:O36"
+    )
+
+
+
+def render_purchase_proforma_pdf(proforma:PurchaseProforma)->bytes:
+    if not proforma.pk:
+        raise ValueError("Proforma must be saved before export.")
+
+    proforma = (
+        PurchaseProforma.objects.select_related("supplier", "export_preset")
+        .prefetch_related("lines__product")
+        .get(pk=proforma.pk)
+    )
+    lines = list(proforma.lines.all())
+    if len(lines) != 1:
+        raise ValueError("This template supports exactly 1 proforma line.")
+
+    line = lines[0]
+    weight = int(line.weight or 0)
+    unit_price = int(line.unit_price or 0)
+    subtotal = Decimal(line.weight or 0) * Decimal(line.unit_price or 0)
+    total_payable = subtotal* (
+        1
+        + Decimal(proforma.shipping_cost or 0)
+        + Decimal(proforma.commission or 0)
+        + Decimal(proforma.other_cost or 0)
+        + Decimal(proforma.tax or 0)
+        - Decimal(proforma.discount or 0)
+    )
+
+    wb, ws = load_sales_proforma_template()
+
+    supplier = proforma.supplier
+    preset = proforma.export_preset
+    preset_left, preset_right = split_two_column_text(getattr(preset, "description", "") or "")
+    product_name = getattr(line.product, "name", "") or ""
+
+    cells = {
+        "N2": proforma.serial_number,
+        "N3": jalali_date(proforma.date),
+        "C16": party_name(supplier),
+        "I16": party_national_code(supplier),
+        "M16": getattr(supplier, "economic_code", "") or "",
+        "C18": getattr(supplier, "postal_code", "") or "",
+        "I18": getattr(supplier, "phone", "") or "",
+        "C20": getattr(supplier, "address", "") or "",
+        "B24": product_name,
+        "F24": weight,
+        "H24": unit_price,
+        "K24": 0,
+        "L24": 0,
+        "I24": int(subtotal),
+        "N24": int(subtotal),
+        "F25": weight,
+        "I25": int(subtotal),
+        "K25": 0,
+        "L25": 0,
+        "N25": int(subtotal),
+        "N26": int(proforma.shipping_cost or 0),
+        "N27": int(proforma.commission or 0),
+        "N28": int(proforma.discount or 0),
+        "N29": int(proforma.tax or 0),
+        "N30": int(proforma.other_cost or 0),
+        "N33": int(total_payable),
+        "H33": rial_words(total_payable),
+    }
+    if preset:
+        cells.update(
+            {
+                "A27": f"حساب بانک {preset.bank_name}:           {preset.account_number}",
+                "H27": preset.sheba_number,
+                "C29": preset_left,
+                "H29": preset_right,
+            }
+        )
+
+    for addr, value in cells.items():
+        ws[addr].value = value
+
+    return workbook_to_pdf_bytes(
+        wb, ws, filename_stem=f"purchase-proforma-{proforma.pk}", print_area="A1:O36"
     )
 

@@ -8,20 +8,31 @@ from .models import (
     SalesProforma,
     PurchaseProforma,
     ProformaLine,
-    SalesProformaExportPreset,
+    ProformaExportPreset,
 )
 from .serializers import (
     SalesProformaSerializer,
     PurchaseProformaSerializer,
     ProformaLineSerializer,
-    SalesProformaExportPresetSerializer,
+    ProformaExportPresetSerializer,
 )
-from .export_pdf import render_sales_proforma_pdf
+from .export_pdf import render_sales_proforma_pdf,render_purchase_proforma_pdf
 
 
-class SalesProformaExportPresetViewSet(viewsets.ModelViewSet):
-    queryset = SalesProformaExportPreset.objects.all()
-    serializer_class = SalesProformaExportPresetSerializer
+
+class ProformaLineViewSet(viewsets.ModelViewSet):
+    queryset = ProformaLine.objects.select_related('product', 'proforma').all()
+    serializer_class = ProformaLineSerializer
+    filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
+    filterset_fields = ['product', 'proforma']
+    search_fields = ['product__name', 'product__code']
+    ordering_fields = ['created_at', 'unit_price', 'weight']
+    ordering = ['-created_at']
+
+
+class ProformaExportPresetViewSet(viewsets.ModelViewSet):
+    queryset = ProformaExportPreset.objects.all()
+    serializer_class = ProformaExportPresetSerializer
     filter_backends = [
         DjangoFilterBackend,
         filters.SearchFilter,
@@ -72,6 +83,25 @@ class PurchaseProformaViewSet(viewsets.ModelViewSet):
         proformas = self.get_queryset().filter(date__range=[start_date, end_date])
         serializer = self.get_serializer(proformas, many=True)
         return Response(serializer.data)
+
+
+    @action(detail=True, methods=["get"], url_path="export_pdf")
+    def pdf(self, request, pk=None):
+        proforma = self.get_object()
+        try:
+            pdf_bytes = render_purchase_proforma_pdf(proforma)
+            response = HttpResponse(pdf_bytes, content_type="application/pdf")
+            filename = f"purchase-proforma-{proforma.serial_number}.pdf"
+            response["Content-Disposition"] = f'attachment; filename="{filename}"'
+            return response
+        except ValueError as e:
+            return Response({"error": str(e)}, status=400)
+        except Exception as e:
+            return Response(
+                {"error": "An error occurred while generating PDF."}, status=500
+            )
+
+
 
 
 class SalesProformaViewSet(viewsets.ModelViewSet):
@@ -135,12 +165,3 @@ class SalesProformaViewSet(viewsets.ModelViewSet):
                 {"error": "An error occurred while generating PDF."}, status=500
             )
 
-
-class ProformaLineViewSet(viewsets.ModelViewSet):
-    queryset = ProformaLine.objects.select_related('product', 'proforma').all()
-    serializer_class = ProformaLineSerializer
-    filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
-    filterset_fields = ['product', 'proforma']
-    search_fields = ['product__name', 'product__code']
-    ordering_fields = ['created_at', 'unit_price', 'weight']
-    ordering = ['-created_at']

@@ -14,6 +14,7 @@ import {
   Eye,
   ChevronDown,
   ChevronUp,
+  File,
 } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
@@ -56,7 +57,7 @@ import {
   createPurchaseProforma,
   updatePurchaseProforma,
   deletePurchaseProforma,
-  exportSalesProformaPdf,
+  exportProformaPdf,
 } from "@/lib/api/finance";
 import { SalesProforma, PurchaseProforma } from "@/lib/interfaces/finance";
 import { getPartyDisplayName } from "@/lib/utils/party-utils";
@@ -194,13 +195,9 @@ export default function FinancePage() {
     }
   };
 
-  const handleExportSelectedSalesPdf = async () => {
-    if (selectedSales.length !== 1) {
-      toast.error("لطفا فقط یک پیش‌فاکتور را انتخاب کنید");
-      return;
-    }
+  const handleExportSelectedPdf = async (proforma: any, type: string) => {
     try {
-      const { blob, filename } = await exportSalesProformaPdf(selectedSales[0]);
+      const { blob, filename } = await exportProformaPdf(proforma.id, type);
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
@@ -473,14 +470,6 @@ export default function FinancePage() {
                   </Button>
                 )}
                 <Button
-                  variant="outline"
-                  disabled={selectedSales.length !== 1}
-                  onClick={handleExportSelectedSalesPdf}
-                >
-                  <FileText className="w-4 h-4 ml-1" />
-                  خروجی PDF
-                </Button>
-                <Button
                   className="bg-[#f6d265] hover:bg-[#f5c842] text-black"
                   onClick={() => {
                     openModal(SalesProformaModal, {
@@ -488,8 +477,26 @@ export default function FinancePage() {
                         try {
                           const apiData = {
                             ...data,
+                            tax: Number(data.tax) || 0,
+                            discount: Number(data.discount) || 0,
+                            shipping_cost: data.shipping_cost
+                              ? Number(data.shipping_cost)
+                              : 0,
+                            commission: data.commission
+                              ? Number(data.commission)
+                              : 0,
+                            other_cost: data.other_cost
+                              ? Number(data.other_cost)
+                              : 0,
+                            lines: data.lines.map((line) => ({
+                              ...line,
+                              weight: Number(line.weight),
+                              unit_price: Number(line.unit_price),
+                              tax: Number(line.tax) || 0,
+                              discount: Number(line.discount) || 0,
+                            })),
                             payment_description:
-                              data.payment_description || null,
+                              data.payment_description || undefined,
                           };
                           await createSalesProforma(apiData);
                           toast.success(
@@ -797,6 +804,18 @@ export default function FinancePage() {
                       <div className="flex gap-2 justify-center">
                         <Button
                           size="sm"
+                          className="text-red-900"
+                          variant="ghost"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleExportSelectedPdf(proforma, "sales");
+                          }}
+                        >
+                          PDF
+                          <File className="w-4 h-4 text-red-600" />
+                        </Button>
+                        <Button
+                          size="sm"
                           variant="ghost"
                           onClick={(e) => {
                             e.stopPropagation();
@@ -831,14 +850,34 @@ export default function FinancePage() {
                                     product: Number(line.product),
                                     weight: String(line.weight),
                                     unit_price: String(line.unit_price),
+                                    tax: String(line.tax),
+                                    discount: String(line.discount),
                                   })) || [],
                               },
                               onSubmit: async (data) => {
                                 try {
                                   const apiData = {
                                     ...data,
+                                    tax: Number(data.tax) || 0,
+                                    discount: Number(data.discount) || 0,
+                                    shipping_cost: data.shipping_cost
+                                      ? Number(data.shipping_cost)
+                                      : 0,
+                                    commission: data.commission
+                                      ? Number(data.commission)
+                                      : 0,
+                                    other_cost: data.other_cost
+                                      ? Number(data.other_cost)
+                                      : 0,
+                                    lines: data.lines.map((line) => ({
+                                      ...line,
+                                      weight: Number(line.weight),
+                                      unit_price: Number(line.unit_price),
+                                      tax: Number(line.tax) || 0,
+                                      discount: Number(line.discount) || 0,
+                                    })),
                                     payment_description:
-                                      data.payment_description || null,
+                                      data.payment_description || undefined,
                                   };
                                   await updateSalesProforma(
                                     proforma.id,
@@ -903,6 +942,16 @@ export default function FinancePage() {
                     openModal(PurchaseProformaModal, {
                       onSubmit: async (data) => {
                         try {
+                          const apiData = {
+                            ...data,
+                            tax: Number(data.tax) || 0,
+                            discount: Number(data.discount) || 0,
+                            lines: data.lines.map((line) => ({
+                              ...line,
+                              tax: Number(line.tax) || 0,
+                              discount: Number(line.discount) || 0,
+                            })),
+                          };
                           await createPurchaseProforma(data);
                           toast.success(
                             tCommon("toast_messages.create_success")
@@ -1171,6 +1220,18 @@ export default function FinancePage() {
                       <div className="flex gap-2 justify-center">
                         <Button
                           size="sm"
+                          className="text-red-900"
+                          variant="ghost"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleExportSelectedPdf(proforma, "purchase");
+                          }}
+                        >
+                          PDF
+                          <File className="w-4 h-4 text-red-600" />
+                        </Button>
+                        <Button
+                          size="sm"
                           variant="ghost"
                           onClick={(e) => {
                             e.stopPropagation();
@@ -1285,14 +1346,34 @@ export default function FinancePage() {
                               product: Number(line.product),
                               weight: String(line.weight),
                               unit_price: String(line.unit_price),
+                              tax: String(line.tax),
+                              discount: String(line.discount),
                             })) || [],
                         },
                         onSubmit: async (data) => {
                           try {
                             const apiData = {
                               ...data,
+                              tax: Number(data.tax) || 0,
+                              discount: Number(data.discount) || 0,
+                              shipping_cost: data.shipping_cost
+                                ? Number(data.shipping_cost)
+                                : 0,
+                              commission: data.commission
+                                ? Number(data.commission)
+                                : 0,
+                              other_cost: data.other_cost
+                                ? Number(data.other_cost)
+                                : 0,
+                              lines: data.lines.map((line) => ({
+                                ...line,
+                                weight: Number(line.weight),
+                                unit_price: Number(line.unit_price),
+                                tax: Number(line.tax) || 0,
+                                discount: Number(line.discount) || 0,
+                              })),
                               payment_description:
-                                data.payment_description || null,
+                                data.payment_description || undefined,
                             };
                             await updateSalesProforma(proforma.id, apiData);
                             toast.success(

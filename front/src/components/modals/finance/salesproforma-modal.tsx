@@ -63,12 +63,12 @@ import {
   VALUE_PLACEHOLDER,
 } from "@/lib/utils/localized-value";
 import {
-  SalesProformaPresetFormData,
-  SalesProformaPresetModal,
-} from "@/components/modals/finance/salesproforma-preset-modal";
-import { SalesProformaExportPreset } from "@/lib/interfaces/finance";
+  ProformaPresetFormData,
+  ProformaPresetModal,
+} from "@/components/modals/finance/proforma-preset-modal";
+import { ProformaExportPreset } from "@/lib/interfaces/finance";
 
-export type SalesProformaFormData = {
+export type ProformaFormData = {
   serial_number: string;
   date: string;
   tax: string;
@@ -84,14 +84,16 @@ export type SalesProformaFormData = {
     product: number;
     weight: string;
     unit_price: string;
+    tax: string;
+    discount: string;
   }[];
 };
 
-interface SalesProformaModalProps {
+interface ProformaModalProps {
   trigger?: React.ReactNode;
-  onSubmit?: (data: SalesProformaFormData) => void;
+  onSubmit?: (data: ProformaFormData) => void;
   onClose?: () => void;
-  initialData?: Partial<SalesProformaFormData>;
+  initialData?: Partial<ProformaFormData>;
   readOnly?: boolean;
   isEditing?: boolean;
 }
@@ -103,14 +105,14 @@ export function SalesProformaModal({
   initialData,
   readOnly = false,
   isEditing,
-}: SalesProformaModalProps) {
+}: ProformaModalProps) {
   const tval = useTranslations("modals.salesProforma.validation");
   const t = useTranslations("modals.salesProforma");
   const tCommon = useTranslations("common");
   const { data, refreshData } = useCoreData();
   const { openModal } = useModal();
   const [isEditMode, setIsEditMode] = useState(!readOnly);
-  const [presets, setPresets] = useState<SalesProformaExportPreset[]>([]);
+  const [presets, setPresets] = useState<ProformaExportPreset[]>([]);
 
   useEffect(() => {
     if (data.customers.length === 0) {
@@ -216,7 +218,7 @@ export function SalesProformaModal({
 
   const [open, setOpen] = useState(trigger ? false : true);
 
-  const form = useForm<SalesProformaFormData>({
+  const form = useForm<ProformaFormData>({
     resolver: zodResolver(salesProformaSchema) as any,
     defaultValues: {
       serial_number: initialData?.serial_number
@@ -567,9 +569,9 @@ export function SalesProformaModal({
                           value={field.value ? String(field.value) : "0"}
                           onValueChange={(value) => {
                             if (value === "new") {
-                              openModal(SalesProformaPresetModal, {
+                              openModal(ProformaPresetModal, {
                                 onSubmit: async (
-                                  newPreset: SalesProformaPresetFormData
+                                  newPreset: ProformaPresetFormData
                                 ) => {
                                   const created =
                                     await createSalesProformaPreset(newPreset);
@@ -749,7 +751,13 @@ export function SalesProformaModal({
                       variant="outline"
                       size="sm"
                       onClick={() =>
-                        append({ product: 0, weight: "", unit_price: "" })
+                        append({
+                          product: 0,
+                          weight: "",
+                          unit_price: "",
+                          tax: "",
+                          discount: "",
+                        })
                       }
                     >
                       <Plus className="w-4 h-4 mr-2" />

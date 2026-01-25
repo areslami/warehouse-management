@@ -25,7 +25,7 @@ import { Input } from "../../ui/input";
 import { Textarea } from "../../ui/textarea";
 import { useTranslations } from "next-intl";
 
-export type SalesProformaPresetFormData = {
+export type ProformaPresetFormData = {
   name: string;
   bank_name: string;
   account_number: string;
@@ -33,19 +33,19 @@ export type SalesProformaPresetFormData = {
   description?: string;
 };
 
-interface SalesProformaPresetModalProps {
+interface ProformaPresetModalProps {
   trigger?: React.ReactNode;
-  onSubmit?: (data: SalesProformaPresetFormData) => void;
+  onSubmit?: (data: ProformaPresetFormData) => void;
   onClose?: () => void;
-  initialData?: Partial<SalesProformaPresetFormData>;
+  initialData?: Partial<ProformaPresetFormData>;
 }
 
-export function SalesProformaPresetModal({
+export function ProformaPresetModal({
   trigger,
   onSubmit,
   onClose,
   initialData,
-}: SalesProformaPresetModalProps) {
+}: ProformaPresetModalProps) {
   const t = useTranslations("modals.salesProformaPreset");
 
   const schema = z.object({
@@ -70,7 +70,7 @@ export function SalesProformaPresetModal({
 
   const [open, setOpen] = useState(trigger ? false : true);
 
-  const form = useForm<SalesProformaPresetFormData>({
+  const form = useForm<ProformaPresetFormData>({
     resolver: zodResolver(schema),
     defaultValues: {
       name: initialData?.name || "",
@@ -81,7 +81,7 @@ export function SalesProformaPresetModal({
     },
   });
 
-  const handleSubmit = (data: SalesProformaPresetFormData) => {
+  const handleSubmit = (data: ProformaPresetFormData) => {
     onSubmit?.(data);
     if (trigger) {
       setOpen(false);
