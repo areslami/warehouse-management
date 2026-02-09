@@ -87,4 +87,7 @@ export interface Indicator {
   format_preview: string;
   start_number: number;
   end_number: number;
+  reset_frequency?: "never" | "year" | "month";
+  created_at?: string;
+  updated_at?: string;
 }

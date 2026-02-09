@@ -36,6 +36,7 @@ export type IndicatorFormData = {
   format_template: string;
   start_number: number;
   end_number: number;
+  reset_frequency: "never" | "year" | "month";
 };
 
 type IndicatorFormValues = IndicatorFormData & {
@@ -83,6 +84,7 @@ export function IndicatorModal({
       .positive()
       .min(1)
       .max(MAX_END_NUMBER, tVal("end-number-max")),
+    reset_frequency: z.enum(["never", "year", "month"]),
   });
 
   const fallbackSection =
@@ -110,6 +112,7 @@ export function IndicatorModal({
       counter_digits: calculateDigitsFromEndNumber(initialData?.end_number) || 3,
       start_number: initialData?.start_number ?? 1,
       end_number: Math.min(initialData?.end_number ?? 999, MAX_END_NUMBER),
+      reset_frequency: initialData?.reset_frequency ?? "never",
     },
   });
 
@@ -124,6 +127,7 @@ export function IndicatorModal({
       counter_digits: calculateDigitsFromEndNumber(initialData?.end_number) || 3,
       start_number: initialData?.start_number ?? 1,
       end_number: Math.min(initialData?.end_number ?? 999, MAX_END_NUMBER),
+      reset_frequency: initialData?.reset_frequency ?? "never",
     });
   }, [initialData, form, fallbackSection, MAX_END_NUMBER]);
 
@@ -175,11 +179,35 @@ export function IndicatorModal({
         format_template: values.format_template,
         start_number: values.start_number,
         end_number: values.end_number,
+        reset_frequency: values.reset_frequency,
       });
       setOpen(false);
       onClose?.();
     } catch (error) {
       console.error("Indicator modal submission failed:", error);
+      const rawMessage =
+        error instanceof Error ? error.message : String(error ?? "");
+      const normalizedMessage = rawMessage.toLowerCase();
+      const duplicateMatch = [
+        "duplicate",
+        "already exist",
+        "already exists",
+        "unique",
+        "تکراری",
+        "قبلا",
+        "قبلاً",
+      ].some(
+        (keyword) =>
+          normalizedMessage.includes(keyword) ||
+          rawMessage.includes(keyword)
+      );
+
+      if (duplicateMatch) {
+        form.setError("name", {
+          type: "manual",
+          message: tVal("name-duplicate"),
+        });
+      }
     } finally {
       setIsSubmitting(false);
     }
@@ -232,6 +260,10 @@ export function IndicatorModal({
                           {...field}
                           placeholder={t("placeholders.name")}
                           disabled={readOnly || isSubmitting}
+                          onChange={(event) => {
+                            form.clearErrors("name");
+                            field.onChange(event);
+                          }}
                         />
                       </FormControl>
                       <FormMessage />
@@ -303,6 +335,36 @@ export function IndicatorModal({
                     </FormItem>
                   )}
                 />
+                <FormField
+                  control={form.control}
+                  name="reset_frequency"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>{t("fields.reset_frequency")}</FormLabel>
+                      <FormControl>
+                        <SimpleCombobox
+                          options={[
+                            { value: "never", label: t("reset_options.never") },
+                            { value: "year", label: t("reset_options.year") },
+                            { value: "month", label: t("reset_options.month") },
+                          ]}
+                          value={field.value || "never"}
+                          onValueChange={(value) => {
+                            field.onChange(value);
+                            form.setValue("reset_frequency", value as "never" | "year" | "month", {
+                              shouldDirty: true,
+                              shouldValidate: true,
+                            });
+                          }}
+                          placeholder={t("placeholders.reset_frequency")}
+                          searchPlaceholder={t("placeholders.reset_frequency")}
+                          disabled={readOnly || isSubmitting}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
               </div>
 
               <div className="grid gap-4 md:grid-cols-2">
@@ -336,11 +398,11 @@ export function IndicatorModal({
                   )}
                 />
 
-                <FormField
-                  control={form.control}
-                  name="end_number"
-                  render={({ field }) => (
-                    <FormItem>
+              <FormField
+                control={form.control}
+                name="end_number"
+                render={({ field }) => (
+                  <FormItem>
                       <FormLabel>{t("fields.end_number")}</FormLabel>
                       <FormControl>
                         <Input

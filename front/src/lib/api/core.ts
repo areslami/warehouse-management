@@ -301,6 +301,10 @@ type IndicatorPayload = {
   name: string;
   belongs: IndicatorSection;
   format_template: string;
+  start_number?: number;
+  end_number?: number;
+  reset_frequency?: "never" | "year" | "month";
+  counter?: number;
 };
 
 export const createIndicator = async (data: IndicatorPayload) =>

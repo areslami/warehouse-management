@@ -490,26 +490,15 @@ export const IndicatorFormatBuilder = forwardRef<
                 <div
                   key={segment.id}
                   className={cn(
-                    "flex items-center gap-2 rounded-full border border-gray-200 bg-white shadow-sm",
+                    "flex items-center gap-2 rounded-full border border-gray-200 bg-white shadow-sm h-9",
                     segment.type === "counter"
-                      ? "px-6 py-1 text-xs"
-                      : "px-3 py-1 text-xs"
+                      ? "px-6 text-xs"
+                      : "px-3 text-xs"
                   )}
                 >
                   <div className="flex flex-col text-right leading-tight" dir="rtl">
                     <span className="font-semibold text-gray-800">
                       {getSegmentLabel(segment, formatT)}
-                    </span>
-                    <span className="font-mono text-[10px] text-gray-500" dir="rtl">
-                      {toPersianDigits(
-                        formatCounterSample(
-                          segment,
-                          renderIndicatorSegmentSample(segment, {
-                            counter: previewCounter ?? sampleCounterReference,
-                            date: sampleDateReference,
-                          })
-                        )
-                      )}
                     </span>
                   </div>
                   {canRemoveSegment(segment) && !disabled && (

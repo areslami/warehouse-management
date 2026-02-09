@@ -74,6 +74,24 @@ export default function SettingsPage() {
   );
   const [defaultsDialogOpen, setDefaultsDialogOpen] = useState(false);
 
+  const isDuplicateIndicatorError = (error: unknown) => {
+    const rawMessage = error instanceof Error ? error.message : String(error ?? "");
+    const normalized = rawMessage.toLowerCase();
+    const keywords = [
+      "duplicate",
+      "already exist",
+      "already exists",
+      "unique",
+      "تکراری",
+      "قبلا",
+      "قبلاً",
+    ];
+    return keywords.some(
+      (keyword) =>
+        normalized.includes(keyword) || rawMessage.includes(keyword)
+    );
+  };
+
   const sectionConfigs = useMemo(
     () =>
       INDICATOR_SECTIONS.map((section) => ({
@@ -126,7 +144,9 @@ export default function SettingsPage() {
       setEditingIndicator(null);
     } catch (error) {
       console.error("Failed to save indicator:", error);
-      toast.error(tCommon("toast_messages.indicator_error"));
+      if (!isDuplicateIndicatorError(error)) {
+        toast.error(tCommon("toast_messages.indicator_error"));
+      }
       throw error;
     }
   };

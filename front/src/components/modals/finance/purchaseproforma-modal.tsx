@@ -224,7 +224,7 @@ export function PurchaseProformaModal({ trigger, onSubmit, onClose, initialData,
           </DialogTrigger>
         )}
         <DialogContent dir="rtl" className="min-w-[80%] max-h-[90vh] overflow-y-auto scrollbar-hide  p-0 my-0 mx-auto [&>button]:hidden">
-          <IndicatorCapacityGuard indicator={defaultIndicator} />
+          <IndicatorCapacityGuard indicator={defaultIndicator} onClose={handleClose} />
           <DialogHeader className="px-3.5 py-4.5  justify-start" style={{ backgroundColor: "#f6d265" }}>
             <DialogTitle className="font-bold text-white text-right">{t("title")}</DialogTitle>
             <DialogDescription className="sr-only">Create or edit purchase proforma</DialogDescription>

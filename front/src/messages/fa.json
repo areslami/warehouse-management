@@ -1253,14 +1253,21 @@
         "format_template": "قالب شماره‌گذاری",
         "counter_digits": "ارقام شمارنده",
         "start_number": "شماره شروع",
-        "end_number": "شماره پایان"
+        "end_number": "شماره پایان",
+        "reset_frequency": "ریست کردن شمارنده"
       },
       "placeholders": {
         "name": "مثال: پ ف",
         "belongs": "مثال: پیش فاکتور فروش",
         "counter_digits": "تعداد ارقام",
         "start_number": "مثال: 1",
-        "end_number": "مثال: 999"
+        "end_number": "مثال: 999",
+        "reset_frequency": "زمان ریست شمارنده"
+      },
+      "reset_options": {
+        "never": "هرگز",
+        "year": "سال",
+        "month": "ماه"
       },
       "actions": {
         "cancel": "انصراف",
@@ -1269,6 +1276,7 @@
       },
       "validation": {
         "name-required": "نام شناسه الزامی است",
+        "name-duplicate": "این شناسه قبلاً استفاده شده است",
         "belongs-required": "نام فرم الزامی است",
         "format-required": "قالب شماره‌گذاری باید حداقل یک جزء داشته باشد",
         "counter-digits-min": "تعداد ارقام شمارنده باید حداقل ۱ باشد",
