@@ -29,8 +29,8 @@ class B2BOfferViewSet(viewsets.ModelViewSet):
     
     def get_queryset(self):
         queryset = super().get_queryset()
-        return queryset.select_related( 'warehouse_receipt')
-    
+        return queryset.select_related('warehouse_receipt', 'product')
+
     @action(detail=False, methods=['get'])
     def active(self, request):
         active_offers = self.get_queryset().filter(status='active')

@@ -13,6 +13,7 @@ export interface B2BOffer {
   cottage_code?: string;
   cottage_number?: string;
   description?: string;
+  product?: number;
   product_id?: number;
   product_name?: string;
   created_at?: string;

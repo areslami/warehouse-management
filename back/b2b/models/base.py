@@ -18,6 +18,10 @@ class B2BOffer(models.Model):
     unit_price = models.DecimalField(max_digits=20, decimal_places=0)
     total_price = models.DecimalField(max_digits=20, decimal_places=0)
 
+    product = models.ForeignKey(
+        'core.Product', on_delete=models.PROTECT, null=True, blank=True
+    )
+
     offer_type = models.CharField(
         max_length=10, choices=TRANSACTION_TYPES, default='cash')
     status = models.CharField(

@@ -692,6 +692,7 @@ export function B2BAddressModal({ trigger, onSubmit, onClose, initialData, readO
                         <NumberInput
                           value={field.value || 0}
                           onChange={(value) => field.onChange(value)}
+                          disabled={saleLocked}
                         />
                       </FormControl>
                       <FormMessage className="min-h-[1.25rem]" />
@@ -709,6 +710,7 @@ export function B2BAddressModal({ trigger, onSubmit, onClose, initialData, readO
                         <NumberInput
                           value={field.value || 0}
                           onChange={(value) => field.onChange(value)}
+                          disabled={saleLocked}
                         />
                       </FormControl>
                       <FormMessage className="min-h-[1.25rem]" />
