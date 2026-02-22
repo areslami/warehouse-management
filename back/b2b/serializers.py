@@ -34,9 +34,11 @@ class B2BOfferListSerializer(serializers.ModelSerializer):
     class Meta:
         model = B2BOffer
         fields = ['id', 'offer_id', 'warehouse_receipt', 'warehouse_receipt_id', 'offer_weight', 'unit_price',
-                  'total_price', 'offer_type', 'status', 'offer_date', 'offer_exp_date', 'product_name', 'product_id', 'cottage_code']
+                  'total_price', 'offer_type', 'status', 'offer_date', 'offer_exp_date', 'product_name', 'product_id', 'product', 'cottage_code']
 
     def get_product_name(self, obj):
+        if obj.product:
+            return obj.product.name
         try:
             if obj.warehouse_receipt:
                 first_item = obj.warehouse_receipt.items.first()
@@ -47,6 +49,8 @@ class B2BOfferListSerializer(serializers.ModelSerializer):
         return None
 
     def get_product_id(self, obj):
+        if obj.product:
+            return obj.product.id
         try:
             if obj.warehouse_receipt:
                 first_item = obj.warehouse_receipt.items.first()

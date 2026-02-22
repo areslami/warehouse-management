@@ -25,6 +25,8 @@ import { PurchaseProformaFormData, PurchaseProformaModal } from "../finance/purc
 import { createWarehouse, fetchWarehouseReceipts } from "@/lib/api/warehouse";
 import { createProduct } from "@/lib/api/core";
 import { createPurchaseProforma } from "@/lib/api/finance";
+import { ProformaLine } from "@/lib/interfaces/finance";
+import { formatNumber } from "@/lib/utils/number-format";
 import { useDefaultIndicator } from "@/lib/hooks/use-default-indicator";
 import { IndicatorCapacityGuard } from "@/components/indicator-capacity-guard";
 import { incrementIndicatorCounter } from "@/lib/api/core";
@@ -72,6 +74,7 @@ export function WarehouseReceiptModal({ trigger, onSubmit, onClose, initialData,
   const { openModal } = useModal();
   const [existingCottageNumbers, setExistingCottageNumbers] = useState<Set<string>>(new Set());
   const [isEditMode, setIsEditMode] = useState(!readOnly);
+  const [selectedProformaLines, setSelectedProformaLines] = useState<ProformaLine[]>([]);
 
 
   useEffect(() => {
@@ -150,7 +153,23 @@ export function WarehouseReceiptModal({ trigger, onSubmit, onClose, initialData,
       }
     ),
     proforma: z.number().positive().optional(),
-    items: z.array(receiptItemSchema).min(1, tval("items")),
+    items: z.array(receiptItemSchema).min(1, tval("items")).superRefine((items, ctx) => {
+      if (selectedProformaLines.length > 0) {
+        items.forEach((item, index) => {
+          const proformaLine = selectedProformaLines[index];
+          if (proformaLine) {
+            const weight = typeof item.weight === 'string' ? parseFloat(item.weight) : item.weight;
+            if (!isNaN(weight) && weight > proformaLine.weight) {
+              ctx.addIssue({
+                code: z.ZodIssueCode.custom,
+                message: tval("weight-exceeds-max"),
+                path: [index, 'weight'],
+              });
+            }
+          }
+        });
+      }
+    }),
   });
 
   const [open, setOpen] = useState(trigger ? false : true);
@@ -236,6 +255,7 @@ export function WarehouseReceiptModal({ trigger, onSubmit, onClose, initialData,
   useEffect(() => {
     if (receiptType === "import_cottage") {
       form.setValue("proforma", undefined);
+      setSelectedProformaLines([]);
     }
   }, [receiptType, form]);
 
@@ -497,11 +517,26 @@ export function WarehouseReceiptModal({ trigger, onSubmit, onClose, initialData,
                                       await refreshData('purchaseProformas');
                                       form.setValue('proforma', created.id);
                                       form.trigger('proforma');
+                                      if (created.lines && created.lines.length > 0) {
+                                        form.setValue('items', created.lines.map(line => ({ product: line.product, weight: line.weight })));
+                                        setSelectedProformaLines(created.lines);
+                                      }
                                     }
                                   },
                                 },);
+                              } else if (value === "none") {
+                                field.onChange(undefined);
+                                setSelectedProformaLines([]);
                               } else {
-                                field.onChange(value === "none" ? undefined : Number(value));
+                                const proformaId = Number(value);
+                                field.onChange(proformaId);
+                                const selectedProforma = (data.purchaseProformas || []).find(p => p.id === proformaId);
+                                if (selectedProforma?.lines && selectedProforma.lines.length > 0) {
+                                  form.setValue('items', selectedProforma.lines.map(line => ({ product: line.product, weight: line.weight })));
+                                  setSelectedProformaLines(selectedProforma.lines);
+                                } else {
+                                  setSelectedProformaLines([]);
+                                }
                               }
                             }}
                             options={[
@@ -525,6 +560,10 @@ export function WarehouseReceiptModal({ trigger, onSubmit, onClose, initialData,
                                     await refreshData('purchaseProformas');
                                     form.setValue('proforma', created.id);
                                     form.trigger('proforma');
+                                    if (created.lines && created.lines.length > 0) {
+                                      form.setValue('items', created.lines.map(line => ({ product: line.product, weight: line.weight })));
+                                      setSelectedProformaLines(created.lines);
+                                    }
                                   }
                                 },
                               },);
@@ -618,7 +657,14 @@ export function WarehouseReceiptModal({ trigger, onSubmit, onClose, initialData,
                       name={`items.${index}.weight`}
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>{t("weight")}</FormLabel>
+                          <FormLabel>
+                            {t("weight")}
+                            {selectedProformaLines[index] && (
+                              <span className="mr-2 text-sm font-normal text-muted-foreground">
+                                - نهایت {formatNumber(selectedProformaLines[index].weight)} کیلوگرم
+                              </span>
+                            )}
+                          </FormLabel>
                           <FormControl>
                             <NumberInput
                               value={typeof field.value === 'string' ? parseInt(field.value) || 0 : field.value || 0}

@@ -1,7 +1,7 @@
 "use client";
 
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -18,12 +18,14 @@ import { useCoreData } from "@/lib/core-data-context";
 import { fetchWarehouseReceipts, createWarehouseReceipt } from "@/lib/api/warehouse";
 import { WarehouseReceipt } from "@/lib/interfaces/warehouse";
 import { describeWarehouseReceipt } from "@/lib/utils/label-utils";
+import { formatNumber } from "@/lib/utils/number-format";
 import { PersianDatePicker } from "../../ui/persian-date-picker";
 import { WarehouseReceiptModal } from "../warehouse/warehouse-receipt-modal";
 
 export type B2BOfferFormData = {
   offer_id: string;
   warehouse_receipt: number;
+  product?: number;
   offer_weight: number;
   unit_price: number;
   status: 'pending' | 'active' | 'sold' | 'expired';
@@ -51,6 +53,10 @@ export function B2BOfferModal({ trigger, onSubmit, onClose, initialData, readOnl
 
   const [showWarehouseReceiptModal, setShowWarehouseReceiptModal] = useState(false);
   const [warehouseReceipts, setWarehouseReceipts] = useState<WarehouseReceipt[]>([]);
+  const [selectedReceipt, setSelectedReceipt] = useState<WarehouseReceipt | null>(null);
+  const [selectedProductId, setSelectedProductId] = useState<number | null>(null);
+  const [selectedItemMaxWeight, setSelectedItemMaxWeight] = useState<number | null>(null);
+  const hasInitializedFromData = useRef(false);
 
 
 
@@ -70,11 +76,37 @@ export function B2BOfferModal({ trigger, onSubmit, onClose, initialData, readOnl
     loadWarehouseReceipts();
   }, [refreshCoreData]);
 
+  // Initialize receipt + product state from initialData once receipts are loaded
+  useEffect(() => {
+    if (hasInitializedFromData.current || !initialData?.warehouse_receipt || warehouseReceipts.length === 0) return;
+    hasInitializedFromData.current = true;
+
+    const receipt = warehouseReceipts.find(r => r.id === Number(initialData.warehouse_receipt)) || null;
+    setSelectedReceipt(receipt);
+    if (!receipt) return;
+
+    const productId = initialData.product;
+    if (productId) {
+      setSelectedProductId(productId);
+      const item = receipt.items.find(i => i.product === productId);
+      setSelectedItemMaxWeight(item?.weight ?? null);
+    } else if (receipt.items.length === 1) {
+      setSelectedProductId(receipt.items[0].product);
+      setSelectedItemMaxWeight(receipt.items[0].weight);
+    }
+  }, [warehouseReceipts]);
+
 
   const b2bOfferSchema = z.object({
     offer_id: z.string().min(1, tval("offer-id")),
     warehouse_receipt: z.number().min(1, tval("warehouse-receipt")),
-    offer_weight: z.number().min(0.01, tval("offer-weight")),
+    offer_weight: z.number().min(0.01, tval("offer-weight")).refine(
+      (val) => {
+        if (!selectedItemMaxWeight) return true;
+        return val <= selectedItemMaxWeight;
+      },
+      { message: tval("weight-exceeds-max") }
+    ),
     unit_price: z.number().min(0.01, tval("unit-price")),
     status: z.enum(['pending', 'active', 'sold', 'expired']),
     offer_type: z.enum(['cash', 'credit', 'agreement', 'other']).optional(),
@@ -106,6 +138,7 @@ export function B2BOfferModal({ trigger, onSubmit, onClose, initialData, readOnl
       const cleanedData = {
         ...data,
         warehouse_receipt: data.warehouse_receipt > 0 ? data.warehouse_receipt : null,
+        product: selectedProductId || undefined,
       };
       await onSubmit?.(cleanedData);
       if (trigger) {
@@ -222,40 +255,73 @@ export function B2BOfferModal({ trigger, onSubmit, onClose, initialData, readOnl
               </div>
 
 
-              <FormField
-                control={form.control as any}
-                name="warehouse_receipt"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>{t("warehouse-receipt")}</FormLabel>
-                    <FormControl>
-                      <SimpleCombobox
-                        value={field.value && field.value > 0 ? field.value.toString() : ""}
-                        onValueChange={(value) => {
-                          if (value && value !== "0" && value !== "") {
-                            field.onChange(Number(value));
-                          } 
-                        }}
-                        options={[
-
-                          ...warehouseReceipts.map(receipt => ({
+              <div className="grid grid-cols-2 gap-4 items-start">
+                <FormField
+                  control={form.control as any}
+                  name="warehouse_receipt"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>{t("warehouse-receipt")}</FormLabel>
+                      <FormControl>
+                        <SimpleCombobox
+                          value={field.value && field.value > 0 ? field.value.toString() : ""}
+                          onValueChange={(value) => {
+                            if (value && value !== "0" && value !== "") {
+                              const receiptId = Number(value);
+                              field.onChange(receiptId);
+                              const receipt = warehouseReceipts.find(r => r.id === receiptId) || null;
+                              setSelectedReceipt(receipt);
+                              setSelectedProductId(null);
+                              setSelectedItemMaxWeight(null);
+                              if (receipt && receipt.items.length === 1) {
+                                setSelectedProductId(receipt.items[0].product);
+                                setSelectedItemMaxWeight(receipt.items[0].weight);
+                              }
+                            }
+                          }}
+                          options={warehouseReceipts.map(receipt => ({
                             value: receipt.id.toString(),
                             label: describeWarehouseReceipt(receipt),
                             id: receipt.id,
                             name: receipt.receipt_id || receipt.id.toString()
-                          }))
-                        ]}
-                        placeholder={t("select-warehouse-receipt")}
-                        searchPlaceholder={tCommon("search_placeholders.search_warehouse_receipts")}
-                        showCreateNew={true}
-                        createNewText={t("create-new-warehouse-receipt")}
-                        onCreateNew={() => setShowWarehouseReceiptModal(true)}
-                      />
-                    </FormControl>
-                    <FormMessage className="min-h-[1.25rem]" />
-                  </FormItem>
-                )}
-              />
+                          }))}
+                          placeholder={t("select-warehouse-receipt")}
+                          searchPlaceholder={tCommon("search_placeholders.search_warehouse_receipts")}
+                          showCreateNew={true}
+                          createNewText={t("create-new-warehouse-receipt")}
+                          onCreateNew={() => setShowWarehouseReceiptModal(true)}
+                        />
+                      </FormControl>
+                      <FormMessage className="min-h-[1.25rem]" />
+                    </FormItem>
+                  )}
+                />
+
+                <FormItem>
+                  <FormLabel>{t("product")}</FormLabel>
+                  <SimpleCombobox
+                    value={selectedProductId ? selectedProductId.toString() : ""}
+                    onValueChange={(value) => {
+                      if (value) {
+                        const productId = Number(value);
+                        setSelectedProductId(productId);
+                        const item = selectedReceipt?.items.find(i => i.product === productId);
+                        setSelectedItemMaxWeight(item?.weight ?? null);
+                      }
+                    }}
+                    options={(selectedReceipt?.items || []).map(item => ({
+                      value: item.product.toString(),
+                      label: item.product_name || item.product.toString(),
+                      id: item.product,
+                      name: item.product_name || item.product.toString(),
+                    }))}
+                    placeholder={t("select-product")}
+                    searchPlaceholder={tCommon("search_placeholders.search_products")}
+                    disabled={!selectedReceipt}
+                  />
+                  <div className="min-h-[1.25rem]" />
+                </FormItem>
+              </div>
 
               <div className="grid grid-cols-2 gap-4 items-start">
                 <FormField
@@ -263,7 +329,14 @@ export function B2BOfferModal({ trigger, onSubmit, onClose, initialData, readOnl
                   name="offer_weight"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>{t("offer-weight")}</FormLabel>
+                      <FormLabel>
+                        {t("offer-weight")}
+                        {selectedItemMaxWeight && (
+                          <span className="mr-2 text-sm font-normal text-muted-foreground">
+                            - نهایت {formatNumber(selectedItemMaxWeight)} کیلوگرم
+                          </span>
+                        )}
+                      </FormLabel>
                       <FormControl>
                         <NumberInput
                           value={field.value || undefined}
@@ -370,12 +443,17 @@ export function B2BOfferModal({ trigger, onSubmit, onClose, initialData, readOnl
                 weight: typeof item.weight === 'string' ? parseFloat(item.weight) || 0 : item.weight
               }))
             };
-            console.log("MMD");
-            console.log(receiptData);
             const created = await createWarehouseReceipt(receiptData);
             if (created) {
               await loadWarehouseReceipts();
               form.setValue('warehouse_receipt', created.id);
+              setSelectedReceipt(created);
+              setSelectedProductId(null);
+              setSelectedItemMaxWeight(null);
+              if (created.items.length === 1) {
+                setSelectedProductId(created.items[0].product);
+                setSelectedItemMaxWeight(created.items[0].weight);
+              }
               setShowWarehouseReceiptModal(false);
             }
           }}

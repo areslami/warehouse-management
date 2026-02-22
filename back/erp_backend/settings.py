@@ -91,7 +91,7 @@ DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.postgresql",
         "NAME": 'shams-erp',
-        "USER": 'postgres',
+        "USER": 'pguser',
         "PASSWORD": 'admin',
         "HOST": 'localhost',
         "PORT": '5432',
