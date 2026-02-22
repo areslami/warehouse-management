@@ -125,6 +125,44 @@ export function PurchaseProformaModal({
       },
       { message: tval("unit-price-required") }
     ),
+    discount: z.preprocess(
+      (val) => (val === undefined ? null : val),
+      z.union([z.string(), z.number(), z.null()])
+        .superRefine((val, ctx) => {
+          if (val === null || val === "") {
+            ctx.addIssue({ code: "custom", message: tval("discount-required") });
+            return;
+          }
+          const num = typeof val === "string" ? parseFloat(val) : Number(val);
+          if (isNaN(num) || num < 0) {
+            ctx.addIssue({ code: "custom", message: tval("discount") });
+          }
+        })
+        .transform((val) => {
+          if (val === null || val === "") return 0;
+          const num = typeof val === "string" ? parseFloat(val) : Number(val);
+          return isNaN(num) ? 0 : num;
+        })
+    ),
+    tax: z.preprocess(
+      (val) => (val === undefined ? null : val),
+      z.union([z.string(), z.number(), z.null()])
+        .superRefine((val, ctx) => {
+          if (val === null || val === "") {
+            ctx.addIssue({ code: "custom", message: tval("tax-required") });
+            return;
+          }
+          const num = typeof val === "string" ? parseFloat(val) : Number(val);
+          if (isNaN(num) || num < 0) {
+            ctx.addIssue({ code: "custom", message: tval("tax") });
+          }
+        })
+        .transform((val) => {
+          if (val === null || val === "") return 0;
+          const num = typeof val === "string" ? parseFloat(val) : Number(val);
+          return isNaN(num) ? 0 : num;
+        })
+    ),
   });
 
   const purchaseProformaSchema = z.object({
@@ -629,7 +667,7 @@ export function PurchaseProformaModal({
                   {fields.map((field, index) => (
                     <div
                       key={field.id}
-                      className="grid grid-cols-6 gap-1 p-4 border rounded-lg items-end"
+                      className="grid grid-cols-6 gap-1 p-4 border rounded-lg items-start"
                     >
                       <FormField
                         control={form.control as any}
@@ -666,7 +704,7 @@ export function PurchaseProformaModal({
                                   }
                                 }}
                               >
-                                <SelectTrigger>
+                                <SelectTrigger className="w-full overflow-hidden" dir="rtl">
                                   <SelectValue
                                     placeholder={t("select-product")}
                                   />
@@ -775,7 +813,7 @@ export function PurchaseProformaModal({
                         )}
                       />
 
-                      <div className="flex items-end">
+                      <div className="flex items-start mt-6">
                         <Button
                           type="button"
                           variant="outline"

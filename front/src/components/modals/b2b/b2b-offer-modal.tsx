@@ -154,7 +154,7 @@ export function B2BOfferModal({ trigger, onSubmit, onClose, initialData, readOnl
           <Form {...form}>
             <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6 py-4 px-12">
               <fieldset disabled={!isEditMode} className="space-y-6">
-              <div className="grid grid-cols-2 gap-4 items-start">
+              <div className="grid grid-cols-3 gap-4 items-start">
                 <FormField
                   control={form.control as any}
                   name="offer_id"
@@ -182,10 +182,10 @@ export function B2BOfferModal({ trigger, onSubmit, onClose, initialData, readOnl
                     <FormItem>
                       <FormLabel>{t("status")}</FormLabel>
                       <Select value={field.value} onValueChange={field.onChange}>
-                        <SelectTrigger>
+                        <SelectTrigger className="w-full" dir="rtl">
                           <SelectValue placeholder={t("select-status")} />
                         </SelectTrigger>
-                        <SelectContent>
+                        <SelectContent dir="rtl">
                           <SelectItem value="pending">{t("status_options.pending")}</SelectItem>
                           <SelectItem value="active">{t("status_options.active")}</SelectItem>
                           <SelectItem value="sold">{t("status_options.sold")}</SelectItem>
@@ -196,9 +196,7 @@ export function B2BOfferModal({ trigger, onSubmit, onClose, initialData, readOnl
                     </FormItem>
                   )}
                 />
-              </div>
 
-              <div className="grid grid-cols-2 gap-4 items-start">
                 <FormField
                   control={form.control as any}
                   name="offer_type"
@@ -206,10 +204,10 @@ export function B2BOfferModal({ trigger, onSubmit, onClose, initialData, readOnl
                     <FormItem>
                       <FormLabel>{t("offer_type_label")}</FormLabel>
                       <Select value={field.value} onValueChange={field.onChange}>
-                        <SelectTrigger>
+                        <SelectTrigger className="w-full" dir="rtl">
                           <SelectValue placeholder={t("select_offer_type")} />
                         </SelectTrigger>
-                        <SelectContent>
+                        <SelectContent dir="rtl">
                           <SelectItem value="cash">{t("offer_type_options.cash")}</SelectItem>
                           <SelectItem value="credit">{t("offer_type_options.credit")}</SelectItem>
                           <SelectItem value="agreement">{t("offer_type_options.agreement")}</SelectItem>

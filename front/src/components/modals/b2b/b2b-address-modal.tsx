@@ -117,7 +117,7 @@ export function B2BAddressModal({ trigger, onSubmit, onClose, initialData, readO
     product_offer: z.number().optional(),
     product: z.number().min(1, tval("product")),
     customer: z.number().min(1, tval("customer")),
-    receiver: z.number().min(1, tval("customer")),
+    receiver: z.preprocess((val) => (val === undefined || val === null || val === "" ? 0 : Number(val)), z.number().min(1, tval("receiver"))),
     total_weight_purchased: z.union([z.string(), z.number()]).refine(
       (val) => {
         if (val === "" || val === null || val === undefined) return false;
@@ -127,7 +127,7 @@ export function B2BAddressModal({ trigger, onSubmit, onClose, initialData, readO
       { message: tval("weight-required") }
     ),
     purchase_date: z.string().min(1, tval("date")),
-    unit_price: z.number().positive(),
+    unit_price: z.number().positive(tval("unit-price")),
     payment_amount: z.number().min(0.01, tval("amount")),
     payment_method: z.string().min(1, tval("payment-method")),
     province: z.string().min(1, tval("province")),

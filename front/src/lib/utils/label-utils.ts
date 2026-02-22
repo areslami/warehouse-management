@@ -46,13 +46,13 @@ export function describeWarehouseReceipt(r: WarehouseReceipt): string {
   const isSingle = itemCount === 1;
   const sameWeight = isSingle && first && typeof first.weight === "number" && typeof r.total_weight === "number" && first.weight === r.total_weight;
 
-  const total = r.total_weight && !sameWeight ? `${formatNumber(r.total_weight)} kg` : "";
+  const total = r.total_weight && !sameWeight ? `${formatNumber(r.total_weight)} کیلوگرم` : "";
 
   let firstDesc = "";
   if (first) {
     const base = first.product_name || "";
     if (isSingle) {
-      firstDesc = sameWeight && first.weight ? `${base} ${formatNumber(first.weight)} kg` : base;
+      firstDesc = sameWeight && first.weight ? `${base} ${formatNumber(first.weight)} کیلوگرم` : base;
     } else {
       firstDesc = base;
     }
@@ -62,22 +62,30 @@ export function describeWarehouseReceipt(r: WarehouseReceipt): string {
   return [id, r.warehouse_name, date, total, productPart].filter(Boolean).join(" - ");
 }
 
+const OFFER_STATUS_FA: Record<string, string> = {
+  pending: "در انتظار",
+  active: "فعال",
+  sold: "فروخته شده",
+  expired: "منقضی شده",
+};
+
 export function describeOffer(o: B2BOffer): string {
   const date = toJalali(o.offer_date || "");
-  const weight = o.offer_weight ? `${formatNumber(o.offer_weight)} kg` : "";
-  const price = o.unit_price ? formatNumber(o.unit_price) : "";
+  const weight = o.offer_weight ? `${formatNumber(o.offer_weight)} کیلوگرم` : "";
+  const price = o.unit_price ? `${formatNumber(o.unit_price)} ریال` : "";
   const product = (o as any).product_name as string | undefined;
-  return [o.offer_id, product, weight, date, o.status, price].filter(Boolean).join(" - ");
+  const status = o.status ? (OFFER_STATUS_FA[o.status] ?? o.status) : "";
+  return [o.offer_id, product, weight, date, status, price].filter(Boolean).join(" - ");
 }
 
 export function describeDistribution(d: B2BDistribution): string {
   const date = toJalali(d.agency_date || "");
-  const weight = d.agency_weight ? `${formatNumber(d.agency_weight)} kg` : "";
+  const weight = d.agency_weight ? `${formatNumber(d.agency_weight)} کیلوگرم` : "";
   return [d.transfer_id, d.customer_name, d.product_name, weight, date].filter(Boolean).join(" - ");
 }
 
 export function describeB2BAddress(a: B2BAddress): string {
   const date = a.purchase_date ? toJalali(a.purchase_date) : "";
-  const weight = a.total_weight_purchased ? `${formatNumber(a.total_weight_purchased)} kg` : "";
+  const weight = a.total_weight_purchased ? `${formatNumber(a.total_weight_purchased)} کیلوگرم` : "";
   return [a.allocation_id, a.customer_name, a.product_name, weight, date, a.city].filter(Boolean).join(" - ");
 }

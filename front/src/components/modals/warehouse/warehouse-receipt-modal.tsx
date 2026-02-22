@@ -567,7 +567,7 @@ export function WarehouseReceiptModal({ trigger, onSubmit, onClose, initialData,
                 </div>
 
                 {fields.map((field, index) => (
-                  <div key={field.id} className="grid grid-cols-3 gap-4 p-4 border rounded-lg items-start">
+                  <div key={field.id} className="grid grid-cols-[1fr_1fr_auto] gap-4 p-4 border rounded-lg items-start">
                     <FormField
                       control={form.control as any}
                       name={`items.${index}.product`}
@@ -630,17 +630,16 @@ export function WarehouseReceiptModal({ trigger, onSubmit, onClose, initialData,
                       )}
                     />
 
-                    <div className="flex items-end">
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={() => remove(index)}
-                        disabled={fields.length === 1}
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </Button>
-                    </div>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="mt-6"
+                      onClick={() => remove(index)}
+                      disabled={fields.length === 1}
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </Button>
                   </div>
                 ))}
               </div>

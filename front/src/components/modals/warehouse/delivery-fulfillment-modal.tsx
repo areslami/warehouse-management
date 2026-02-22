@@ -987,7 +987,7 @@ export function DeliveryFulfillmentModal({ trigger, onSubmit, onClose, initialDa
                         )}
                       />
 
-                      <div className="col-span-1 flex items-end justify-center row-span-2">
+                      <div className="col-span-1 flex items-start justify-center row-span-2 mt-6">
                         <Button
                           type="button"
                           variant="outline"

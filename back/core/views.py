@@ -99,7 +99,9 @@ class IndicatorViewSet(viewsets.ModelViewSet):
     @transaction.atomic
     def increment(self, request, pk=None):
         indicator = self.get_object()
-        Indicator.objects.filter(pk=indicator.pk).update(counter=F('counter') + 1)
+        start_number = indicator.start_number or 1
+        new_counter = max(indicator.counter + 1, start_number)
+        Indicator.objects.filter(pk=indicator.pk).update(counter=new_counter)
         indicator.refresh_from_db()
         serializer = self.get_serializer(indicator)
         return Response(serializer.data, status=status.HTTP_200_OK)
