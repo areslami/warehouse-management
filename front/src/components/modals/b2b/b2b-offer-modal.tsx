@@ -327,7 +327,7 @@ export function B2BOfferModal({ trigger, onSubmit, onClose, initialData, readOnl
                   name="offer_weight"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>
+                      <FormLabel className="min-h-[2.5rem] flex items-center">
                         {t("offer-weight")}
                         {selectedItemMaxWeight && (
                           <span className="mr-2 text-sm font-normal text-muted-foreground">
@@ -351,7 +351,7 @@ export function B2BOfferModal({ trigger, onSubmit, onClose, initialData, readOnl
                   name="unit_price"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>{t("unit-price")}</FormLabel>
+                      <FormLabel className="min-h-[2.5rem] flex items-center">{t("unit-price")}</FormLabel>
                       <FormControl>
                         <NumberInput
                           value={field.value || undefined}

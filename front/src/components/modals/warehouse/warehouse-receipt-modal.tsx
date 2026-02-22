@@ -606,13 +606,13 @@ export function WarehouseReceiptModal({ trigger, onSubmit, onClose, initialData,
                 </div>
 
                 {fields.map((field, index) => (
-                  <div key={field.id} className="grid grid-cols-[1fr_1fr_auto] gap-4 p-4 border rounded-lg items-start">
+                  <div key={field.id} className="grid grid-cols-[1fr_1fr_auto] gap-4 p-4 border rounded-lg items-end">
                     <FormField
                       control={form.control as any}
                       name={`items.${index}.product`}
                       render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>{t("product")}</FormLabel>
+                        <FormItem className="flex flex-col justify-between">
+                          <FormLabel className="min-h-[2.5rem] flex items-center">{t("product")}</FormLabel>
                           <FormControl>
                             <SimpleCombobox
                               value={field.value > 0 ? field.value.toString() : ""}
@@ -656,8 +656,8 @@ export function WarehouseReceiptModal({ trigger, onSubmit, onClose, initialData,
                       control={form.control as any}
                       name={`items.${index}.weight`}
                       render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>
+                        <FormItem className="flex flex-col justify-between">
+                          <FormLabel className="min-h-[2.5rem] flex items-center">
                             {t("weight")}
                             {selectedProformaLines[index] && (
                               <span className="mr-2 text-sm font-normal text-muted-foreground">

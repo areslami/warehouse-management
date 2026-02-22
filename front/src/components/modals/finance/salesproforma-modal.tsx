@@ -793,7 +793,7 @@ export function SalesProformaModal({
                   {fields.map((field, index) => (
                     <div
                       key={field.id}
-                      className="grid grid-cols-6 gap-1 p-4 border rounded-lg items-start"
+                      className="grid grid-cols-6 gap-4 p-4 border rounded-lg items-start"
                     >
                       <FormField
                         control={form.control as any}
