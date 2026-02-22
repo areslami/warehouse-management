@@ -289,7 +289,7 @@ export function WarehouseReceiptModal({ trigger, onSubmit, onClose, initialData,
           </DialogTrigger>
         )}
         <DialogContent dir="rtl" className="min-w-[80%] max-h-[90vh] overflow-y-auto scrollbar-hide  p-0 my-0 mx-auto [&>button]:hidden">
-          <IndicatorCapacityGuard indicator={defaultIndicator} />
+          <IndicatorCapacityGuard indicator={defaultIndicator} onClose={handleClose}/>
           <DialogHeader className="px-3.5 py-4.5  justify-start relative" style={{ backgroundColor: "#f6d265" }}>
             <DialogTitle className="font-bold text-white text-right">{t("title")}</DialogTitle>
             <DialogDescription className="sr-only">Create or edit warehouse receipt</DialogDescription>
@@ -321,10 +321,11 @@ export function WarehouseReceiptModal({ trigger, onSubmit, onClose, initialData,
                       <Input
                         {...field}
                         value={toPersianDigits(field.value ?? "")}
+                        onChange={(e) => !hasExistingReceiptId && !defaultIndicator && field.onChange(e.target.value)}
                         dir="rtl"
                         className={receiptInputClassNames}
                         placeholder={t("receipt-id")}
-                        readOnly
+                        readOnly={hasExistingReceiptId || !!defaultIndicator}
                       />
                     ) : (
                       <input type="hidden" {...field} value={field.value ?? ""} />

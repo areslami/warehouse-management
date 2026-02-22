@@ -232,7 +232,7 @@ export function SalesProformaModal({ trigger, onSubmit, onClose, initialData, re
           </DialogTrigger>
         )}
         <DialogContent dir="rtl" className="min-w-[80%] max-h-[90vh] overflow-y-auto scrollbar-hide  p-0 my-0 mx-auto [&>button]:hidden">
-          <IndicatorCapacityGuard indicator={defaultIndicator} />
+          <IndicatorCapacityGuard indicator={defaultIndicator} onClose={handleClose} />
           <DialogHeader className="px-3.5 py-4.5  justify-start relative" style={{ backgroundColor: "#f6d265" }}>
             <DialogTitle className="font-bold text-white text-right">{t("title")}</DialogTitle>
             <DialogDescription className="sr-only">Create or edit sales proforma</DialogDescription>
@@ -264,11 +264,12 @@ export function SalesProformaModal({ trigger, onSubmit, onClose, initialData, re
                       <Input
                         {...field}
                         value={toPersianDigits(field.value ?? "")}
+                        onChange={(e) => !hasExistingSerialNumber && !defaultIndicator && field.onChange(e.target.value)}
                         dir="rtl"
                         style={{ unicodeBidi: "plaintext" }}
                         className={serialInputClassNames}
                         placeholder={t('serialnumber')}
-                        readOnly
+                        readOnly={hasExistingSerialNumber || !!defaultIndicator}
                       />
                     ) : (
                       <input type="hidden" {...field} value={field.value ?? ""} />

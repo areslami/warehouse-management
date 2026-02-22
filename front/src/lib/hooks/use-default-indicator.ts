@@ -47,6 +47,18 @@ export function useDefaultIndicator<FormValues>({
 
       try {
         const indicator = await fetchDefaultIndicator(section);
+        if (!indicator && isMounted) {
+          // No default indicator configured — seed the field with a plain "001" fallback
+          const existingValue = form.getValues(fieldName);
+          if (!existingValue) {
+            form.setValue(
+              fieldName as keyof FormValues,
+              "001" as FormValues[keyof FormValues],
+              { shouldDirty: false, shouldTouch: false }
+            );
+          }
+          return;
+        }
         if (indicator && isMounted) {
           let indicatorToUse = indicator;
 
