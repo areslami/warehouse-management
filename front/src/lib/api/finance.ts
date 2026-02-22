@@ -1,6 +1,7 @@
 import type {
   PurchaseProforma,
   SalesProforma,
+  ProformaExportPreset,
   ProformaLine,
   ProformaLineCreate,
   SalesProformaCreate,
@@ -11,6 +12,14 @@ import { apiFetch } from "./api-client";
 import { getApiBaseUrl } from "./config";
 
 const API_BASE_URL = () => `${getApiBaseUrl()}finance/`;
+
+export type SalesProformaExportPresetCreate = {
+  name: string;
+  bank_name: string;
+  account_number: string;
+  sheba_number: string;
+  description?: string;
+};
 
 // ------------------------ PurchaseProforma  ------------------------
 export const fetchPurchaseProformas = () =>
@@ -143,6 +152,32 @@ export const fetchSalesProformasByDateRange = (
   apiFetch<SalesProforma[]>(
     `${API_BASE_URL()}sales-proformas/by_date_range/?start_date=${startDate}&end_date=${endDate}`
   );
+
+// ------------------------ SalesProforma Presets ------------------------
+export const fetchSalesProformaPresets = () =>
+  apiFetch<ProformaExportPreset[]>(`${API_BASE_URL()}sales-proforma-presets/`);
+
+export const createSalesProformaPreset = (
+  data: SalesProformaExportPresetCreate
+) =>
+  apiFetch<ProformaExportPreset>(`${API_BASE_URL()}sales-proforma-presets/`, {
+    method: "POST",
+    body: data,
+  });
+
+export const exportProformaPdf = async (id: number, type: string) => {
+  const url = `${API_BASE_URL()}${type}-proformas/${id}/export_pdf/`;
+  const response = await fetch(url);
+  if (!response.ok) {
+    const errorText = await response.text().catch(() => "");
+    throw new Error(errorText || `HTTP ${response.status}`);
+  }
+  const blob = await response.blob();
+  const disposition = response.headers.get("content-disposition") || "";
+  const match = disposition.match(/filename=\"?([^\";]+)\"?/i);
+  const filename = match?.[1] || `${type}-proforma-${id}.pdf`;
+  return { blob, filename };
+};
 
 // ------------------------ ProformaLine  ------------------------
 export const fetchProformaLines = () =>

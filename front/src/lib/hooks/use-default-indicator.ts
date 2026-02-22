@@ -95,8 +95,10 @@ export function useDefaultIndicator<FormValues>({
             const formatFn = formatWithSpacing
               ? renderIndicatorFormatWithSpacing
               : renderIndicatorFormat;
+            const startNumber = indicatorToUse.start_number ?? 1;
+            const nextCounter = Math.max((indicatorToUse.counter ?? 0) + 1, startNumber);
             const nextValue = formatFn(template, {
-              counter: (indicatorToUse.counter ?? 0) + 1,
+              counter: nextCounter,
             });
             form.setValue(
               fieldName as keyof FormValues,

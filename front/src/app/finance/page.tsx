@@ -2,16 +2,45 @@
 
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
-import { Plus, Edit2, Trash2, DollarSign, Receipt, Search, FileText, Clock, Eye, ChevronDown, ChevronUp } from "lucide-react";
+import {
+  Plus,
+  Edit2,
+  Trash2,
+  DollarSign,
+  Receipt,
+  Search,
+  FileText,
+  Clock,
+  Eye,
+  ChevronDown,
+  ChevronUp,
+  File,
+} from "lucide-react";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { handleApiErrorWithToast } from "@/lib/api/error-toast-handler";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Collapsible, CollapsibleTrigger, CollapsibleContent } from "@/components/ui/collapsible";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
+  Collapsible,
+  CollapsibleTrigger,
+  CollapsibleContent,
+} from "@/components/ui/collapsible";
 import { PersianDatePicker } from "@/components/ui/persian-date-picker";
 import { SearchableSelect } from "@/components/ui/searchable-select";
 import { SimpleCombobox } from "@/components/ui/simple-combobox";
@@ -20,8 +49,15 @@ import { PurchaseProformaModal } from "@/components/modals/finance/purchaseprofo
 import { useCoreData } from "@/lib/core-data-context";
 import { useModal } from "@/lib/modal-context";
 import {
-  fetchSalesProformas, createSalesProforma, updateSalesProforma, deleteSalesProforma,
-  fetchPurchaseProformas, createPurchaseProforma, updatePurchaseProforma, deletePurchaseProforma
+  fetchSalesProformas,
+  createSalesProforma,
+  updateSalesProforma,
+  deleteSalesProforma,
+  fetchPurchaseProformas,
+  createPurchaseProforma,
+  updatePurchaseProforma,
+  deletePurchaseProforma,
+  exportProformaPdf,
 } from "@/lib/api/finance";
 import { SalesProforma, PurchaseProforma } from "@/lib/interfaces/finance";
 import { getPartyDisplayName } from "@/lib/utils/party-utils";
@@ -32,27 +68,41 @@ import { toPersianDigits } from "@/lib/utils/numbers";
 export default function FinancePage() {
   const t = useTranslations("pages.finance");
   const tCommon = useTranslations("common");
-  const { customers, suppliers, products, salesProformas: coreDataSalesProformas, purchaseProformas: coreDataPurchaseProformas } = useCoreData();
+  const {
+    customers,
+    suppliers,
+    products,
+    salesProformas: coreDataSalesProformas,
+    purchaseProformas: coreDataPurchaseProformas,
+  } = useCoreData();
   const { openModal } = useModal();
 
   const [salesProformas, setSalesProformas] = useState<SalesProforma[]>([]);
-  const [purchaseProformas, setPurchaseProformas] = useState<PurchaseProforma[]>([]);
+  const [purchaseProformas, setPurchaseProformas] = useState<
+    PurchaseProforma[]
+  >([]);
   const [selectedSales, setSelectedSales] = useState<number[]>([]);
   const [selectedPurchases, setSelectedPurchases] = useState<number[]>([]);
 
   const [sheetOpen, setSheetOpen] = useState(false);
-  const [selectedItem, setSelectedItem] = useState<SalesProforma | PurchaseProforma | null>(null);
-  const [selectedType, setSelectedType] = useState<'sales' | 'purchase'>('sales');
+  const [selectedItem, setSelectedItem] = useState<
+    SalesProforma | PurchaseProforma | null
+  >(null);
+  const [selectedType, setSelectedType] = useState<"sales" | "purchase">(
+    "sales"
+  );
 
   const [searchTerm, setSearchTerm] = useState("");
   const searchParams = useSearchParams();
   const router = useRouter();
-  const tabFromUrl = searchParams.get('tab') || 'sales_proforma';
+  const tabFromUrl = searchParams.get("tab") || "sales_proforma";
   const [activeTab, setActiveTab] = useState(tabFromUrl);
 
   // Filter states
-  const [salesProformaFiltersOpen, setSalesProformaFiltersOpen] = useState(false);
-  const [purchaseProformaFiltersOpen, setPurchaseProformaFiltersOpen] = useState(false);
+  const [salesProformaFiltersOpen, setSalesProformaFiltersOpen] =
+    useState(false);
+  const [purchaseProformaFiltersOpen, setPurchaseProformaFiltersOpen] =
+    useState(false);
   const [salesProformaFilters, setSalesProformaFilters] = useState({
     serial_number: "",
     customer: "",
@@ -74,7 +124,7 @@ export default function FinancePage() {
   });
 
   useEffect(() => {
-    const newTab = searchParams.get('tab') || 'sales_proforma';
+    const newTab = searchParams.get("tab") || "sales_proforma";
     setActiveTab(newTab);
   }, [searchParams]);
 
@@ -82,14 +132,13 @@ export default function FinancePage() {
     try {
       const [salesData, purchaseData] = await Promise.all([
         fetchSalesProformas(),
-        fetchPurchaseProformas()
+        fetchPurchaseProformas(),
       ]);
       setSalesProformas(salesData || []);
       setPurchaseProformas(purchaseData || []);
     } catch (error) {
       console.error("Failed to load finance data:", error);
       handleApiErrorWithToast(error, "Loading finance data");
-
     }
   }, []);
 
@@ -110,7 +159,10 @@ export default function FinancePage() {
     loadData();
   }, [loadData]);
 
-  const handleRowClick = (item: SalesProforma | PurchaseProforma, type: 'sales' | 'purchase') => {
+  const handleRowClick = (
+    item: SalesProforma | PurchaseProforma,
+    type: "sales" | "purchase"
+  ) => {
     setSelectedItem(item);
     setSelectedType(type);
     setSheetOpen(true);
@@ -125,7 +177,6 @@ export default function FinancePage() {
       } catch (error) {
         console.error("Failed to delete sales proforma:", error);
         handleApiErrorWithToast(error, "Deleting sales proforma");
-        
       }
     }
   };
@@ -134,13 +185,29 @@ export default function FinancePage() {
     if (selectedSales.length === 0) return;
     if (confirm(`Delete ${selectedSales.length} selected sales proformas?`)) {
       try {
-        await Promise.all(selectedSales.map(id => deleteSalesProforma(id)));
+        await Promise.all(selectedSales.map((id) => deleteSalesProforma(id)));
         toast.success(`Deleted ${selectedSales.length} sales proformas`);
         setSelectedSales([]);
         loadData();
       } catch (error) {
         toast.error("Failed to delete some sales proformas");
       }
+    }
+  };
+
+  const handleExportSelectedPdf = async (proforma: any, type: string) => {
+    try {
+      const { blob, filename } = await exportProformaPdf(proforma.id, type);
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      toast.error("خطا در خروجی PDF");
     }
   };
 
@@ -153,16 +220,19 @@ export default function FinancePage() {
       } catch (error) {
         console.error("Failed to delete purchase proforma:", error);
         handleApiErrorWithToast(error, "Deleting purchase proforma");
-        
       }
     }
   };
 
   const handleBulkDeletePurchases = async () => {
     if (selectedPurchases.length === 0) return;
-    if (confirm(`Delete ${selectedPurchases.length} selected purchase proformas?`)) {
+    if (
+      confirm(`Delete ${selectedPurchases.length} selected purchase proformas?`)
+    ) {
       try {
-        await Promise.all(selectedPurchases.map(id => deletePurchaseProforma(id)));
+        await Promise.all(
+          selectedPurchases.map((id) => deletePurchaseProforma(id))
+        );
         toast.success(`Deleted ${selectedPurchases.length} purchase proformas`);
         setSelectedPurchases([]);
         loadData();
@@ -172,41 +242,79 @@ export default function FinancePage() {
     }
   };
 
-  const calculateTotal = (lines?: Array<{ weight: number; unit_price: number; tax?: number; discount?: number }>) => {
+  const calculateTotal = (
+    lines?: Array<{
+      weight: number;
+      unit_price: number;
+      tax?: number;
+      discount?: number;
+    }>
+  ) => {
     if (!lines) return 0;
-    return lines.reduce((sum, line) => sum + (line.weight * line.unit_price), 0);
+    return lines.reduce((sum, line) => sum + line.weight * line.unit_price, 0);
   };
 
   const filteredSalesProformas = useMemo(() => {
-    return salesProformas.filter(proforma => {
+    return salesProformas.filter((proforma) => {
       // Search term filter
-      const customerName = getPartyDisplayName(customers.find(c => c.id === proforma.customer));
-      const matchesSearch = proforma.serial_number.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      const customerName = getPartyDisplayName(
+        customers.find((c) => c.id === proforma.customer)
+      );
+      const matchesSearch =
+        proforma.serial_number
+          .toLowerCase()
+          .includes(searchTerm.toLowerCase()) ||
         customerName.toLowerCase().includes(searchTerm.toLowerCase());
       if (!matchesSearch) return false;
 
       // Advanced filters
-      if (salesProformaFilters.serial_number && !proforma.serial_number.toLowerCase().includes(salesProformaFilters.serial_number.toLowerCase())) return false;
-      if (salesProformaFilters.customer && proforma.customer.toString() !== salesProformaFilters.customer) return false;
-      if (salesProformaFilters.payment_type && proforma.payment_type !== salesProformaFilters.payment_type) return false;
+      if (
+        salesProformaFilters.serial_number &&
+        !proforma.serial_number
+          .toLowerCase()
+          .includes(salesProformaFilters.serial_number.toLowerCase())
+      )
+        return false;
+      if (
+        salesProformaFilters.customer &&
+        proforma.customer.toString() !== salesProformaFilters.customer
+      )
+        return false;
+      if (
+        salesProformaFilters.payment_type &&
+        proforma.payment_type !== salesProformaFilters.payment_type
+      )
+        return false;
 
       // Date filters
-      const proformaDate = proforma.date ? new Date(proforma.date).getTime() : 0;
-      const dateFrom = salesProformaFilters.date_from ? new Date(salesProformaFilters.date_from).getTime() : 0;
-      const dateTo = salesProformaFilters.date_to ? new Date(salesProformaFilters.date_to).getTime() : 0;
+      const proformaDate = proforma.date
+        ? new Date(proforma.date).getTime()
+        : 0;
+      const dateFrom = salesProformaFilters.date_from
+        ? new Date(salesProformaFilters.date_from).getTime()
+        : 0;
+      const dateTo = salesProformaFilters.date_to
+        ? new Date(salesProformaFilters.date_to).getTime()
+        : 0;
       if (dateFrom && proformaDate < dateFrom) return false;
       if (dateTo && proformaDate > dateTo) return false;
 
       // Product filter (check if any line contains the product)
       if (salesProformaFilters.product) {
-        const hasProduct = proforma.lines?.some(line => line.product.toString() === salesProformaFilters.product);
+        const hasProduct = proforma.lines?.some(
+          (line) => line.product.toString() === salesProformaFilters.product
+        );
         if (!hasProduct) return false;
       }
 
       // Total amount filter
       const totalAmount = calculateTotal(proforma.lines);
-      const minAmount = salesProformaFilters.total_amount_min ? Number(salesProformaFilters.total_amount_min) : -Infinity;
-      const maxAmount = salesProformaFilters.total_amount_max ? Number(salesProformaFilters.total_amount_max) : Infinity;
+      const minAmount = salesProformaFilters.total_amount_min
+        ? Number(salesProformaFilters.total_amount_min)
+        : -Infinity;
+      const maxAmount = salesProformaFilters.total_amount_max
+        ? Number(salesProformaFilters.total_amount_max)
+        : Infinity;
       if (totalAmount < minAmount || totalAmount > maxAmount) return false;
 
       return true;
@@ -214,34 +322,61 @@ export default function FinancePage() {
   }, [salesProformas, searchTerm, customers, salesProformaFilters]);
 
   const filteredPurchaseProformas = useMemo(() => {
-    return purchaseProformas.filter(proforma => {
+    return purchaseProformas.filter((proforma) => {
       // Search term filter
-      const supplierName = getPartyDisplayName(suppliers.find(s => s.id === proforma.supplier));
-      const matchesSearch = proforma.serial_number.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      const supplierName = getPartyDisplayName(
+        suppliers.find((s) => s.id === proforma.supplier)
+      );
+      const matchesSearch =
+        proforma.serial_number
+          .toLowerCase()
+          .includes(searchTerm.toLowerCase()) ||
         supplierName.toLowerCase().includes(searchTerm.toLowerCase());
       if (!matchesSearch) return false;
 
       // Advanced filters
-      if (purchaseProformaFilters.serial_number && !proforma.serial_number.toLowerCase().includes(purchaseProformaFilters.serial_number.toLowerCase())) return false;
-      if (purchaseProformaFilters.supplier && proforma.supplier.toString() !== purchaseProformaFilters.supplier) return false;
+      if (
+        purchaseProformaFilters.serial_number &&
+        !proforma.serial_number
+          .toLowerCase()
+          .includes(purchaseProformaFilters.serial_number.toLowerCase())
+      )
+        return false;
+      if (
+        purchaseProformaFilters.supplier &&
+        proforma.supplier.toString() !== purchaseProformaFilters.supplier
+      )
+        return false;
 
       // Date filters
-      const proformaDate = proforma.date ? new Date(proforma.date).getTime() : 0;
-      const dateFrom = purchaseProformaFilters.date_from ? new Date(purchaseProformaFilters.date_from).getTime() : 0;
-      const dateTo = purchaseProformaFilters.date_to ? new Date(purchaseProformaFilters.date_to).getTime() : 0;
+      const proformaDate = proforma.date
+        ? new Date(proforma.date).getTime()
+        : 0;
+      const dateFrom = purchaseProformaFilters.date_from
+        ? new Date(purchaseProformaFilters.date_from).getTime()
+        : 0;
+      const dateTo = purchaseProformaFilters.date_to
+        ? new Date(purchaseProformaFilters.date_to).getTime()
+        : 0;
       if (dateFrom && proformaDate < dateFrom) return false;
       if (dateTo && proformaDate > dateTo) return false;
 
       // Product filter (check if any line contains the product)
       if (purchaseProformaFilters.product) {
-        const hasProduct = proforma.lines?.some(line => line.product.toString() === purchaseProformaFilters.product);
+        const hasProduct = proforma.lines?.some(
+          (line) => line.product.toString() === purchaseProformaFilters.product
+        );
         if (!hasProduct) return false;
       }
 
       // Total amount filter
       const totalAmount = calculateTotal(proforma.lines);
-      const minAmount = purchaseProformaFilters.total_amount_min ? Number(purchaseProformaFilters.total_amount_min) : -Infinity;
-      const maxAmount = purchaseProformaFilters.total_amount_max ? Number(purchaseProformaFilters.total_amount_max) : Infinity;
+      const minAmount = purchaseProformaFilters.total_amount_min
+        ? Number(purchaseProformaFilters.total_amount_min)
+        : -Infinity;
+      const maxAmount = purchaseProformaFilters.total_amount_max
+        ? Number(purchaseProformaFilters.total_amount_max)
+        : Infinity;
       if (totalAmount < minAmount || totalAmount > maxAmount) return false;
 
       return true;
@@ -253,7 +388,6 @@ export default function FinancePage() {
       <h1 className="text-3xl font-bold mb-8 text-gray-800">{t("title")}</h1>
 
       <div className="mb-6 space-y-4">
-
         <div className="relative">
           <Search className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
           <Input
@@ -265,35 +399,51 @@ export default function FinancePage() {
         </div>
       </div>
 
-      <Tabs value={activeTab} onValueChange={(value) => {
-        setActiveTab(value);
-        router.push(`/finance?tab=${value}`);
-      }} className="w-full">
+      <Tabs
+        value={activeTab}
+        onValueChange={(value) => {
+          setActiveTab(value);
+          router.push(`/finance?tab=${value}`);
+        }}
+        className="w-full"
+      >
         <TabsList className="grid w-full grid-cols-4 mb-6">
-          <TabsTrigger value="purchase_invoice" className="data-[state=active]:bg-[#f6d265] data-[state=active]:text-black">
+          <TabsTrigger
+            value="purchase_invoice"
+            className="data-[state=active]:bg-[#f6d265] data-[state=active]:text-black"
+          >
             <FileText className="w-4 h-4 mr-2" />
             {t("purchase_invoice_tab")}
           </TabsTrigger>
-          <TabsTrigger value="sales_invoice" className="data-[state=active]:bg-[#f6d265] data-[state=active]:text-black">
+          <TabsTrigger
+            value="sales_invoice"
+            className="data-[state=active]:bg-[#f6d265] data-[state=active]:text-black"
+          >
             <FileText className="w-4 h-4 mr-2" />
             {t("sales_invoice_tab")}
           </TabsTrigger>
-          <TabsTrigger value="purchase_proforma" className="data-[state=active]:bg-[#f6d265] data-[state=active]:text-black">
+          <TabsTrigger
+            value="purchase_proforma"
+            className="data-[state=active]:bg-[#f6d265] data-[state=active]:text-black"
+          >
             <Receipt className="w-4 h-4 mr-2" />
             {t("purchase_proforma_tab")}
           </TabsTrigger>
-          <TabsTrigger value="sales_proforma" className="data-[state=active]:bg-[#f6d265] data-[state=active]:text-black">
+          <TabsTrigger
+            value="sales_proforma"
+            className="data-[state=active]:bg-[#f6d265] data-[state=active]:text-black"
+          >
             <DollarSign className="w-4 h-4 mr-2" />
             {t("sales_proforma_tab")}
           </TabsTrigger>
-
-
         </TabsList>
 
         <TabsContent value="sales_invoice">
           <div className="bg-white rounded-lg shadow p-8 text-center">
             <Clock className="w-16 h-16 mx-auto mb-4 text-gray-400" />
-            <h2 className="text-2xl font-semibold mb-2 text-gray-700">{t("sales_invoice_tab")}</h2>
+            <h2 className="text-2xl font-semibold mb-2 text-gray-700">
+              {t("sales_invoice_tab")}
+            </h2>
             <p className="text-gray-500">{t("invoice_coming_soon")}</p>
           </div>
         </TabsContent>
@@ -301,7 +451,9 @@ export default function FinancePage() {
         <TabsContent value="purchase_invoice">
           <div className="bg-white rounded-lg shadow p-8 text-center">
             <Clock className="w-16 h-16 mx-auto mb-4 text-gray-400" />
-            <h2 className="text-2xl font-semibold mb-2 text-gray-700">{t("purchase_invoice_tab")}</h2>
+            <h2 className="text-2xl font-semibold mb-2 text-gray-700">
+              {t("purchase_invoice_tab")}
+            </h2>
             <p className="text-gray-500">{t("invoice_coming_soon")}</p>
           </div>
         </TabsContent>
@@ -317,75 +469,144 @@ export default function FinancePage() {
                     {t("delete")} ({selectedSales.length})
                   </Button>
                 )}
-                <Button className="bg-[#f6d265] hover:bg-[#f5c842] text-black" onClick={() => {
-                openModal(SalesProformaModal, {
-                  onSubmit: async (data) => {
-                    try {
-                      const apiData = {
-                        ...data,
-                        payment_description: data.payment_description || null
-                      };
-                      await createSalesProforma(apiData);
-                      toast.success(tCommon("toast_messages.create_success"));
-                      await loadData();
-                    } catch (error) {
-                      console.error("Failed to create sales proforma:", error);
-                      handleApiErrorWithToast(error, "Creating sales proforma");
-
-                    }
-                  }
-                });
-                }}>
+                <Button
+                  className="bg-[#f6d265] hover:bg-[#f5c842] text-black"
+                  onClick={() => {
+                    openModal(SalesProformaModal, {
+                      onSubmit: async (data) => {
+                        try {
+                          const apiData = {
+                            ...data,
+                            tax: Number(data.tax) || 0,
+                            discount: Number(data.discount) || 0,
+                            shipping_cost: data.shipping_cost
+                              ? Number(data.shipping_cost)
+                              : 0,
+                            commission: data.commission
+                              ? Number(data.commission)
+                              : 0,
+                            other_cost: data.other_cost
+                              ? Number(data.other_cost)
+                              : 0,
+                            lines: data.lines.map((line) => ({
+                              ...line,
+                              weight: Number(line.weight),
+                              unit_price: Number(line.unit_price),
+                              tax: Number(line.tax) || 0,
+                              discount: Number(line.discount) || 0,
+                            })),
+                            payment_description:
+                              data.payment_description || undefined,
+                          };
+                          await createSalesProforma(apiData);
+                          toast.success(
+                            tCommon("toast_messages.create_success")
+                          );
+                          await loadData();
+                        } catch (error) {
+                          console.error(
+                            "Failed to create sales proforma:",
+                            error
+                          );
+                          handleApiErrorWithToast(
+                            error,
+                            "Creating sales proforma"
+                          );
+                        }
+                      },
+                    });
+                  }}
+                >
                   <Plus className="w-4 h-4 mr-1" />
                   {t("sales.add_proforma")}
                 </Button>
               </div>
             </div>
             <div className="p-4">
-              <Collapsible open={salesProformaFiltersOpen} onOpenChange={setSalesProformaFiltersOpen}>
+              <Collapsible
+                open={salesProformaFiltersOpen}
+                onOpenChange={setSalesProformaFiltersOpen}
+              >
                 <div className="flex justify-end mb-3">
                   <CollapsibleTrigger asChild>
-                    <Button variant="outline" className="flex items-center gap-2">
+                    <Button
+                      variant="outline"
+                      className="flex items-center gap-2"
+                    >
                       فیلتر ها
-                      {salesProformaFiltersOpen ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                      {salesProformaFiltersOpen ? (
+                        <ChevronUp className="w-4 h-4" />
+                      ) : (
+                        <ChevronDown className="w-4 h-4" />
+                      )}
                     </Button>
                   </CollapsibleTrigger>
                 </div>
                 <CollapsibleContent dir="rtl">
                   <div className="grid grid-cols-4 gap-4 mb-4">
                     <div>
-                      <div className="text-sm font-medium mb-1">{t("sales.serial_number")}</div>
+                      <div className="text-sm font-medium mb-1">
+                        {t("sales.serial_number")}
+                      </div>
                       <Input
                         value={salesProformaFilters.serial_number}
-                        onChange={e => setSalesProformaFilters({...salesProformaFilters, serial_number: e.target.value})}
+                        onChange={(e) =>
+                          setSalesProformaFilters({
+                            ...salesProformaFilters,
+                            serial_number: e.target.value,
+                          })
+                        }
                         placeholder="شماره سریال"
                       />
                     </div>
                     <div>
-                      <div className="text-sm font-medium mb-1">{t("sales.customer")}</div>
+                      <div className="text-sm font-medium mb-1">
+                        {t("sales.customer")}
+                      </div>
                       <SearchableSelect
                         options={[
-                          { value: '', label: 'همه مشتری ها' },
-                          ...customers.map(c => ({
+                          { value: "", label: "همه مشتری ها" },
+                          ...customers.map((c) => ({
                             value: c.id.toString(),
-                            label: c.company_name || c.full_name || `#${c.id}`
-                          }))
+                            label: c.company_name || c.full_name || `#${c.id}`,
+                          })),
                         ]}
                         value={salesProformaFilters.customer}
-                        onValueChange={(v) => setSalesProformaFilters({...salesProformaFilters, customer: v})}
+                        onValueChange={(v) =>
+                          setSalesProformaFilters({
+                            ...salesProformaFilters,
+                            customer: v,
+                          })
+                        }
                       />
                     </div>
                     <div>
-                      <div className="text-sm font-medium mb-1">{t("sales.payment_type")}</div>
+                      <div className="text-sm font-medium mb-1">
+                        {t("sales.payment_type")}
+                      </div>
                       <SimpleCombobox
                         options={[
-                          { value: '', label: 'همه انواع' },
-                          { value: 'cash', label: tCommon('payment_types.cash') },
-                          { value: 'credit', label: tCommon('payment_types.credit') },
-                          { value: 'other', label: tCommon('payment_types.other') }
+                          { value: "", label: "همه انواع" },
+                          {
+                            value: "cash",
+                            label: tCommon("payment_types.cash"),
+                          },
+                          {
+                            value: "credit",
+                            label: tCommon("payment_types.credit"),
+                          },
+                          {
+                            value: "other",
+                            label: tCommon("payment_types.other"),
+                          },
                         ]}
                         value={salesProformaFilters.payment_type}
-                        onValueChange={(v) => setSalesProformaFilters({...salesProformaFilters, payment_type: v})}
+                        onValueChange={(v) =>
+                          setSalesProformaFilters({
+                            ...salesProformaFilters,
+                            payment_type: v,
+                          })
+                        }
                         placeholder="نوع پرداخت"
                         searchPlaceholder="نوع پرداخت"
                         showCreateNew={false}
@@ -395,21 +616,31 @@ export default function FinancePage() {
                       <div className="text-sm font-medium mb-1">محصول</div>
                       <SearchableSelect
                         options={[
-                          { value: '', label: 'همه محصولات' },
-                          ...products.map(p => ({
+                          { value: "", label: "همه محصولات" },
+                          ...products.map((p) => ({
                             value: p.id.toString(),
-                            label: p.name
-                          }))
+                            label: p.name,
+                          })),
                         ]}
                         value={salesProformaFilters.product}
-                        onValueChange={(v) => setSalesProformaFilters({...salesProformaFilters, product: v})}
+                        onValueChange={(v) =>
+                          setSalesProformaFilters({
+                            ...salesProformaFilters,
+                            product: v,
+                          })
+                        }
                       />
                     </div>
                     <div>
                       <div className="text-sm font-medium mb-1">تاریخ از</div>
                       <PersianDatePicker
                         value={salesProformaFilters.date_from}
-                        onChange={(v) => setSalesProformaFilters({...salesProformaFilters, date_from: v})}
+                        onChange={(v) =>
+                          setSalesProformaFilters({
+                            ...salesProformaFilters,
+                            date_from: v,
+                          })
+                        }
                         placeholder="انتخاب تاریخ"
                       />
                     </div>
@@ -417,7 +648,12 @@ export default function FinancePage() {
                       <div className="text-sm font-medium mb-1">تاریخ تا</div>
                       <PersianDatePicker
                         value={salesProformaFilters.date_to}
-                        onChange={(v) => setSalesProformaFilters({...salesProformaFilters, date_to: v})}
+                        onChange={(v) =>
+                          setSalesProformaFilters({
+                            ...salesProformaFilters,
+                            date_to: v,
+                          })
+                        }
                         placeholder="انتخاب تاریخ"
                       />
                     </div>
@@ -427,12 +663,22 @@ export default function FinancePage() {
                         <Input
                           placeholder="حداقل"
                           value={salesProformaFilters.total_amount_min}
-                          onChange={e => setSalesProformaFilters({...salesProformaFilters, total_amount_min: e.target.value})}
+                          onChange={(e) =>
+                            setSalesProformaFilters({
+                              ...salesProformaFilters,
+                              total_amount_min: e.target.value,
+                            })
+                          }
                         />
                         <Input
                           placeholder="حداکثر"
                           value={salesProformaFilters.total_amount_max}
-                          onChange={e => setSalesProformaFilters({...salesProformaFilters, total_amount_max: e.target.value})}
+                          onChange={(e) =>
+                            setSalesProformaFilters({
+                              ...salesProformaFilters,
+                              total_amount_max: e.target.value,
+                            })
+                          }
                         />
                       </div>
                     </div>
@@ -440,16 +686,18 @@ export default function FinancePage() {
                   <div className="flex justify-end mb-4">
                     <Button
                       className="bg-red-100 text-red-700 hover:bg-red-200"
-                      onClick={() => setSalesProformaFilters({
-                        serial_number: "",
-                        customer: "",
-                        payment_type: "",
-                        date_from: "",
-                        date_to: "",
-                        product: "",
-                        total_amount_min: "",
-                        total_amount_max: "",
-                      })}
+                      onClick={() =>
+                        setSalesProformaFilters({
+                          serial_number: "",
+                          customer: "",
+                          payment_type: "",
+                          date_from: "",
+                          date_to: "",
+                          product: "",
+                          total_amount_min: "",
+                          total_amount_max: "",
+                        })
+                      }
                     >
                       ریست
                     </Button>
@@ -463,10 +711,15 @@ export default function FinancePage() {
                   <TableHead className="w-12 text-center">
                     <input
                       type="checkbox"
-                      checked={filteredSalesProformas.length > 0 && selectedSales.length === filteredSalesProformas.length}
+                      checked={
+                        filteredSalesProformas.length > 0 &&
+                        selectedSales.length === filteredSalesProformas.length
+                      }
                       onChange={(e) => {
                         if (e.target.checked) {
-                          setSelectedSales(filteredSalesProformas.map(p => p.id));
+                          setSelectedSales(
+                            filteredSalesProformas.map((p) => p.id)
+                          );
                         } else {
                           setSelectedSales([]);
                         }
@@ -474,18 +727,33 @@ export default function FinancePage() {
                     />
                   </TableHead>
                   <TableHead className="text-right w-16">ردیف</TableHead>
-                  <TableHead className="text-right">{t("sales.serial_number")}</TableHead>
-                  <TableHead className="text-right">{t("sales.payment_type")}</TableHead>
-                  <TableHead className="text-right">{t("sales.total_amount")}</TableHead>
-                  <TableHead className="text-right">{t("sales.date")}</TableHead>
-                  <TableHead className="text-right">{t("sales.customer")}</TableHead>
-                  <TableHead className="text-center w-24">{t("sales.operations")}</TableHead>
+                  <TableHead className="text-right">
+                    {t("sales.serial_number")}
+                  </TableHead>
+                  <TableHead className="text-right">
+                    {t("sales.payment_type")}
+                  </TableHead>
+                  <TableHead className="text-right">
+                    {t("sales.total_amount")}
+                  </TableHead>
+                  <TableHead className="text-right">
+                    {t("sales.date")}
+                  </TableHead>
+                  <TableHead className="text-right">
+                    {t("sales.customer")}
+                  </TableHead>
+                  <TableHead className="text-center w-24">
+                    {t("sales.operations")}
+                  </TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {filteredSalesProformas.map((proforma, index) => (
                   <TableRow key={proforma.id} className="hover:bg-gray-50">
-                    <TableCell className="text-center" onClick={(e) => e.stopPropagation()}>
+                    <TableCell
+                      className="text-center"
+                      onClick={(e) => e.stopPropagation()}
+                    >
                       <input
                         type="checkbox"
                         checked={selectedSales.includes(proforma.id)}
@@ -493,75 +761,156 @@ export default function FinancePage() {
                           if (e.target.checked) {
                             setSelectedSales([...selectedSales, proforma.id]);
                           } else {
-                            setSelectedSales(selectedSales.filter(id => id !== proforma.id));
+                            setSelectedSales(
+                              selectedSales.filter((id) => id !== proforma.id)
+                            );
                           }
                         }}
                       />
                     </TableCell>
-                    <TableCell className="text-right font-medium">{index + 1}</TableCell>
+                    <TableCell className="text-right font-medium">
+                      {index + 1}
+                    </TableCell>
                     <TableCell
                       className="text-right font-mono"
                       dir="auto"
                       style={{ unicodeBidi: "plaintext" }}
                     >
-                      {toPersianDigits(compactIndicatorValue(proforma.serial_number))}
+                      {toPersianDigits(
+                        compactIndicatorValue(proforma.serial_number)
+                      )}
                     </TableCell>
                     <TableCell className="text-right">
-                      {proforma.payment_type === 'cash' && tCommon('payment_types.cash')}
-                      {proforma.payment_type === 'credit' && tCommon('payment_types.credit')}
-                      {proforma.payment_type === 'other' && tCommon('payment_types.other')}
+                      {proforma.payment_type === "cash" &&
+                        tCommon("payment_types.cash")}
+                      {proforma.payment_type === "credit" &&
+                        tCommon("payment_types.credit")}
+                      {proforma.payment_type === "other" &&
+                        tCommon("payment_types.other")}
                     </TableCell>
-                    <TableCell className="text-right">{formatNumber(calculateTotal(proforma.lines))} {tCommon('units.rial')}</TableCell>
-                    <TableCell className="text-right">{new Date(proforma.date).toLocaleDateString('fa-IR')}</TableCell>
-                    <TableCell className="text-right">{getPartyDisplayName(customers.find(c => c.id === proforma.customer))}</TableCell>
+                    <TableCell className="text-right">
+                      {formatNumber(calculateTotal(proforma.lines))}{" "}
+                      {tCommon("units.rial")}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      {new Date(proforma.date).toLocaleDateString("fa-IR")}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      {getPartyDisplayName(
+                        customers.find((c) => c.id === proforma.customer)
+                      )}
+                    </TableCell>
                     <TableCell>
                       <div className="flex gap-2 justify-center">
-                        <Button size="sm" variant="ghost" onClick={(e) => {
-                          e.stopPropagation();
-                          handleRowClick(proforma, 'sales')
-                        }}>
+                        <Button
+                          size="sm"
+                          className="text-red-900"
+                          variant="ghost"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleExportSelectedPdf(proforma, "sales");
+                          }}
+                        >
+                          PDF
+                          <File className="w-4 h-4 text-red-600" />
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleRowClick(proforma, "sales");
+                          }}
+                        >
                           <Eye className="w-4 h-4 text-blue-600" />
                         </Button>
-                        <Button size="sm" variant="ghost" onClick={(e) => {
-                          e.stopPropagation();
-                          openModal(SalesProformaModal, {
-                            isEditing: true,
-                            initialData: {
-                              ...proforma,
-                              customer: Number(proforma.customer),
-                              tax: String(proforma.tax),
-                              discount: String(proforma.discount),
-                              payment_description: proforma.payment_description || undefined,
-                              lines: proforma.lines?.map(line => ({
-                                ...line,
-                                product: Number(line.product),
-                                weight: String(line.weight),
-                                unit_price: String(line.unit_price),
-                              })) || [],
-                            },
-                            onSubmit: async (data) => {
-                              try {
-                                const apiData = {
-                                  ...data,
-                                  payment_description: data.payment_description || null
-                                };
-                                await updateSalesProforma(proforma.id, apiData);
-                                toast.success(tCommon("toast_messages.update_success"));
-                                await loadData();
-                              } catch (error) {
-                                console.error("Failed to update sales proforma:", error);
-                                handleApiErrorWithToast(error, "Updating sales proforma");
-                                
-                              }
-                            }
-                          });
-                        }}>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            openModal(SalesProformaModal, {
+                              isEditing: true,
+                              initialData: {
+                                ...proforma,
+                                customer: Number(proforma.customer),
+                                tax: String(proforma.tax),
+                                discount: String(proforma.discount),
+                                shipping_cost: String(
+                                  proforma.shipping_cost ?? 0
+                                ),
+                                commission: String(proforma.commission ?? 0),
+                                other_cost: String(proforma.other_cost ?? 0),
+                                export_preset: proforma.export_preset ?? null,
+                                payment_description:
+                                  proforma.payment_description || undefined,
+                                lines:
+                                  proforma.lines?.map((line) => ({
+                                    ...line,
+                                    product: Number(line.product),
+                                    weight: String(line.weight),
+                                    unit_price: String(line.unit_price),
+                                    tax: String(line.tax),
+                                    discount: String(line.discount),
+                                  })) || [],
+                              },
+                              onSubmit: async (data) => {
+                                try {
+                                  const apiData = {
+                                    ...data,
+                                    tax: Number(data.tax) || 0,
+                                    discount: Number(data.discount) || 0,
+                                    shipping_cost: data.shipping_cost
+                                      ? Number(data.shipping_cost)
+                                      : 0,
+                                    commission: data.commission
+                                      ? Number(data.commission)
+                                      : 0,
+                                    other_cost: data.other_cost
+                                      ? Number(data.other_cost)
+                                      : 0,
+                                    lines: data.lines.map((line) => ({
+                                      ...line,
+                                      weight: Number(line.weight),
+                                      unit_price: Number(line.unit_price),
+                                      tax: Number(line.tax) || 0,
+                                      discount: Number(line.discount) || 0,
+                                    })),
+                                    payment_description:
+                                      data.payment_description || undefined,
+                                  };
+                                  await updateSalesProforma(
+                                    proforma.id,
+                                    apiData
+                                  );
+                                  toast.success(
+                                    tCommon("toast_messages.update_success")
+                                  );
+                                  await loadData();
+                                } catch (error) {
+                                  console.error(
+                                    "Failed to update sales proforma:",
+                                    error
+                                  );
+                                  handleApiErrorWithToast(
+                                    error,
+                                    "Updating sales proforma"
+                                  );
+                                }
+                              },
+                            });
+                          }}
+                        >
                           <Edit2 className="w-4 h-4" />
                         </Button>
-                        <Button size="sm" variant="ghost" onClick={(e) => {
-                          e.stopPropagation();
-                          handleDeleteSales(proforma.id);
-                        }}>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDeleteSales(proforma.id);
+                          }}
+                        >
                           <Trash2 className="w-4 h-4 text-red-500" />
                         </Button>
                       </div>
@@ -579,84 +928,141 @@ export default function FinancePage() {
               <h2 className="text-xl font-semibold">{t("purchase.title")}</h2>
               <div className="flex gap-2">
                 {selectedPurchases.length > 0 && (
-                  <Button variant="destructive" onClick={handleBulkDeletePurchases}>
+                  <Button
+                    variant="destructive"
+                    onClick={handleBulkDeletePurchases}
+                  >
                     <Trash2 className="w-4 h-4 mr-1" />
                     {t("delete")} ({selectedPurchases.length})
                   </Button>
                 )}
-                <Button className="bg-[#f6d265] hover:bg-[#f5c842] text-black" onClick={() => {
-                openModal(PurchaseProformaModal, {
-                  onSubmit: async (data) => {
-                    try {
-                      await createPurchaseProforma(data);
-                      toast.success(tCommon("toast_messages.create_success"));
-                      await loadData();
-                    } catch (error) {
-                      console.error("Failed to create purchase proforma:", error);
-                      handleApiErrorWithToast(error, "Creating purchase proforma");
-
-                    }
-                  }
-                });
-                }}>
+                <Button
+                  className="bg-[#f6d265] hover:bg-[#f5c842] text-black"
+                  onClick={() => {
+                    openModal(PurchaseProformaModal, {
+                      onSubmit: async (data) => {
+                        try {
+                          const apiData = {
+                            ...data,
+                            tax: Number(data.tax) || 0,
+                            discount: Number(data.discount) || 0,
+                            lines: data.lines.map((line) => ({
+                              ...line,
+                              tax: Number(line.tax) || 0,
+                              discount: Number(line.discount) || 0,
+                            })),
+                          };
+                          await createPurchaseProforma(data);
+                          toast.success(
+                            tCommon("toast_messages.create_success")
+                          );
+                          await loadData();
+                        } catch (error) {
+                          console.error(
+                            "Failed to create purchase proforma:",
+                            error
+                          );
+                          handleApiErrorWithToast(
+                            error,
+                            "Creating purchase proforma"
+                          );
+                        }
+                      },
+                    });
+                  }}
+                >
                   <Plus className="w-4 h-4 mr-1" />
                   {t("purchase.add_proforma")}
                 </Button>
               </div>
             </div>
             <div className="p-4">
-              <Collapsible open={purchaseProformaFiltersOpen} onOpenChange={setPurchaseProformaFiltersOpen}>
+              <Collapsible
+                open={purchaseProformaFiltersOpen}
+                onOpenChange={setPurchaseProformaFiltersOpen}
+              >
                 <div className="flex justify-end mb-3">
                   <CollapsibleTrigger asChild>
-                    <Button variant="outline" className="flex items-center gap-2">
+                    <Button
+                      variant="outline"
+                      className="flex items-center gap-2"
+                    >
                       فیلتر ها
-                      {purchaseProformaFiltersOpen ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                      {purchaseProformaFiltersOpen ? (
+                        <ChevronUp className="w-4 h-4" />
+                      ) : (
+                        <ChevronDown className="w-4 h-4" />
+                      )}
                     </Button>
                   </CollapsibleTrigger>
                 </div>
                 <CollapsibleContent dir="rtl">
                   <div className="grid grid-cols-4 gap-4 mb-4">
                     <div>
-                      <div className="text-sm font-medium mb-1">{t("purchase.serial_number")}</div>
+                      <div className="text-sm font-medium mb-1">
+                        {t("purchase.serial_number")}
+                      </div>
                       <Input
                         value={purchaseProformaFilters.serial_number}
-                        onChange={e => setPurchaseProformaFilters({...purchaseProformaFilters, serial_number: e.target.value})}
+                        onChange={(e) =>
+                          setPurchaseProformaFilters({
+                            ...purchaseProformaFilters,
+                            serial_number: e.target.value,
+                          })
+                        }
                         placeholder="شماره سریال"
                       />
                     </div>
                     <div>
-                      <div className="text-sm font-medium mb-1">{t("purchase.supplier")}</div>
+                      <div className="text-sm font-medium mb-1">
+                        {t("purchase.supplier")}
+                      </div>
                       <SearchableSelect
                         options={[
-                          { value: '', label: 'همه تامین کنندگان' },
-                          ...suppliers.map(s => ({
+                          { value: "", label: "همه تامین کنندگان" },
+                          ...suppliers.map((s) => ({
                             value: s.id.toString(),
-                            label: s.company_name || s.full_name || `#${s.id}`
-                          }))
+                            label: s.company_name || s.full_name || `#${s.id}`,
+                          })),
                         ]}
                         value={purchaseProformaFilters.supplier}
-                        onValueChange={(v) => setPurchaseProformaFilters({...purchaseProformaFilters, supplier: v})}
+                        onValueChange={(v) =>
+                          setPurchaseProformaFilters({
+                            ...purchaseProformaFilters,
+                            supplier: v,
+                          })
+                        }
                       />
                     </div>
                     <div>
                       <div className="text-sm font-medium mb-1">محصول</div>
                       <SearchableSelect
                         options={[
-                          { value: '', label: 'همه محصولات' },
-                          ...products.map(p => ({
+                          { value: "", label: "همه محصولات" },
+                          ...products.map((p) => ({
                             value: p.id.toString(),
-                            label: p.name
-                          }))
+                            label: p.name,
+                          })),
                         ]}
                         value={purchaseProformaFilters.product}
-                        onValueChange={(v) => setPurchaseProformaFilters({...purchaseProformaFilters, product: v})}
+                        onValueChange={(v) =>
+                          setPurchaseProformaFilters({
+                            ...purchaseProformaFilters,
+                            product: v,
+                          })
+                        }
                       />
                     </div>
                     <div>
                       <div className="text-sm font-medium mb-1">تاریخ از</div>
                       <PersianDatePicker
                         value={purchaseProformaFilters.date_from}
-                        onChange={(v) => setPurchaseProformaFilters({...purchaseProformaFilters, date_from: v})}
+                        onChange={(v) =>
+                          setPurchaseProformaFilters({
+                            ...purchaseProformaFilters,
+                            date_from: v,
+                          })
+                        }
                         placeholder="انتخاب تاریخ"
                       />
                     </div>
@@ -664,7 +1070,12 @@ export default function FinancePage() {
                       <div className="text-sm font-medium mb-1">تاریخ تا</div>
                       <PersianDatePicker
                         value={purchaseProformaFilters.date_to}
-                        onChange={(v) => setPurchaseProformaFilters({...purchaseProformaFilters, date_to: v})}
+                        onChange={(v) =>
+                          setPurchaseProformaFilters({
+                            ...purchaseProformaFilters,
+                            date_to: v,
+                          })
+                        }
                         placeholder="انتخاب تاریخ"
                       />
                     </div>
@@ -674,12 +1085,22 @@ export default function FinancePage() {
                         <Input
                           placeholder="حداقل"
                           value={purchaseProformaFilters.total_amount_min}
-                          onChange={e => setPurchaseProformaFilters({...purchaseProformaFilters, total_amount_min: e.target.value})}
+                          onChange={(e) =>
+                            setPurchaseProformaFilters({
+                              ...purchaseProformaFilters,
+                              total_amount_min: e.target.value,
+                            })
+                          }
                         />
                         <Input
                           placeholder="حداکثر"
                           value={purchaseProformaFilters.total_amount_max}
-                          onChange={e => setPurchaseProformaFilters({...purchaseProformaFilters, total_amount_max: e.target.value})}
+                          onChange={(e) =>
+                            setPurchaseProformaFilters({
+                              ...purchaseProformaFilters,
+                              total_amount_max: e.target.value,
+                            })
+                          }
                         />
                       </div>
                     </div>
@@ -687,15 +1108,17 @@ export default function FinancePage() {
                   <div className="flex justify-end mb-4">
                     <Button
                       className="bg-red-100 text-red-700 hover:bg-red-200"
-                      onClick={() => setPurchaseProformaFilters({
-                        serial_number: "",
-                        supplier: "",
-                        date_from: "",
-                        date_to: "",
-                        product: "",
-                        total_amount_min: "",
-                        total_amount_max: "",
-                      })}
+                      onClick={() =>
+                        setPurchaseProformaFilters({
+                          serial_number: "",
+                          supplier: "",
+                          date_from: "",
+                          date_to: "",
+                          product: "",
+                          total_amount_min: "",
+                          total_amount_max: "",
+                        })
+                      }
                     >
                       ریست
                     </Button>
@@ -709,10 +1132,16 @@ export default function FinancePage() {
                   <TableHead className="w-12 text-center">
                     <input
                       type="checkbox"
-                      checked={filteredPurchaseProformas.length > 0 && selectedPurchases.length === filteredPurchaseProformas.length}
+                      checked={
+                        filteredPurchaseProformas.length > 0 &&
+                        selectedPurchases.length ===
+                          filteredPurchaseProformas.length
+                      }
                       onChange={(e) => {
                         if (e.target.checked) {
-                          setSelectedPurchases(filteredPurchaseProformas.map(p => p.id));
+                          setSelectedPurchases(
+                            filteredPurchaseProformas.map((p) => p.id)
+                          );
                         } else {
                           setSelectedPurchases([]);
                         }
@@ -720,83 +1149,151 @@ export default function FinancePage() {
                     />
                   </TableHead>
                   <TableHead className="text-right w-16">ردیف</TableHead>
-                  <TableHead className="text-right">{t("purchase.serial_number")}</TableHead>
-                  <TableHead className="text-right">{t("purchase.total_amount")}</TableHead>
-                  <TableHead className="text-right">{t("purchase.date")}</TableHead>
-                  <TableHead className="text-right">{t("purchase.supplier")}</TableHead>
-                  <TableHead className="text-center w-24">{t("purchase.operations")}</TableHead>
+                  <TableHead className="text-right">
+                    {t("purchase.serial_number")}
+                  </TableHead>
+                  <TableHead className="text-right">
+                    {t("purchase.total_amount")}
+                  </TableHead>
+                  <TableHead className="text-right">
+                    {t("purchase.date")}
+                  </TableHead>
+                  <TableHead className="text-right">
+                    {t("purchase.supplier")}
+                  </TableHead>
+                  <TableHead className="text-center w-24">
+                    {t("purchase.operations")}
+                  </TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {filteredPurchaseProformas.map((proforma, index) => (
                   <TableRow key={proforma.id} className="hover:bg-gray-50">
-                    <TableCell className="text-center" onClick={(e) => e.stopPropagation()}>
+                    <TableCell
+                      className="text-center"
+                      onClick={(e) => e.stopPropagation()}
+                    >
                       <input
                         type="checkbox"
                         checked={selectedPurchases.includes(proforma.id)}
                         onChange={(e) => {
                           if (e.target.checked) {
-                            setSelectedPurchases([...selectedPurchases, proforma.id]);
+                            setSelectedPurchases([
+                              ...selectedPurchases,
+                              proforma.id,
+                            ]);
                           } else {
-                            setSelectedPurchases(selectedPurchases.filter(id => id !== proforma.id));
+                            setSelectedPurchases(
+                              selectedPurchases.filter(
+                                (id) => id !== proforma.id
+                              )
+                            );
                           }
                         }}
                       />
                     </TableCell>
-                    <TableCell className="text-right font-medium">{index + 1}</TableCell>
+                    <TableCell className="text-right font-medium">
+                      {index + 1}
+                    </TableCell>
                     <TableCell
                       className="text-right font-mono"
                       dir="rtl"
                       style={{ unicodeBidi: "plaintext" }}
                     >
-                      {toPersianDigits(compactIndicatorValue(proforma.serial_number))}
+                      {toPersianDigits(
+                        compactIndicatorValue(proforma.serial_number)
+                      )}
                     </TableCell>
-                    <TableCell className="text-right">{formatNumber(calculateTotal(proforma.lines))} {tCommon('units.rial')}</TableCell>
-                    <TableCell className="text-right">{new Date(proforma.date).toLocaleDateString('fa-IR')}</TableCell>
-                    <TableCell className="text-right">{getPartyDisplayName(suppliers.find(s => s.id === proforma.supplier))}</TableCell>
+                    <TableCell className="text-right">
+                      {formatNumber(calculateTotal(proforma.lines))}{" "}
+                      {tCommon("units.rial")}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      {new Date(proforma.date).toLocaleDateString("fa-IR")}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      {getPartyDisplayName(
+                        suppliers.find((s) => s.id === proforma.supplier)
+                      )}
+                    </TableCell>
                     <TableCell>
                       <div className="flex gap-2 justify-center">
-                        <Button size="sm" variant="ghost" onClick={(e) => {
-                          e.stopPropagation();
-                          handleRowClick(proforma, 'purchase')
-                        }}>
+                        <Button
+                          size="sm"
+                          className="text-red-900"
+                          variant="ghost"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleExportSelectedPdf(proforma, "purchase");
+                          }}
+                        >
+                          PDF
+                          <File className="w-4 h-4 text-red-600" />
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleRowClick(proforma, "purchase");
+                          }}
+                        >
                           <Eye className="w-4 h-4 text-blue-600" />
                         </Button>
-                        <Button size="sm" variant="ghost" onClick={(e) => {
-                          e.stopPropagation();
-                          openModal(PurchaseProformaModal, {
-                            isEditing: true,
-                            initialData: {
-                              ...proforma,
-                              supplier: Number(proforma.supplier),
-                              tax: Number(proforma.tax),
-                              discount: Number(proforma.discount),
-                              lines: proforma.lines?.map(line => ({
-                                ...line,
-                                product: Number(line.product),
-                                weight: Number(line.weight),
-                                unit_price: Number(line.unit_price),
-                              })) || [],
-                            },
-                            onSubmit: async (data) => {
-                              try {
-                                await updatePurchaseProforma(proforma.id, data);
-                                toast.success(tCommon("toast_messages.update_success"));
-                                await loadData();
-                              } catch (error) {
-                                console.error("Failed to update purchase proforma:", error);
-                                handleApiErrorWithToast(error, "Updating purchase proforma");
-                                
-                              }
-                            }
-                          });
-                        }}>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            openModal(PurchaseProformaModal, {
+                              isEditing: true,
+                              initialData: {
+                                ...proforma,
+                                supplier: Number(proforma.supplier),
+                                tax: Number(proforma.tax),
+                                discount: Number(proforma.discount),
+                                lines:
+                                  proforma.lines?.map((line) => ({
+                                    ...line,
+                                    product: Number(line.product),
+                                    weight: Number(line.weight),
+                                    unit_price: Number(line.unit_price),
+                                  })) || [],
+                              },
+                              onSubmit: async (data) => {
+                                try {
+                                  await updatePurchaseProforma(
+                                    proforma.id,
+                                    data
+                                  );
+                                  toast.success(
+                                    tCommon("toast_messages.update_success")
+                                  );
+                                  await loadData();
+                                } catch (error) {
+                                  console.error(
+                                    "Failed to update purchase proforma:",
+                                    error
+                                  );
+                                  handleApiErrorWithToast(
+                                    error,
+                                    "Updating purchase proforma"
+                                  );
+                                }
+                              },
+                            });
+                          }}
+                        >
                           <Edit2 className="w-4 h-4" />
                         </Button>
-                        <Button size="sm" variant="ghost" onClick={(e) => {
-                          e.stopPropagation();
-                          handleDeletePurchase(proforma.id);
-                        }}>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDeletePurchase(proforma.id);
+                          }}
+                        >
                           <Trash2 className="w-4 h-4 text-red-500" />
                         </Button>
                       </div>
@@ -810,11 +1307,15 @@ export default function FinancePage() {
       </Tabs>
 
       <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
-        <SheetContent side="left" className="w-[400px] sm:w-[540px] overflow-y-auto p-6" dir="rtl">
+        <SheetContent
+          side="left"
+          className="w-[400px] sm:w-[540px] overflow-y-auto p-6"
+          dir="rtl"
+        >
           <SheetHeader>
             <SheetTitle className="text-2xl font-bold text-[#f6d265]">
-              {selectedType === 'sales' && t("sales.details")}
-              {selectedType === 'purchase' && t("purchase.details")}
+              {selectedType === "sales" && t("sales.details")}
+              {selectedType === "purchase" && t("purchase.details")}
             </SheetTitle>
           </SheetHeader>
           {selectedItem && (
@@ -824,7 +1325,7 @@ export default function FinancePage() {
                   variant="outline"
                   size="sm"
                   onClick={() => {
-                    if (selectedType === 'sales') {
+                    if (selectedType === "sales") {
                       const proforma = selectedItem as SalesProforma;
                       openModal(SalesProformaModal, {
                         isEditing: true,
@@ -833,29 +1334,63 @@ export default function FinancePage() {
                           customer: Number(proforma.customer),
                           tax: String(proforma.tax),
                           discount: String(proforma.discount),
-                          payment_description: proforma.payment_description || undefined,
-                          lines: proforma.lines?.map(line => ({
-                            ...line,
-                            product: Number(line.product),
-                            weight: String(line.weight),
-                            unit_price: String(line.unit_price),
-                          })) || [],
+                          shipping_cost: String(proforma.shipping_cost ?? 0),
+                          commission: String(proforma.commission ?? 0),
+                          other_cost: String(proforma.other_cost ?? 0),
+                          export_preset: proforma.export_preset ?? null,
+                          payment_description:
+                            proforma.payment_description || undefined,
+                          lines:
+                            proforma.lines?.map((line) => ({
+                              ...line,
+                              product: Number(line.product),
+                              weight: String(line.weight),
+                              unit_price: String(line.unit_price),
+                              tax: String(line.tax),
+                              discount: String(line.discount),
+                            })) || [],
                         },
                         onSubmit: async (data) => {
                           try {
                             const apiData = {
                               ...data,
-                              payment_description: data.payment_description || null
+                              tax: Number(data.tax) || 0,
+                              discount: Number(data.discount) || 0,
+                              shipping_cost: data.shipping_cost
+                                ? Number(data.shipping_cost)
+                                : 0,
+                              commission: data.commission
+                                ? Number(data.commission)
+                                : 0,
+                              other_cost: data.other_cost
+                                ? Number(data.other_cost)
+                                : 0,
+                              lines: data.lines.map((line) => ({
+                                ...line,
+                                weight: Number(line.weight),
+                                unit_price: Number(line.unit_price),
+                                tax: Number(line.tax) || 0,
+                                discount: Number(line.discount) || 0,
+                              })),
+                              payment_description:
+                                data.payment_description || undefined,
                             };
                             await updateSalesProforma(proforma.id, apiData);
-                            toast.success(tCommon("toast_messages.update_success"));
+                            toast.success(
+                              tCommon("toast_messages.update_success")
+                            );
                             await loadData();
                           } catch (error) {
-                            console.error("Failed to update sales proforma:", error);
-                            handleApiErrorWithToast(error, "Updating sales proforma");
-                            
+                            console.error(
+                              "Failed to update sales proforma:",
+                              error
+                            );
+                            handleApiErrorWithToast(
+                              error,
+                              "Updating sales proforma"
+                            );
                           }
-                        }
+                        },
                       });
                     } else {
                       const proforma = selectedItem as PurchaseProforma;
@@ -866,24 +1401,32 @@ export default function FinancePage() {
                           supplier: Number(proforma.supplier),
                           tax: Number(proforma.tax),
                           discount: Number(proforma.discount),
-                          lines: proforma.lines?.map(line => ({
-                            ...line,
-                            product: Number(line.product),
-                            weight: Number(line.weight),
-                            unit_price: Number(line.unit_price),
-                          })) || [],
+                          lines:
+                            proforma.lines?.map((line) => ({
+                              ...line,
+                              product: Number(line.product),
+                              weight: Number(line.weight),
+                              unit_price: Number(line.unit_price),
+                            })) || [],
                         },
                         onSubmit: async (data) => {
                           try {
                             await updatePurchaseProforma(proforma.id, data);
-                            toast.success(tCommon("toast_messages.update_success"));
+                            toast.success(
+                              tCommon("toast_messages.update_success")
+                            );
                             await loadData();
                           } catch (error) {
-                            console.error("Failed to update purchase proforma:", error);
-                            handleApiErrorWithToast(error, "Updating purchase proforma");
-                            
+                            console.error(
+                              "Failed to update purchase proforma:",
+                              error
+                            );
+                            handleApiErrorWithToast(
+                              error,
+                              "Updating purchase proforma"
+                            );
                           }
-                        }
+                        },
                       });
                     }
                     setSheetOpen(false);
@@ -897,10 +1440,13 @@ export default function FinancePage() {
                   size="sm"
                   className="text-red-600 hover:bg-red-50"
                   onClick={async () => {
-                    const confirmMessage = selectedType === 'sales' ? t("sales.confirm_delete") : t("purchase.confirm_delete");
+                    const confirmMessage =
+                      selectedType === "sales"
+                        ? t("sales.confirm_delete")
+                        : t("purchase.confirm_delete");
                     if (confirm(confirmMessage)) {
                       try {
-                        if (selectedType === 'sales') {
+                        if (selectedType === "sales") {
                           await deleteSalesProforma(selectedItem.id);
                         } else {
                           await deletePurchaseProforma(selectedItem.id);
@@ -911,7 +1457,6 @@ export default function FinancePage() {
                       } catch (error) {
                         console.error("Failed to delete proforma:", error);
                         handleApiErrorWithToast(error, "Deleting proforma");
-                        
                       }
                     }
                   }}
@@ -921,31 +1466,74 @@ export default function FinancePage() {
                 </Button>
               </div>
               <div className="mt-6 space-y-4 p-4 bg-gray-50 rounded-lg">
-                <div><strong>{tCommon('detail_labels.serial_number')}</strong> {toPersianDigits(compactIndicatorValue(selectedItem.serial_number))}</div>
-                <div><strong>{tCommon('detail_labels.date')}</strong> {new Date(selectedItem.date).toLocaleDateString('fa-IR')}</div>
-                {selectedType === 'sales' && 'customer' in selectedItem && (
+                <div>
+                  <strong>{tCommon("detail_labels.serial_number")}</strong>{" "}
+                  {toPersianDigits(
+                    compactIndicatorValue(selectedItem.serial_number)
+                  )}
+                </div>
+                <div>
+                  <strong>{tCommon("detail_labels.date")}</strong>{" "}
+                  {new Date(selectedItem.date).toLocaleDateString("fa-IR")}
+                </div>
+                {selectedType === "sales" && "customer" in selectedItem && (
                   <>
-                    <div><strong>{tCommon('detail_labels.customer')}</strong> {getPartyDisplayName(customers.find(c => c.id === selectedItem.customer))}</div>
-                    <div><strong>{tCommon('detail_labels.payment_type')}</strong> {
-                      selectedItem.payment_type === 'cash' ? tCommon('payment_types.cash') :
-                        selectedItem.payment_type === 'credit' ? tCommon('payment_types.credit') : tCommon('payment_types.other')
-                    }</div>
-                    {selectedItem.payment_description && <div><strong>{tCommon('detail_labels.payment_description')}</strong> {selectedItem.payment_description}</div>}
+                    <div>
+                      <strong>{tCommon("detail_labels.customer")}</strong>{" "}
+                      {getPartyDisplayName(
+                        customers.find((c) => c.id === selectedItem.customer)
+                      )}
+                    </div>
+                    <div>
+                      <strong>{tCommon("detail_labels.payment_type")}</strong>{" "}
+                      {selectedItem.payment_type === "cash"
+                        ? tCommon("payment_types.cash")
+                        : selectedItem.payment_type === "credit"
+                        ? tCommon("payment_types.credit")
+                        : tCommon("payment_types.other")}
+                    </div>
+                    {selectedItem.payment_description && (
+                      <div>
+                        <strong>
+                          {tCommon("detail_labels.payment_description")}
+                        </strong>{" "}
+                        {selectedItem.payment_description}
+                      </div>
+                    )}
                   </>
                 )}
-                {selectedType === 'purchase' && 'supplier' in selectedItem && (
-                  <div><strong>{tCommon('detail_labels.supplier')}</strong> {getPartyDisplayName(suppliers.find(s => s.id === selectedItem.supplier))}</div>
+                {selectedType === "purchase" && "supplier" in selectedItem && (
+                  <div>
+                    <strong>{tCommon("detail_labels.supplier")}</strong>{" "}
+                    {getPartyDisplayName(
+                      suppliers.find((s) => s.id === selectedItem.supplier)
+                    )}
+                  </div>
                 )}
-                <div><strong>{tCommon('detail_labels.total_amount')}</strong> {formatNumber(calculateTotal(selectedItem.lines))} {tCommon('units.rial')}</div>
+                <div>
+                  <strong>{tCommon("detail_labels.total_amount")}</strong>{" "}
+                  {formatNumber(calculateTotal(selectedItem.lines))}{" "}
+                  {tCommon("units.rial")}
+                </div>
                 {selectedItem.lines && selectedItem.lines.length > 0 && (
                   <div>
-                    <strong>{tCommon('detail_labels.lines')}</strong>
+                    <strong>{tCommon("detail_labels.lines")}</strong>
                     <ul className="mt-2 space-y-2">
                       {selectedItem.lines.map((line, idx: number) => (
                         <li key={idx} className="bg-white p-3 rounded border">
-                          <div>{tCommon('detail_labels.product')} {products.find(p => p.id === line.product)?.name}</div>
-                          <div>{tCommon('detail_labels.weight')} {line.weight} {tCommon('units.kg')}</div>
-                          <div>{tCommon('detail_labels.unit_price')} {formatNumber(line.unit_price)} {tCommon('units.rial')}</div>
+                          <div>
+                            {tCommon("detail_labels.product")}{" "}
+                            {products.find((p) => p.id === line.product)?.name}
+                          </div>
+                          <div>
+                            {tCommon("detail_labels.weight")} {line.weight}{" "}
+                            {tCommon("units.kg")}
+                          </div>
+                          <div>
+                            {tCommon("detail_labels.unit_price")}{" "}
+                            {formatNumber(line.unit_price)}{" "}
+                            {tCommon("units.rial")}
+                          </div>
                         </li>
                       ))}
                     </ul>

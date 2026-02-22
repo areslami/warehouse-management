@@ -191,21 +191,21 @@ export function WarehouseReceiptModal({ trigger, onSubmit, onClose, initialData,
 
   const indicatorPreview = useMemo(() => {
     if (!defaultIndicator) return null;
+    const startNumber = defaultIndicator.start_number ?? 1;
+    const currentCounter = Math.max((defaultIndicator.counter ?? 0) + 1, startNumber);
     return buildIndicatorPreview(
       defaultIndicator.format_template || DEFAULT_INDICATOR_TEMPLATE,
-      {
-        counter: (defaultIndicator.counter ?? 0) + 2,
-      }
+      { counter: currentCounter + 1 }
     );
   }, [defaultIndicator]);
 
-    const currentIndicatorPreview = useMemo(() => {
+  const currentIndicatorPreview = useMemo(() => {
     if (!defaultIndicator) return null;
+    const startNumber = defaultIndicator.start_number ?? 1;
+    const currentCounter = Math.max((defaultIndicator.counter ?? 0) + 1, startNumber);
     return buildIndicatorPreview(
       defaultIndicator.format_template || DEFAULT_INDICATOR_TEMPLATE,
-      {
-        counter: (defaultIndicator.counter ?? 0) + 1,
-      }
+      { counter: currentCounter }
     );
   }, [defaultIndicator]);
 

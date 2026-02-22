@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import SalesProforma,PurchaseProforma,ProformaLine
+from .models import SalesProforma,PurchaseProforma,ProformaLine, ProformaExportPreset
 
 
 class ProformaLineSerializer(serializers.ModelSerializer):
@@ -15,17 +15,37 @@ class ProformaLineSerializer(serializers.ModelSerializer):
             'product_code',
             'weight',
             'unit_price',
+            'tax',
+            'discount',
             'total_price',
         ]
         read_only_fields=['total_price']
         
+
+class ProformaExportPresetSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ProformaExportPreset
+        fields = [
+            'id',
+            'name',
+            'bank_name',
+            'account_number',
+            'sheba_number',
+            'description',
+            'created_at',
+            'updated_at',
+        ]
+        read_only_fields = ['created_at', 'updated_at']
+
+
+
 class PurchaseProformaSerializer(serializers.ModelSerializer):
     lines=ProformaLineSerializer(many=True,required=False)
     supplier_name=serializers.SerializerMethodField()
     
     class Meta:
         model = PurchaseProforma
-        fields = ['id','serial_number','date','subtotal','tax','discount' ,'final_price' ,'supplier','supplier_name','lines','created_at','updated_at']
+        fields = ['id','serial_number','date','subtotal','tax','discount','export_preset' ,'final_price', 'shipping_cost','commission','other_cost','supplier','supplier_name','lines','created_at','updated_at']
         read_only_fields=['subtotal','final_price','created_at','updated_at']
     
     def get_supplier_name(self, obj):
@@ -42,8 +62,14 @@ class PurchaseProformaSerializer(serializers.ModelSerializer):
             ProformaLine.objects.create(proforma=proforma, **item_data)
             subtotal += item_data['weight'] * item_data['unit_price']
         proforma.subtotal = subtotal
-        proforma.final_price = (1 - proforma.discount) * subtotal 
-        proforma.final_price = (1 + proforma.tax) * proforma.final_price
+        proforma.final_price = (
+            subtotal
+            - proforma.discount
+            + proforma.tax
+            + proforma.shipping_cost
+            + proforma.commission
+            + proforma.other_cost
+        )
         proforma.save()
         return proforma
     
@@ -62,8 +88,14 @@ class PurchaseProformaSerializer(serializers.ModelSerializer):
                 subtotal += item_data['weight'] * item_data['unit_price']
             
             instance.subtotal = subtotal
-            instance.final_price = (1 - instance.discount) * subtotal 
-            instance.final_price = (1 + instance.tax) * instance.final_price
+            instance.final_price = (
+                1
+                - instance.discount
+                + instance.tax
+                + instance.shipping_cost
+                + instance.commission
+                + instance.other_cost
+            ) * subtotal
         
         instance.save()
         return instance
@@ -74,7 +106,26 @@ class SalesProformaSerializer(serializers.ModelSerializer):
     customer_name=serializers.SerializerMethodField()
     class Meta:
         model = SalesProforma
-        fields = ['id','serial_number','date','subtotal','tax','discount' ,'final_price','payment_type',"payment_description",'customer','customer_name','lines','created_at','updated_at']
+        fields = [
+            'id',
+            'serial_number',
+            'date',
+            'subtotal',
+            'tax',
+            'discount',
+            'shipping_cost',
+            'commission',
+            'other_cost',
+            'final_price',
+            'export_preset',
+            'payment_type',
+            "payment_description",
+            'customer',
+            'customer_name',
+            'lines',
+            'created_at',
+            'updated_at',
+        ]
         read_only_fields=['subtotal','final_price','created_at','updated_at']
     
     def get_customer_name(self, obj):
@@ -91,8 +142,14 @@ class SalesProformaSerializer(serializers.ModelSerializer):
             ProformaLine.objects.create(proforma=proforma, **item_data)
             subtotal += item_data['weight'] * item_data['unit_price']
         proforma.subtotal = subtotal
-        proforma.final_price = (1 - proforma.discount) * subtotal 
-        proforma.final_price = (1 + proforma.tax) * proforma.final_price
+        proforma.final_price = (
+            subtotal
+            - proforma.discount
+            + proforma.tax
+            + proforma.shipping_cost
+            + proforma.commission
+            + proforma.other_cost
+        )
         proforma.save()
         return proforma
     
@@ -111,11 +168,14 @@ class SalesProformaSerializer(serializers.ModelSerializer):
                 subtotal += item_data['weight'] * item_data['unit_price']
             
             instance.subtotal = subtotal
-            instance.final_price = (1 - instance.discount) * subtotal 
-            instance.final_price = (1 + instance.tax) * instance.final_price
+            instance.final_price = (
+                1
+                - instance.discount
+                + instance.tax
+                + instance.shipping_cost
+                + instance.commission
+                + instance.other_cost
+            ) * subtotal
         
         instance.save()
         return instance
-    
-    
-
