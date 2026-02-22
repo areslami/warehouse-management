@@ -21,6 +21,7 @@ import { B2BDistribution, B2BOffer } from "@/lib/interfaces/b2b";
 import { PersianDatePicker } from "../../ui/persian-date-picker";
 import { getPartyDisplayName } from "@/lib/utils/party-utils";
 import { describeProduct, describeParty, describeOffer, describeDistribution } from "@/lib/utils/label-utils";
+import { formatNumber } from "@/lib/utils/number-format";
 import { B2BOfferModal } from "./b2b-offer-modal";
 import { B2BDistributionModal } from "./b2b-distribution-modal";
 
@@ -63,6 +64,7 @@ export function B2BSaleModal({ trigger, onSubmit, onClose, initialData, isEditin
     const [saleType, setSaleType] = useState<"your_sale" | "distributor_sale">(
         initialData?.is_distributor ? "distributor_sale" : "your_sale"
     );
+    const [selectedMaxWeight, setSelectedMaxWeight] = useState<number | null>(null);
 
     useEffect(() => {
         if (products.length === 0) {
@@ -99,7 +101,13 @@ export function B2BSaleModal({ trigger, onSubmit, onClose, initialData, isEditin
         offer: z.number().nullable().optional(),
         b2b_distribution: z.number().nullable().optional(),
         cottage_code: z.string().optional(),
-        weight: z.number().positive(tval("weight")),
+        weight: z.number().positive(tval("weight")).refine(
+            (val) => {
+                if (!selectedMaxWeight) return true;
+                return val <= selectedMaxWeight;
+            },
+            { message: tval("weight-exceeds-max") }
+        ),
         unit_price: z.number().positive(tval("unit-price")),
         sale_date: z.string().min(1, tval("sale-date")),
         product: z.number().min(1, tval("product")),
@@ -155,9 +163,11 @@ export function B2BSaleModal({ trigger, onSubmit, onClose, initialData, isEditin
                 }
                 form.setValue('unit_price', Number(offer.unit_price), { shouldValidate: false, shouldDirty: true, shouldTouch: true });
                 form.setValue('cottage_code', offer.cottage_code || offer.cottage_number || "", { shouldValidate: false, shouldDirty: true });
+                setSelectedMaxWeight(offer.offer_weight ? Number(offer.offer_weight) : null);
             }
         } else if (!selectedOffer) {
             form.setValue('cottage_code', "", { shouldValidate: false, shouldDirty: false });
+            setSelectedMaxWeight(null);
         }
     }, [selectedOffer, offers, form, saleType]);
 
@@ -173,9 +183,11 @@ export function B2BSaleModal({ trigger, onSubmit, onClose, initialData, isEditin
                 }
                 form.setValue('unit_price', Number(distribution.unit_price), { shouldValidate: false, shouldDirty: true, shouldTouch: true });
                 form.setValue('cottage_code', distribution.cottage_code || distribution.cottage_number || "", { shouldValidate: false, shouldDirty: true });
+                setSelectedMaxWeight(distribution.agency_weight ? Number(distribution.agency_weight) : null);
             }
         } else if (!selectedDistribution) {
             form.setValue('cottage_code', "", { shouldValidate: false, shouldDirty: false });
+            setSelectedMaxWeight(null);
         }
     }, [selectedDistribution, distributions, form, saleType]);
 
@@ -258,6 +270,7 @@ export function B2BSaleModal({ trigger, onSubmit, onClose, initialData, isEditin
                                                     form.setValue("is_distributor", false);
                                                     form.setValue("b2b_distribution", null);
                                                     form.setValue("cottage_code", "", { shouldDirty: false });
+                                                    setSelectedMaxWeight(null);
                                                 }}
                                                 className="mr-2"
                                             />
@@ -273,6 +286,7 @@ export function B2BSaleModal({ trigger, onSubmit, onClose, initialData, isEditin
                                                     form.setValue("is_distributor", true);
                                                     form.setValue("offer", null);
                                                     form.setValue("cottage_code", "", { shouldDirty: false });
+                                                    setSelectedMaxWeight(null);
                                                 }}
                                                 className="mr-2"
                                             />
@@ -440,7 +454,14 @@ export function B2BSaleModal({ trigger, onSubmit, onClose, initialData, isEditin
                                     name="weight"
                                     render={({ field }) => (
                                         <FormItem>
-                                            <FormLabel>{t("weight")}</FormLabel>
+                                            <FormLabel>
+                                                {t("weight")}
+                                                {selectedMaxWeight && (
+                                                    <span className="mr-2 text-sm font-normal text-muted-foreground">
+                                                        - نهایت {formatNumber(selectedMaxWeight)} کیلوگرم
+                                                    </span>
+                                                )}
+                                            </FormLabel>
                                             <FormControl>
                                                 <NumberInput
                                                     value={field.value || 0}

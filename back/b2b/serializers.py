@@ -223,34 +223,46 @@ class B2BSaleSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError(
                 {'b2b_distribution': 'برای فروش مستقیم نباید عاملیت انتخاب شود.'})
         source_receipt = None
-        available_capacity = None
+        max_weight = None
         if offer:
             source_receipt = offer.warehouse_receipt
             if offer.offer_weight:
-                qs = offer.b2b_sales.all()
-                if self.instance:
-                    qs = qs.exclude(pk=self.instance.pk)
-                consumed = qs.aggregate(total=models.Sum('weight'))[
-                    'total'] or Decimal('0')
-                available_capacity = Decimal(offer.offer_weight) - consumed
+                max_weight = Decimal(offer.offer_weight)
         elif distribution:
             source_receipt = distribution.warehouse_receipt
             if distribution.agency_weight:
-                qs = distribution.b2b_sales.all()
-                if self.instance:
-                    qs = qs.exclude(pk=self.instance.pk)
-                consumed = qs.aggregate(total=models.Sum('weight'))[
-                    'total'] or Decimal('0')
-                available_capacity = Decimal(
-                    distribution.agency_weight) - consumed
+                max_weight = Decimal(distribution.agency_weight)
+
+        # NOTE: remaining-capacity logic commented out.
+        # To re-enable: replace the max_weight block above with this,
+        # and change the weight check below to use available_capacity instead of max_weight.
+        #
+        # available_capacity = None
+        # if offer:
+        #     source_receipt = offer.warehouse_receipt
+        #     if offer.offer_weight:
+        #         qs = offer.b2b_sales.all()
+        #         if self.instance:
+        #             qs = qs.exclude(pk=self.instance.pk)
+        #         consumed = qs.aggregate(total=models.Sum('weight'))['total'] or Decimal('0')
+        #         available_capacity = Decimal(offer.offer_weight) - consumed
+        # elif distribution:
+        #     source_receipt = distribution.warehouse_receipt
+        #     if distribution.agency_weight:
+        #         qs = distribution.b2b_sales.all()
+        #         if self.instance:
+        #             qs = qs.exclude(pk=self.instance.pk)
+        #         consumed = qs.aggregate(total=models.Sum('weight'))['total'] or Decimal('0')
+        #         available_capacity = Decimal(distribution.agency_weight) - consumed
+
         if source_receipt and product:
             source_item = source_receipt.items.first()
             if source_item and source_item.product_id != product.id:
                 raise serializers.ValidationError(
                     {'product': 'کالا با منبع انتخابی همخوانی ندارد.'})
-        if available_capacity is not None and weight:
+        if max_weight is not None and weight:
             requested = Decimal(weight)
-            if requested > available_capacity:
+            if requested > max_weight:
                 raise serializers.ValidationError(
                     {'weight': 'وزن فروش بیش از موجودی مجاز است.'})
         if source_receipt:
