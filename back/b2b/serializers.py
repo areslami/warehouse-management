@@ -265,10 +265,10 @@ class B2BSaleSerializer(serializers.ModelSerializer):
             if requested > max_weight:
                 raise serializers.ValidationError(
                     {'weight': 'وزن فروش بیش از موجودی مجاز است.'})
-        if source_receipt:
-            attrs['cottage_code'] = source_receipt.cottage_serial_number or source_receipt.cottage_code or ''
-        elif self.instance and 'cottage_code' not in attrs:
-            attrs['cottage_code'] = getattr(self.instance, 'cottage_code', '')
+        # if source_receipt:
+        #     attrs['cottage_code'] = source_receipt.cottage_serial_number or source_receipt.cottage_code or ''
+        # elif self.instance and 'cottage_code' not in attrs:
+        #     attrs['cottage_code'] = getattr(self.instance, 'cottage_code', '')
         return attrs
 
     def get_customer_name(self, obj):

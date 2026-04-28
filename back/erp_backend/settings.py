@@ -47,6 +47,7 @@ INSTALLED_APPS = [
     "warehouse",
     "b2b",
     "finance",
+    "notifications",
     "rest_framework",
     'django_filters',
 ]

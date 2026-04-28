@@ -2,7 +2,24 @@
   "pages": {
     "dashboard": {
       "title": "داشبورد مدیریت",
-      "coming_soon": "به زودی..."
+      "subtitle": "نمای کلی عملیات شمس",
+      "realized_revenue": "درآمد تحقق‌یافته",
+      "pipeline_revenue": "پایپ‌لاین",
+      "stock_weight": "موجودی انبار",
+      "active_offers": "عرضه‌های فعال",
+      "pending_dispatches": "حواله‌های در انتظارارسال",
+      "overdue_dispatches": "حواله‌های منقضی‌شده",
+      "view_all": "مشاهده همه",
+      "quick_actions": "دسترسی سریع",
+      "all_caught_up": "همه چیز به‌روز است!",
+      "no_overdue": "هیچ حواله منقضی‌ای وجود ندارد.",
+      "new_receipt": "رسید انبار جدید",
+      "new_dispatch": "صدور حواله",
+      "new_offer": "ایجاد عرضه B2B",
+      "new_proforma": "پروفورما فروش",
+      "weekly_trend": "روند هفتگی وزن (کیلوگرم)",
+      "search_placeholder": "جستجو یا رفتن به...",
+      "loading_error": "خطا در بارگذاری داشبورد. لطفاً دوباره تلاش کنید."
     },
     "b2b": {
       "title": "بازارگاه",
@@ -308,6 +325,7 @@
   },
   "sidebar": {
     "title": "شمس تجارت خوشنام",
+    "dashboard": "داشبورد",
     "products": "محصولات",
     "parties": "اشخاص",
     "supplier": "تامین کنندگان",

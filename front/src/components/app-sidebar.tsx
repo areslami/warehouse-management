@@ -15,7 +15,7 @@ import { B2BOfferFormData, B2BOfferModal } from "./modals/b2b/b2b-offer-modal";
 import { B2BDistributionFormData, B2BDistributionModal } from "./modals/b2b/b2b-distribution-modal";
 import { B2BAddressFormData, B2BAddressModal } from "./modals/b2b/b2b-address-modal";
 
-import { Warehouse, DollarSign, ChevronLeft, BadgeCent, Package, Users, Plus, Settings } from "lucide-react";
+import { Warehouse, DollarSign, ChevronLeft, BadgeCent, Package, Users, Plus, Settings, Home } from "lucide-react";
 import { createWarehouseReceipt, createDispatchIssue, createDeliveryFulfillment } from "@/lib/api/warehouse";
 import { createB2BOffer, createB2BDistribution, createB2BAddress, createB2BSale } from "@/lib/api/b2b";
 import Link from "next/link";
@@ -66,6 +66,11 @@ export function AppSidebar() {
     const sidebarTitle = t("title");
 
     const coreItems = [
+        {
+            name: t("dashboard"),
+            icon: Home,
+            href: "/"
+        },
         {
             name: t("products"),
             icon: Package,
